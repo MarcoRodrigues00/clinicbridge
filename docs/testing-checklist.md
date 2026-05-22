@@ -1,0 +1,222 @@
+# ClinicBridge — Checklist de Testes
+
+> Consolidado na compactação de 2026-05-22 a partir das verificações das sprints
+> (`docs/sprint-history.md`). Use como roteiro de smoke test / regressão local.
+> Endpoints tenant-scoped exigem `Authorization: Bearer <token>` (de `/auth/login`).
+
+## Build / typecheck
+
+```bash
+# Backend (porta 3001)
+pnpm --filter backend typecheck
+pnpm --filter backend build
+
+# Frontend (Vite, porta 5173)
+pnpm --filter frontend typecheck
+pnpm --filter frontend build
+
+# Migrations
+pnpm --filter backend migrate:status
+pnpm --filter backend migrate:latest
+```
+
+Não rode builds quando a tarefa só mexe em docs.
+
+## Setup local
+
+```bash
+cp .env.example .env
+pnpm install
+docker compose up -d
+curl http://localhost:3001/health
+```
+
+## Smoke tests (curl)
+
+```bash
+# Health
+curl http://localhost:3001/health
+
+# Auth
+curl -X POST http://localhost:3001/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"...","senha":"..."}'
+curl http://localhost:3001/auth/me -H "Authorization: Bearer $TOKEN"
+
+# Import files
+curl http://localhost:3001/import-files -H "Authorization: Bearer $TOKEN"
+# upload: multipart, campo "file" (.csv/.xlsx)
+curl -X POST http://localhost:3001/import-files/upload \
+  -H "Authorization: Bearer $TOKEN" -F "file=@valid.csv"
+
+# Pacientes (CPF sempre mascarado)
+curl "http://localhost:3001/patients?search=&limit=50&offset=0" -H "Authorization: Bearer $TOKEN"
+curl "http://localhost:3001/patients/duplicates" -H "Authorization: Bearer $TOKEN"
+
+# Export (read-only)
+curl "http://localhost:3001/patients/export?format=csv" -H "Authorization: Bearer $TOKEN" -o pacientes.csv
+
+# Retenção (DRY-RUN, não apaga)
+curl "http://localhost:3001/import-files/retention/dry-run" -H "Authorization: Bearer $TOKEN"
+curl "http://localhost:3001/import-files/retention/dry-run?retention_days=60&limit=50" -H "Authorization: Bearer $TOKEN"
+```
+
+## SQL de validação (sanity-check de invariantes)
+
+```sql
+SELECT count(*) FROM patients;          -- baseline local: 6
+SELECT count(*) FROM import_files;       -- baseline local: 24
+SELECT count(*) FROM import_sessions;    -- baseline local: 7
+
+-- audit não deve conter PII; colunas reais apenas:
+SELECT acao, recurso, recurso_id, usuario_id, clinica_id, ip, user_agent, request_id, criado_em
+FROM audit_logs ORDER BY criado_em DESC LIMIT 20;
+```
+
+> Os counts são do ambiente local e podem mudar após novos testes. Antes/depois
+> de uma operação read-only (export, duplicates, retention dry-run) os counts de
+> `patients`/`import_files`/`import_sessions` **não devem mudar**.
+
+## Upload — tipo de arquivo (magic bytes, Sprint 2.23)
+
+Resultados esperados com fixtures reais:
+- `empty.csv` → `file_empty`
+- arquivo binário → `invalid_file_content`
+- `valid.csv` (texto) → ok
+- texto renomeado para `.xlsx` → `invalid_file_content`
+- ZIP real (stored, não-OOXML) renomeado `.xlsx` → `invalid_file_content`
+- XLSX real (gerado por exceljs) → ok
+- XLSX válido com MIME fora da allowlist → `invalid_file_type`
+
+## Export (Sprint 2.21–2.22)
+
+- `format` ≠ csv/xlsx → 400 `patients_export_invalid_format`
+- `include_cpf_raw=true` → 400 `patients_export_cpf_raw_not_allowed`
+- CPF nunca bruto (só `cpf_masked`)
+- formula injection neutralizada em CSV e XLSX (célula iniciando com `= + - @` recebe prefixo `'`)
+- acima de `PATIENTS_EXPORT_MAX_ROWS` → 413
+- `Content-Disposition` filename fixo; sem signed URL
+
+## Retenção dry-run (Sprint 2.24/2.26)
+
+- Resposta só com metadados seguros (sem nome/hash/path/conteúdo)
+- `retention_days` fora de 1..365 ou `limit` fora de 1..MAX → 400 `invalid_retention_params`
+- arquivos em fluxo ativo (última sessão validated/ready_for_import/import_started) são excluídos dos candidatos
+- outra clínica → 0 candidatos (tenant isolation)
+- `import_files`/`import_sessions`/`patients` inalterados (nada é apagado)
+
+## Rate limit (Sprint 2.22)
+
+- limiter roda antes do auth: requisições sem token estouram 429 após o teto
+- 429 body genérico `{ error: { code: 'rate_limited', ... } }`, headers `RateLimit`/`Retry-After`
+
+## Trust proxy + rate-limit store (Sprint 3.2)
+
+Dica: para não poluir o dev server, suba instâncias efêmeras numa porta livre com
+um limite baixo. O `.env` é carregado por `dotenv` mas variáveis passadas inline
+têm precedência (dotenv não sobrescreve o que já está no ambiente).
+
+**Memory mode (default):**
+```bash
+cd backend
+RATE_LIMIT_STORE=memory BACKEND_PORT=3010 EXPORT_RATE_LIMIT_MAX=3 \
+  pnpm exec tsx src/server.ts &
+# boot loga {"store":"memory",...}
+for i in 1 2 3 4 5; do curl -s -o /dev/null -w "%{http_code}\n" \
+  http://localhost:3010/patients/export?format=csv; done   # 401,401,401,429,429
+```
+
+**Redis mode (precisa Redis):**
+```bash
+docker compose up -d redis            # serviço opcional; bound a 127.0.0.1
+docker exec clinicbridge-redis redis-cli ping   # PONG
+cd backend
+RATE_LIMIT_STORE=redis REDIS_URL=redis://localhost:6379 \
+  REDIS_PREFIX="clinicbridge:ratelimit:" BACKEND_PORT=3011 EXPORT_RATE_LIMIT_MAX=3 \
+  pnpm exec tsx src/server.ts &
+# boot loga {"store":"redis","prefix":"clinicbridge:ratelimit:",...} SEM ClientClosedError
+for i in 1 2 3 4 5; do curl -s -o /dev/null -w "%{http_code}\n" \
+  http://localhost:3011/patients/export?format=csv; done   # ... 429
+docker exec clinicbridge-redis redis-cli --scan --pattern 'clinicbridge:ratelimit:*'
+# Persistência: reinicie o backend (mesmo Redis) e a 1ª chamada de export já dá 429.
+```
+
+> Falha-rápido: com `RATE_LIMIT_STORE=redis` e `REDIS_URL` inacessível, o boot
+> termina com `process.exit(1)` (não cai para memory). Com `RATE_LIMIT_STORE=redis`
+> e `REDIS_URL` ausente, o env falha na validação (REDIS_URL required).
+
+**Trust proxy:**
+```bash
+# Sem endpoint de debug: observe o IP na chave do Redis.
+# TRUST_PROXY=1  -> chave usa o X-Forwarded-For
+RATE_LIMIT_STORE=redis REDIS_URL=redis://localhost:6379 REDIS_PREFIX="clinicbridge:tp1:" \
+  BACKEND_PORT=3012 TRUST_PROXY=1 pnpm exec tsx src/server.ts &
+curl -s -o /dev/null -H "X-Forwarded-For: 203.0.113.7" http://localhost:3012/patients
+docker exec clinicbridge-redis redis-cli --scan --pattern 'clinicbridge:tp1:*'   # ...:203.0.113.7
+# TRUST_PROXY=false -> chave usa o IP do socket (XFF ignorado)
+```
+
+Limpeza: encerre as instâncias efêmeras (mate o **listener**, não só o wrapper
+pnpm) e `docker exec clinicbridge-redis redis-cli --scan --pattern 'clinicbridge:*' | xargs -r docker exec clinicbridge-redis redis-cli del`.
+
+## Autorização por papel — requireRole (Sprint 3.1)
+
+Precondição: um token de `dono_clinica` (owner) e um de `secretaria` (operator).
+Owner sai do fluxo normal de registro/login. Para um operator de teste local há
+duas opções seguras:
+
+```sql
+-- Opção A: rebaixar temporariamente um usuário de teste para operator
+UPDATE users SET papel = 'secretaria' WHERE email = '<email_de_teste>';
+-- ... rode os testes ...
+-- Voltar o usuário principal para owner (NÃO deixar o ambiente quebrado):
+UPDATE users SET papel = 'dono_clinica' WHERE email = '<email_de_teste>';
+```
+
+> Opção B (sem mutar o DB): assinar dois JWTs localmente com o próprio
+> `tokenService` (mesmo `JWT_SECRET` do servidor), variando só `papel`
+> (`dono_clinica` vs `secretaria`) com um `sub`/`clinica_id` reais. Como
+> `requireRole` lê o papel do JWT, isso exercita o gate sem criar usuários.
+
+Matriz esperada:
+
+```bash
+B=http://localhost:3001
+# 1) Sem token (auth roda antes do role) → 401
+curl -s -o /dev/null -w "%{http_code}\n" "$B/patients/export?format=csv"          # 401
+curl -s -o /dev/null -w "%{http_code}\n" "$B/import-files/retention/dry-run"        # 401
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/import-sessions/<id>/import"   # 401
+
+# 2) Owner (dono_clinica) → 200
+curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $OWNER" "$B/patients"                       # 200
+curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $OWNER" "$B/patients/duplicates"            # 200
+curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $OWNER" "$B/patients/export?format=csv"     # 200
+curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $OWNER" "$B/import-files/retention/dry-run" # 200
+
+# 3) Secretaria (operator)
+curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $SEC" "$B/patients"                    # 200
+curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $SEC" "$B/patients/duplicates"         # 200
+curl -s -H "Authorization: Bearer $SEC" "$B/patients/export?format=csv"                                   # 403 forbidden_role
+curl -s -H "Authorization: Bearer $SEC" "$B/import-files/retention/dry-run"                               # 403 forbidden_role
+curl -s -X POST -H "Authorization: Bearer $SEC" "$B/import-sessions/<id>/mark-ready"                      # 403 forbidden_role
+curl -s -X POST -H "Authorization: Bearer $SEC" "$B/import-sessions/<id>/import"                          # 403 forbidden_role
+```
+
+Body 403 esperado: `{ "error": { "code": "forbidden_role", "message": "Você não tem permissão para executar esta ação." } }`.
+
+SQL de papéis: `SELECT id, email, papel, clinica_id FROM users ORDER BY criado_em DESC LIMIT 10;`
+
+UI: como operator (`secretaria`), o painel "Arquivos antigos de importação" não
+aparece; em "Pacientes importados" os botões de export viram uma nota; no detalhe
+de uma revisão, mark-ready/importação viram nota (recibo e simulação seguem
+visíveis). Como owner, tudo aparece normalmente.
+
+## Responsividade mobile (Sprint 2.26)
+
+Testar `/app` no DevTools em 360, 390, 414 (iPhone XR), 430 e 768px e desktop:
+- sem scroll horizontal / sem corte lateral no topo
+- "ClinicBridge" + "Sair" cabem ou quebram corretamente; selo "Sessão ativa" não estoura
+- nome do usuário e e-mail longos quebram linha (não cortam)
+- cards de identidade e do rodapé colapsam para 1 coluna no mobile
+- painel "Arquivos antigos de importação": inputs/botões quebram linha; card não estoura; rótulos longos quebram
+- validação de input: dias 0/366 ou "Mostrar até" 0/101 → mensagem amigável, **sem** chamada à API

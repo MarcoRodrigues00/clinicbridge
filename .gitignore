@@ -1,0 +1,69 @@
+# ============================================================
+# ClinicBridge — .gitignore
+# Goal: never commit secrets, dependencies, build output, logs,
+# uploaded files or real patient data (CSV/XLSX exports/uploads).
+# ============================================================
+
+# --- Dependencies ---
+node_modules/
+.pnpm-store/
+
+# --- Build output ---
+dist/
+build/
+*.tsbuildinfo
+
+# --- Env files (ONLY .env.example is committed) ---
+.env
+.env.*
+!.env.example
+
+# --- Logs ---
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# --- Caches / tooling ---
+coverage/
+.nyc_output/
+.turbo/
+.vite/
+.cache/
+
+# --- Uploads / private storage / temp (NEVER commit user data) ---
+storage/
+uploads/
+tmp/
+temp/
+*.tmp
+
+# --- Spreadsheets & data dumps (real patient data / exports) ---
+# Tabular files are treated as data, never source. If a small, anonymized
+# fixture is ever needed, add it explicitly with: git add -f <file>
+*.csv
+*.xlsx
+*.xls
+*.xlsm
+*.xlsb
+*.zip
+
+# --- Database dumps / backups ---
+*.dump
+*.sql
+backups/
+
+# --- Docker local volumes ---
+.postgres-data/
+
+# --- Editor / OS ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# --- Claude Code local overrides (machine-specific; agents/ stay tracked) ---
+.claude/settings.local.json
