@@ -40,6 +40,19 @@ export function createApp(): Express {
     );
   }
 
+  // In production with multiple instances, an in-memory rate-limit store keeps
+  // per-instance counters, so the effective limit becomes (max × instances) —
+  // useless across the fleet. We warn (not fail) because memory is legitimate
+  // for a single instance; multi-instance prod should set RATE_LIMIT_STORE=redis
+  // (REDIS_URL required; the store fails fast on a bad connection at boot).
+  if (env.NODE_ENV === 'production' && env.RATE_LIMIT_STORE === 'memory') {
+    logger.warn(
+      'RATE_LIMIT_STORE=memory in production: rate-limit counters are per-instance. ' +
+        'If you run more than one instance, set RATE_LIMIT_STORE=redis (with REDIS_URL) ' +
+        'so limits hold across the fleet.',
+    );
+  }
+
   // requestId must run before everything else so every downstream middleware,
   // including error handlers and audit writes, can see req.requestId and the
   // response carries X-Request-Id even on early failures.

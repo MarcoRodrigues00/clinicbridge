@@ -7,7 +7,16 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.5** — produção/governança: **backup/restore local implementado** com
+**Sprint 3.6** — produção/governança: **revisão de deploy seguro + CORS + env de
+produção**. Auditoria de env/CORS/Helmet/trust proxy/rate limit/secrets/compose/
+health; criados `docs/deploy-security-checklist.md` + ADR
+`docs/adr/0004-deploy-security-baseline.md`. Pequenos hardenings **só de produção**
+(dev intacto): guardas no `config/env.ts` que **falham o boot** se `JWT_SECRET`/
+`DATABASE_URL` ainda usam os placeholders do `.env.example`; warning no `app.ts`
+para `RATE_LIMIT_STORE=memory` em produção. **Sem** deploy real, AWS, Terraform,
+CI/CD, domínio ou HTTPS real; sem migration/schema; sem commit. typecheck+build OK.
+
+**Sprint anterior: 3.5** — produção/governança: **backup/restore local implementado** com
 Restic (decisão da 3.4). Scripts em `scripts/` (`check-backup-env.sh`,
 `backup-local-restic.sh`, `restore-local-restic.sh`) + runbook
 `docs/backup-restore-local-runbook.md`. **Restore drill validado**: backup
@@ -136,10 +145,11 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
   proxy + Redis/shared store **(Sprint 3.2)**, política técnica de retenção
   **(Sprint 3.3, docs-only)**, estratégia de backup/restore Restic-first
   **(Sprint 3.4, docs-only)**, backup/restore **local** + restore drill validado
-  **(Sprint 3.5)**; restantes: provisionar Redis/proxy de produção, **validação
-  jurídica** da política de retenção, **offsite/produção** do backup (destino,
-  gestão de chave, agendamento, monitoramento), deploy seguro, revisão de CORS/env
-  prod
+  **(Sprint 3.5)**, baseline de deploy seguro + revisão de CORS/env prod
+  **(Sprint 3.6)**; restantes: **deploy real** (HTTPS/reverse proxy, secrets
+  manager, banco/Redis gerenciados, monitoramento), provisionar Redis/proxy de
+  produção, **validação jurídica** da política de retenção, **offsite/produção**
+  do backup (destino, gestão de chave, agendamento, monitoramento)
 - Download assinado de arquivos de importação (só se houver caso de uso real)
 - LGPD: endpoint de exportação e exclusão de dados por clínica
 - Limpeza real de arquivos (com confirmação/soft-delete/quarentena/auditoria)
