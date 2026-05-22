@@ -271,6 +271,24 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3011/health           
 # pgrep -af 'tsx src/server.ts' e mate o PID do node/MainThread em :3011.
 ```
 
+## Edge security — Nginx + WAF (Sprint 3.8) — ESTRATÉGIA, ainda NÃO implementado
+
+Sem comandos reais ainda (não há Nginx/WAF nesta fase). Detalhe:
+`docs/edge-security-strategy.md` + ADR 0005. Checklist a exercitar **quando** o
+Nginx for implementado (sprint futura):
+
+- [ ] backend **não** acessível direto pela internet (só via Nginx).
+- [ ] HTTP redireciona para HTTPS; HSTS só após HTTPS estável.
+- [ ] upload de ~5 MB passa pelo Nginx (sem 413 indevido) → `client_max_body_size`
+  ≥ `UPLOAD_MAX_BYTES`.
+- [ ] `TRUST_PROXY` = hop count real → `req.ip`/rate limit/`audit_logs` usam o IP
+  real do cliente (não o IP do Nginx).
+- [ ] `FRONTEND_ORIGIN` HTTPS real; CORS segue no app (sem header CORS duplicado no Nginx).
+- [ ] access logs do Nginx sem corpo, sem `Authorization`/`Cookie`, sem PII.
+- [ ] `/health/live` e `/health/ready` acessíveis pelo proxy (readiness 200/503).
+- [ ] WAF (se ligado) em `SecRuleEngine DetectionOnly`; logs revisados antes de
+  qualquer blocking; tuning por rota (upload/import/export/auth).
+
 ## Backup/restore local com Restic (Sprint 3.5) — LOCAL/DEV, sem offsite
 
 Pré: `restic` instalado, Docker/Postgres de pé, `RESTIC_PASSWORD` exportada no
