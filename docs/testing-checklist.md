@@ -271,7 +271,40 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3011/health           
 # pgrep -af 'tsx src/server.ts' e mate o PID do node/MainThread em :3011.
 ```
 
-## Edge security — Nginx + WAF (Sprint 3.8) — ESTRATÉGIA, ainda NÃO implementado
+## Nginx reverse proxy local/staging (Sprint 3.9) — sem TLS/WAF
+
+Detalhe: `docs/nginx-local-staging-runbook.md`. Profile `edge` (não sobe no
+`docker compose up` padrão).
+
+```bash
+# Subir Postgres/Redis + backend (atrás do proxy use TRUST_PROXY=1) + Nginx:
+docker compose up -d postgres redis
+TRUST_PROXY=1 pnpm --filter backend dev        # backend host :3001
+docker compose --profile edge up -d nginx      # proxy em 127.0.0.1:8080
+
+# Validar config e proxy:
+docker compose exec nginx nginx -t             # syntax is ok / test is successful
+curl -i http://localhost:8080/health           # 200 (quando o Nginx alcança o backend)
+curl -i http://localhost:8080/health/live      # 200
+curl -i http://localhost:8080/health/ready     # 200 database ok (Postgres up) / 503 se DB cair
+
+# Logs seguros (sem Authorization/Cookie/corpo; path sem query string):
+docker compose logs nginx --tail=20
+
+# Parar o proxy:
+docker compose --profile edge stop nginx
+```
+
+> **Anti-spoof XFF:** o Nginx sobrescreve `X-Forwarded-For`/`X-Real-IP` com o IP
+> real da conexão; um `X-Forwarded-For` forjado pelo cliente é descartado (com
+> `TRUST_PROXY=1`, o `req.ip`/rate limit/audit usam o IP real).
+>
+> **Nota Docker Desktop + WSL2:** se o backend roda na distro WSL (não em
+> container), o Nginx (VM do Docker) pode não alcançar `:3001` (502) — ver
+> "Limitação conhecida" no runbook. Config correta; funciona com backend
+> alcançável pelo host do Docker.
+
+## Edge security — Nginx + WAF (Sprint 3.8) — estratégia (WAF ainda NÃO implementado)
 
 Sem comandos reais ainda (não há Nginx/WAF nesta fase). Detalhe:
 `docs/edge-security-strategy.md` + ADR 0005. Checklist a exercitar **quando** o

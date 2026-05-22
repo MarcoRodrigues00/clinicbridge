@@ -83,8 +83,15 @@ Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passaria no `min(48)`.
 - **WAF staged:** detection-only/log-only → tuning por rota (upload/import/export/
   auth) → blocking gradual. WAF **não** substitui auth/role/rate limit/validação.
 - Logs do Nginx sem corpo, sem `Authorization`/`Cookie`, sem PII.
-- **Fora do escopo desta fase:** certificado, domínio, `nginx.conf` real,
-  ModSecurity e deploy real (apenas estratégia/ADR documentados).
+- **Implementado (Sprint 3.9, local/staging):** Nginx reverse proxy em
+  `infra/nginx/` + serviço `nginx` opcional no compose (profile `edge`):
+  `docker compose --profile edge up -d nginx` → `127.0.0.1:8080`; valida com
+  `docker compose exec nginx nginx -t`. `client_max_body_size 10m` (≥
+  `UPLOAD_MAX_BYTES`); headers `X-Real-IP`/`X-Forwarded-For` com **anti-spoof**
+  (overwrite); logs sem `Authorization`/`Cookie`/corpo. Backend atrás do proxy:
+  `TRUST_PROXY=1`. Runbook: `docs/nginx-local-staging-runbook.md`.
+- **Fora do escopo desta fase:** TLS/certificado real, domínio, ModSecurity/WAF,
+  deploy real (apenas estratégia/ADR + proxy local/staging).
 
 ## 6. Trust proxy
 
