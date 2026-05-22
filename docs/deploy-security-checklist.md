@@ -145,13 +145,26 @@ Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passaria no `min(48)`.
 - **Produção:** centralizar logs, definir retenção/rotação (alinhar à política de
   retenção) e monitorar erros/saturação.
 
-## 13. Healthcheck
+## 13. Healthcheck (liveness vs readiness)
 
-- `GET /health` → `{status, service, timestamp}` (liveness). **Não** vaza env,
-  versões nem secrets. Não checa DB.
-- **Melhoria futura (não implementada):** separar `/health/live` (liveness) e
-  `/health/ready` (readiness com checagem de DB/Redis) para orquestradores.
+- **Liveness — "o processo está de pé?":** `GET /health` e o alias `GET
+  /health/live` → `{status:'ok', service, timestamp}` (200). **Sem** dependências,
+  DB, auth ou PII. Use para o liveness probe do orquestrador. `/health` é mantido
+  para compatibilidade.
+- **Readiness — "consegue servir tráfego?":** `GET /health/ready` faz um `select 1`
+  leve no pool knex existente:
+  - **200** quando o banco responde:
+    `{status:'ready', service, timestamp, checks:{database:'ok'}}`.
+  - **503** quando o banco não responde:
+    `{status:'not_ready', ..., checks:{database:'error'}}`.
+  - Timeout curto (`HEALTH_READY_DB_TIMEOUT_MS`, default 2000) para um 503 rápido
+    em vez de pendurar no acquire longo do knex.
+  - **Nunca** vaza `DATABASE_URL`, erro bruto, stack ou SQL — só `ok`/`error`. Sem
+    auth, sem PII, sem `audit_logs`.
+  - Use no readiness probe; o proxy/orquestrador só envia tráfego quando 200.
 - Compose já tem healthcheck de Postgres/Redis (container-level).
+- **Futuro (não implementado):** adicionar checagem de Redis ao readiness quando
+  `RATE_LIMIT_STORE=redis` em produção.
 
 ## 14. Docker Compose: local/dev vs produção
 
@@ -176,7 +189,8 @@ Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passaria no `min(48)`.
 - [ ] `TRUST_PROXY` = hop count real (se houver proxy).
 - [ ] `RATE_LIMIT_STORE=redis` + `REDIS_URL` se multi-instância.
 - [ ] Migrations aplicadas (`migrate:status` limpo).
-- [ ] `/health` responde 200.
+- [ ] `/health` (e `/health/live`) responde 200; `/health/ready` 200 com DB up
+  (e 503 quando o DB cai) — ligar nos probes de liveness/readiness.
 - [ ] Backup local validado (restore drill OK).
 - [ ] `.env` não versionado; sem secret em logs.
 

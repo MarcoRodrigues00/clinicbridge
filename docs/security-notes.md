@@ -190,9 +190,13 @@
   `x-powered-by` desabilitado. HSTS só vale sob HTTPS (requisito de produção).
 - **HTTPS/reverse proxy:** requisito de produção **documentado, não implementado**
   (TLS terminado no proxy; API não serve TLS).
-- **Healthcheck:** `GET /health` é liveness (status/service/timestamp; sem
-  env/versão/secret; sem checagem de DB). Readiness com checagem de DB fica como
-  melhoria futura.
+- **Healthcheck (Sprint 3.7):** `GET /health` e o alias `GET /health/live` são
+  liveness (status/service/timestamp; sem env/versão/secret; sem DB/auth/PII).
+  `GET /health/ready` é readiness: `select 1` leve no pool knex com timeout curto
+  (`HEALTH_READY_DB_TIMEOUT_MS`, default 2000) → **200** `{checks:{database:'ok'}}`
+  ou **503** `{checks:{database:'error'}}`. **Nunca** vaza `DATABASE_URL`/erro
+  bruto/stack/SQL (só `ok`/`error`); sem auth, sem PII, sem `audit_logs`. Falha do
+  DB é logada só com mensagem segura (verificado: log não contém host/credencial).
 - **docker-compose:** é **local/dev**, não produção (ver `docs/deploy-security-checklist.md` §14).
 - **Sem promessa:** não afirma produção pronta nem compliance completo.
 

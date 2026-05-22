@@ -478,3 +478,17 @@ Direção: ADR `docs/adr/0001-product-direction-option-c.md` (Opção C) → Fas
 - **Documentos:** criado `docs/deploy-security-checklist.md` (17 seções: status/escopo, ambientes, env obrigatórias, CORS, HTTPS/reverse proxy, trust proxy, rate limit/Redis, banco, storage, secrets, backup, logs/auditoria, healthcheck, compose dev vs prod, checklist staging, checklist produção, fora de escopo) + ADR 0004. Atualizados `docs/security-notes.md`, `docs/project-state.md`, `docs/roadmap-next-phase.md`, `docs/testing-checklist.md`, `CLAUDE.md`.
 - **Decisão de baseline (ADR 0004):** reverse-proxy/HTTPS first; produção exige `FRONTEND_ORIGIN` explícito (sem `*`); `TRUST_PROXY` = hop count real; `RATE_LIMIT_STORE=redis` em multi-instância; `docker-compose.yml` é local/dev (não produção).
 - **Verificação:** `pnpm --filter backend typecheck` + `build` OK. Guardas testadas com instâncias efêmeras (env craftada): `NODE_ENV=production` + placeholder de `JWT_SECRET` → boot recusa com mensagem clara; idem `DATABASE_URL=...change-me-locally`; com segredos válidos → passa. **Sem** alterar `docker-compose.yml`/banco/schema; **sem** `.env` real tocado; nenhum secret no diff; counts do banco inalterados (não tocados).
+
+---
+
+## Sprint 3.7 (readiness endpoint /health/ready com checagem leve de banco)
+
+Direção: ADR `docs/adr/0004-deploy-security-baseline.md` (§13 do checklist marcava readiness como melhoria futura) → Fase 3. **Só backend + `.env.example` + docs. Sem migration/schema, sem frontend, sem dependência, sem deploy real, sem commit/push.**
+
+- **`routes/health.ts`:** `GET /health` mantido como liveness (formato inalterado: `{status:'ok',service,timestamp}`) + alias explícito `GET /health/live`. Novo `GET /health/ready`: roda `db.raw('select 1')` no pool knex existente (sem conexão paralela), com `withTimeout` (Promise.race + `setTimeout(...).unref()`). **200** `{status:'ready',...,checks:{database:'ok'}}` quando o DB responde; **503** `{status:'not_ready',...,checks:{database:'error'}}` quando não. try/catch local → o `errorHandler` nunca vira 500 com detalhe. Sem `requireAuth`, sem tenant, sem PII, sem `audit_logs`. Falha logada só com mensagem segura (`err.message`), nunca a connection string.
+- **`config/env.ts`:** novo `HEALTH_READY_DB_TIMEOUT_MS` (coerce number, default **2000**) — timeout curto para um 503 rápido em vez de pendurar no `acquireConnectionTimeout` longo (60s) do knex. **`.env.example`:** documentado com comentário seguro.
+- **Segurança confirmada:** readiness nunca expõe `DATABASE_URL`/`JWT_SECRET`/`REDIS_URL`/stack/SQL/versão — só `ok`/`error` por check + timestamp.
+- **Verificação:** `pnpm --filter backend typecheck` + `build` OK. Instâncias efêmeras (sem tocar o dev server 3001, que não estava rodando):
+  - porta 3010 (DB real up): `/health`=200, `/health/live`=200, `/health/ready`=200 `database:ok`.
+  - porta 3011 (`DATABASE_URL` blackhole `10.255.255.1`, `NODE_ENV=development`): `/health`=200 (liveness independe do DB), `/health/ready`=**503** `database:error` em **~2.00s** (cap de timeout). Log só com `"readiness check timed out"` — sem host/credencial. Listeners efêmeros encerrados; Postgres compartilhado **não** foi parado (teste de 503 via host inalcançável, alternativa segura).
+- **Sem** alterar `docker-compose.yml`/banco/schema; `.env` real intocado; nenhum secret no diff; nenhum dado clínico.

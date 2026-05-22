@@ -246,9 +246,29 @@ curl -s -D - -o /dev/null -H "Origin: https://evil.example" http://localhost:300
 # Em produção, FRONTEND_ORIGIN='*' faz o boot falhar; lista vazia também.
 ```
 
-Health:
+Health / readiness (Sprint 3.7):
 ```bash
-curl -s http://localhost:3001/health   # {status,service,timestamp} — sem env/versão/secret
+# Liveness (sem DB): 200
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3001/health        # 200
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3001/health/live   # 200
+curl -s http://localhost:3001/health     # {status:'ok',service,timestamp} — sem env/versão/secret
+
+# Readiness (select 1 leve): 200 com DB up
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3001/health/ready  # 200
+curl -s http://localhost:3001/health/ready
+# -> {"status":"ready",...,"checks":{"database":"ok"}}
+
+# Readiness com DB fora -> 503, em ~HEALTH_READY_DB_TIMEOUT_MS (default 2000),
+# sem stack/DATABASE_URL. Teste SEM parar o Postgres compartilhado: subir uma
+# instância efêmera apontando DATABASE_URL para um host inalcançável:
+cd backend
+BACKEND_PORT=3011 DATABASE_URL='postgresql://u:p@10.255.255.1:5432/db' \
+  JWT_SECRET="$(openssl rand -hex 32)" pnpm exec tsx src/server.ts &
+sleep 3
+curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" http://localhost:3011/health/ready  # 503 ~2s
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3011/health                       # 200 (liveness)
+# encerrar a instância efêmera: kill o LISTENER (não só o wrapper pnpm) —
+# pgrep -af 'tsx src/server.ts' e mate o PID do node/MainThread em :3011.
 ```
 
 ## Backup/restore local com Restic (Sprint 3.5) — LOCAL/DEV, sem offsite
