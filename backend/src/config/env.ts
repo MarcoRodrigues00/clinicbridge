@@ -115,6 +115,11 @@ const EnvSchema = z.object({
   REDIS_PREFIX: z.string().default('clinicbridge:ratelimit:'),
   // How long to wait for the initial Redis connection before failing startup.
   RATE_LIMIT_REDIS_CONNECT_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+
+  // Readiness probe (Sprint 3.7). Max time the GET /health/ready DB check waits
+  // before reporting the database as not ready. Kept short so an orchestrator/
+  // proxy gets a fast 503 instead of hanging on knex's long acquire timeout.
+  HEALTH_READY_DB_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
 }).superRefine((val, ctx) => {
   if (val.RATE_LIMIT_STORE === 'redis' && !val.REDIS_URL) {
     ctx.addIssue({

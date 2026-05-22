@@ -63,8 +63,8 @@ fases: `docs/roadmap-next-phase.md`.
   (3.4) e **local implementado + restore drill validado (3.5)** — scripts em
   `scripts/` + runbook; falta **offsite/produção**; deploy seguro com **baseline
   auditada + checklist (3.6 — `docs/deploy-security-checklist.md` + ADR 0004;
-  guardas de produção no env.ts/app.ts)**; falta deploy real (HTTPS/proxy/secrets
-  manager).
+  guardas de produção no env.ts/app.ts)** + **readiness `/health/ready` (3.7)**;
+  falta deploy real (HTTPS/proxy/secrets manager).
 - **P2:** limpeza real de arquivos (confirmação/soft-delete/quarentena/auditoria/
   idempotência/lock); paginação de duplicados; export streaming/assíncrono;
   rate limit dedicado em GETs leves se necessário.

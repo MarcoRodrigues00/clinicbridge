@@ -7,7 +7,16 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.6** — produção/governança: **revisão de deploy seguro + CORS + env de
+**Sprint 3.7** — produção/governança: **readiness endpoint** para deploy futuro.
+`GET /health` + alias `GET /health/live` (liveness, inalterado no formato);
+`GET /health/ready` faz `select 1` leve no pool knex com timeout curto
+(`HEALTH_READY_DB_TIMEOUT_MS`, default 2000) → **200** `database:ok` / **503**
+`database:error`. Sem auth, sem PII, sem `audit_logs`; nunca vaza
+`DATABASE_URL`/erro bruto/stack/SQL. Só backend (`routes/health.ts`, `config/env.ts`)
++ `.env.example` + docs; sem migration/schema; sem frontend; sem commit.
+typecheck+build OK; testado: DB up → 200, DB inalcançável → 503 em ~2s.
+
+**Sprint anterior: 3.6** — produção/governança: **revisão de deploy seguro + CORS + env de
 produção**. Auditoria de env/CORS/Helmet/trust proxy/rate limit/secrets/compose/
 health; criados `docs/deploy-security-checklist.md` + ADR
 `docs/adr/0004-deploy-security-baseline.md`. Pequenos hardenings **só de produção**
@@ -86,6 +95,8 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
   (memory/redis) para preparar produção/escala horizontal (Sprint 3.2)
 - Backup/restore **local/dev** com Restic: scripts em `scripts/` + runbook;
   restore drill validado em banco separado (Sprint 3.5) — **sem offsite**
+- Healthcheck: `GET /health` + `GET /health/live` (liveness) e `GET /health/ready`
+  (readiness com `select 1` leve + timeout; 200/503; sem vazar nada) (Sprint 3.7)
 - Tabela `patients` criada e populável; `import_sessions` com recibo persistido
 - Frontend: UploadPanel, ImportPreviewPanel, ValidationReport, ImportSessionsList (com DryRunSection, ImportExecutionSection, ImportReceipt embutidos), PatientsList (com exportação CSV/XLSX), DuplicatesList, ImportFileRetentionPanel
 
@@ -146,7 +157,8 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
   **(Sprint 3.3, docs-only)**, estratégia de backup/restore Restic-first
   **(Sprint 3.4, docs-only)**, backup/restore **local** + restore drill validado
   **(Sprint 3.5)**, baseline de deploy seguro + revisão de CORS/env prod
-  **(Sprint 3.6)**; restantes: **deploy real** (HTTPS/reverse proxy, secrets
+  **(Sprint 3.6)**, readiness endpoint `/health/ready` **(Sprint 3.7)**;
+  restantes: **deploy real** (HTTPS/reverse proxy, secrets
   manager, banco/Redis gerenciados, monitoramento), provisionar Redis/proxy de
   produção, **validação jurídica** da política de retenção, **offsite/produção**
   do backup (destino, gestão de chave, agendamento, monitoramento)

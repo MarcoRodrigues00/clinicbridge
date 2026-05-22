@@ -37,8 +37,9 @@ Objetivo: tornar a base administrativa apta a produção, com governança real.
   monitoramento) e validação de ponta a ponta em produção;
 - deploy seguro (segredos, hardening de runtime, healthchecks) — **baseline
   auditada + checklist (Sprint 3.6): `docs/deploy-security-checklist.md` + ADR
-  0004**; pendente: deploy real (HTTPS/reverse proxy, secrets manager, banco/Redis
-  gerenciados, monitoramento);
+  0004**; **readiness `/health/ready` + liveness `/health`/`/health/live`
+  implementados (Sprint 3.7)**; pendente: deploy real (HTTPS/reverse proxy, secrets
+  manager, banco/Redis gerenciados, monitoramento);
 - revisão de CORS/env de produção (`FRONTEND_ORIGIN` sem `*`) — **feita (Sprint
   3.6)**: guardas de placeholder (`JWT_SECRET`/`DATABASE_URL`) + warning de
   `RATE_LIMIT_STORE=memory` em produção;
