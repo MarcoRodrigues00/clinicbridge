@@ -5,6 +5,7 @@
 > - **Histórico das sprints (1.5 → 2.26):** `docs/sprint-history.md`
 > - **Segurança detalhada + ressalvas P1/P2/P3:** `docs/security-notes.md`
 > - **Política de retenção e governança de dados:** `docs/data-retention-policy.md` (+ ADR `docs/adr/0002-data-retention-governance.md`)
+> - **Estratégia de backup/restore (Restic-first):** `docs/backup-restore-strategy.md` (+ ADR `docs/adr/0003-backup-restore-strategy.md`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
 > - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
 
@@ -56,8 +57,9 @@ fases: `docs/roadmap-next-phase.md`.
   limit~~ (feitos na Sprint 3.2; falta só provisionar Redis/proxy reais e setar
   `TRUST_PROXY`/`REDIS_URL` em prod); ~~requireRole/dono-admin~~ (Sprint 3.1);
   política técnica de retenção criada (Sprint 3.3 — `docs/data-retention-policy.md`
-  + ADR 0002; falta validação jurídica); backup/restore; deploy seguro; revisão de
-  CORS/env de produção.
+  + ADR 0002; falta validação jurídica); backup/restore com estratégia decidida
+  (Sprint 3.4 — Restic-first; ADR 0003; falta implementar local/dev + restore
+  drill → offsite); deploy seguro; revisão de CORS/env de produção.
 - **P2:** limpeza real de arquivos (confirmação/soft-delete/quarentena/auditoria/
   idempotência/lock); paginação de duplicados; export streaming/assíncrono;
   rate limit dedicado em GETs leves se necessário.
