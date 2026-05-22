@@ -141,6 +141,27 @@
   ser revisado juridicamente antes de produção**; não afirma conformidade
   completa com LGPD/HIPAA/CFM. O produto **não** está pronto para produção.
 
+## Backup e restore (estratégia — Sprint 3.4)
+
+- **Documento principal:** `docs/backup-restore-strategy.md`; **decisão:** ADR
+  `docs/adr/0003-backup-restore-strategy.md`.
+- **Decisão:** **Restic-first** no MVP (repo cifrado por padrão, dedup, snapshots,
+  local+offsite, restore testável); **Bacula** fica como opção futura enterprise.
+- **Estado atual:** **não há backup** — a Sprint 3.4 é docs-only (sem scripts,
+  cron, secrets, repositório ou backups reais).
+- **O que proteger:** PostgreSQL (inclui PII) + storage de uploads (PII). **Redis**
+  é efêmero (não precisa). **Segredos** (`.env`/`JWT_SECRET`) tratados à parte —
+  nunca no backup em texto puro.
+- **Backups conteriam PII** → exigem cifragem em repouso e gestão segura da chave
+  (perda da chave = backup irrecuperável).
+- **Restore drill obrigatório:** backup sem restore testado não é confiável. A
+  implementação futura deve começar **em local/dev com restore drill validado**,
+  **antes** de qualquer storage externo/offsite.
+- **Liga ao ADR 0002:** a limpeza real de arquivos só é destravada após
+  backup/restore validado (critério #10).
+- **Sem promessa de compliance:** prazos/retenção de backups e offsite dependem de
+  validação jurídica. Não afirma produção pronta.
+
 ## Limites intencionais (MVP)
 
 - `IMPORT_MAX_ROWS=100` — limite conservador intencional para MVP.
@@ -162,7 +183,9 @@
 - política LGPD de retenção: **política técnica inicial criada na Sprint 3.3**
   (`docs/data-retention-policy.md` + ADR 0002). Resta: **validação jurídica** de
   prazos/base legal/fluxos do titular e a limpeza real futura (com salvaguardas)
-- backup / restore
+- backup / restore: **estratégia decidida na Sprint 3.4** (Restic-first; ADR 0003
+  + `docs/backup-restore-strategy.md`). Resta **implementar** (local/dev + restore
+  drill primeiro, depois offsite) e validar de ponta a ponta
 - deploy seguro
 - revisão de CORS/env de produção (`FRONTEND_ORIGIN` sem `*`)
 

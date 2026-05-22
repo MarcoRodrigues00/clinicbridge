@@ -7,7 +7,17 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.3** — produção/governança (docs-only): criada a **política técnica de
+**Sprint 3.4** — produção/governança (docs-only): definida a **estratégia de
+backup/restore** — **Restic-first** no MVP, **Bacula** como opção futura
+enterprise. Criados `docs/backup-restore-strategy.md` + ADR
+`docs/adr/0003-backup-restore-strategy.md`. **Nada de backup implementado** (sem
+scripts/cron/secrets/repositório/dumps). Proteger: PostgreSQL + storage (PII);
+Redis é efêmero; segredos tratados à parte. Implementação futura deve começar em
+**local/dev com restore drill**, antes de qualquer offsite. Liga ao ADR 0002:
+limpeza real só após backup validado. Sem alterar backend/frontend/banco/compose;
+sem migration.
+
+**Sprint anterior: 3.3** — produção/governança (docs-only): criada a **política técnica de
 retenção e governança de dados** (`docs/data-retention-policy.md`, com matriz de
 retenção) + ADR `docs/adr/0002-data-retention-governance.md` ("dry-run first,
 deletion later"). **Nenhuma limpeza real implementada**, nenhum endpoint/botão de
@@ -110,9 +120,10 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
 
 - Fase 3 (produção/governança): requireRole/dono-admin **(Sprint 3.1)**, trust
   proxy + Redis/shared store **(Sprint 3.2)**, política técnica de retenção
-  **(Sprint 3.3, docs-only)**; restantes: provisionar Redis/proxy de produção,
-  **validação jurídica** da política de retenção, backup/restore, deploy seguro,
-  revisão de CORS/env prod
+  **(Sprint 3.3, docs-only)**, estratégia de backup/restore Restic-first
+  **(Sprint 3.4, docs-only)**; restantes: provisionar Redis/proxy de produção,
+  **validação jurídica** da política de retenção, **implementar** backup/restore
+  (local/dev + restore drill → offsite), deploy seguro, revisão de CORS/env prod
 - Download assinado de arquivos de importação (só se houver caso de uso real)
 - LGPD: endpoint de exportação e exclusão de dados por clínica
 - Limpeza real de arquivos (com confirmação/soft-delete/quarentena/auditoria)
