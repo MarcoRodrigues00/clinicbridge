@@ -4,6 +4,7 @@
 > - **Estado detalhado / invariantes:** `docs/project-state.md`
 > - **Histórico das sprints (1.5 → 2.26):** `docs/sprint-history.md`
 > - **Segurança detalhada + ressalvas P1/P2/P3:** `docs/security-notes.md`
+> - **Política de retenção e governança de dados:** `docs/data-retention-policy.md` (+ ADR `docs/adr/0002-data-retention-governance.md`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
 > - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
 
@@ -54,8 +55,9 @@ fases: `docs/roadmap-next-phase.md`.
 - **P1 (antes de produção):** ~~trust proxy~~ + ~~Redis/shared store p/ rate
   limit~~ (feitos na Sprint 3.2; falta só provisionar Redis/proxy reais e setar
   `TRUST_PROXY`/`REDIS_URL` em prod); ~~requireRole/dono-admin~~ (Sprint 3.1);
-  política LGPD de retenção; backup/restore; deploy seguro; revisão de CORS/env
-  de produção.
+  política técnica de retenção criada (Sprint 3.3 — `docs/data-retention-policy.md`
+  + ADR 0002; falta validação jurídica); backup/restore; deploy seguro; revisão de
+  CORS/env de produção.
 - **P2:** limpeza real de arquivos (confirmação/soft-delete/quarentena/auditoria/
   idempotência/lock); paginação de duplicados; export streaming/assíncrono;
   rate limit dedicado em GETs leves se necessário.
@@ -85,7 +87,8 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
   aleatório, SHA-256.
 - **Retenção:** ainda é **dry-run** — NÃO apaga nada. Limpeza real é futura e
   exige confirmação/auditoria/soft-delete/quarentena. O painel não tem botão
-  destrutivo/download.
+  destrutivo/download. Política técnica em `docs/data-retention-policy.md` (ADR
+  0002); limpeza real continua **fora do escopo atual**.
 - **Export:** read-only; neutraliza formula injection (`= + - @`) em CSV e XLSX;
   `Content-Disposition` com filename fixo; sem signed URL.
 - **Rate limit:** por grupo, IP-keyed, roda antes de `requireAuth`; 429 genérico.

@@ -7,7 +7,15 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.2** — produção/governança: `TRUST_PROXY` configurável + store de rate
+**Sprint 3.3** — produção/governança (docs-only): criada a **política técnica de
+retenção e governança de dados** (`docs/data-retention-policy.md`, com matriz de
+retenção) + ADR `docs/adr/0002-data-retention-governance.md` ("dry-run first,
+deletion later"). **Nenhuma limpeza real implementada**, nenhum endpoint/botão de
+delete, nenhum dado clínico. Sem alterar backend/frontend/banco; sem migration.
+Retenção continua **dry-run**. Próxima etapa possível: backup/restore ou deploy
+seguro — **não** a limpeza real (ainda exige validação jurídica + salvaguardas).
+
+**Sprint anterior: 3.2** — produção/governança: `TRUST_PROXY` configurável + store de rate
 limit compartilhado opcional (`RATE_LIMIT_STORE=memory|redis`, via
 `rate-limit-redis`+`redis`). Default memory (dev intacto); redis falha-rápido no
 boot se não conectar. Redis opcional adicionado ao docker-compose. Só backend +
@@ -101,9 +109,10 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
 ## Próximos passos possíveis (Sprint 3+)
 
 - Fase 3 (produção/governança): requireRole/dono-admin **(Sprint 3.1)**, trust
-  proxy + Redis/shared store **(Sprint 3.2)**; restantes: provisionar Redis/proxy
-  de produção, política LGPD de retenção, backup/restore, deploy seguro, revisão
-  de CORS/env prod
+  proxy + Redis/shared store **(Sprint 3.2)**, política técnica de retenção
+  **(Sprint 3.3, docs-only)**; restantes: provisionar Redis/proxy de produção,
+  **validação jurídica** da política de retenção, backup/restore, deploy seguro,
+  revisão de CORS/env prod
 - Download assinado de arquivos de importação (só se houver caso de uso real)
 - LGPD: endpoint de exportação e exclusão de dados por clínica
 - Limpeza real de arquivos (com confirmação/soft-delete/quarentena/auditoria)
