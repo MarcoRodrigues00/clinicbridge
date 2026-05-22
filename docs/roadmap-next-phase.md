@@ -30,10 +30,11 @@ Objetivo: tornar a base administrativa apta a produção, com governança real.
 - política LGPD de retenção (prazos, base legal, fluxo) — **avançada (Sprint 3.3):
   política técnica inicial + ADR 0002 criadas** (`docs/data-retention-policy.md`);
   **pendente: validação jurídica** dos prazos/base legal e a limpeza real futura;
-- backup / restore (validado de ponta a ponta) — **estratégia decidida (Sprint
-  3.4, docs-only): Restic-first, Bacula como opção futura enterprise** (ADR 0003 +
-  `docs/backup-restore-strategy.md`); **pendente: implementar** (local/dev +
-  restore drill → offsite) e validar de ponta a ponta;
+- backup / restore (validado de ponta a ponta) — **estratégia decidida (3.4,
+  Restic-first; ADR 0003)** + **backup/restore local implementado e restore drill
+  validado (3.5)** (scripts em `scripts/` + `docs/backup-restore-local-runbook.md`);
+  **pendente: offsite/produção** (destino, gestão de chave, agendamento,
+  monitoramento) e validação de ponta a ponta em produção;
 - deploy seguro (segredos, hardening de runtime, healthchecks) — **pendente**;
 - revisão de CORS/env de produção (`FRONTEND_ORIGIN` sem `*`) — **pendente**;
 - signed URL para download de arquivos de importação **apenas se** houver caso de

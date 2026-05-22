@@ -211,6 +211,31 @@ aparece; em "Pacientes importados" os botões de export viram uma nota; no detal
 de uma revisão, mark-ready/importação viram nota (recibo e simulação seguem
 visíveis). Como owner, tudo aparece normalmente.
 
+## Backup/restore local com Restic (Sprint 3.5) — LOCAL/DEV, sem offsite
+
+Pré: `restic` instalado, Docker/Postgres de pé, `RESTIC_PASSWORD` exportada no
+shell (nunca em arquivo). Detalhe: `docs/backup-restore-local-runbook.md`.
+
+```bash
+export RESTIC_PASSWORD='dev-local-only-change-me'   # só no shell; não versionar
+./scripts/check-backup-env.sh        # restic/docker/pg_dump/pg_restore/.gitignore
+./scripts/backup-local-restic.sh     # pg_dump -Fc + storage -> snapshot Restic local
+./scripts/restore-local-restic.sh    # restaura em clinicbridge_restore_test e compara counts
+```
+
+Esperado:
+- `check` termina "Ambiente pronto..." (0 fail).
+- `backup` cria/usa `backups/restic-repo`, gera dump em `backups/work/`, salva snapshot.
+- `restore` recria **clinicbridge_restore_test** (nunca o principal) e imprime:
+  `patients`/`import_files`/`import_sessions` → main == restore (OK).
+- Banco principal **intacto**; `RESTORE_DB` é separado.
+- `git status --short` não mostra backups/dumps/repo Restic (tudo sob `backups/` ignorado).
+- Limpar banco de teste (opcional):
+  `docker exec clinicbridge-postgres psql -U clinicbridge -d postgres -c 'DROP DATABASE IF EXISTS "clinicbridge_restore_test";'`
+
+> Segurança: `RESTIC_PASSWORD` nunca em arquivo/docs; `backups/` e o repo Restic
+> (cifrado, com PII) são git-ignored; sem AWS/S3/offsite nesta fase.
+
 ## Responsividade mobile (Sprint 2.26)
 
 Testar `/app` no DevTools em 360, 390, 414 (iPhone XR), 430 e 768px e desktop:

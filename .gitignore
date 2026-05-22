@@ -49,10 +49,22 @@ temp/
 *.xlsb
 *.zip
 
-# --- Database dumps / backups ---
+# --- Database dumps / backups (NEVER commit dumps, backups or restic repos) ---
+# Sprint 3.5: local Restic backup/restore. Backups, dumps and the Restic
+# repository contain PII and a recovery key — they must never be versioned.
 *.dump
+*.pgdump
 *.sql
+*.sql.gz
+*.backup
+*.bak
+*.tar
+*.tar.gz
+*.restic
 backups/
+backup/
+restic-repo/
+.restic/
 
 # --- Docker local volumes ---
 .postgres-data/
