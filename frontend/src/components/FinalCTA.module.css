@@ -1,0 +1,106 @@
+.wrap {
+  position: relative;
+  isolation: isolate;
+  text-align: center;
+}
+
+.wrap::before {
+  content: '';
+  position: absolute;
+  inset: -30% 0 -10% 0;
+  background:
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(34, 211, 238, 0.18), transparent 70%),
+    radial-gradient(ellipse 60% 50% at 50% 60%, rgba(20, 184, 166, 0.10), transparent 75%);
+  pointer-events: none;
+  z-index: -1;
+  filter: blur(20px);
+}
+
+.inner {
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.title {
+  font-size: clamp(1.85rem, 3.6vw, 2.85rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  margin-top: 0.85rem;
+  background: linear-gradient(180deg, #ffffff 0%, #b6c2d4 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subtitle {
+  color: var(--text-1);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 42rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.btnPrimary,
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.95rem 1.55rem;
+  border-radius: var(--r-md);
+  font-size: 0.98rem;
+  font-weight: 600;
+  transition: transform 0.18s ease, filter 0.18s ease, background 0.18s ease,
+    border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, #22d3ee 0%, #14b8a6 100%);
+  color: #03161a;
+  box-shadow:
+    0 12px 34px -10px rgba(34, 211, 238, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.btnPrimary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow:
+    0 18px 42px -12px rgba(34, 211, 238, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.btnGhost {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-0);
+}
+
+.btnGhost:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(120, 200, 230, 0.5);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 480px) {
+  .actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .btnPrimary,
+  .btnGhost {
+    width: 100%;
+  }
+}

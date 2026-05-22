@@ -1,0 +1,43 @@
+# ClinicBridge — local infrastructure.
+# PostgreSQL (always) + Redis (optional, for shared rate-limit store — Sprint 3.2).
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: clinicbridge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-clinicbridge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-locally}
+      POSTGRES_DB: ${POSTGRES_DB:-clinicbridge}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - clinicbridge_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clinicbridge} -d ${POSTGRES_DB:-clinicbridge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis — OPTIONAL shared store for rate limiting (Sprint 3.2).
+  # Only needed when the backend runs with RATE_LIMIT_STORE=redis. In the default
+  # local setup (RATE_LIMIT_STORE=memory) the backend ignores Redis entirely, so
+  # this service is safe to leave running or stopped. Bound to 127.0.0.1 so it is
+  # not exposed beyond the host. Future async parsing (BullMQ) can reuse it.
+  redis:
+    image: redis:7-alpine
+    container_name: clinicbridge-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  clinicbridge_postgres_data:
+    name: clinicbridge_postgres_data

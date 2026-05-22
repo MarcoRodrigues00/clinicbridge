@@ -1,0 +1,35 @@
+.footer {
+  padding: 3rem var(--gutter) 2.5rem;
+  border-top: 1px solid rgba(120, 200, 230, 0.08);
+  background: linear-gradient(180deg, transparent, rgba(5, 7, 13, 0.6));
+}
+
+.inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+}
+
+.note {
+  font-size: 0.86rem;
+  color: var(--text-2);
+  max-width: 32rem;
+  line-height: 1.55;
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-3);
+}
