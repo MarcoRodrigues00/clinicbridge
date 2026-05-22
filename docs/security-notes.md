@@ -200,6 +200,25 @@
 - **docker-compose:** é **local/dev**, não produção (ver `docs/deploy-security-checklist.md` §14).
 - **Sem promessa:** não afirma produção pronta nem compliance completo.
 
+## Edge security — Nginx reverse proxy + WAF (estratégia, Sprint 3.8)
+
+- **Documento:** `docs/edge-security-strategy.md`; **decisão:** ADR
+  `docs/adr/0005-edge-security-reverse-proxy-waf.md`. **Docs/ADR-first — nada de
+  borda implementado** (sem Nginx/`nginx.conf`/TLS/WAF; sem alterar compose).
+- **Decisão:** **Nginx** reverse proxy baseline (Caddy/Traefik avaliados, não
+  escolhidos). TLS termina no Nginx; backend continua **HTTP interno**, **não**
+  exposto direto na internet.
+- **WAF futuro:** ModSecurity + OWASP CRS, começando em **detection-only/log-only**;
+  blocking só após tuning por rota (upload/import/export/auth) — alto risco de
+  falso positivo em CSV/XLSX, JSON de mapeamento, acentos e JWT no header.
+- **Integrações:** `TRUST_PROXY` = hop count real do Nginx (IP real p/ rate
+  limit/audit); `FRONTEND_ORIGIN` = domínio HTTPS real (CORS continua no app);
+  `client_max_body_size` ≥ `UPLOAD_MAX_BYTES` (5 MB); logs de borda sem corpo/
+  `Authorization`/`Cookie`/PII; `/health/live` (liveness) e `/health/ready`
+  (readiness) atrás do proxy.
+- **WAF não substitui:** `requireAuth`/`requireClinic`/`requireRole`, rate limit do
+  app, validação por magic bytes, CPF mascarado, CORS, errorHandler seguro.
+
 ## Limites intencionais (MVP)
 
 - `IMPORT_MAX_ROWS=100` — limite conservador intencional para MVP.

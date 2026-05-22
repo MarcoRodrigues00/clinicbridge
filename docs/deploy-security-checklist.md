@@ -66,14 +66,25 @@ Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passaria no `min(48)`.
   `https://app.clinicbridge.com.br` (HTTPS, sem barra final).
 - **Nunca** usar `*` com `credentials: true`.
 
-## 5. HTTPS / reverse proxy
+## 5. HTTPS / reverse proxy + WAF (estratégia)
 
-- **Requisito de produção (ainda não implementado):** TLS terminado em um reverse
-  proxy (Nginx/Traefik/Cloudflare) à frente da API; a API não serve TLS sozinha.
-- HSTS (via Helmet) só tem efeito sob HTTPS — depende do proxy/domínio.
-- Redirecionar HTTP→HTTPS no proxy; não expor a API em texto claro publicamente.
-- **Fora do escopo desta sprint:** certificado, domínio e configuração real do
-  proxy (apenas requisito documentado).
+- **Decisão (Sprint 3.8):** **Nginx** como reverse proxy baseline; WAF futuro com
+  **ModSecurity + OWASP CRS** em **detection-only first**. Detalhe:
+  `docs/edge-security-strategy.md` + ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`.
+  **Ainda NÃO implementado** (sem Nginx/`nginx.conf`/TLS/WAF nesta fase).
+- **Requisito de produção:** TLS termina no **Nginx**; o backend Express fica HTTP
+  interno e **não** é exposto direto na internet. Caddy/Traefik avaliados e não
+  escolhidos (ver ADR 0005).
+- HSTS (via Helmet) só tem efeito sob HTTPS; HTTP **redireciona** para HTTPS.
+- **`client_max_body_size`** do Nginx deve ser ≥ `UPLOAD_MAX_BYTES` (5 MB) — senão
+  corta uploads válidos com 413 antes do app (JSON segue limitado a 100kb no Express).
+- **`TRUST_PROXY`** = hop count real do Nginx; Nginx seta `X-Real-IP`/`X-Forwarded-For`.
+- **CORS** continua no backend (`FRONTEND_ORIGIN` HTTPS real; Nginx não emite CORS).
+- **WAF staged:** detection-only/log-only → tuning por rota (upload/import/export/
+  auth) → blocking gradual. WAF **não** substitui auth/role/rate limit/validação.
+- Logs do Nginx sem corpo, sem `Authorization`/`Cookie`, sem PII.
+- **Fora do escopo desta fase:** certificado, domínio, `nginx.conf` real,
+  ModSecurity e deploy real (apenas estratégia/ADR documentados).
 
 ## 6. Trust proxy
 

@@ -8,6 +8,7 @@
 > - **Estratégia de backup/restore (Restic-first):** `docs/backup-restore-strategy.md` (+ ADR `docs/adr/0003-backup-restore-strategy.md`)
 > - **Runbook backup/restore local (scripts em `scripts/`):** `docs/backup-restore-local-runbook.md`
 > - **Checklist de deploy seguro / CORS / env prod:** `docs/deploy-security-checklist.md` (+ ADR `docs/adr/0004-deploy-security-baseline.md`)
+> - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
 > - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
 
@@ -63,8 +64,9 @@ fases: `docs/roadmap-next-phase.md`.
   (3.4) e **local implementado + restore drill validado (3.5)** — scripts em
   `scripts/` + runbook; falta **offsite/produção**; deploy seguro com **baseline
   auditada + checklist (3.6 — `docs/deploy-security-checklist.md` + ADR 0004;
-  guardas de produção no env.ts/app.ts)** + **readiness `/health/ready` (3.7)**;
-  falta deploy real (HTTPS/proxy/secrets manager).
+  guardas de produção no env.ts/app.ts)** + **readiness `/health/ready` (3.7)** +
+  **estratégia de borda Nginx + WAF decidida (3.8 — ADR 0005)**; falta implementar
+  Nginx/WAF e o deploy real (HTTPS/proxy/secrets manager).
 - **P2:** limpeza real de arquivos (confirmação/soft-delete/quarentena/auditoria/
   idempotência/lock); paginação de duplicados; export streaming/assíncrono;
   rate limit dedicado em GETs leves se necessário.

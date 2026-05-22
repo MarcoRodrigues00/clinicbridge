@@ -7,7 +7,17 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.7** — produção/governança: **readiness endpoint** para deploy futuro.
+**Sprint 3.8** — produção/governança (docs/ADR-first): **estratégia de borda
+segura** — **Nginx** reverse proxy baseline + **WAF futuro (ModSecurity + OWASP
+CRS) em detection-only first**. Criados `docs/edge-security-strategy.md` + ADR
+`docs/adr/0005-edge-security-reverse-proxy-waf.md`. TLS termina no Nginx; backend
+continua HTTP interno, não exposto direto; `TRUST_PROXY`=hop count real;
+`FRONTEND_ORIGIN`=domínio HTTPS; `client_max_body_size` ≥ `UPLOAD_MAX_BYTES`; logs
+de borda sem PII. Caddy/Traefik avaliados e não escolhidos. **Nada de borda
+implementado** (sem Nginx/`nginx.conf`/TLS/WAF; sem alterar compose/backend/banco;
+sem migration; sem commit).
+
+**Sprint anterior: 3.7** — produção/governança: **readiness endpoint** para deploy futuro.
 `GET /health` + alias `GET /health/live` (liveness, inalterado no formato);
 `GET /health/ready` faz `select 1` leve no pool knex com timeout curto
 (`HEALTH_READY_DB_TIMEOUT_MS`, default 2000) → **200** `database:ok` / **503**
@@ -157,8 +167,10 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
   **(Sprint 3.3, docs-only)**, estratégia de backup/restore Restic-first
   **(Sprint 3.4, docs-only)**, backup/restore **local** + restore drill validado
   **(Sprint 3.5)**, baseline de deploy seguro + revisão de CORS/env prod
-  **(Sprint 3.6)**, readiness endpoint `/health/ready` **(Sprint 3.7)**;
-  restantes: **deploy real** (HTTPS/reverse proxy, secrets
+  **(Sprint 3.6)**, readiness endpoint `/health/ready` **(Sprint 3.7)**,
+  estratégia de borda Nginx + WAF **(Sprint 3.8, docs/ADR-first)**;
+  restantes: **implementar Nginx reverse proxy** (TLS, body size, IP real, logs) e
+  depois **WAF** (detection-only → blocking), **deploy real** (HTTPS/reverse proxy, secrets
   manager, banco/Redis gerenciados, monitoramento), provisionar Redis/proxy de
   produção, **validação jurídica** da política de retenção, **offsite/produção**
   do backup (destino, gestão de chave, agendamento, monitoramento)
