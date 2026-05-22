@@ -22,13 +22,17 @@
 Objetivo: tornar a base administrativa apta a produção, com governança real.
 
 - `requireRole` / gating dono-admin nos endpoints administrativos sensíveis
-  (inclui retenção e, futuramente, limpeza real);
-- trust proxy configurado (IP correto atrás de proxy para rate limit/logs);
-- Redis / shared store para rate limit (substituir o store em memória do MVP);
-- política LGPD de retenção (prazos, base legal, fluxo);
-- backup / restore (validado de ponta a ponta);
-- deploy seguro (segredos, hardening de runtime, healthchecks);
-- revisão de CORS/env de produção (`FRONTEND_ORIGIN` sem `*`);
+  (inclui retenção e, futuramente, limpeza real) — **feito (Sprint 3.1)**;
+- trust proxy configurado (IP correto atrás de proxy para rate limit/logs) —
+  **feito (Sprint 3.2)**;
+- Redis / shared store para rate limit (substituir o store em memória do MVP) —
+  **feito (Sprint 3.2)**;
+- política LGPD de retenção (prazos, base legal, fluxo) — **avançada (Sprint 3.3):
+  política técnica inicial + ADR 0002 criadas** (`docs/data-retention-policy.md`);
+  **pendente: validação jurídica** dos prazos/base legal e a limpeza real futura;
+- backup / restore (validado de ponta a ponta) — **pendente**;
+- deploy seguro (segredos, hardening de runtime, healthchecks) — **pendente**;
+- revisão de CORS/env de produção (`FRONTEND_ORIGIN` sem `*`) — **pendente**;
 - signed URL para download de arquivos de importação **apenas se** houver caso de
   uso real (não implementar especulativamente).
 

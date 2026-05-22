@@ -124,6 +124,23 @@
 - O painel frontend (Sprint 2.26) é só visualização: sem botão de apagar/limpar/excluir, sem download.
 - **Limpeza real é futura** e exige confirmação/auditoria/soft-delete/quarentena (ver P2).
 
+## Política de retenção e governança de dados (Sprint 3.3)
+
+- **Documento principal:** `docs/data-retention-policy.md` (princípios, tipos de
+  dado tratados/fora de escopo, matriz de retenção, requisitos para limpeza real,
+  o que precisa de validação jurídica).
+- **Decisão:** ADR `docs/adr/0002-data-retention-governance.md` ("dry-run first,
+  deletion later").
+- **Estado atual:** a retenção é **dry-run** — nada é apagado. Não há endpoint de
+  delete, job/cron, botão destrutivo nem signed URL.
+- **Limpeza real futura** exige (todos): `dono_clinica`, confirmação explícita,
+  soft-delete/quarentena antes da remoção física, auditoria por arquivo,
+  idempotência, lock se virar job, coordenação banco+storage, logs sem PII,
+  política de prazos validada e backup/restore validado.
+- **Sem promessa de compliance:** o documento é rascunho técnico inicial e **deve
+  ser revisado juridicamente antes de produção**; não afirma conformidade
+  completa com LGPD/HIPAA/CFM. O produto **não** está pronto para produção.
+
 ## Limites intencionais (MVP)
 
 - `IMPORT_MAX_ROWS=100` — limite conservador intencional para MVP.
@@ -142,7 +159,9 @@
 - ~~`requireRole` / gating dono-admin para endpoints administrativos sensíveis~~
   **feito na Sprint 3.1** (ver seção "Autorização por papel"). Resta: gestão de
   usuários/papéis e mitigação do papel stale quando isso existir.
-- política LGPD de retenção (definir prazos, base legal, fluxo)
+- política LGPD de retenção: **política técnica inicial criada na Sprint 3.3**
+  (`docs/data-retention-policy.md` + ADR 0002). Resta: **validação jurídica** de
+  prazos/base legal/fluxos do titular e a limpeza real futura (com salvaguardas)
 - backup / restore
 - deploy seguro
 - revisão de CORS/env de produção (`FRONTEND_ORIGIN` sem `*`)
