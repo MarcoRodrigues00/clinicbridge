@@ -7,7 +7,20 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.8** — produção/governança (docs/ADR-first): **estratégia de borda
+**Sprint 3.9** — produção/governança: **Nginx reverse proxy local/staging
+implementado** (sem WAF, sem TLS real, sem domínio). `infra/nginx/` (nginx.conf +
+conf.d) + serviço `nginx` opcional no compose (profile `edge`, 127.0.0.1:8080) →
+upstream `host.docker.internal:3001`; `client_max_body_size 10m` (≥
+`UPLOAD_MAX_BYTES`); headers `X-Real-IP`/`X-Forwarded-For` com anti-spoof
+(overwrite); logs sem `Authorization`/`Cookie`/corpo. Runbook
+`docs/nginx-local-staging-runbook.md`. Verificado: `nginx -t` OK, compose up,
+proxy+headers+anti-spoof comprovados via upstream de eco. **Limitação conhecida:**
+neste host (Docker Desktop + WSL2) o container não alcança o backend da distro WSL
+em :3001 (502) — config correta; funciona com backend alcançável pelo host do
+Docker (Linux nativo/staging/containerizado). Sem migration/schema; sem WAF/TLS/
+domínio/AWS/Cloudflare; `.env` real intocado; sem commit.
+
+**Sprint anterior: 3.8** — produção/governança (docs/ADR-first): **estratégia de borda
 segura** — **Nginx** reverse proxy baseline + **WAF futuro (ModSecurity + OWASP
 CRS) em detection-only first**. Criados `docs/edge-security-strategy.md` + ADR
 `docs/adr/0005-edge-security-reverse-proxy-waf.md`. TLS termina no Nginx; backend
@@ -107,6 +120,9 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
   restore drill validado em banco separado (Sprint 3.5) — **sem offsite**
 - Healthcheck: `GET /health` + `GET /health/live` (liveness) e `GET /health/ready`
   (readiness com `select 1` leve + timeout; 200/503; sem vazar nada) (Sprint 3.7)
+- Nginx reverse proxy **local/staging** (`infra/nginx/` + serviço opcional no
+  compose, profile `edge`): body size, IP real (anti-spoof), logs sem PII — sem
+  TLS/WAF (Sprint 3.9)
 - Tabela `patients` criada e populável; `import_sessions` com recibo persistido
 - Frontend: UploadPanel, ImportPreviewPanel, ValidationReport, ImportSessionsList (com DryRunSection, ImportExecutionSection, ImportReceipt embutidos), PatientsList (com exportação CSV/XLSX), DuplicatesList, ImportFileRetentionPanel
 
@@ -168,9 +184,10 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
   **(Sprint 3.4, docs-only)**, backup/restore **local** + restore drill validado
   **(Sprint 3.5)**, baseline de deploy seguro + revisão de CORS/env prod
   **(Sprint 3.6)**, readiness endpoint `/health/ready` **(Sprint 3.7)**,
-  estratégia de borda Nginx + WAF **(Sprint 3.8, docs/ADR-first)**;
-  restantes: **implementar Nginx reverse proxy** (TLS, body size, IP real, logs) e
-  depois **WAF** (detection-only → blocking), **deploy real** (HTTPS/reverse proxy, secrets
+  estratégia de borda Nginx + WAF **(Sprint 3.8, docs/ADR-first)**, Nginx reverse
+  proxy **local/staging** implementado **(Sprint 3.9)**; restantes: **TLS real**
+  (HTTP→HTTPS + HSTS), backend alcançável pelo host do Docker (ou containerizado),
+  **WAF** (detection-only → blocking), **deploy real** (HTTPS/reverse proxy, secrets
   manager, banco/Redis gerenciados, monitoramento), provisionar Redis/proxy de
   produção, **validação jurídica** da política de retenção, **offsite/produção**
   do backup (destino, gestão de chave, agendamento, monitoramento)

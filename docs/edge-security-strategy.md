@@ -16,8 +16,10 @@
 ## 1. Status e escopo
 
 - **Status:** rascunho técnico inicial; sujeito à definição do ambiente de produção.
-- **Escopo:** decidir e documentar a borda (reverse proxy + WAF) — **sem
-  implementar**. A implementação (Nginx/`nginx.conf`/TLS/WAF) é sprint futura.
+- **Escopo:** decidir e documentar a borda (reverse proxy + WAF). O **Nginx
+  reverse proxy local/staging foi implementado na Sprint 3.9** (`infra/nginx/` +
+  serviço `nginx` opcional no compose, profile `edge`; runbook
+  `docs/nginx-local-staging-runbook.md`). **TLS real e WAF continuam futuros.**
 - **Decisão central:** Nginx como reverse proxy baseline; WAF futuro com
   ModSecurity + OWASP CRS começando em **detection-only**.
 
@@ -185,11 +187,15 @@ OWASP CRS tende a marcar como suspeito conteúdo legítimo do ClinicBridge:
 
 ## 19. Próxima sprint recomendada
 
-**Sprint de implementação do Nginx reverse proxy (sem WAF blocking):** criar um
-`nginx.conf` de exemplo (marcado como local/staging), validar TLS local/staging,
-`TRUST_PROXY`, `client_max_body_size` ≥ `UPLOAD_MAX_BYTES`, IP real e logs sem PII;
-ligar `/health/live` e `/health/ready` no proxy. **WAF entra depois**, em
-detection-only, com tuning antes de qualquer blocking.
+**Feito na Sprint 3.9:** Nginx reverse proxy **local/staging** implementado
+(`infra/nginx/` + serviço `nginx` no compose, profile `edge`; `client_max_body_size`
+≥ `UPLOAD_MAX_BYTES`; headers `X-Real-IP`/`X-Forwarded-For` com anti-spoof; logs
+sem PII; runbook `docs/nginx-local-staging-runbook.md`). Sem TLS real/WAF.
+
+**Próximas:** (a) **TLS** (local self-signed/staging → produção real com
+HTTP→HTTPS + HSTS); (b) tornar o backend alcançável a partir do host do Docker
+(ou containerizá-lo) para o proxy funcionar ponta a ponta em todo ambiente;
+(c) **WAF** ModSecurity + OWASP CRS em detection-only, com tuning antes de blocking.
 
 ---
 

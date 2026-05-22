@@ -203,8 +203,15 @@
 ## Edge security — Nginx reverse proxy + WAF (estratégia, Sprint 3.8)
 
 - **Documento:** `docs/edge-security-strategy.md`; **decisão:** ADR
-  `docs/adr/0005-edge-security-reverse-proxy-waf.md`. **Docs/ADR-first — nada de
-  borda implementado** (sem Nginx/`nginx.conf`/TLS/WAF; sem alterar compose).
+  `docs/adr/0005-edge-security-reverse-proxy-waf.md`; **runbook local/staging:**
+  `docs/nginx-local-staging-runbook.md`.
+- **Implementado (Sprint 3.9, local/staging):** Nginx reverse proxy em
+  `infra/nginx/` + serviço `nginx` opcional no compose (profile `edge`,
+  127.0.0.1:8080). `client_max_body_size 10m` (≥ `UPLOAD_MAX_BYTES`); headers de
+  borda `X-Real-IP`/`X-Forwarded-For` **com anti-spoof** (Nginx sobrescreve o XFF
+  do cliente → comprovado: header chega como o IP real, não o forjado); logs sem
+  `Authorization`/`Cookie`/corpo; backend atrás do proxy usa `TRUST_PROXY=1`.
+  **Ainda SEM TLS real, domínio ou WAF.**
 - **Decisão:** **Nginx** reverse proxy baseline (Caddy/Traefik avaliados, não
   escolhidos). TLS termina no Nginx; backend continua **HTTP interno**, **não**
   exposto direto na internet.

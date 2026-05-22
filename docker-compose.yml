@@ -38,6 +38,29 @@ services:
       timeout: 5s
       retries: 5
 
+  # Nginx reverse proxy — OPTIONAL, LOCAL/STAGING only (Sprint 3.9).
+  # Opt-in via the "edge" profile so a plain `docker compose up -d` never starts
+  # it: `docker compose --profile edge up -d nginx`. NO TLS, NO domain, NO WAF
+  # here (those are future). Proxies to the HOST-run backend (:3001) through
+  # host.docker.internal. Bound to 127.0.0.1 so it isn't exposed beyond the host.
+  # Config + details: infra/nginx/ and docs/nginx-local-staging-runbook.md.
+  nginx:
+    image: nginx:alpine
+    container_name: clinicbridge-nginx
+    profiles: ["edge"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${NGINX_PORT:-8080}:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+    extra_hosts:
+      # Lets the container resolve the host-run backend on Linux/WSL Docker.
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
+      - redis
+
 volumes:
   clinicbridge_postgres_data:
     name: clinicbridge_postgres_data
