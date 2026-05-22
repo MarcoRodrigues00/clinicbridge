@@ -141,24 +141,30 @@
   ser revisado juridicamente antes de produção**; não afirma conformidade
   completa com LGPD/HIPAA/CFM. O produto **não** está pronto para produção.
 
-## Backup e restore (estratégia — Sprint 3.4)
+## Backup e restore (estratégia 3.4 + implementação local 3.5)
 
-- **Documento principal:** `docs/backup-restore-strategy.md`; **decisão:** ADR
-  `docs/adr/0003-backup-restore-strategy.md`.
-- **Decisão:** **Restic-first** no MVP (repo cifrado por padrão, dedup, snapshots,
-  local+offsite, restore testável); **Bacula** fica como opção futura enterprise.
-- **Estado atual:** **não há backup** — a Sprint 3.4 é docs-only (sem scripts,
-  cron, secrets, repositório ou backups reais).
-- **O que proteger:** PostgreSQL (inclui PII) + storage de uploads (PII). **Redis**
-  é efêmero (não precisa). **Segredos** (`.env`/`JWT_SECRET`) tratados à parte —
-  nunca no backup em texto puro.
-- **Backups conteriam PII** → exigem cifragem em repouso e gestão segura da chave
-  (perda da chave = backup irrecuperável).
-- **Restore drill obrigatório:** backup sem restore testado não é confiável. A
-  implementação futura deve começar **em local/dev com restore drill validado**,
-  **antes** de qualquer storage externo/offsite.
+- **Estratégia/decisão:** `docs/backup-restore-strategy.md` + ADR
+  `docs/adr/0003-backup-restore-strategy.md` (**Restic-first**; Bacula como opção
+  futura enterprise). **Runbook operacional local:** `docs/backup-restore-local-runbook.md`.
+- **Estado atual (Sprint 3.5):** backup/restore **local/dev implementado** com
+  Restic — scripts em `scripts/` (`check-backup-env.sh`, `backup-local-restic.sh`,
+  `restore-local-restic.sh`). **Restore drill validado**: restore em banco
+  **separado** (`clinicbridge_restore_test`), counts batendo com o principal
+  (patients/import_files/import_sessions) e banco principal **intacto**.
+  **Offsite/produção continuam pendentes** (sem AWS/S3/Backblaze/MinIO).
+- **O que é protegido:** PostgreSQL (PII) via `pg_dump -Fc` + storage de uploads
+  (se existir). **Redis** é efêmero (não entra). **Segredos** (`.env`/`JWT_SECRET`/
+  `RESTIC_PASSWORD`) tratados à parte — **nunca** em arquivo versionado nem no
+  backup em texto puro.
+- **Segurança dos scripts:** `bash`+`set -euo pipefail`; sem senha/secret
+  hardcoded; `RESTIC_PASSWORD` só vem do ambiente (nunca impressa); restore
+  **aborta** se `RESTORE_DB == POSTGRES_DB` (protege o principal). `backups/` e o
+  repositório Restic são git-ignored (repo cifrado contém PII + chave).
+- **Chave do repo Restic:** perda da senha = backup **irrecuperável** — gestão de
+  chave em produção é processo próprio (pendente).
 - **Liga ao ADR 0002:** a limpeza real de arquivos só é destravada após
-  backup/restore validado (critério #10).
+  backup/restore validado de ponta a ponta (critério #10) — local validado;
+  produção/offsite ainda faltam.
 - **Sem promessa de compliance:** prazos/retenção de backups e offsite dependem de
   validação jurídica. Não afirma produção pronta.
 
@@ -183,9 +189,11 @@
 - política LGPD de retenção: **política técnica inicial criada na Sprint 3.3**
   (`docs/data-retention-policy.md` + ADR 0002). Resta: **validação jurídica** de
   prazos/base legal/fluxos do titular e a limpeza real futura (com salvaguardas)
-- backup / restore: **estratégia decidida na Sprint 3.4** (Restic-first; ADR 0003
-  + `docs/backup-restore-strategy.md`). Resta **implementar** (local/dev + restore
-  drill primeiro, depois offsite) e validar de ponta a ponta
+- backup / restore: **estratégia decidida (3.4)** + **backup/restore local
+  implementado e restore drill validado (3.5)** — Restic-first; ADR 0003 +
+  `docs/backup-restore-strategy.md` + runbook `docs/backup-restore-local-runbook.md`.
+  Resta **offsite/produção** (provisionar destino, gestão de chave, agendamento,
+  monitoramento) e validar de ponta a ponta em produção
 - deploy seguro
 - revisão de CORS/env de produção (`FRONTEND_ORIGIN` sem `*`)
 

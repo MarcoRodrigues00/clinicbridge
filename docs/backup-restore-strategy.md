@@ -23,9 +23,10 @@
   do ambiente de produção. Não é procedimento operacional validado.
 - **Escopo:** proteger os dados administrativos e artefatos do pipeline
   (PostgreSQL + storage de uploads) com backup cifrado e restore testável.
-- **Estado atual:** **não há backup.** Esta sprint apenas decide a ferramenta
-  (Restic) e registra requisitos; a implementação fica para uma sprint futura
-  dedicada.
+- **Estado atual:** backup/restore **local/dev implementado** com Restic na Sprint
+  3.5 (scripts em `scripts/`, runbook em `docs/backup-restore-local-runbook.md`);
+  restore drill validado em banco separado. **Offsite/produção continuam
+  pendentes.** A decisão da ferramenta (Restic) está no ADR 0003.
 - **Motivação:** backup/restore é P1 (antes de produção) e é **pré-requisito** da
   limpeza real de arquivos (critério #10 do ADR 0002).
 
@@ -149,10 +150,10 @@ para um cenário enterprise futuro.
 - O drill deve verificar: integridade do dump do Postgres, integridade do storage,
   e que a aplicação sobe sobre os dados restaurados (com os segredos
   reprovisionados).
-- **A próxima sprint (implementação) deve fazer o primeiro ciclo backup→restore
-  inteiramente em ambiente local/dev, com restore drill comprovado, ANTES de
-  configurar qualquer storage externo/offsite real.** Só depois desse ciclo
-  validado o offsite entra.
+- **O primeiro ciclo backup→restore foi feito inteiramente em local/dev na Sprint
+  3.5**, com restore drill comprovado (counts batendo, banco principal intacto) —
+  ver `docs/backup-restore-local-runbook.md`. **O offsite só entra depois desse
+  ciclo validado** (próxima etapa, ainda pendente).
 
 ## 11. Responsabilidades
 

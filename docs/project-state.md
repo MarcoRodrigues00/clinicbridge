@@ -7,7 +7,19 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.4** — produção/governança (docs-only): definida a **estratégia de
+**Sprint 3.5** — produção/governança: **backup/restore local implementado** com
+Restic (decisão da 3.4). Scripts em `scripts/` (`check-backup-env.sh`,
+`backup-local-restic.sh`, `restore-local-restic.sh`) + runbook
+`docs/backup-restore-local-runbook.md`. **Restore drill validado**: backup
+(`pg_dump -Fc` + storage se existir) → snapshot Restic local cifrado → restore em
+banco **separado** (`clinicbridge_restore_test`), counts batendo
+(patients=6/import_files=24/import_sessions=7) e banco principal **intacto**.
+**Sem offsite/AWS/S3.** Não alterou backend funcional/frontend/schema/dados do
+banco principal; sem migration; sem commit. `backups/`/repo Restic/dumps
+git-ignored; `RESTIC_PASSWORD` só no ambiente. Pendente: offsite/produção (destino,
+gestão de chave, agendamento, monitoramento).
+
+**Sprint anterior: 3.4** — produção/governança (docs-only): definida a **estratégia de
 backup/restore** — **Restic-first** no MVP, **Bacula** como opção futura
 enterprise. Criados `docs/backup-restore-strategy.md` + ADR
 `docs/adr/0003-backup-restore-strategy.md`. **Nada de backup implementado** (sem
@@ -63,6 +75,8 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
   (import real, mark-ready, export, retenção dry-run) — `dono_clinica` only (Sprint 3.1)
 - `TRUST_PROXY` configurável + rate limit com store compartilhado opcional
   (memory/redis) para preparar produção/escala horizontal (Sprint 3.2)
+- Backup/restore **local/dev** com Restic: scripts em `scripts/` + runbook;
+  restore drill validado em banco separado (Sprint 3.5) — **sem offsite**
 - Tabela `patients` criada e populável; `import_sessions` com recibo persistido
 - Frontend: UploadPanel, ImportPreviewPanel, ValidationReport, ImportSessionsList (com DryRunSection, ImportExecutionSection, ImportReceipt embutidos), PatientsList (com exportação CSV/XLSX), DuplicatesList, ImportFileRetentionPanel
 
@@ -121,9 +135,11 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
 - Fase 3 (produção/governança): requireRole/dono-admin **(Sprint 3.1)**, trust
   proxy + Redis/shared store **(Sprint 3.2)**, política técnica de retenção
   **(Sprint 3.3, docs-only)**, estratégia de backup/restore Restic-first
-  **(Sprint 3.4, docs-only)**; restantes: provisionar Redis/proxy de produção,
-  **validação jurídica** da política de retenção, **implementar** backup/restore
-  (local/dev + restore drill → offsite), deploy seguro, revisão de CORS/env prod
+  **(Sprint 3.4, docs-only)**, backup/restore **local** + restore drill validado
+  **(Sprint 3.5)**; restantes: provisionar Redis/proxy de produção, **validação
+  jurídica** da política de retenção, **offsite/produção** do backup (destino,
+  gestão de chave, agendamento, monitoramento), deploy seguro, revisão de CORS/env
+  prod
 - Download assinado de arquivos de importação (só se houver caso de uso real)
 - LGPD: endpoint de exportação e exclusão de dados por clínica
 - Limpeza real de arquivos (com confirmação/soft-delete/quarentena/auditoria)
