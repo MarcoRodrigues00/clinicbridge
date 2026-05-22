@@ -1,0 +1,200 @@
+# ClinicBridge — Checklist de Deploy Seguro
+
+> Checklist técnico de configuração/segurança para preparar **staging/produção**.
+> Criado na Sprint 3.6. **Não é deploy real**, **não** afirma produção pronta e
+> **não** afirma conformidade completa com LGPD/HIPAA/CFM. Não substitui uma
+> revisão de segurança dedicada.
+>
+> Relacionado: `docs/security-notes.md`, `docs/adr/0004-deploy-security-baseline.md`,
+> `docs/backup-restore-strategy.md` + `docs/backup-restore-local-runbook.md`,
+> `docs/data-retention-policy.md`, `.env.example` (fonte de verdade das envs).
+
+## 1. Status e escopo
+
+- **Estado:** rascunho técnico inicial. O MVP **não está pronto para produção**
+  (ver ressalvas P1 em `docs/security-notes.md`).
+- **Escopo desta sprint:** auditar e preparar a configuração de deploy seguro
+  (envs, CORS, headers, trust proxy, rate limit, secrets, compose, healthcheck).
+  **Sem** deploy real, Terraform, CI/CD, domínio, HTTPS real ou serviço externo.
+- **Foco:** dar uma lista verificável antes de subir staging e produção.
+
+## 2. Ambientes
+
+| Ambiente | Uso | Observações |
+|---|---|---|
+| development | local (WSL/Docker) | `NODE_ENV=development`; CORS aceita `http://localhost:5173`; rate limit memory |
+| test | CI/local | igual dev, sem dados reais |
+| production | staging/prod | `NODE_ENV=production` ativa as guardas (CORS sem `*`, guardas de placeholder, warnings) |
+
+`NODE_ENV` controla fail-fast/warnings: defina **`production`** em staging e prod
+para ligar as proteções.
+
+## 3. Variáveis obrigatórias
+
+Fonte de verdade: `.env.example`. Validação no boot por `config/env.ts` (zod) —
+configuração inválida derruba o processo (`process.exit(1)`).
+
+**Obrigatórias (sem default — boot falha se ausentes/ inválidas):**
+- `DATABASE_URL` (URL válida).
+- `JWT_SECRET` (≥ 48 chars; use `openssl rand -hex 32`).
+
+**Importantes com default (revisar para produção):**
+- `NODE_ENV=production`, `BACKEND_PORT`, `LOG_LEVEL`.
+- `FRONTEND_ORIGIN` (ver §4), `JWT_EXPIRES_IN` (default `1h`).
+- `UPLOAD_DIR`, `UPLOAD_MAX_BYTES`, `IMPORT_MAX_ROWS`.
+- Rate limit por escopo `<AUTH|UPLOAD|PATIENTS|EXPORT|IMPORT>_RATE_LIMIT_*`.
+- `TRUST_PROXY` (ver §6), `RATE_LIMIT_STORE` + `REDIS_URL`/`REDIS_PREFIX` (ver §7).
+
+**Guardas de produção (Sprint 3.6, `config/env.ts`):** com `NODE_ENV=production`,
+o boot **falha** se `JWT_SECRET` ainda contém o placeholder do `.env.example`
+(`replace-with…`/`change-me`) ou se `DATABASE_URL` contém `change-me-locally`.
+Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passaria no `min(48)`.
+
+> Frontend: `VITE_API_BASE_URL` (build-time, Vite) deve apontar para a URL pública
+> da API em produção.
+
+## 4. CORS
+
+- Allowlist dirigida por `FRONTEND_ORIGIN` (lista separada por vírgula).
+  `credentials: true`; métodos e headers explícitos; `X-Request-Id` exposto.
+- **Produção:** `*` é **recusado no boot** (`process.exit(1)`); lista vazia também
+  falha. Origem não permitida → resposta sem CORS (browser bloqueia), com log
+  `cors: origin not allowed` (sem vazar detalhe ao cliente).
+- Chamadas sem `Origin` (curl/health/server-to-server) são permitidas — CORS só
+  protege browsers.
+- **Exemplos:** dev `http://localhost:5173`; prod
+  `https://app.clinicbridge.com.br` (HTTPS, sem barra final).
+- **Nunca** usar `*` com `credentials: true`.
+
+## 5. HTTPS / reverse proxy
+
+- **Requisito de produção (ainda não implementado):** TLS terminado em um reverse
+  proxy (Nginx/Traefik/Cloudflare) à frente da API; a API não serve TLS sozinha.
+- HSTS (via Helmet) só tem efeito sob HTTPS — depende do proxy/domínio.
+- Redirecionar HTTP→HTTPS no proxy; não expor a API em texto claro publicamente.
+- **Fora do escopo desta sprint:** certificado, domínio e configuração real do
+  proxy (apenas requisito documentado).
+
+## 6. Trust proxy
+
+- `TRUST_PROXY` (`config/env.ts` → `app.set('trust proxy', …)`). Default `false`
+  (não confia em `X-Forwarded-*`) — correto para API exposta direto.
+- **Atrás de proxy:** definir o **hop count** real (ex.: `TRUST_PROXY=1`) para que
+  `req.ip` (rate limit + `audit_logs`) use o IP real do cliente.
+- Em produção, se `TRUST_PROXY` não estiver setado, o boot emite **warning forte**
+  (não falha — `false` é legítimo para API exposta direto).
+- Confiar cegamente em XFF deixaria qualquer cliente forjar o IP de origem.
+
+## 7. Rate limit / Redis
+
+- Limiters por grupo (auth/upload/patients/export/import), IP-keyed, **antes** do
+  `requireAuth`; 429 genérico + headers draft-7.
+- `RATE_LIMIT_STORE=memory|redis` (default memory). **memory** = contadores por
+  instância (ok dev/instância única). **redis** = store compartilhado (necessário
+  em multi-instância).
+- **redis mode:** `REDIS_URL` obrigatória (boot falha sem ela) e **fail-fast** se
+  não conectar (não degrada para memory).
+- **Produção (Sprint 3.6):** com `NODE_ENV=production` e `RATE_LIMIT_STORE=memory`
+  o boot emite **warning** (não falha) — multi-instância deve usar `redis`.
+- `REDIS_URL` pode conter credenciais e **nunca** é logada; Redis gerenciado/
+  protegido em produção (sem exposição pública).
+
+## 8. Banco de dados
+
+- `DATABASE_URL` com credenciais reais e fortes (guarda de produção rejeita o
+  placeholder `change-me-locally`).
+- **Produção:** Postgres **gerenciado** ou protegido (rede privada, sem porta
+  pública), TLS na conexão quando aplicável, usuário com menos privilégios.
+- DAOs sempre filtram `clinica_id` (tenant isolation); migrations versionadas e
+  aplicadas de forma controlada (`migrate:latest`).
+- Backups: ver §11.
+
+## 9. Storage / uploads
+
+- `UPLOAD_DIR` é **storage privado** (nunca servido pela web), nome interno
+  aleatório, SHA-256, validação por magic bytes.
+- **Produção:** garantir que `UPLOAD_DIR` fique em volume persistente e privado,
+  fora de qualquer raiz pública; incluído no backup (ver §11).
+- Sem signed URL / download público (fora de escopo até caso de uso real).
+
+## 10. Secrets
+
+- `.env` **nunca** versionado (`.gitignore` cobre `.env`/`.env.*`, mantém
+  `.env.example`). Apenas placeholders no `.env.example`.
+- `JWT_SECRET` forte (≥ 48 chars); rotação planejada (invalida tokens vigentes).
+- `RESTIC_PASSWORD` é **shell-only** (nunca em `.env`/arquivo/Git) — perda = backup
+  irrecuperável.
+- **Produção:** usar secrets manager / variáveis de ambiente seguras do provedor;
+  não imprimir segredos em logs (logger redige `authorization/cookie/password/
+  senha/cpf/token/...`).
+
+## 11. Backup / restore
+
+- Estratégia: **Restic-first** (ADR 0003). Backup/restore **local** implementado +
+  restore drill validado (Sprint 3.5) — `scripts/` + runbook.
+- **Pendente para produção:** destino **offsite**, gestão de chave do repo,
+  agendamento, monitoramento/alerta e validação de ponta a ponta.
+- Backups contêm PII → cifrados em repouso; nunca versionados.
+
+## 12. Logs e auditoria
+
+- `logger` (pino) com `redact` (`authorization/cookie/password/senha/senha_hash/
+  cpf/token/access_token/refresh_token`, `remove: true`).
+- `errorHandler` nunca vaza stack/SQL/path; 500 → `internal_error` genérico.
+- `audit_logs` append-only, sem PII; `X-Request-Id` em toda resposta.
+- **Produção:** centralizar logs, definir retenção/rotação (alinhar à política de
+  retenção) e monitorar erros/saturação.
+
+## 13. Healthcheck
+
+- `GET /health` → `{status, service, timestamp}` (liveness). **Não** vaza env,
+  versões nem secrets. Não checa DB.
+- **Melhoria futura (não implementada):** separar `/health/live` (liveness) e
+  `/health/ready` (readiness com checagem de DB/Redis) para orquestradores.
+- Compose já tem healthcheck de Postgres/Redis (container-level).
+
+## 14. Docker Compose: local/dev vs produção
+
+- `docker-compose.yml` é **local/dev** — não é definição de produção.
+  - Postgres publicado em `${POSTGRES_PORT:-5432}:5432` (host); Redis em
+    `127.0.0.1:${REDIS_PORT:-6379}` (apenas loopback).
+  - Volumes nomeados; healthchecks; `restart: unless-stopped`; **sem** secrets
+    reais (placeholders via env).
+- **Recomendações de produção** (não aplicar no compose dev):
+  - **não** publicar Postgres em interface pública (rede privada / bind loopback);
+  - Postgres/Redis gerenciados ou protegidos;
+  - reverse proxy + HTTPS à frente da API;
+  - secrets via env segura/secrets manager;
+  - backups offsite + logs/monitoramento;
+  - CORS restrito (`FRONTEND_ORIGIN` real).
+
+## 15. Checklist antes de staging
+
+- [ ] `NODE_ENV=production`.
+- [ ] `JWT_SECRET` forte (≠ placeholder); `DATABASE_URL` real (≠ `change-me-locally`).
+- [ ] `FRONTEND_ORIGIN` explícito (sem `*`), HTTPS.
+- [ ] `TRUST_PROXY` = hop count real (se houver proxy).
+- [ ] `RATE_LIMIT_STORE=redis` + `REDIS_URL` se multi-instância.
+- [ ] Migrations aplicadas (`migrate:status` limpo).
+- [ ] `/health` responde 200.
+- [ ] Backup local validado (restore drill OK).
+- [ ] `.env` não versionado; sem secret em logs.
+
+## 16. Checklist antes de produção
+
+- [ ] Tudo de §15 + revisão de segurança dedicada.
+- [ ] HTTPS/reverse proxy reais; HTTP→HTTPS.
+- [ ] Postgres/Redis gerenciados/protegidos (sem porta pública).
+- [ ] Secrets manager; rotação de `JWT_SECRET` planejada.
+- [ ] Backup **offsite** + gestão de chave + agendamento + monitoramento.
+- [ ] Logs centralizados + alertas; retenção definida (validação jurídica).
+- [ ] Revisão de CORS/env de produção concluída.
+- [ ] Plano de incidente/restore documentado e testado.
+
+## 17. Itens fora do escopo (desta sprint)
+
+- deploy real / provisionamento (AWS, etc.), Terraform/IaC, CI/CD completo;
+- domínio, certificado e HTTPS reais; serviço externo real;
+- secrets manager real; offsite real do backup;
+- readiness endpoint com checagem de DB (registrado como melhoria futura);
+- qualquer dado clínico, limpeza real ou endpoint destrutivo.

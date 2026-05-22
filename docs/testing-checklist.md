@@ -211,6 +211,46 @@ aparece; em "Pacientes importados" os botões de export viram uma nota; no detal
 de uma revisão, mark-ready/importação viram nota (recibo e simulação seguem
 visíveis). Como owner, tudo aparece normalmente.
 
+## Deploy seguro / CORS / env de produção (Sprint 3.6)
+
+Detalhe: `docs/deploy-security-checklist.md` + ADR 0004. Guardas só disparam com
+`NODE_ENV=production` (dev/test intactos). Use instâncias efêmeras numa porta livre
+para não tocar o dev server.
+
+```bash
+cd backend
+
+# 1) Guarda: JWT_SECRET placeholder em produção → boot DEVE falhar (exit !=0)
+NODE_ENV=production BACKEND_PORT=3099 \
+  DATABASE_URL='postgresql://u:p@localhost:5432/db' \
+  JWT_SECRET='replace-with-output-of-openssl-rand-hex-32-at-least-48-chars' \
+  pnpm exec tsx src/config/env.ts; echo "exit=$?"   # espera erro [env] + exit=1
+
+# 2) Guarda: DATABASE_URL com placeholder local em produção → boot DEVE falhar
+NODE_ENV=production BACKEND_PORT=3099 \
+  DATABASE_URL='postgresql://clinicbridge:change-me-locally@localhost:5432/clinicbridge' \
+  JWT_SECRET="$(openssl rand -hex 32)" \
+  pnpm exec tsx src/config/env.ts; echo "exit=$?"   # espera erro [env] + exit=1
+
+# 3) Segredos válidos em produção → env carrega (sem erro de placeholder)
+NODE_ENV=production BACKEND_PORT=3099 \
+  DATABASE_URL='postgresql://u:s3cret@db.internal:5432/clinicbridge' \
+  JWT_SECRET="$(openssl rand -hex 32)" \
+  pnpm exec tsx src/config/env.ts; echo "exit=$?"   # espera exit=0
+```
+
+CORS (com backend rodando):
+```bash
+# Origem não permitida não recebe Access-Control-Allow-Origin (browser bloqueia)
+curl -s -D - -o /dev/null -H "Origin: https://evil.example" http://localhost:3001/health | grep -i access-control || echo "(sem ACAO header — correto)"
+# Em produção, FRONTEND_ORIGIN='*' faz o boot falhar; lista vazia também.
+```
+
+Health:
+```bash
+curl -s http://localhost:3001/health   # {status,service,timestamp} — sem env/versão/secret
+```
+
 ## Backup/restore local com Restic (Sprint 3.5) — LOCAL/DEV, sem offsite
 
 Pré: `restic` instalado, Docker/Postgres de pé, `RESTIC_PASSWORD` exportada no

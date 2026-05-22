@@ -168,6 +168,34 @@
 - **Sem promessa de compliance:** prazos/retenção de backups e offsite dependem de
   validação jurídica. Não afirma produção pronta.
 
+## Deploy seguro / CORS / env de produção (Sprint 3.6)
+
+- **Documento principal:** `docs/deploy-security-checklist.md`; **decisão:** ADR
+  `docs/adr/0004-deploy-security-baseline.md`. Sprint de auditoria + pequenos
+  hardenings (**sem** deploy real, AWS, Terraform, CI/CD, domínio ou HTTPS real).
+- **Guardas de produção (`config/env.ts`):** com `NODE_ENV=production`, o boot
+  **falha** se `JWT_SECRET` ainda usa o placeholder do `.env.example`
+  (`replace-with…`/`change-me`) ou se `DATABASE_URL` contém `change-me-locally`.
+  Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passava no `min(48)`. Dev/
+  test não são afetados.
+- **Warning de produção (`app.ts`):** `RATE_LIMIT_STORE=memory` em produção emite
+  warning (contadores por instância → limite inútil em multi-instância). Mantido
+  fail-fast só para redis sem conexão. Espelha o warning já existente de `TRUST_PROXY`.
+- **CORS:** allowlist por `FRONTEND_ORIGIN`; `*` recusado no boot em produção;
+  lista vazia também falha; origem não permitida → sem CORS (browser bloqueia),
+  log sem vazar detalhe; chamadas sem `Origin` (curl/health) passam. `credentials:
+  true` nunca com `*`. Exemplos: dev `http://localhost:5173`, prod
+  `https://app.clinicbridge.com.br`.
+- **Headers (Helmet):** defaults (HSTS/noSniff/frameguard/referrer-policy/CSP);
+  `x-powered-by` desabilitado. HSTS só vale sob HTTPS (requisito de produção).
+- **HTTPS/reverse proxy:** requisito de produção **documentado, não implementado**
+  (TLS terminado no proxy; API não serve TLS).
+- **Healthcheck:** `GET /health` é liveness (status/service/timestamp; sem
+  env/versão/secret; sem checagem de DB). Readiness com checagem de DB fica como
+  melhoria futura.
+- **docker-compose:** é **local/dev**, não produção (ver `docs/deploy-security-checklist.md` §14).
+- **Sem promessa:** não afirma produção pronta nem compliance completo.
+
 ## Limites intencionais (MVP)
 
 - `IMPORT_MAX_ROWS=100` — limite conservador intencional para MVP.
@@ -194,8 +222,12 @@
   `docs/backup-restore-strategy.md` + runbook `docs/backup-restore-local-runbook.md`.
   Resta **offsite/produção** (provisionar destino, gestão de chave, agendamento,
   monitoramento) e validar de ponta a ponta em produção
-- deploy seguro
-- revisão de CORS/env de produção (`FRONTEND_ORIGIN` sem `*`)
+- deploy seguro: **baseline auditada + checklist criado na Sprint 3.6**
+  (`docs/deploy-security-checklist.md` + ADR 0004). Resta o deploy real
+  (HTTPS/reverse proxy, secrets manager, banco/Redis gerenciados, monitoramento)
+- revisão de CORS/env de produção (`FRONTEND_ORIGIN` sem `*`): **revisada na
+  Sprint 3.6** + guardas de placeholder (`JWT_SECRET`/`DATABASE_URL`) e warning de
+  `RATE_LIMIT_STORE=memory` em produção
 
 ### P2
 - limpeza real de arquivos com confirmação/soft-delete/quarentena/auditoria/idempotência/lock

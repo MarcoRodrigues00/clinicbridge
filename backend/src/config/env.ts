@@ -123,6 +123,32 @@ const EnvSchema = z.object({
       message: 'REDIS_URL is required when RATE_LIMIT_STORE=redis.',
     });
   }
+
+  // Production guards (Sprint 3.6). Refuse to boot production with the committed
+  // .env.example placeholders. These only fire when NODE_ENV=production, so dev
+  // and test are unaffected.
+  if (val.NODE_ENV === 'production') {
+    // The JWT_SECRET placeholder is longer than 48 chars, so the min(48) check
+    // above does NOT catch it. Without this guard production could run on the
+    // public example secret.
+    if (/replace-with|change-me/i.test(val.JWT_SECRET)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['JWT_SECRET'],
+        message:
+          'JWT_SECRET still uses the .env.example placeholder. Set a strong secret in production (openssl rand -hex 32).',
+      });
+    }
+    // The local DB password placeholder must never reach production.
+    if (/change-me-locally/i.test(val.DATABASE_URL)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['DATABASE_URL'],
+        message:
+          'DATABASE_URL still uses the local placeholder password. Use real, secret DB credentials in production.',
+      });
+    }
+  }
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;

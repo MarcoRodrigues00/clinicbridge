@@ -7,6 +7,7 @@
 > - **Política de retenção e governança de dados:** `docs/data-retention-policy.md` (+ ADR `docs/adr/0002-data-retention-governance.md`)
 > - **Estratégia de backup/restore (Restic-first):** `docs/backup-restore-strategy.md` (+ ADR `docs/adr/0003-backup-restore-strategy.md`)
 > - **Runbook backup/restore local (scripts em `scripts/`):** `docs/backup-restore-local-runbook.md`
+> - **Checklist de deploy seguro / CORS / env prod:** `docs/deploy-security-checklist.md` (+ ADR `docs/adr/0004-deploy-security-baseline.md`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
 > - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
 
@@ -60,8 +61,10 @@ fases: `docs/roadmap-next-phase.md`.
   política técnica de retenção criada (Sprint 3.3 — `docs/data-retention-policy.md`
   + ADR 0002; falta validação jurídica); backup/restore Restic-first decidido
   (3.4) e **local implementado + restore drill validado (3.5)** — scripts em
-  `scripts/` + runbook; falta **offsite/produção**; deploy seguro; revisão de
-  CORS/env de produção.
+  `scripts/` + runbook; falta **offsite/produção**; deploy seguro com **baseline
+  auditada + checklist (3.6 — `docs/deploy-security-checklist.md` + ADR 0004;
+  guardas de produção no env.ts/app.ts)**; falta deploy real (HTTPS/proxy/secrets
+  manager).
 - **P2:** limpeza real de arquivos (confirmação/soft-delete/quarentena/auditoria/
   idempotência/lock); paginação de duplicados; export streaming/assíncrono;
   rate limit dedicado em GETs leves se necessário.
