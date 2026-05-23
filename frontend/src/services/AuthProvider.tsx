@@ -9,12 +9,18 @@ import {
 import { api, ApiError, type PublicClinic, type SafeUser } from './api';
 import { clearToken, getToken, setToken } from './authStorage';
 
+export interface LoginAttemptResult {
+  mfaRequired: boolean;
+  challengeToken?: string;
+}
+
 interface AuthContextValue {
   loading: boolean;
   authenticated: boolean;
   user: SafeUser | null;
   clinic: PublicClinic | null;
-  login: (email: string, senha: string) => Promise<void>;
+  login: (email: string, senha: string) => Promise<LoginAttemptResult>;
+  completeMfaLogin: (challengeToken: string, code: string) => Promise<void>;
   logout: () => void;
   refreshMe: () => Promise<void>;
 }
@@ -74,12 +80,29 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   }, [refreshMe]);
 
   const login = useCallback(
-    async (email: string, senha: string) => {
+    async (email: string, senha: string): Promise<LoginAttemptResult> => {
       const res = await api.login({ email, senha });
+      // MFA-enabled account: no token yet — the caller must collect a TOTP code
+      // and call completeMfaLogin with the challenge. The challenge token stays in
+      // the caller's state only (never persisted).
+      if ('mfa_required' in res) {
+        return { mfaRequired: true, challengeToken: res.mfa_challenge_token };
+      }
       setToken(res.token);
-      // Login returns the user but not the clinic, so resolve the full session
-      // via /auth/me. If that round-trip fails for a non-auth reason, fall back
-      // to the user we already have from the login response.
+      try {
+        await refreshMe();
+      } catch {
+        setUser(res.user);
+      }
+      return { mfaRequired: false };
+    },
+    [refreshMe],
+  );
+
+  const completeMfaLogin = useCallback(
+    async (challengeToken: string, code: string) => {
+      const res = await api.verifyMfaLogin(challengeToken, code);
+      setToken(res.token);
       try {
         await refreshMe();
       } catch {
@@ -99,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     user,
     clinic,
     login,
+    completeMfaLogin,
     logout,
     refreshMe,
   };

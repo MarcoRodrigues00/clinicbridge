@@ -12,6 +12,15 @@ authRouter.use('/auth', authRateLimit);
 
 authRouter.post('/auth/register', asyncHandler(authController.register));
 authRouter.post('/auth/login', asyncHandler(authController.login));
+
+// MFA (Sprint 3.19). All under /auth/* so the authRateLimit above applies.
+// verify-login uses the challenge token in the body (no requireAuth yet); the
+// others require an authenticated session.
+authRouter.post('/auth/mfa/verify-login', asyncHandler(authController.verifyMfaLogin));
+authRouter.post('/auth/mfa/setup', requireAuth, asyncHandler(authController.mfaSetup));
+authRouter.post('/auth/mfa/confirm', requireAuth, asyncHandler(authController.mfaConfirm));
+authRouter.get('/auth/mfa/status', requireAuth, asyncHandler(authController.mfaStatus));
+authRouter.post('/auth/mfa/disable', requireAuth, asyncHandler(authController.mfaDisable));
 // /auth/me intentionally does NOT compose requireClinic: admin_sistema users
 // have no clinic and the service safely returns clinic:null in that case.
 // Future tenant-scoped routes (patients, imports, exports) MUST add

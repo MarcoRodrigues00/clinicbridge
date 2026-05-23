@@ -7,7 +7,21 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.18** — frontend: **lembrete manual/assistido** da Agenda Administrativa.
+**Sprint 3.19** — segurança: **MFA por TOTP no login** (app autenticador; sem SMS/
+e-mail OTP/serviço externo). Backend: `otplib`+`qrcode`; migration
+`20260527000000_user_mfa` (campos MFA em `users`); secret **cifrado em repouso**
+(AES-256-GCM, chave via HKDF do `JWT_SECRET` ou `MFA_ENCRYPTION_KEY` opcional).
+Endpoints: `/auth/login` (se MFA on → `mfa_required` + `mfa_challenge_token` curto,
+sem JWT), `/auth/mfa/verify-login`, `/auth/mfa/setup|confirm|status|disable`
+(setup com pending secret no DB; disable exige TOTP válido). Frontend: passo de
+código MFA no login + painel `MfaSettings` (QR + chave manual + ativar/desativar)
+na aba Segurança. Auditoria `auth.mfa.*` sem secret/código; rate limit `/auth/*`
+reaproveitado. **Usuários existentes seguem com `mfa_enabled=false`** (login
+inalterado). Backend e2e validado por curl; backend+frontend typecheck/build OK.
+Sem dado clínico. **Ressalvas:** backup codes futuros; cifra do secret derivada do
+JWT_SECRET por padrão (P1: chave dedicada/KMS em produção). Sem commit.
+
+**Sprint anterior: 3.18** — frontend: **lembrete manual/assistido** da Agenda Administrativa.
 `utils/reminders.ts` (funções puras) gera **mensagem neutra** ("Olá, {nome}! …
 atendimento na {clínica} para {data} às {hora}. Para confirmar ou remarcar…") e
 botões por card (só `scheduled`/`confirmed`/`rescheduled`): **"Copiar lembrete"**
@@ -203,6 +217,9 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 ## O que está implementado
 
 - Auth completo (registro, login JWT, `/auth/me`, rate limit, audit logs)
+- **MFA por TOTP** (Sprint 3.19): setup/confirm/status/disable + login em 2 passos
+  (`mfa_required` → `verify-login`); secret cifrado em repouso; sem SMS/e-mail OTP/
+  serviço externo; backup codes futuros
 - Upload de CSV/XLSX com validação de extensão, MIME, tamanho e conteúdo real por magic bytes (Sprint 2–2.1, 2.23)
 - Preview de arquivo com mapeamento sugerido (Sprint 2.2–2.3)
 - Validação local de mapeamento no frontend (Sprint 2.4–2.5)
@@ -274,6 +291,7 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
 - `20260524000000_patients`
 - `20260525000000_import_sessions_summary` — import_summary_json, imported_at, imported_by_user_id
 - `20260526000000_scheduling` — clinic_professionals, appointments (Sprint 3.14)
+- `20260527000000_user_mfa` — campos MFA/TOTP em users (Sprint 3.19)
 
 ## Invariantes atuais (ambiente local)
 

@@ -4,6 +4,37 @@
 > (`docs/sprint-history.md`). Use como roteiro de smoke test / regressão local.
 > Endpoints tenant-scoped exigem `Authorization: Bearer <token>` (de `/auth/login`).
 
+## MFA / TOTP (Sprint 3.19)
+
+App autenticador (TOTP); sem SMS/e-mail OTP/serviço externo. Backend e2e (backend
++ Postgres up). Para computar um código TOTP a partir do secret no teste:
+`node -e "const {generateSync}=require('otplib'); console.log(generateSync({secret:process.argv[1]}))" <SECRET>` (rode em `backend/`).
+
+```bash
+# Usuário SEM MFA: login normal devolve token (comportamento atual).
+# Setup (com Bearer de sessão):
+curl -s -X POST -H "Authorization: Bearer $TOKEN" http://localhost:3001/auth/mfa/setup
+#   -> { otpauth_url, manual_key, qr_data_url }   (secret só aqui, durante o setup)
+# Confirmar (código do app):
+curl -s -X POST -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+  -d '{"code":"123456"}' http://localhost:3001/auth/mfa/confirm        # -> mfa_enabled true
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:3001/auth/mfa/status  # sem secret
+# Login com MFA: devolve mfa_required + mfa_challenge_token (SEM token):
+curl -s -X POST -H "Content-Type: application/json" -d '{"email":"...","senha":"..."}' \
+  http://localhost:3001/auth/login
+# Verificar login (challenge + código) -> token final:
+curl -s -X POST -H "Content-Type: application/json" \
+  -d '{"challenge_token":"...","code":"123456"}' http://localhost:3001/auth/mfa/verify-login
+# Desativar (exige TOTP válido):
+curl -s -X POST -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+  -d '{"code":"123456"}' http://localhost:3001/auth/mfa/disable        # -> mfa_enabled false
+```
+
+Esperado: código errado em confirm → 400; em verify-login → 401; em disable → 400.
+`status` nunca retorna o secret; logs não contêm secret/código; audit `auth.mfa.*`
+sem PII. Usuários sem MFA continuam logando normalmente. Frontend: aba Segurança
+→ "Ativar MFA" (QR + chave manual) → confirmar; login pede código; "Desativar MFA".
+
 ## Build / typecheck
 
 ```bash

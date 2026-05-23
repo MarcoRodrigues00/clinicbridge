@@ -71,6 +71,25 @@ export interface MeResponse {
   clinic: PublicClinic | null;
 }
 
+// MFA / TOTP (Sprint 3.19).
+export interface MfaRequiredResponse {
+  mfa_required: true;
+  mfa_challenge_token: string;
+}
+
+export type LoginOutcome = LoginResponse | MfaRequiredResponse;
+
+export interface MfaStatusResponse {
+  mfa_enabled: boolean;
+  mfa_enabled_at: string | null;
+}
+
+export interface MfaSetupResponse {
+  otpauth_url: string;
+  manual_key: string;
+  qr_data_url: string;
+}
+
 export interface PublicImportFile {
   id: string;
   nome_original: string;
@@ -506,8 +525,41 @@ export const api = {
     return apiFetch<RegisterResponse>('/auth/register', { method: 'POST', body: payload });
   },
 
-  login(payload: LoginPayload): Promise<LoginResponse> {
-    return apiFetch<LoginResponse>('/auth/login', { method: 'POST', body: payload });
+  // Returns a normal LoginResponse, or { mfa_required, mfa_challenge_token } when
+  // the account has MFA enabled (no session token issued yet).
+  login(payload: LoginPayload): Promise<LoginOutcome> {
+    return apiFetch<LoginOutcome>('/auth/login', { method: 'POST', body: payload });
+  },
+
+  verifyMfaLogin(challenge_token: string, code: string): Promise<LoginResponse> {
+    return apiFetch<LoginResponse>('/auth/mfa/verify-login', {
+      method: 'POST',
+      body: { challenge_token, code },
+    });
+  },
+
+  getMfaStatus(token: string): Promise<MfaStatusResponse> {
+    return apiFetch<MfaStatusResponse>('/auth/mfa/status', { method: 'GET', token });
+  },
+
+  setupMfa(token: string): Promise<MfaSetupResponse> {
+    return apiFetch<MfaSetupResponse>('/auth/mfa/setup', { method: 'POST', token });
+  },
+
+  confirmMfa(token: string, code: string): Promise<MfaStatusResponse> {
+    return apiFetch<MfaStatusResponse>('/auth/mfa/confirm', {
+      method: 'POST',
+      body: { code },
+      token,
+    });
+  },
+
+  disableMfa(token: string, code: string): Promise<MfaStatusResponse> {
+    return apiFetch<MfaStatusResponse>('/auth/mfa/disable', {
+      method: 'POST',
+      body: { code },
+      token,
+    });
   },
 
   getMe(token: string): Promise<MeResponse> {

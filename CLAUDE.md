@@ -43,7 +43,8 @@ job/cron; gestão de usuários/papéis na UI (papel é definido no registro/SQL)
 `20260521000000_audit_logs` · `20260522000000_import_files` ·
 `20260523000000_import_sessions` · `20260524000000_patients` ·
 `20260525000000_import_sessions_summary` · `20260526000000_scheduling`
-(clinic_professionals/appointments — Agenda Administrativa, Sprint 3.14).
+(clinic_professionals/appointments — Agenda Administrativa, Sprint 3.14) ·
+`20260527000000_user_mfa` (campos MFA/TOTP em users — Sprint 3.19).
 
 **Invariantes locais (sanity-check, podem mudar):** patients=6, import_files=24,
 import_sessions=7; clinic_professionals=0, appointments=0; audit sem PII. Reconfira
@@ -183,6 +184,10 @@ assinado (futuro); audit logs; rate limits; mensagens de erro seguras; sem
 segredos/PII em logs; backup; fluxos LGPD de export/exclusão.
 
 - Senhas: nunca em texto puro; argon2id ou bcrypt com custo forte.
+- MFA por TOTP (Sprint 3.19): app autenticador, sem SMS/e-mail OTP/serviço externo;
+  secret cifrado em repouso (AES-GCM); login em 2 passos (`mfa_required` →
+  `verify-login`); secret nunca logado/retornado após ativar. Detalhe em
+  `docs/security-notes.md`. Ressalva: backup codes + chave dedicada/KMS são futuros.
 - DB: nunca concatenar SQL com input; usar ORM/queries parametrizadas.
 - Frontend: evitar `dangerouslySetInnerHTML`; escapar conteúdo; sem stack traces.
 - Secrets: nunca commitar `.env`; `.env.example` só com placeholders.

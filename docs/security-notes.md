@@ -321,6 +321,31 @@
 - **Segredos:** tokens/API keys de qualquer provedor **nunca** no Git/docs/compose
   — usar secrets manager quando a automação real existir.
 
+## MFA / TOTP no login (Sprint 3.19)
+
+- **TOTP com app autenticador** (`otplib` + `qrcode`). **Sem SMS, sem e-mail OTP,
+  sem serviço externo/pago.** Backup codes ficam para sprint futura (ressalva).
+- **Secret cifrado em repouso:** AES-256-GCM (`config/mfaCrypto.ts`), chave
+  derivada via HKDF-SHA256 do `JWT_SECRET` por padrão, ou de `MFA_ENCRYPTION_KEY`
+  (opcional) quando setado. **Ressalva P1:** em produção usar uma chave dedicada/
+  KMS; trocar `JWT_SECRET` (quando a chave não é dedicada) invalida os secrets MFA.
+- **Secret nunca vaza:** só é retornado durante o setup (`/auth/mfa/setup`, para o
+  QR/chave manual); `status` e demais respostas **nunca** retornam o secret; nunca
+  é logado (verificado: log de boot/fluxo sem o secret).
+- **Login em 2 passos:** se `mfa_enabled`, `/auth/login` valida a senha mas **não**
+  emite JWT — retorna `mfa_required` + `mfa_challenge_token` (JWT curto, 5min,
+  `typ=mfa_challenge`, sem `papel` → rejeitado por `requireAuth`). `/auth/mfa/
+  verify-login` valida o challenge + código e só então emite o JWT de sessão.
+- **Setup/disable:** setup guarda um **pending secret cifrado** no DB (expira em
+  10min) confirmado por código; `disable` exige um **código TOTP válido** (não só a
+  senha). `status` retorna apenas `mfa_enabled` + `mfa_enabled_at`.
+- **Compatibilidade:** usuários existentes têm `mfa_enabled=false` → login
+  inalterado (aditivo; migration sem backfill destrutivo).
+- **Auditoria sem PII/secret:** `auth.mfa.setup.started/confirmed`,
+  `auth.mfa.login.challenge/success/failure`, `auth.mfa.disable.success/failure`
+  (recurso `auth`, sem código/secret). Erros genéricos (`invalid_mfa_code`), sem
+  enumeração. Rate limit de `/auth/*` cobre os endpoints MFA.
+
 ## Limites intencionais (MVP)
 
 - `IMPORT_MAX_ROWS=100` — limite conservador intencional para MVP.

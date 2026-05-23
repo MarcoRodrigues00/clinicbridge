@@ -23,6 +23,9 @@ Objetivo: tornar a base administrativa apta a produção, com governança real.
 
 - `requireRole` / gating dono-admin nos endpoints administrativos sensíveis
   (inclui retenção e, futuramente, limpeza real) — **feito (Sprint 3.1)**;
+- **MFA por TOTP no login — feito (Sprint 3.19)** (app autenticador; secret cifrado;
+  sem SMS/e-mail OTP/serviço externo); pendente: backup codes + chave de cifra
+  dedicada/KMS em produção;
 - trust proxy configurado (IP correto atrás de proxy para rate limit/logs) —
   **feito (Sprint 3.2)**;
 - Redis / shared store para rate limit (substituir o store em memória do MVP) —

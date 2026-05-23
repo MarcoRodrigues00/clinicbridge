@@ -11,6 +11,13 @@ export interface UserRow {
   clinica_id: string | null;
   ativo: boolean;
   ultimo_login_em: Date | null;
+  // MFA/TOTP (Sprint 3.19). Secrets are encrypted at rest; never exposed via API.
+  mfa_enabled: boolean;
+  mfa_secret_encrypted: string | null;
+  mfa_pending_secret_encrypted: string | null;
+  mfa_pending_created_at: Date | null;
+  mfa_enabled_at: Date | null;
+  mfa_last_verified_at: Date | null;
   criado_em: Date;
   atualizado_em: Date;
 }
