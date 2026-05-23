@@ -7,7 +7,29 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.11** — produção/governança: **TLS local/staging no Nginx** + HTTP→HTTPS.
+**Sprint 3.13** — produto/escopo (docs/ADR-only): **escopo futuro de lembretes e
+WhatsApp** para a Agenda Administrativa. Adendo no ADR 0006 + Parte II em
+`docs/administrative-scheduling-scope.md`: **manual-first** (copiar mensagem/abrir
+WhatsApp com texto neutro; humano decide enviar), **opt-in/opt-out**, **templates
+neutros**, logs só de metadados (sem conteúdo), **WhatsApp automático/API gated**
+(sprint futura com ADR própria). **Sem dado clínico nas mensagens** (sem motivo/
+diagnóstico/especialidade sensível/medicação). Modelos conceituais futuros
+(PatientContactPreference, AppointmentReminder, MessageTemplate) — **não criados**.
+**Nada implementado** (sem backend/frontend/migration/endpoint/WhatsApp/job/cron).
+Numeração de implementação reordenada (3.14 backend → 3.15 frontend → 3.16 lembrete
+manual → 3.17 demo → 3.18 polish → futura WhatsApp API). Sem commit.
+
+**Sprint anterior: 3.12** — produto/escopo (docs/ADR-only): **decisão e escopo do módulo
+Agenda Administrativa** (não clínica), preparando o piloto v0.1. Criados ADR
+`docs/adr/0006-administrative-scheduling-module.md` + `docs/administrative-scheduling-scope.md`.
+Define entidades conceituais (ClinicProfessional, Appointment), status, papéis
+(reuso de `dono_clinica`/`secretaria`/`admin_sistema`), regras, LGPD/auditoria e
+roadmap (3.13 backend → 3.14 frontend → 3.15 demo → 3.16 polish). **Agenda é
+administrativa**: sem diagnóstico/prescrição/evolução/CID/anamnese/exames/
+prontuário; observações administrativas mínimas. **Nada implementado** (sem
+backend/frontend/migration/schema/endpoint). Sem commit.
+
+**Sprint anterior: 3.11** — produção/governança: **TLS local/staging no Nginx** + HTTP→HTTPS.
 Script `scripts/generate-local-nginx-cert.sh` (openssl, cert autoassinado, SAN
 localhost/clinicbridge.local/127.0.0.1) → `infra/nginx/certs/` (gitignored; chave
 privada nunca versionada). `conf.d`: server `:80` faz **301** para HTTPS; server
@@ -161,6 +183,11 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 - job/cron automático
 - gestão de usuários/papéis pela UI (papel é definido no registro como
   `dono_clinica`, ou via SQL); RBAC complexo com tabela de permissões
+- **módulo Agenda Administrativa** — **escopo/ADR aprovados (Sprint 3.12)** +
+  **escopo de lembretes/WhatsApp (Sprint 3.13)**, mas **não implementado**: sem
+  entidades/migrations/endpoints/telas de agendamento, sem envio de lembrete/
+  WhatsApp (planejado para 3.14+). Será **administrativo**, nunca clínico; mensagens
+  neutras (ADR 0006)
 
 ## Sprints aprovadas
 
@@ -219,6 +246,12 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
   manager, banco/Redis gerenciados, monitoramento), provisionar Redis/proxy de
   produção, **validação jurídica** da política de retenção, **offsite/produção**
   do backup (destino, gestão de chave, agendamento, monitoramento)
+- **Módulo Agenda Administrativa** (escopo/ADR — ADR 0006 +
+  `docs/administrative-scheduling-scope.md`; lembretes/WhatsApp escopados na 3.13):
+  **3.14** backend → **3.15** frontend → **3.16** lembrete manual/assistido →
+  **3.17** dados sintéticos/demo v0.1 → **3.18** polimento UX/dashboard → futura
+  **WhatsApp API** (gated, ADR própria). Sempre administrativo, nunca clínico;
+  mensagens neutras.
 - Download assinado de arquivos de importação (só se houver caso de uso real)
 - LGPD: endpoint de exportação e exclusão de dados por clínica
 - Limpeza real de arquivos (com confirmação/soft-delete/quarentena/auditoria)

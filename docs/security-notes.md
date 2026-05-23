@@ -244,6 +244,42 @@
 - **WAF não substitui:** `requireAuth`/`requireClinic`/`requireRole`, rate limit do
   app, validação por magic bytes, CPF mascarado, CORS, errorHandler seguro.
 
+## Agenda Administrativa — riscos e proibição clínica (escopo, Sprint 3.12)
+
+- **Documento/decisão:** `docs/administrative-scheduling-scope.md` + ADR
+  `docs/adr/0006-administrative-scheduling-module.md`. **Escopo/ADR-only — não
+  implementado** (sem migrations/endpoints/telas).
+- **Administrativa, não clínica:** a agenda **não** pode conter diagnóstico,
+  prescrição, evolução, CID, anamnese, exames, medicação nem prontuário. Campo
+  `administrative_notes` é opcional/curto e **administrativo** (✅ "pediu contato
+  por telefone"; ❌ "dor intensa", "ansiedade", "remédio X", "diagnóstico Y").
+- **PII indireta:** a agenda revela presença/horário de pacientes e pode insinuar
+  contexto sensível conforme o profissional → minimização + acesso por papel +
+  tenant isolation (`clinica_id`; cross-tenant → 403; sem `listAll`).
+- **Permissões (reuso):** `dono_clinica` gerencia profissionais + todas as ações;
+  `secretaria` opera agendamentos; `admin_sistema` barrado por `requireClinic`.
+- **Auditoria:** ações relevantes em `audit_logs` (padrão atual, append-only) sem
+  PII e **sem** conteúdo de observação.
+- **Fora do MVP:** export da agenda e lembretes automáticos; delete físico (usar
+  status `cancelled`). Implementação só nas Sprints 3.14+.
+
+### Lembretes / WhatsApp (escopo futuro, Sprint 3.13)
+
+- **Escopo/ADR-only — não implementado** (sem envio real, sem WhatsApp API, sem
+  SDK, sem job/cron). Detalhe: `docs/administrative-scheduling-scope.md` (Parte II)
+  + adendo no ADR 0006.
+- **Mensagem neutra/administrativa:** lembrete de horário + confirmar/remarcar.
+  Lembretes podem expor informação sensível **indiretamente** → proibido no texto
+  qualquer dado clínico (motivo, diagnóstico, especialidade sensível, tratamento,
+  medicação); preferir "atendimento" genérico em vez de especialidade reveladora.
+- **Manual-first:** primeiro passo é lembrete assistido/manual ("copiar mensagem"/
+  "abrir WhatsApp"); **humano decide enviar**. WhatsApp **automático/API** exige
+  **opt-in** + **opt-out** + **ADR/sprint própria** antes de implementar.
+- **Logs sem conteúdo:** registrar só metadados (canal/horário/status/`template_key`)
+  — **nunca** o texto renderizado nem PII/clínico; audit sem PII excessiva.
+- **Segredos:** tokens/API keys de qualquer provedor **nunca** no Git/docs/compose
+  — usar secrets manager quando a automação real existir.
+
 ## Limites intencionais (MVP)
 
 - `IMPORT_MAX_ROWS=100` — limite conservador intencional para MVP.

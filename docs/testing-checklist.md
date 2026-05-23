@@ -271,6 +271,24 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3011/health           
 # pgrep -af 'tsx src/server.ts' e mate o PID do node/MainThread em :3011.
 ```
 
+## Agenda Administrativa (Sprint 3.12) — ESCOPO/ADR, ainda NÃO implementada
+
+Sem testes ainda: a agenda é **escopo/ADR-only** (ADR 0006 +
+`docs/administrative-scheduling-scope.md`) — não há migrations/endpoints/telas.
+Checklist a exercitar **quando** for implementada (Sprints 3.14+): CRUD de
+profissionais restrito a `dono_clinica`; criar/confirmar/remarcar/cancelar/no_show/
+concluir agendamento (owner+secretaria); `clinica_id` obrigatório e cross-tenant →
+403; status validado e `ends_at > starts_at`; cancelamento soft (`cancelled`);
+auditoria sem PII; **nenhum** dado clínico em nenhum campo.
+
+**Lembretes / WhatsApp (Sprint 3.13) — ESCOPO/ADR, ainda NÃO implementados:** sem
+testes (sem envio real/WhatsApp API/SDK/job/cron). Escopo: ADR 0006 (adendo) +
+`docs/administrative-scheduling-scope.md` Parte II. Quando houver lembrete
+manual/assistido (3.16): validar que o texto é **neutro** (sem dado clínico), que
+o envio é **decisão humana** (sem API), e que logs guardam só metadados (canal/
+horário/status/`template_key`), nunca o conteúdo. WhatsApp automático só após ADR
+própria (opt-in/opt-out/templates aprovados).
+
 ## Nginx + backend containerizado + TLS local, e2e (Sprint 3.10/3.11) — sem WAF
 
 Detalhe: `docs/nginx-local-staging-runbook.md`. Profile `edge` (não sobe no
