@@ -93,6 +93,33 @@ export interface PatientRow {
   atualizado_em: Date;
 }
 
+// Administrative Scheduling (Sprint 3.14). Administrative data only — no clinical
+// fields. Tenant-scoped by clinica_id.
+export interface ClinicProfessionalRow {
+  id: string;
+  clinica_id: string;
+  name: string;
+  specialty_label: string | null;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface AppointmentRow {
+  id: string;
+  clinica_id: string;
+  patient_id: string;
+  professional_id: string | null;
+  starts_at: Date;
+  ends_at: Date;
+  status: string;
+  administrative_notes: string | null;
+  created_by_user_id: string | null;
+  updated_by_user_id: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 declare module 'knex/types/tables' {
   interface Tables {
     users: UserRow;
@@ -101,5 +128,7 @@ declare module 'knex/types/tables' {
     import_files: ImportFileRow;
     import_sessions: ImportSessionRow;
     patients: PatientRow;
+    clinic_professionals: ClinicProfessionalRow;
+    appointments: AppointmentRow;
   }
 }

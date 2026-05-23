@@ -67,9 +67,11 @@ Lembretes/WhatsApp: escopo definido na Sprint 3.13 (adendo ADR 0006 +
 templates neutros, **sem dado clínico**; WhatsApp automático/API é gated (sprint
 futura com ADR própria). Sequência (numeração atualizada na 3.13):
 
-- **Sprint 3.14 — Backend da Agenda:** migrations (ClinicProfessional,
-  Appointment), DAO/service/controller/routes, validação, `requireAuth`/
-  `requireClinic`/`requireRole`, audit, testes curl.
+- **Sprint 3.14 — Backend da Agenda ✅ (concluída):** migration
+  `20260526000000_scheduling` (clinic_professionals, appointments), DAO/service/
+  controller/routes, validação, `requireAuth`/`requireClinic`/`requireRole`, audit
+  sem PII, testes curl (positivos/negativos/cross-tenant). Sem DELETE; sem dado
+  clínico.
 - **Sprint 3.15 — Frontend da Agenda:** tela, filtros, criação, status,
   remarcação, UX para não técnicos.
 - **Sprint 3.16 — Lembrete manual/assistido:** "copiar mensagem" + "abrir

@@ -43,6 +43,14 @@ export const patientDao = {
     return query.orderBy('criado_em', 'desc').limit(options.limit).offset(options.offset);
   },
 
+  // Tenant-scoped existence check (read-only). Used by the scheduling module to
+  // confirm a patient belongs to the actor's clinic before creating an
+  // appointment — never leaks cross-clinic data (returns only a boolean).
+  async existsForClinic(id: string, clinica_id: string, conn: Knex = db): Promise<boolean> {
+    const row = await conn<PatientRow>('patients').where({ id, clinica_id }).select('id').first();
+    return row !== undefined;
+  },
+
   // Fetches patients for the read-only duplicate scan. ALWAYS tenant-scoped.
   // Ordered by criado_em ASC so the earliest (original) record sorts first
   // within each detected cluster. Capped by `limit` so a future large clinic

@@ -11,7 +11,9 @@
 
 ## 1. Status e objetivo
 
-- **Status:** escopo aprovado (ADR 0006); **não implementado**.
+- **Status:** escopo aprovado (ADR 0006); **backend implementado na Sprint 3.14**
+  (tabelas/endpoints tenant-scoped, sem dado clínico, sem DELETE, auditado);
+  **frontend (3.15) e lembretes (3.16+) ainda pendentes**.
 - **Objetivo:** dar ao ClinicBridge um módulo de **agendamento administrativo**
   para fortalecer o piloto **v0.1**, mantendo a fronteira administrativo/clínico.
 
