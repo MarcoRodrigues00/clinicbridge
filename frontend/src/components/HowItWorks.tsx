@@ -11,12 +11,12 @@ const STEPS = [
   {
     icon: Columns3,
     label: 'Revise o mapeamento',
-    desc: 'O ClinicBridge sugere automaticamente quais colunas viraram nome, telefone, e-mail, CPF e convênio.',
+    desc: 'O ClinicBridge sugere automaticamente quais colunas viraram nome, telefone, e-mail, CPF e data de nascimento.',
   },
   {
     icon: WandSparkles,
-    label: 'Corrija inconsistências',
-    desc: 'Veja duplicados, formatos inválidos e campos incompletos. Corrija ou mescle direto na revisão.',
+    label: 'Revise inconsistências',
+    desc: 'Veja duplicados, formatos inválidos e campos incompletos sinalizados na validação, antes de importar.',
   },
   {
     icon: FileDown,

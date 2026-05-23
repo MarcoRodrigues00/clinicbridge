@@ -127,8 +127,19 @@ curl -X POST http://localhost:3001/import-files/upload \
   -H "Authorization: Bearer $TOKEN" -F "file=@valid.csv"
 
 # Pacientes (CPF sempre mascarado)
-curl "http://localhost:3001/patients?search=&limit=50&offset=0" -H "Authorization: Bearer $TOKEN"
+curl "http://localhost:3001/patients?search=&limit=50&offset=0" -H "Authorization: Bearer $TOKEN"   # default status=active
+curl "http://localhost:3001/patients?status=archived" -H "Authorization: Bearer $TOKEN"             # só arquivados
 curl "http://localhost:3001/patients/duplicates" -H "Authorization: Bearer $TOKEN"
+
+# CRUD administrativo (Sprint 3.22) — criar/editar: dono + secretaria
+curl -X POST "http://localhost:3001/patients" -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"Fulano","telefone":"11999990000","cpf":"11144477735","data_nascimento":"1990-05-20"}'
+curl -X PATCH "http://localhost:3001/patients/$PID" -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"telefone":"11888887777"}'   # CPF em branco/omitido = mantém
+# arquivar/restaurar: SÓ dono (secretaria -> 403 forbidden_role)
+curl -X PATCH "http://localhost:3001/patients/$PID/archive" -H "Authorization: Bearer $OWNER_TOKEN"
+curl -X PATCH "http://localhost:3001/patients/$PID/restore" -H "Authorization: Bearer $OWNER_TOKEN"
 
 # Export (read-only)
 curl "http://localhost:3001/patients/export?format=csv" -H "Authorization: Bearer $TOKEN" -o pacientes.csv
@@ -173,6 +184,33 @@ Resultados esperados com fixtures reais:
 - formula injection neutralizada em CSV e XLSX (célula iniciando com `= + - @` recebe prefixo `'`)
 - acima de `PATIENTS_EXPORT_MAX_ROWS` → 413
 - `Content-Disposition` filename fixo; sem signed URL
+
+## CRUD de pacientes (Sprint 3.22)
+
+Matriz obrigatória (verificada por API, **25/25** no último run; contas
+descartáveis: 1 dono + 1 secretaria na mesma clínica + 1 dono de outra clínica):
+
+1. secretaria cria paciente → 201; `origem='manual'`, `status='active'`
+2. secretaria edita paciente → 200 (campos atualizados; CPF mantido)
+3. secretaria **não** arquiva → 403 `forbidden_role`
+4. dono arquiva → 200, `status='archived'`
+5. arquivado **some** da listagem padrão (`GET /patients`, default `active`)
+6. `GET /patients?status=archived` mostra o arquivado (`status=all` também)
+7. dono restaura → 200, `status='active'`
+8. cross-tenant edita/arquiva/restaura → **404 `patient_not_found`** (e não aparece na listagem do outro tenant)
+9. resposta pública só com `cpf_masked` — **nunca** CPF bruto
+10. audit com `patient.create/update/archive/restore.success`, **sem PII** (schema sem `metadata`/`entidade_tipo`)
+
+Extras: CPF inválido → 400 `patient_invalid` **sem ecoar o valor**; nome vazio → 400.
+
+```sql
+-- audit das ações da 3.22 (sem PII; recurso_id = UUID do paciente)
+SELECT acao, recurso, recurso_id FROM audit_logs
+WHERE acao LIKE 'patient.%' ORDER BY criado_em DESC LIMIT 10;
+```
+
+> Soft-delete: arquivar **não** apaga linha nem agendamentos. Não há delete físico.
+> Limpe contas/pacientes de teste após o run para não poluir os invariantes.
 
 ## Retenção dry-run (Sprint 2.24/2.26)
 

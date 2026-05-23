@@ -17,17 +17,29 @@
 
 ## Estado atual (resumido — atualizado 2026-05-23)
 
-**Última sprint aprovada: Sprint 3.20** — dados sintéticos + roteiro/checklist de
-demo do piloto v0.1 (CSV demo fictício em `docs/demo-data/`, seed dev-only de
-agenda `backend/scripts/seed-demo-scheduling.ts` com cleanup, docs de demo).
-
-**Em validação/finalização: Sprint 3.21** — **MFA backup codes** (códigos de
-recuperação). Tabela `user_mfa_backup_codes` (só hash argon2, uso único); gerados
-no confirm do MFA e no novo `POST /auth/mfa/backup-codes/regenerate` (exige TOTP,
+**Última sprint aprovada: Sprint 3.21** — **MFA backup codes** (códigos de
+recuperação): tabela `user_mfa_backup_codes` (só hash argon2, uso único); gerados
+no confirm do MFA e no `POST /auth/mfa/backup-codes/regenerate` (exige TOTP,
 invalida os anteriores); `verify-login` aceita TOTP **ou** backup code (erro
 genérico); disable apaga os códigos; status expõe só a contagem restante. Sem
-SMS/e-mail/WhatsApp OTP, sem recovery por suporte/bypass. Aguarda validação visual
-no `/app` (e2e por curl: 11/11 OK).
+SMS/e-mail/WhatsApp OTP, sem recovery por suporte/bypass.
+
+**Em validação/finalização: Sprint 3.22** — **CRUD administrativo de pacientes**
+(criação manual + edição + arquivar/restaurar via soft-delete). Backend:
+`POST /patients` e `PATCH /patients/:id` (dono + secretaria), `PATCH
+/patients/:id/archive` e `.../restore` (**somente dono**); `GET /patients` aceita
+`status=active|archived|inactive|all` (**default `active`**). Soft-delete via
+`status='archived'` (**sem delete físico**; agendamentos preservados); arquivado
+sai da listagem padrão **e** do seletor da agenda (que reusa `GET /patients`
+default). Tenant isolado por `clinica_id`; cross-tenant → **404 genérico**
+(`patient_not_found`). CPF nunca volta bruto (só `cpf_masked`); audits
+`patient.create/update/archive/restore.success` **sem PII**. **Sem migration**
+(`patients.status`/`origem` já existiam). Inclui ajuste de **copy/UX** da tela de
+Pacientes (deixar claro que é lista **paginada/filtrada**, não "todos"; incentivar
+busca/filtro; cards mais compactos) + os polimentos de copy da landing/Dashboard
+(mantidos do working tree). Aguarda validação visual no `/app`. **Gap conhecido:**
+o papel `secretaria` não é testável pelo navegador (só existe via SQL) até haver
+gestão de equipe na UI — ver sprint futura no `docs/roadmap-next-phase.md`.
 
 **Fase:** Fase 3 (produção/governança) + trilha da Agenda Administrativa em curso;
 Sprint 2 (pipeline de importação) completa. **Este MVP NÃO está pronto para
@@ -37,15 +49,17 @@ produção** (ver ressalvas P1 em `docs/security-notes.md`). Nunca descrever com
 **O que existe:** auth (JWT, `/auth/me`, rate limit, audit); upload CSV/XLSX com
 magic bytes; preview + mapeamento; validação full-file; sessões de migração;
 dry-run; mark-ready; importação controlada; recibo persistido; listagem de
-pacientes (CPF mascarado); duplicados read-only; export CSV/XLSX; hardening de
-rate limit; retenção dry-run (backend + painel frontend); responsividade mobile;
-`requireRole` por papel nos endpoints administrativos sensíveis (Sprint 3.1);
-`TRUST_PROXY` configurável + rate limit com store memory/redis (Sprint 3.2).
-Detalhe e endpoints: `docs/project-state.md`.
+pacientes (CPF mascarado); **CRUD administrativo de pacientes (criar/editar
+manual + arquivar/restaurar por soft-delete, Sprint 3.22)**; duplicados read-only;
+export CSV/XLSX; hardening de rate limit; retenção dry-run (backend + painel
+frontend); responsividade mobile; `requireRole` por papel nos endpoints
+administrativos sensíveis (Sprint 3.1); `TRUST_PROXY` configurável + rate limit
+com store memory/redis (Sprint 3.2). Detalhe e endpoints: `docs/project-state.md`.
 
 **O que NÃO existe (precisa sprint explícita):** prontuário/dados clínicos;
-edição/exclusão/merge de pacientes; limpeza real de arquivos; signed URL/download;
-job/cron; gestão de usuários/papéis na UI (papel é definido no registro/SQL).
+**merge de pacientes**; **delete físico** de paciente (arquivar é soft-delete);
+limpeza real de arquivos; signed URL/download; job/cron; gestão de usuários/papéis
+na UI (papel é definido no registro/SQL).
 
 **Migrações (em ordem):** `20260520000000_init` (users/clinics/tokens) ·
 `20260521000000_audit_logs` · `20260522000000_import_files` ·
@@ -73,6 +87,14 @@ fases: `docs/roadmap-next-phase.md`.
 
 ## Próximas prioridades prováveis
 
+- **Produto (trilha pacientes):** **3.23 recomendada = duplicados acionáveis /
+  correção de importação** (editar/arquivar por grupo reusando o CRUD da 3.22;
+  **merge seguro só depois**, com confirmação+audit, **sem** merge automático;
+  inclui paginação de duplicados). Sprint futura = **gestão de equipe / convite de
+  secretaria** (secretaria solicita entrada → dono aprova → papel aplicado, tudo
+  auditado, **sem autoentrada**); enquanto não existir, o **teste do papel
+  secretaria pelo navegador segue pendente** (hoje só via SQL). Detalhe:
+  `docs/roadmap-next-phase.md`.
 - **P1 (antes de produção):** ~~trust proxy~~ + ~~Redis/shared store p/ rate
   limit~~ (feitos na Sprint 3.2; falta só provisionar Redis/proxy reais e setar
   `TRUST_PROXY`/`REDIS_URL` em prod); ~~requireRole/dono-admin~~ (Sprint 3.1);
@@ -99,16 +121,21 @@ fases: `docs/roadmap-next-phase.md`.
 Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
 
 - **Tenant:** sempre filtrar por `clinica_id`; `requireAuth + requireClinic` em
-  todo endpoint tenant-scoped; cross-tenant → 403. DAOs sempre filtram tenant,
-  sem `listAll`. `importFileDao`/`importSessionDao` sem update/delete livre;
-  `patientDao` read-only.
+  todo endpoint tenant-scoped; cross-tenant → 403 (nas escritas de paciente →
+  **404 genérico** `patient_not_found`, sem distinguir inexistente de outro
+  tenant). DAOs sempre filtram tenant, sem `listAll`. `importFileDao`/
+  `importSessionDao` sem update/delete livre. `patientDao`: leitura + escritas
+  **tenant-scoped** (create/update/setStatus, Sprint 3.22), **sem delete físico**
+  (arquivar = `status='archived'`).
 - **PII:** nunca expor CPF bruto (só `cpf_masked`); export usa `cpf_masked`
   (`include_cpf_raw=true` → 400). Issues/mensagens/audits/logs nunca contêm
   CPF/telefone/e-mail/nome. Nunca expor `nome_original`/`nome_interno`/path/
   sha256/conteúdo de arquivo.
 - **Escopo clínico proibido:** não criar prontuário, diagnóstico, prescrição,
-  exames, CID, medicamentos ou dados clínicos sem sprint explícita. Não criar
-  edição/exclusão/merge de pacientes sem sprint explícita.
+  exames, CID, medicamentos ou dados clínicos sem sprint explícita. CRUD
+  administrativo de paciente (criar/editar/arquivar/restaurar) existe (Sprint
+  3.22) e é **somente administrativo**; **merge** e **delete físico** de paciente
+  continuam proibidos sem sprint explícita.
 - **audit_logs:** colunas reais = `acao/recurso/recurso_id/usuario_id/clinica_id/
   ip/user_agent/request_id/criado_em`. **Não existem** `metadata` nem
   `entidade_tipo`. Append-only no DAO.
@@ -131,11 +158,14 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
 - **requireRole (papel):** `requireRole(CLINIC_ADMIN_ROLES)` roda após
   `requireClinic` (nunca burla tenant) e gateia os endpoints administrativos
   sensíveis a `dono_clinica`: `POST /import-sessions/:id/import`, `.../mark-ready`,
-  `GET /patients/export`, `GET /import-files/retention/dry-run`. `secretaria`
-  (operator) faz upload/preview/validate/create-session/dry-run e leitura de
-  pacientes/duplicados. 403 → `{ error: { code: 'forbidden_role', ... } }`. Papel
-  vem do JWT (sem hit no DB); risco de papel stale até o token expirar — aceitável
-  enquanto não há gestão de usuários na UI (ver `docs/security-notes.md`).
+  `GET /patients/export`, `GET /import-files/retention/dry-run`, **`PATCH
+  /patients/:id/archive`** e **`PATCH /patients/:id/restore`** (Sprint 3.22).
+  `secretaria` (operator) faz upload/preview/validate/create-session/dry-run,
+  leitura de pacientes/duplicados e **criar/editar paciente** (`POST /patients`,
+  `PATCH /patients/:id`) — mas **não** arquivar/restaurar. 403 → `{ error: {
+  code: 'forbidden_role', ... } }`. Papel vem do JWT (sem hit no DB); risco de
+  papel stale até o token expirar — aceitável enquanto não há gestão de usuários
+  na UI (ver `docs/security-notes.md`).
 - **Limites MVP:** `IMPORT_MAX_ROWS=100` (intencional).
 
 ## Project identity

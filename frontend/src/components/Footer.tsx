@@ -12,7 +12,7 @@ export function Footer(): JSX.Element {
         <p className={styles.note}>
           ClinicBridge — MVP focado em migração administrativa, não em prontuário clínico.
         </p>
-        <span className={styles.meta}>v0.0.1 · Sprint 0</span>
+        <span className={styles.meta}>Piloto administrativo · v0.1</span>
       </div>
     </footer>
   );

@@ -12,7 +12,14 @@
 - Todo endpoint tenant-scoped usa `requireAuth` + `requireClinic`. Acesso cross-tenant deve retornar 403 (ou 404 genérico onde aplicável, ex.: `findByIdForClinic`).
 - DAOs sempre filtram `clinica_id`; **não existe `listAll`**. O único acesso direto a `patients` em service é o INSERT do import, que carrega `clinica_id`.
 - `importFileDao`/`importSessionDao`: sem update/delete livre — só operações explícitas com filtro de tenant (ex.: `updateStatusForClinic`, `markCompletedForClinic` por CAS).
-- `patientDao` é read-only (sem create/update/delete; o INSERT de import vive no execution service).
+- `patientDao` (Sprint 3.22): leitura + escritas **tenant-scoped** — `create`
+  (força `origem='manual'`/`status='active'`/`import_session_id=null`),
+  `updateForClinic` (patch parcial), `setStatusForClinic` (archive/restore). **Sem
+  delete físico** (arquivar = `status='archived'`; preserva o histórico de
+  agendamentos, que é `ON DELETE CASCADE`). `updateForClinic`/`setStatusForClinic`
+  filtram `{ id, clinica_id }` e devolvem `undefined` para id de outro tenant →
+  service responde **404 genérico** `patient_not_found` (não distingue inexistente
+  de cross-tenant; sem enumeração).
 
 ## PII e logs
 
@@ -24,11 +31,12 @@
 ## CPF mascarado
 
 - `GET /patients`, `/patients/duplicates`, `/patients/export` nunca retornam CPF bruto — só `cpf_masked` (`***.***.789-01`). `include_cpf_raw=true` no export → 400.
+- As escritas de paciente (`POST /patients`, `PATCH /patients/:id`) aceitam CPF bruto no corpo (gravado para mascarar na leitura) mas a resposta volta **só** `cpf_masked`; o CPF bruto nunca é devolvido. A validação de entrada (`patient_invalid`/400) **nunca ecoa o valor** ofensivo (ex.: "CPF deve ter 11 dígitos", sem o número). Na edição, como o CPF só existe mascarado no cliente, o frontend envia o campo CPF em branco para **manter** o atual (não pré-preenche o mascarado).
 
 ## audit_logs (schema real)
 
 - Colunas: `acao`, `recurso`, `recurso_id`, `usuario_id`, `clinica_id`, `ip`, `user_agent`, `request_id`, `criado_em`.
-- **NÃO existem** colunas `metadata` nem `entidade_tipo`. Audits de pacientes não gravam contagens nem PII (só `acao` + `recurso='patient'`).
+- **NÃO existem** colunas `metadata` nem `entidade_tipo`. Audits de pacientes não gravam contagens nem PII (só `acao` + `recurso='patient'` + `recurso_id` = UUID do paciente). Ações da Sprint 3.22: `patient.create.success`, `patient.update.success`, `patient.archive.success`, `patient.restore.success` (nenhuma carrega nome/CPF/telefone/e-mail/valor de campo).
 - Append-only no DAO (sem update/delete). FKs com SET NULL para preservar evidência ao apagar user/clinic.
 
 ## Autorização por papel — requireRole (Sprint 3.1)
@@ -43,9 +51,12 @@
   `CLINIC_ADMIN_ROLES = ['dono_clinica']`.
 - Endpoints gateados a `dono_clinica`: `POST /import-sessions/:id/import`,
   `POST /import-sessions/:id/mark-ready`, `GET /patients/export`,
-  `GET /import-files/retention/dry-run`.
-- `secretaria` mantém: upload, preview, validate, create session, dry-run, e
-  leitura de `GET /patients` e `GET /patients/duplicates`.
+  `GET /import-files/retention/dry-run`, **`PATCH /patients/:id/archive`** e
+  **`PATCH /patients/:id/restore`** (Sprint 3.22 — arquivar/restaurar paciente).
+- `secretaria` mantém: upload, preview, validate, create session, dry-run,
+  leitura de `GET /patients` e `GET /patients/duplicates`, e **criar/editar
+  paciente** (`POST /patients`, `PATCH /patients/:id`, Sprint 3.22) — mas **não**
+  arquivar/restaurar (owner-only).
 - 403 → `{ error: { code: 'forbidden_role', message: 'Você não tem permissão para
   executar esta ação.' } }` (genérico, sem PII, sem detalhe interno). 403 de papel
   **não** é auditado (decisão: não auditar cada negação).

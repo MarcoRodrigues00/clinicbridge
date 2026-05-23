@@ -19,7 +19,7 @@ export function Hero(): JSX.Element {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: 'easeOut' }}
         >
-          <span className="eyebrow">MVP em construção · Sprint 0</span>
+          <span className="eyebrow">MVP administrativo · piloto v0.1</span>
 
           <h1 className={styles.title}>
             Migração segura de{' '}

@@ -42,3 +42,46 @@ patientsRouter.get(
   requireRole(CLINIC_ADMIN_ROLES),
   asyncHandler(patientController.export),
 );
+
+// Manual administrative CRUD (Sprint 3.22). Administrative fields ONLY — no
+// clinical data. All writes are tenant-scoped (requireClinic + DAO clinica_id
+// filter); a cross-clinic id yields a generic 404. There is NO physical delete:
+// archiving sets status='archived' (kept out of the default listing and the
+// agenda picker), restoring sets it back to 'active'.
+
+// Create + edit: owner + secretaria (no requireRole — both operate the records).
+patientsRouter.post(
+  '/patients',
+  patientsRateLimit,
+  requireAuth,
+  requireClinic,
+  asyncHandler(patientController.create),
+);
+
+patientsRouter.patch(
+  '/patients/:id',
+  patientsRateLimit,
+  requireAuth,
+  requireClinic,
+  asyncHandler(patientController.update),
+);
+
+// Archive + restore: owner-only (requireRole after requireClinic — never
+// bypasses tenant isolation), mirroring the other sensitive admin actions.
+patientsRouter.patch(
+  '/patients/:id/archive',
+  patientsRateLimit,
+  requireAuth,
+  requireClinic,
+  requireRole(CLINIC_ADMIN_ROLES),
+  asyncHandler(patientController.archive),
+);
+
+patientsRouter.patch(
+  '/patients/:id/restore',
+  patientsRateLimit,
+  requireAuth,
+  requireClinic,
+  requireRole(CLINIC_ADMIN_ROLES),
+  asyncHandler(patientController.restore),
+);
