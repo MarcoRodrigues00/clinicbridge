@@ -181,6 +181,17 @@
   font-size: 0.82rem;
 }
 
+.groupHint {
+  margin-top: 0.55rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--surface-border);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 .records {
   list-style: none;
   margin: 0.85rem 0 0;
@@ -327,6 +338,7 @@
   color: var(--warning);
   border-color: rgba(245, 158, 11, 0.5);
 }
+
 
 .actionError {
   margin-top: 1rem;
