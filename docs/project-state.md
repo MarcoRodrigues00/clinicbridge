@@ -7,7 +7,20 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.17** — frontend/UX (QA visual + landing): polimento da **Agenda
+**Sprint 3.18** — frontend: **lembrete manual/assistido** da Agenda Administrativa.
+`utils/reminders.ts` (funções puras) gera **mensagem neutra** ("Olá, {nome}! …
+atendimento na {clínica} para {data} às {hora}. Para confirmar ou remarcar…") e
+botões por card (só `scheduled`/`confirmed`/`rescheduled`): **"Copiar lembrete"**
+(clipboard + feedback) e **"Abrir WhatsApp"** (`wa.me` com texto pré-preenchido se
+houver telefone; normaliza BR/DDI 55; sem telefone → "Paciente sem telefone
+disponível."). Mensagem **editável localmente** por agendamento (draft só em
+memória; sem persistência) com aviso anti-clínico e "Restaurar padrão". **Humano
+decide enviar** — sem envio automático, sem API oficial,
+sem job/cron/fila, sem token. Mensagem **não** usa profissional/rótulo/observação/
+CPF/e-mail/dado clínico. frontend typecheck+build OK. **Sem backend/migration/
+schema.** WhatsApp API oficial segue pendente (ADR própria). Sem commit.
+
+**Sprint anterior: 3.17** — frontend/UX (QA visual + landing): polimento da **Agenda
 Administrativa** e refatoração do **Roadmap público**. Agenda ganhou cabeçalho de
 data legível ("Agenda de sábado, 23 de maio de 2026") com navegação Anterior/Hoje/
 Próximo, **resumo do dia** (total/agendados/confirmados/concluídos/faltas-cancelados),
@@ -307,7 +320,7 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
   do backup (destino, gestão de chave, agendamento, monitoramento)
 - **Módulo Agenda Administrativa** (ADR 0006 + `docs/administrative-scheduling-scope.md`):
   **3.14 backend ✅** → **3.15 frontend ✅** → **3.16 app shell/navegação/cache ✅** →
-  **3.17 QA visual da agenda + landing ✅** → **3.18** lembrete manual/assistido →
+  **3.17 QA visual da agenda + landing ✅** → **3.18 lembrete manual/assistido ✅** →
   **3.19** dados sintéticos/demo v0.1 → futura **WhatsApp API** (gated, ADR própria).
   Sempre administrativo, nunca clínico; mensagens neutras.
 - Download assinado de arquivos de importação (só se houver caso de uso real)

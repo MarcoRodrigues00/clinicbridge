@@ -83,8 +83,9 @@ futura com ADR própria). Sequência (numeração atualizada na 3.13):
 - **Sprint 3.17 — QA visual da agenda + landing ✅ (concluída):** cabeçalho de data
   legível + navegação dia, resumo do dia, timeline por horário, formulário
   colapsável; landing com "O que o piloto entrega" (Roadmap antigo removido).
-- **Sprint 3.18 — Lembrete manual/assistido:** "copiar mensagem" + "abrir
-  WhatsApp" com texto neutro; humano decide enviar; registro interno opcional.
+- **Sprint 3.18 — Lembrete manual/assistido ✅ (concluída):** `utils/reminders.ts`
+  (mensagem neutra) + botões "Copiar lembrete" / "Abrir WhatsApp" (`wa.me`) por
+  card; humano decide enviar; sem API oficial/job/envio automático/registro de envio.
 - **Sprint 3.19 — Dados sintéticos + demo/piloto v0.1:** seed sintético, roteiro
   de demo, perguntas de validação, polish final.
 - **Sprint futura — WhatsApp API oficial:** opt-in, templates aprovados, logs de

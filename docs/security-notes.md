@@ -271,6 +271,19 @@
   interno (Sprint 0/1/2/3) substituída por capacidades de produto ("piloto
   administrativo"; sem afirmar produção pronta nem compliance completo). Avisos
   anti-clínico da agenda mantidos. Sem mudança de backend/contrato.
+- **Lembrete manual/assistido (Sprint 3.18):** `utils/reminders.ts` + botões na
+  agenda **apenas preparam** uma mensagem **neutra** para um humano copiar/enviar.
+  **Sem envio automático, sem WhatsApp API oficial, sem SDK, sem job/cron/fila/
+  webhook, sem token/secret, sem registro de envio.** "Abrir WhatsApp" monta um
+  link `wa.me` (telefone normalizado p/ BR; sem telefone → aviso amigável) que abre
+  o WhatsApp do operador com o rascunho — **nada é enviado pelo sistema**. A
+  mensagem **padrão** usa **só** nome do paciente + nome da clínica + data + hora;
+  **nunca** profissional/rótulo, `administrative_notes`, CPF, e-mail, motivo ou
+  qualquer dado clínico/área sensível. A mensagem pode ser **editada localmente**
+  por agendamento (draft só em memória — **sem backend, sem localStorage, sem
+  persistência**), com `maxLength` 700 e **aviso anti-clínico** ao lado do textarea
+  (sem bloqueio textual automático, p/ evitar falso positivo). WhatsApp automático/
+  API segue gated (ADR futura).
 - **App shell (Sprint 3.16):** `/app` em abas + footer; cache via
   `@tanstack/react-query` (sem token persistido no cache — o token segue em
   `authStorage`; as queries leem o token por request via `getToken()`). A

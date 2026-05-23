@@ -351,6 +351,23 @@ typecheck && build`. Manual:
   (sem "Sprint 0/1/2/3"); responsiva.
 - Mobile: timeline colapsa (trilha de horário vira linha), sem corte horizontal.
 
+**Lembrete manual/assistido (Sprint 3.18):** em cards `scheduled`/`confirmed`/
+`rescheduled` aparece a linha "Lembrete administrativo".
+- **Copiar lembrete:** copia a mensagem neutra ("Olá, {nome}! …na {clínica} para
+  {data} às {hora}…"); feedback "Mensagem copiada.". Conferir que o texto **não**
+  tem profissional/rótulo/observação/CPF/e-mail/dado clínico.
+- **Abrir WhatsApp:** com telefone do paciente → abre `wa.me` em nova aba com o
+  texto preenchido (telefone normalizado: 10/11 dígitos → prefixa 55; já com 55
+  mantém). Sem telefone → "Paciente sem telefone disponível.".
+- **Ver/editar mensagem:** abre textarea prefilled; editar muda o texto usado por
+  "Copiar lembrete" e "Abrir WhatsApp"; "Restaurar padrão" volta ao template
+  neutro; "Fechar"/reabrir mantém o draft enquanto a tela está aberta. Draft
+  **não** persiste após reload/troca de dia (só memória; sem localStorage/backend).
+  Contador + maxLength 700 + aviso anti-clínico ao lado do textarea.
+- Status `completed`/`cancelled`/`no_show`: linha de lembrete **não** aparece.
+- **Nada é enviado pelo sistema** — só prepara; humano decide. Sem API/job.
+- Mobile: botões quebram linha sem overflow; textarea ocupa largura total.
+
 **Lembretes / WhatsApp (Sprint 3.13) — ESCOPO/ADR, ainda NÃO implementados:** sem
 testes (sem envio real/WhatsApp API/SDK/job/cron). Escopo: ADR 0006 (adendo) +
 `docs/administrative-scheduling-scope.md` Parte II. Quando houver lembrete

@@ -15,6 +15,9 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarCheck,
+  Copy,
+  MessageCircle,
+  Pencil,
 } from 'lucide-react';
 import {
   api,
@@ -25,6 +28,13 @@ import {
   type PublicPatient,
 } from '../services/api';
 import { getToken } from '../services/authStorage';
+import { useAuth } from '../services/AuthProvider';
+import {
+  buildReminderMessage,
+  buildWhatsappUrl,
+  formatReminderDate,
+  formatReminderTime,
+} from '../utils/reminders';
 import styles from './AdministrativeSchedulePanel.module.css';
 
 const STATUS_LABELS: Record<AppointmentStatus, string> = {
@@ -44,6 +54,8 @@ const STATUS_ACTIONS: { status: AppointmentStatus; label: string }[] = [
 ];
 
 const TERMINAL: AppointmentStatus[] = ['cancelled', 'completed'];
+// Reminders only make sense for upcoming/active appointments.
+const REMINDER_STATUSES: AppointmentStatus[] = ['scheduled', 'confirmed', 'rescheduled'];
 const PROFESSIONALS_KEY = ['clinic-professionals'] as const;
 const APPOINTMENTS_KEY = ['appointments'] as const;
 
@@ -121,6 +133,7 @@ function timeFromIso(iso: string): string {
 
 export function AdministrativeSchedulePanel(): JSX.Element {
   const queryClient = useQueryClient();
+  const { clinic } = useAuth();
   const token = getToken();
 
   const [date, setDate] = useState(todayStr());
@@ -145,6 +158,12 @@ export function AdministrativeSchedulePanel(): JSX.Element {
   const [rDate, setRDate] = useState(todayStr());
   const [rStart, setRStart] = useState('09:00');
   const [rEnd, setREnd] = useState('10:00');
+
+  // Local-only reminder edits, per appointment id. NOT persisted (no backend, no
+  // localStorage). Cleared naturally when the component unmounts / day changes.
+  const [reminderDrafts, setReminderDrafts] = useState<Record<string, string>>({});
+  const [openReminderId, setOpenReminderId] = useState<string | null>(null);
+  const REMINDER_MAX = 700;
 
   const professionalsQuery = useQuery({
     queryKey: [...PROFESSIONALS_KEY, 'active'],
@@ -202,10 +221,12 @@ export function AdministrativeSchedulePanel(): JSX.Element {
     return s;
   }, [appointments]);
 
-  const patientName = useMemo(() => {
-    const map = new Map(patients.map((p) => [p.id, p.nome]));
-    return (id: string): string => map.get(id) ?? `Paciente ${id.slice(0, 8)}…`;
+  const patientById = useMemo(() => {
+    const map = new Map(patients.map((p) => [p.id, p]));
+    return (id: string): PublicPatient | undefined => map.get(id);
   }, [patients]);
+
+  const patientName = (id: string): string => patientById(id)?.nome ?? `Paciente ${id.slice(0, 8)}…`;
 
   const professionalName = useMemo(() => {
     const map = new Map(professionals.map((p) => [p.id, p.name]));
@@ -291,6 +312,68 @@ export function AdministrativeSchedulePanel(): JSX.Element {
     setNotice(null);
     setBusyId(id);
     rescheduleMutation.mutate({ id, starts_at: toIsoUtc(rDate, rStart), ends_at: toIsoUtc(rDate, rEnd) });
+  }
+
+  // Builds the NEUTRAL default reminder text for an appointment. Uses ONLY patient
+  // name, clinic name, date and time — never the professional/specialty, the
+  // administrative_notes, CPF, e-mail or any clinical data.
+  function defaultReminderText(appt: PublicAppointment): string {
+    const p = patientById(appt.patient_id);
+    return buildReminderMessage({
+      nome: p?.nome ?? 'paciente',
+      clinica: clinic?.nome ?? 'sua clínica',
+      data: formatReminderDate(appt.starts_at.slice(0, 10)),
+      hora: formatReminderTime(appt.starts_at),
+    });
+  }
+
+  // The message that copy/WhatsApp actually use: the local edit if present,
+  // otherwise the neutral default. Local-only (state), never persisted.
+  function effectiveReminderText(appt: PublicAppointment): string {
+    return reminderDrafts[appt.id] ?? defaultReminderText(appt);
+  }
+
+  function openReminderEditor(appt: PublicAppointment): void {
+    setError(null);
+    setNotice(null);
+    // Seed the draft with the current effective text so the textarea is prefilled.
+    setReminderDrafts((d) => (d[appt.id] !== undefined ? d : { ...d, [appt.id]: defaultReminderText(appt) }));
+    setOpenReminderId((cur) => (cur === appt.id ? cur : appt.id));
+  }
+
+  function updateReminderDraft(id: string, value: string): void {
+    setReminderDrafts((d) => ({ ...d, [id]: value.slice(0, REMINDER_MAX) }));
+  }
+
+  function restoreReminderDefault(appt: PublicAppointment): void {
+    setReminderDrafts((d) => ({ ...d, [appt.id]: defaultReminderText(appt) }));
+  }
+
+  async function handleCopyReminder(appt: PublicAppointment): Promise<void> {
+    setError(null);
+    setNotice(null);
+    const message = effectiveReminderText(appt);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable');
+      await navigator.clipboard.writeText(message);
+      setNotice('Mensagem copiada.');
+    } catch {
+      setError('Não foi possível copiar automaticamente. Use "Abrir WhatsApp" ou copie manualmente.');
+    }
+  }
+
+  // Opens WhatsApp (wa.me) with the draft pre-filled. The human decides to send —
+  // nothing is sent automatically and no send is recorded.
+  function handleOpenWhatsapp(appt: PublicAppointment): void {
+    setError(null);
+    setNotice(null);
+    const p = patientById(appt.patient_id);
+    const url = buildWhatsappUrl(p?.telefone, effectiveReminderText(appt));
+    if (!url) {
+      setError('Paciente sem telefone disponível.');
+      return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   return (
@@ -498,6 +581,52 @@ export function AdministrativeSchedulePanel(): JSX.Element {
                     <button type="button" className={styles.actionBtn} disabled={busyId === a.id} onClick={() => openReschedule(a)}>
                       <CalendarClock size={14} aria-hidden="true" /> Remarcar
                     </button>
+                  </div>
+                )}
+
+                {REMINDER_STATUSES.includes(a.status) && (
+                  <div className={styles.reminder}>
+                    <span className={styles.reminderLabel}>Lembrete administrativo</span>
+                    <div className={styles.reminderActions}>
+                      <button type="button" className={styles.reminderBtn} onClick={() => (openReminderId === a.id ? setOpenReminderId(null) : openReminderEditor(a))}>
+                        <Pencil size={14} aria-hidden="true" /> {openReminderId === a.id ? 'Fechar mensagem' : 'Ver/editar mensagem'}
+                      </button>
+                      <button type="button" className={styles.reminderBtn} onClick={() => void handleCopyReminder(a)}>
+                        <Copy size={14} aria-hidden="true" /> Copiar lembrete
+                      </button>
+                      <button type="button" className={styles.reminderBtn} onClick={() => handleOpenWhatsapp(a)}>
+                        <MessageCircle size={14} aria-hidden="true" /> Abrir WhatsApp
+                      </button>
+                    </div>
+
+                    {openReminderId === a.id && (
+                      <div className={styles.reminderEditor}>
+                        <textarea
+                          className={styles.textarea}
+                          rows={4}
+                          maxLength={REMINDER_MAX}
+                          value={effectiveReminderText(a)}
+                          onChange={(e) => updateReminderDraft(a.id, e.target.value)}
+                          aria-label="Mensagem do lembrete"
+                        />
+                        <div className={styles.reminderEditorFoot}>
+                          <span className={styles.reminderCount}>{effectiveReminderText(a).length}/{REMINDER_MAX}</span>
+                          <div className={styles.reminderActions}>
+                            <button type="button" className={styles.reminderBtn} onClick={() => restoreReminderDefault(a)}>
+                              Restaurar padrão
+                            </button>
+                            <button type="button" className={styles.reminderBtn} onClick={() => setOpenReminderId(null)}>
+                              Fechar
+                            </button>
+                          </div>
+                        </div>
+                        <p className={styles.warning}>
+                          <AlertTriangle size={15} aria-hidden="true" />
+                          Mensagem administrativa. Não inclua diagnóstico, queixa, medicação,
+                          tratamento, exame, CID, prontuário ou informação clínica.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
