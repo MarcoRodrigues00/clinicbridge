@@ -42,12 +42,12 @@ Objetivo: tornar a base administrativa apta a produção, com governança real.
   manager, banco/Redis gerenciados, monitoramento);
 - edge security (reverse proxy + WAF) — **estratégia decidida (Sprint 3.8): Nginx
   baseline + WAF ModSecurity/OWASP CRS detection-only first** (ADR 0005) +
-  **Nginx reverse proxy local/staging implementado (Sprint 3.9)** + **backend
-  containerizado com e2e Nginx→backend→Postgres/Redis validado (Sprint 3.10)**
-  (`infra/nginx/` + `backend/Dockerfile` + serviços opcionais no compose, profile
-  `edge`; body size/IP real anti-spoof/logs seguros; runbook
-  `docs/nginx-local-staging-runbook.md`); pendente: **TLS real** (HTTP→HTTPS +
-  HSTS) e o **WAF** (detection-only → tuning → blocking);
+  **Nginx reverse proxy local/staging (3.9)** + **backend containerizado e2e
+  (3.10)** + **TLS local/staging (cert autoassinado) + HTTP→HTTPS (3.11)**
+  (`infra/nginx/` + `backend/Dockerfile` + `scripts/generate-local-nginx-cert.sh`;
+  serviços opcionais no compose, profile `edge`; runbook
+  `docs/nginx-local-staging-runbook.md`); pendente: **TLS real em produção** (cert
+  ACME/gerenciado + domínio + HSTS) e o **WAF** (detection-only → tuning → blocking);
 - revisão de CORS/env de produção (`FRONTEND_ORIGIN` sem `*`) — **feita (Sprint
   3.6)**: guardas de placeholder (`JWT_SECRET`/`DATABASE_URL`) + warning de
   `RATE_LIMIT_STORE=memory` em produção;

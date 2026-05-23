@@ -75,7 +75,13 @@ Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passaria no `min(48)`.
 - **Requisito de produção:** TLS termina no **Nginx**; o backend Express fica HTTP
   interno e **não** é exposto direto na internet. Caddy/Traefik avaliados e não
   escolhidos (ver ADR 0005).
-- HSTS (via Helmet) só tem efeito sob HTTPS; HTTP **redireciona** para HTTPS.
+- **TLS local/staging (Sprint 3.11):** Nginx termina TLS com **cert autoassinado**
+  (`scripts/generate-local-nginx-cert.sh` → `infra/nginx/certs/` gitignored) +
+  redirect HTTP→HTTPS; portas host `8080` (HTTP) / `8443` (HTTPS). Teste com
+  `curl -k`. `X-Forwarded-Proto: https` enviado ao backend no server TLS. **HSTS
+  desativado** em local (comentado no `conf.d`) — ligar só com HTTPS real estável.
+  **Produção** usa cert **real** (ACME/Let's Encrypt ou gerenciado) + domínio real.
+- HSTS (via Helmet/Nginx) só tem efeito sob HTTPS; HTTP **redireciona** para HTTPS.
 - **`client_max_body_size`** do Nginx deve ser ≥ `UPLOAD_MAX_BYTES` (5 MB) — senão
   corta uploads válidos com 413 antes do app (JSON segue limitado a 100kb no Express).
 - **`TRUST_PROXY`** = hop count real do Nginx; Nginx seta `X-Real-IP`/`X-Forwarded-For`.

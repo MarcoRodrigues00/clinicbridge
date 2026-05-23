@@ -271,29 +271,39 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3011/health           
 # pgrep -af 'tsx src/server.ts' e mate o PID do node/MainThread em :3011.
 ```
 
-## Nginx + backend containerizado, e2e (Sprint 3.10) — sem TLS/WAF
+## Nginx + backend containerizado + TLS local, e2e (Sprint 3.10/3.11) — sem WAF
 
 Detalhe: `docs/nginx-local-staging-runbook.md`. Profile `edge` (não sobe no
-`docker compose up` padrão). Tudo containerizado — resolve a limitação WSL2 da 3.9.
+`docker compose up` padrão). Tudo containerizado; TLS local com cert autoassinado.
 
 ```bash
-# Build da imagem do backend + subir a stack edge:
+# 0) Gerar o cert autoassinado LOCAL (uma vez; gitignored) — senão o Nginx não sobe:
+./scripts/generate-local-nginx-cert.sh
+
+# 1) Build + subir a stack edge:
 docker compose --profile edge build backend
 docker compose --profile edge up -d postgres redis backend nginx
-docker compose ps
+docker compose ps                              # nginx: 127.0.0.1:8080->80 e 8443->443
 docker compose exec nginx nginx -t             # syntax is ok / test is successful
 
-# e2e via proxy (Nginx -> backend:3001 -> Postgres/Redis):
-curl -i http://localhost:8080/health           # 200
-curl -i http://localhost:8080/health/live      # 200
-curl -i http://localhost:8080/health/ready     # 200 {"checks":{"database":"ok"}}
+# 2) HTTP -> HTTPS redirect:
+curl -i http://localhost:8080/health           # 301 Location: https://localhost:8443/health
 
-# Readiness com DB parado (volta sozinho ao religar):
+# 3) HTTPS (cert autoassinado -> -k). Nginx -> backend:3001 -> Postgres/Redis:
+curl -k -i https://localhost:8443/health        # 200
+curl -k -i https://localhost:8443/health/live   # 200
+curl -k -i https://localhost:8443/health/ready  # 200 {"checks":{"database":"ok"}}
+
+# 4) Conferir o cert (SAN) apresentado:
+echo | openssl s_client -connect localhost:8443 -servername localhost 2>/dev/null \
+  | openssl x509 -noout -subject -ext subjectAltName
+
+# 5) Readiness com DB parado (volta sozinho ao religar):
 docker compose stop postgres
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/health/ready   # 503
+curl -sk -o /dev/null -w "%{http_code}\n" https://localhost:8443/health/ready   # 503
 docker compose --profile edge up -d postgres   # ready volta a 200 quando healthy
 
-# Logs seguros + segurança da imagem:
+# 6) Logs seguros + segurança da imagem:
 docker compose logs nginx --tail=20            # sem Authorization/Cookie/corpo
 docker compose exec backend id                 # uid=1000(node) — non-root
 docker compose exec backend sh -c 'ls -a /repo/backend | grep "^\.env$" || echo "(sem .env)"'
@@ -301,6 +311,10 @@ docker compose exec backend sh -c 'ls -a /repo/backend | grep "^\.env$" || echo 
 # Parar a stack edge:
 docker compose --profile edge stop nginx backend
 ```
+
+> **TLS:** cert autoassinado em `infra/nginx/certs/` (gitignored; `curl -k` ou
+> `--cacert`). **HSTS** desligado em local (comentado no `conf.d`). Produção usa
+> cert **real** (ACME/gerenciado) + domínio real.
 
 > **Anti-spoof XFF:** o Nginx sobrescreve `X-Forwarded-For`/`X-Real-IP` com o IP
 > real da conexão; um `X-Forwarded-For` forjado é descartado. Com

@@ -187,15 +187,16 @@ OWASP CRS tende a marcar como suspeito conteúdo legítimo do ClinicBridge:
 
 ## 19. Próxima sprint recomendada
 
-**Feito na Sprint 3.9:** Nginx reverse proxy **local/staging** implementado
-(`infra/nginx/` + serviço `nginx` no compose, profile `edge`; `client_max_body_size`
-≥ `UPLOAD_MAX_BYTES`; headers `X-Real-IP`/`X-Forwarded-For` com anti-spoof; logs
-sem PII; runbook `docs/nginx-local-staging-runbook.md`). Sem TLS real/WAF.
+**Feito na Sprint 3.9–3.11:** Nginx reverse proxy **local/staging** (`infra/nginx/`
++ serviço `nginx` no compose, profile `edge`; `client_max_body_size` ≥
+`UPLOAD_MAX_BYTES`; headers `X-Real-IP`/`X-Forwarded-For` com anti-spoof; logs sem
+PII); backend **containerizado** + e2e (3.10); **TLS local/staging com cert
+autoassinado + HTTP→HTTPS** (3.11; HSTS documentado/desligado em local). Runbook:
+`docs/nginx-local-staging-runbook.md`.
 
-**Próximas:** (a) **TLS** (local self-signed/staging → produção real com
-HTTP→HTTPS + HSTS); (b) tornar o backend alcançável a partir do host do Docker
-(ou containerizá-lo) para o proxy funcionar ponta a ponta em todo ambiente;
-(c) **WAF** ModSecurity + OWASP CRS em detection-only, com tuning antes de blocking.
+**Próximas:** (a) **TLS real** em produção (ACME/Let's Encrypt ou cert gerenciado,
+domínio real, HSTS após HTTPS estável); (b) **WAF** ModSecurity + OWASP CRS em
+detection-only, com tuning antes de blocking.
 
 ---
 

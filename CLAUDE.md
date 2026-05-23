@@ -67,10 +67,11 @@ fases: `docs/roadmap-next-phase.md`.
   auditada + checklist (3.6 — `docs/deploy-security-checklist.md` + ADR 0004;
   guardas de produção no env.ts/app.ts)** + **readiness `/health/ready` (3.7)** +
   **estratégia de borda Nginx + WAF decidida (3.8 — ADR 0005)** + **Nginx reverse
-  proxy local/staging implementado (3.9 — `infra/nginx/`, profile `edge`, sem
-  TLS/WAF)** + **backend containerizado + e2e Nginx→backend→DB/Redis (3.10 —
-  `backend/Dockerfile`)**; falta TLS real, WAF e o deploy real (HTTPS/proxy/secrets
-  manager).
+  proxy local/staging implementado (3.9 — `infra/nginx/`, profile `edge`)** +
+  **backend containerizado + e2e Nginx→backend→DB/Redis (3.10 — `backend/Dockerfile`)**
+  + **TLS local/staging (cert autoassinado) + HTTP→HTTPS (3.11 —
+  `scripts/generate-local-nginx-cert.sh`)**; falta TLS real em produção (cert
+  ACME/gerenciado + domínio + HSTS), WAF e o deploy real (secrets manager).
 - **P2:** limpeza real de arquivos (confirmação/soft-delete/quarentena/auditoria/
   idempotência/lock); paginação de duplicados; export streaming/assíncrono;
   rate limit dedicado em GETs leves se necessário.

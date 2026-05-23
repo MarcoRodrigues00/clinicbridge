@@ -219,7 +219,17 @@
   Docker Desktop + WSL2 da 3.9). Segredos do container via env (placeholder
   local/staging; `NODE_ENV=development` para usar o Postgres de dev). Verificado
   e2e: health/live/ready via proxy, readiness 503 com DB parado, anti-spoof, logs
-  seguros, counts do banco intactos (6/24/7). **Ainda SEM TLS real, domínio ou WAF.**
+  seguros, counts do banco intactos (6/24/7).
+- **TLS local/staging (Sprint 3.11):** Nginx termina TLS com **certificado
+  autoassinado** gerado por `scripts/generate-local-nginx-cert.sh` (SAN: localhost/
+  clinicbridge.local/127.0.0.1) em `infra/nginx/certs/` (**gitignored**; chave
+  privada nunca versionada — `.gitignore` cobre `infra/nginx/certs/` + `*.key`/
+  `*.pem`). Server `:80` faz **301 HTTP→HTTPS**; server `:443` proxya para o backend
+  com `X-Forwarded-Proto: https`. Portas host 8080/8443; teste com `curl -k`.
+  **HSTS desativado** em local (comentado) — ligar só com HTTPS real estável.
+  Verificado: redirect 301, HTTPS health/live/ready 200, readiness 503 com DB
+  parado, logs sem `Authorization`/`Cookie`/corpo. **Ainda SEM domínio/cert real
+  ou WAF.** Produção usa cert real (ACME/gerenciado).
 - **Decisão:** **Nginx** reverse proxy baseline (Caddy/Traefik avaliados, não
   escolhidos). TLS termina no Nginx; backend continua **HTTP interno**, **não**
   exposto direto na internet.

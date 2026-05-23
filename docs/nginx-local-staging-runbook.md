@@ -1,9 +1,10 @@
 # ClinicBridge — Runbook do Nginx Reverse Proxy (Local/Staging)
 
-> **LOCAL/STAGING ONLY.** Reverse proxy Nginx para o ClinicBridge implementado na
-> Sprint 3.9. **Sem TLS real, sem domínio real, sem WAF/ModSecurity, sem
-> AWS/Cloudflare.** Não é produção e não afirma conformidade completa com
-> LGPD/HIPAA/CFM. O MVP **não está pronto para produção** (ver `docs/security-notes.md`).
+> **LOCAL/STAGING ONLY.** Reverse proxy Nginx para o ClinicBridge (Sprint 3.9 →
+> 3.11). **Sem domínio real, sem certificado real/gerenciado, sem WAF/ModSecurity,
+> sem AWS/Cloudflare.** A Sprint 3.11 adiciona TLS local com **certificado
+> autoassinado** + redirect HTTP→HTTPS. Não é produção e não afirma conformidade
+> completa com LGPD/HIPAA/CFM. O MVP **não está pronto para produção** (ver `docs/security-notes.md`).
 >
 > Decisão/estratégia de borda: `docs/adr/0005-edge-security-reverse-proxy-waf.md` +
 > `docs/edge-security-strategy.md`. Config: `infra/nginx/`.
@@ -14,42 +15,73 @@
 - **Sprint 3.10:** o backend agora roda **containerizado** (serviço `backend`),
   então o Nginx proxya para `backend:3001` na rede do compose — o que **resolve a
   limitação Docker Desktop + WSL2** da Sprint 3.9 (ver no fim).
-- Proxy → backend HTTP interno; **sem TLS aqui** (TLS termina no Nginx só em
-  produção, futuro). Frontend via Nginx fica para sprint futura.
+- **Sprint 3.11:** o Nginx termina **TLS** (cert autoassinado local) e **redireciona
+  HTTP→HTTPS**; o proxy para o backend continua HTTP interno. Frontend via Nginx
+  fica para sprint futura.
 - WAF (ModSecurity + OWASP CRS) **não** entra nesta sprint (detection-only first
   no futuro).
 
-## Arquitetura (local/staging) — Sprint 3.10
+## Arquitetura (local/staging) — Sprint 3.11
 
 ```
 curl/browser
-  → Nginx (container, 127.0.0.1:8080 → :80)   # headers de borda, body size, logs
-    → backend (container, backend:3001, NÃO publicado no host)
-      → Postgres / Redis (containers, rede do compose)
+  → Nginx :80 (127.0.0.1:8080)  → 301 redirect → HTTPS
+  → Nginx :443 (127.0.0.1:8443) → TLS termina aqui (cert autoassinado local)
+      → backend (container, backend:3001, NÃO publicado no host)   # X-Forwarded-Proto: https
+        → Postgres / Redis (containers, rede do compose)
 ```
 
 ## Pré-requisitos
 
-- Docker + Docker Compose.
+- Docker + Docker Compose; `openssl` (para gerar o cert local).
 - Tudo containerizado via profile `edge` (não precisa de backend no host).
 - Migrations aplicadas (rodadas do host: `pnpm --filter backend migrate:latest`).
 
-## Como subir (backend containerizado — recomendado, Sprint 3.10)
+## Como subir (backend containerizado + TLS local — Sprint 3.11)
 
 ```bash
-# Build da imagem do backend (multi-stage; contexto = raiz do repo):
+# 0) Gerar o certificado autoassinado LOCAL (uma vez; gitignored). Sem isso o
+#    Nginx falha ao subir (a config TLS referencia o cert):
+./scripts/generate-local-nginx-cert.sh
+
+# 1) Build da imagem do backend (multi-stage; contexto = raiz do repo):
 docker compose --profile edge build backend
 
-# Sobe Postgres + Redis + backend + Nginx (profile edge não sobe no up padrão):
+# 2) Sobe Postgres + Redis + backend + Nginx (profile edge não sobe no up padrão):
 docker compose --profile edge up -d postgres redis backend nginx
 
-# Validar a config do Nginx:
+# 3) Validar a config do Nginx:
 docker compose exec nginx nginx -t
 docker compose ps
 ```
 
-Porta do proxy: `127.0.0.1:8080` (ajustável via `NGINX_PORT`). O backend **não** é
-publicado no host (só `expose: 3001`); o Nginx é a entrada.
+Portas: HTTP `127.0.0.1:8080` (redireciona para HTTPS) e HTTPS `127.0.0.1:8443`
+(ajustáveis via `NGINX_PORT` / `NGINX_HTTPS_PORT`). O backend **não** é publicado
+no host (só `expose: 3001`); o Nginx é a entrada.
+
+## TLS local/staging (cert autoassinado)
+
+- **Gerar o cert:** `./scripts/generate-local-nginx-cert.sh` → cria
+  `infra/nginx/certs/local/clinicbridge.local.{crt,key}` (SAN: `localhost`,
+  `clinicbridge.local`, `127.0.0.1`). Regerar: `FORCE=true ./scripts/generate-local-nginx-cert.sh`.
+- **Onde fica / por que não versionar:** em `infra/nginx/certs/` (gitignored).
+  Chave privada **nunca** é commitada (mesmo de dev). Montada read-only no Nginx
+  em `/etc/nginx/certs`.
+- **HTTP→HTTPS:** o server `:80` faz `301` para `https://$host:8443$request_uri`.
+  (Se mudar `NGINX_HTTPS_PORT`, ajuste o `:8443` no `conf.d`.)
+- **curl com `-k`:** o cert é autoassinado, então use `curl -k` (ou
+  `--cacert infra/nginx/certs/local/clinicbridge.local.crt`).
+- **HSTS:** **desativado** de propósito em local/staging (HSTS em `localhost`
+  prende o navegador a HTTPS para todos os apps locais e o cert autoassinado torna
+  isso doloroso). Há um `add_header Strict-Transport-Security ...` **comentado** no
+  `conf.d` — ligar **apenas** com HTTPS real e estável em produção.
+- **Produção:** usar certificado **REAL** (ACME/Let's Encrypt ou gerenciado pelo
+  ambiente de deploy), domínio real e HTTP→HTTPS no proxy.
+
+> **Fallback host-run:** para rodar o backend no host (modo Sprint 3.9), troque o
+> upstream em `infra/nginx/conf.d/clinicbridge.local.conf` de `backend:3001` para
+> `host.docker.internal:3001`, recarregue o Nginx (`nginx -s reload`) e rode
+> `TRUST_PROXY=1 pnpm --filter backend dev`. Sujeito à limitação WSL2 abaixo.
 
 > **Fallback host-run:** para rodar o backend no host (modo Sprint 3.9), troque o
 > upstream em `infra/nginx/conf.d/clinicbridge.local.conf` de `backend:3001` para
@@ -68,9 +100,13 @@ publicado no host (só `expose: 3001`); o Nginx é a entrada.
 ## Testar via proxy
 
 ```bash
-curl -i http://localhost:8080/health
-curl -i http://localhost:8080/health/live
-curl -i http://localhost:8080/health/ready
+# HTTP -> deve redirecionar (301) para https://localhost:8443/...
+curl -i http://localhost:8080/health        # 301 Location: https://localhost:8443/health
+
+# HTTPS (cert autoassinado -> use -k)
+curl -k -i https://localhost:8443/health        # 200
+curl -k -i https://localhost:8443/health/live   # 200
+curl -k -i https://localhost:8443/health/ready  # 200 {"checks":{"database":"ok"}}
 ```
 
 Esperado (quando o Nginx alcança o backend): `200` em `/health` e `/health/live`;

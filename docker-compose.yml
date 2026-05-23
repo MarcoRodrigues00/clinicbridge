@@ -78,13 +78,14 @@ services:
       redis:
         condition: service_healthy
 
-  # Nginx reverse proxy — OPTIONAL, LOCAL/STAGING only (Sprint 3.9 / 3.10).
+  # Nginx reverse proxy — OPTIONAL, LOCAL/STAGING only (Sprint 3.9 / 3.10 / 3.11).
   # Opt-in via the "edge" profile so a plain `docker compose up -d` never starts
-  # it: `docker compose --profile edge up -d nginx`. NO TLS, NO domain, NO WAF
-  # here (those are future). Since Sprint 3.10 it proxies to the containerized
-  # `backend` service over the compose network (backend:3001). Bound to 127.0.0.1
-  # so it isn't exposed beyond the host. extra_hosts is kept so the host-run
-  # backend mode still works if you switch the upstream back to host.docker.internal.
+  # it: `docker compose --profile edge up -d nginx`. Proxies to the containerized
+  # `backend` service over the compose network (backend:3001). Bound to 127.0.0.1.
+  # Sprint 3.11: terminates TLS with a SELF-SIGNED LOCAL cert + redirects HTTP to
+  # HTTPS. NO real domain, NO real/managed cert, NO WAF (those are future).
+  # IMPORTANT: generate the local cert BEFORE `up`, or Nginx fails to start:
+  #   ./scripts/generate-local-nginx-cert.sh
   # Config + details: infra/nginx/ and docs/nginx-local-staging-runbook.md.
   nginx:
     image: nginx:alpine
@@ -93,9 +94,12 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${NGINX_PORT:-8080}:80"
+      - "127.0.0.1:${NGINX_HTTPS_PORT:-8443}:443"
     volumes:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+      # Self-signed LOCAL/STAGING certs (gitignored). Run the generator first.
+      - ./infra/nginx/certs/local:/etc/nginx/certs:ro
     extra_hosts:
       # Kept for the host-run backend fallback (host.docker.internal upstream).
       - "host.docker.internal:host-gateway"
