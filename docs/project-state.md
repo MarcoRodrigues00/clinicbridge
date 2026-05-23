@@ -295,10 +295,12 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
 
 ## Invariantes atuais (ambiente local)
 
-- patients = 6
+- patients = 6 na base (+5 com o seed de demo, `origem='seed_demo'`)
 - import_files = 24
 - import_sessions = 7
-- clinic_professionals = 0, appointments = 0 (criadas na Sprint 3.14; dados de teste limpos)
+- clinic_professionals / appointments: dados de teste manual de UI (ex.: 1 prof /
+  3 agend.) + **seed de demo** da Sprint 3.20 (`pnpm --filter backend seed:demo`:
+  +3 profissionais, +5 pacientes, +7 agendamentos), revertível por `seed:demo:clean`
 - audit_logs registra ações (ex.: `appointment.create.success`) sem PII
 
 > Observação: estes counts são do ambiente local atual e **podem mudar** após
@@ -339,8 +341,10 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
 - **Módulo Agenda Administrativa** (ADR 0006 + `docs/administrative-scheduling-scope.md`):
   **3.14 backend ✅** → **3.15 frontend ✅** → **3.16 app shell/navegação/cache ✅** →
   **3.17 QA visual da agenda + landing ✅** → **3.18 lembrete manual/assistido ✅** →
-  **3.19** dados sintéticos/demo v0.1 → futura **WhatsApp API** (gated, ADR própria).
-  Sempre administrativo, nunca clínico; mensagens neutras.
+  **3.20** dados sintéticos + roteiro/checklist de demo do piloto v0.1 (seed dev-only
+  + CSV fictício + docs) → futura **WhatsApp API** (gated, ADR própria). (MFA por
+  TOTP foi a Sprint 3.19, trilha de segurança.) Sempre administrativo, nunca
+  clínico; mensagens neutras.
 - Download assinado de arquivos de importação (só se houver caso de uso real)
 - LGPD: endpoint de exportação e exclusão de dados por clínica
 - Limpeza real de arquivos (com confirmação/soft-delete/quarentena/auditoria)

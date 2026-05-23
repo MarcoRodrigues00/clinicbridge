@@ -12,7 +12,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "migrate:latest": "tsx scripts/db.ts migrate:latest",
     "migrate:rollback": "tsx scripts/db.ts migrate:rollback",
-    "migrate:status": "tsx scripts/db.ts migrate:status"
+    "migrate:status": "tsx scripts/db.ts migrate:status",
+    "seed:demo": "tsx scripts/seed-demo-scheduling.ts seed",
+    "seed:demo:clean": "tsx scripts/seed-demo-scheduling.ts clean"
   },
   "dependencies": {
     "argon2": "^0.44.0",

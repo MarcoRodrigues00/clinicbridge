@@ -11,20 +11,26 @@
 > - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
 > - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
+> - **Demo/piloto v0.1 (Sprint 3.20; dados fictícios, não clínico):** `docs/demo-data/README.md` (+ `docs/demo-data/pacientes-demo.csv`), `docs/demo-pilot-v0.1-script.md`, `docs/demo-pilot-v0.1-checklist.md` — seed dev-only de agenda: `backend/scripts/seed-demo-scheduling.ts` (`pnpm --filter backend seed:demo` / `seed:demo:clean`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
 > - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
 
-## Estado atual (resumido — atualizado 2026-05-22)
+## Estado atual (resumido — atualizado 2026-05-23)
 
-**Última sprint aprovada: Sprint 2.26** — painel "Arquivos antigos de importação"
-no `/app` (visibilidade da retenção dry-run, read-only), copy administrativa
-amigável e responsividade mobile corrigida (painel + Dashboard). Frontend-only;
-backend intacto.
+**Última sprint aprovada: Sprint 3.19** — MFA por TOTP no login (app autenticador;
+secret cifrado em repouso; sem SMS/e-mail OTP/serviço externo).
 
-**Fase:** Sprint 2 completa (Upload → Parse → Validação → Sessão → Dry-run →
-Importação → Listagem → Duplicados → Exportação → Hardening → Retenção dry-run).
-**Este MVP NÃO está pronto para produção** (ver ressalvas P1 em
-`docs/security-notes.md`). Nunca descrever como "pronto para produção".
+**Em validação/finalização: Sprint 3.20** — dados sintéticos + roteiro/checklist
+de demo do piloto v0.1: CSV demo fictício (`docs/demo-data/`), **seed dev-only**
+de agenda (`backend/scripts/seed-demo-scheduling.ts`, com modo cleanup) e docs
+(`docs/demo-pilot-v0.1-script.md` / `-checklist.md`). Administrativo, **não
+clínico**; sem WhatsApp API / envio automático / job / cron. Aguarda validação
+visual no `/app`.
+
+**Fase:** Fase 3 (produção/governança) + trilha da Agenda Administrativa em curso;
+Sprint 2 (pipeline de importação) completa. **Este MVP NÃO está pronto para
+produção** (ver ressalvas P1 em `docs/security-notes.md`). Nunca descrever como
+"pronto para produção". Estado detalhado e por-sprint: `docs/project-state.md`.
 
 **O que existe:** auth (JWT, `/auth/me`, rate limit, audit); upload CSV/XLSX com
 magic bytes; preview + mapeamento; validação full-file; sessões de migração;
@@ -46,9 +52,12 @@ job/cron; gestão de usuários/papéis na UI (papel é definido no registro/SQL)
 (clinic_professionals/appointments — Agenda Administrativa, Sprint 3.14) ·
 `20260527000000_user_mfa` (campos MFA/TOTP em users — Sprint 3.19).
 
-**Invariantes locais (sanity-check, podem mudar):** patients=6, import_files=24,
-import_sessions=7; clinic_professionals=0, appointments=0; audit sem PII. Reconfira
-via `docs/testing-checklist.md`.
+**Invariantes locais (sanity-check, podem mudar):** patients=6 (base, sem demo),
+import_files=24, import_sessions=7. `clinic_professionals`/`appointments` contêm
+dados de teste manual de UI (ex.: 1 prof / 3 agend.); o **seed de demo** (`pnpm
+--filter backend seed:demo`) adiciona +3 profissionais, +5 pacientes
+(`origem='seed_demo'`) e +7 agendamentos, **revertíveis** por `seed:demo:clean`.
+audit sem PII. Reconfira via `docs/testing-checklist.md`.
 
 ## Direção estratégica (aceita 2026-05-22)
 
