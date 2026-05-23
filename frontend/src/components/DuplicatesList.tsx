@@ -10,7 +10,6 @@ import {
   Cake,
   Pencil,
   Archive,
-  ArchiveRestore,
   ShieldCheck,
 } from 'lucide-react';
 import {
@@ -165,24 +164,19 @@ export function DuplicatesList({
     }
   }
 
-  async function handleRestore(p: PublicPatient): Promise<void> {
-    const token = getToken();
-    if (!token) return;
-    setActionBusyId(p.id);
-    setActionError(null);
-    try {
-      await api.restorePatient(token, p.id);
-      afterChange();
-    } catch (err) {
-      setActionError(apiMessage(err, 'Não foi possível restaurar o paciente.'));
-    } finally {
-      setActionBusyId(null);
-    }
-  }
+  // This screen is the ACTIVE correction queue, not an archive view: hide archived
+  // records and drop any group that no longer has 2+ records to compare. So
+  // "Excluir duplicado" (which archives) makes the record leave this list; it stays
+  // available under Pacientes > Arquivados. (Restore lives there, not here.)
+  // Frontend-only — the backend scan still returns every status (unchanged).
+  const activeGroups = (result?.groups ?? [])
+    .map((g) => ({ ...g, patients: g.patients.filter((p) => p.status !== 'archived') }))
+    .filter((g) => g.patients.length >= 2);
 
-  const groups = result?.groups ?? [];
-  const visibleGroups = groups.slice(0, visibleCount);
-  const hasMoreGroups = groups.length > visibleCount;
+  const groupsShown = activeGroups.length;
+  const recordsShown = activeGroups.reduce((sum, g) => sum + g.patients.length, 0);
+  const visibleGroups = activeGroups.slice(0, visibleCount);
+  const hasMoreGroups = activeGroups.length > visibleCount;
 
   return (
     <section className={styles.panel}>
@@ -210,8 +204,9 @@ export function DuplicatesList({
 
       <p className={styles.notice}>
         <Info size={16} aria-hidden="true" />
-        Revise os dados antes de arquivar. Arquivar não apaga histórico nem agendamentos — apenas
-        tira o registro da lista padrão e da agenda. Merge automático ainda não existe.
+        Esta tela mostra possíveis duplicados ativos. Ao excluir um duplicado, ele é arquivado e
+        sai desta lista, mas continua disponível em Pacientes &gt; Arquivados. Histórico e
+        agendamentos são preservados. Merge automático ainda não existe.
       </p>
 
       {!isOwner && (
@@ -232,16 +227,16 @@ export function DuplicatesList({
         </p>
       ) : error ? (
         <p className={`${styles.state} ${styles.error}`}>{error}</p>
-      ) : groups.length === 0 ? (
-        <p className={styles.empty}>Nenhum possível duplicado encontrado.</p>
+      ) : groupsShown === 0 ? (
+        <p className={styles.empty}>Nenhum possível duplicado ativo encontrado.</p>
       ) : (
         <>
           <p className={styles.count}>
-            {result?.summary.groups_count} grupo
-            {result?.summary.groups_count === 1 ? '' : 's'} ·{' '}
-            {result?.summary.patients_in_duplicate_groups} registro
-            {result?.summary.patients_in_duplicate_groups === 1 ? '' : 's'} envolvido
-            {result?.summary.patients_in_duplicate_groups === 1 ? '' : 's'}.
+            {groupsShown} grupo
+            {groupsShown === 1 ? '' : 's'} ·{' '}
+            {recordsShown} registro
+            {recordsShown === 1 ? '' : 's'} ativo
+            {recordsShown === 1 ? '' : 's'}.
             {result?.summary.scan_limited
               ? ' A análise foi limitada a uma parte dos registros.'
               : ''}
@@ -266,7 +261,7 @@ export function DuplicatesList({
                     >
                       {CONFIDENCE_LABELS[g.confidence]}
                     </span>
-                    <span className={styles.countPill}>{g.count} registros</span>
+                    <span className={styles.countPill}>{g.patients.length} registros</span>
                   </div>
 
                   {g.reasons.length > 1 && (
@@ -276,6 +271,12 @@ export function DuplicatesList({
                         .filter((r) => r !== g.reason)
                         .map((r) => REASON_LABELS[r] ?? r)
                         .join(' · ')}
+                    </p>
+                  )}
+
+                  {canWrite && g.patients.length >= 3 && (
+                    <p className={styles.groupHint}>
+                      Corrija o registro que deve ficar e exclua os duplicados.
                     </p>
                   )}
 
@@ -323,6 +324,9 @@ export function DuplicatesList({
 
                         {(canWrite || isOwner) && (
                           <div className={styles.recordActions}>
+                            {/* Only active records are shown here, so the actions are
+                                "Corrigir" (edit, owner + secretaria) and "Excluir duplicado"
+                                (archive, owner only). Restore lives in Pacientes > Arquivados. */}
                             {canWrite && (
                               <button
                                 type="button"
@@ -333,39 +337,25 @@ export function DuplicatesList({
                                 disabled={actionBusyId === p.id}
                               >
                                 <Pencil size={13} aria-hidden="true" />
-                                Editar
+                                Corrigir
                               </button>
                             )}
-                            {isOwner &&
-                              (p.status === 'archived' ? (
-                                <button
-                                  type="button"
-                                  className={styles.recordActionBtn}
-                                  onClick={() => void handleRestore(p)}
-                                  disabled={actionBusyId === p.id}
-                                >
-                                  {actionBusyId === p.id ? (
-                                    <Loader2 size={13} className={styles.spin} aria-hidden="true" />
-                                  ) : (
-                                    <ArchiveRestore size={13} aria-hidden="true" />
-                                  )}
-                                  Restaurar
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className={`${styles.recordActionBtn} ${styles.recordActionDanger}`}
-                                  onClick={() => void handleArchive(p)}
-                                  disabled={actionBusyId === p.id}
-                                >
-                                  {actionBusyId === p.id ? (
-                                    <Loader2 size={13} className={styles.spin} aria-hidden="true" />
-                                  ) : (
-                                    <Archive size={13} aria-hidden="true" />
-                                  )}
-                                  Arquivar
-                                </button>
-                              ))}
+                            {isOwner && (
+                              <button
+                                type="button"
+                                className={`${styles.recordActionBtn} ${styles.recordActionDanger}`}
+                                onClick={() => void handleArchive(p)}
+                                disabled={actionBusyId === p.id}
+                                title="Apenas arquiva o registro (soft-delete). Histórico e agendamentos são preservados."
+                              >
+                                {actionBusyId === p.id ? (
+                                  <Loader2 size={13} className={styles.spin} aria-hidden="true" />
+                                ) : (
+                                  <Archive size={13} aria-hidden="true" />
+                                )}
+                                Excluir duplicado
+                              </button>
+                            )}
                           </div>
                         )}
 
