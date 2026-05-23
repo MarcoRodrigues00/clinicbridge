@@ -66,6 +66,13 @@ backup/
 restic-repo/
 .restic/
 
+# --- TLS certs / private keys (LOCAL/STAGING self-signed; Sprint 3.11) ---
+# Never commit certificates or private keys. Local Nginx TLS certs are generated
+# by scripts/generate-local-nginx-cert.sh into infra/nginx/certs/ (gitignored).
+infra/nginx/certs/
+*.key
+*.pem
+
 # --- Docker local volumes ---
 .postgres-data/
 

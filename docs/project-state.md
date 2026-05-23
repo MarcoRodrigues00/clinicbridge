@@ -7,7 +7,17 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.10** — produção/governança: **backend containerizado** para teste ponta
+**Sprint 3.11** — produção/governança: **TLS local/staging no Nginx** + HTTP→HTTPS.
+Script `scripts/generate-local-nginx-cert.sh` (openssl, cert autoassinado, SAN
+localhost/clinicbridge.local/127.0.0.1) → `infra/nginx/certs/` (gitignored; chave
+privada nunca versionada). `conf.d`: server `:80` faz **301** para HTTPS; server
+`:443` termina TLS e proxya `backend:3001` com `X-Forwarded-Proto: https`. Compose
+expõe `127.0.0.1:8443:443` + monta certs ro. **HSTS desativado** em local
+(comentado). Verificado e2e: redirect 301, HTTPS health/live/ready 200, readiness
+503 com DB parado e 200 ao voltar, cert SAN correto, logs seguros. **Sem domínio/
+cert real, sem WAF, sem AWS/Cloudflare**; sem migration/schema; sem commit.
+
+**Sprint anterior: 3.10** — produção/governança: **backend containerizado** para teste ponta
 a ponta com Nginx. `backend/Dockerfile` (multi-stage, node:20-slim, non-root,
 prod-only, sem `.env`) + `.dockerignore` + serviço `backend` no compose (profile
 `edge`, `expose: 3001`, env apontando para `postgres`/`redis` services,
@@ -137,6 +147,8 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 - Backend **containerizado** local/staging (`backend/Dockerfile` + serviço `backend`
   no compose, profile `edge`): fluxo Nginx→backend→Postgres/Redis validado e2e
   (Sprint 3.10)
+- TLS **local/staging** no Nginx (cert autoassinado via `scripts/generate-local-nginx-cert.sh`)
+  + redirect HTTP→HTTPS; HSTS desligado em local — sem cert/domínio real (Sprint 3.11)
 - Tabela `patients` criada e populável; `import_sessions` com recibo persistido
 - Frontend: UploadPanel, ImportPreviewPanel, ValidationReport, ImportSessionsList (com DryRunSection, ImportExecutionSection, ImportReceipt embutidos), PatientsList (com exportação CSV/XLSX), DuplicatesList, ImportFileRetentionPanel
 
@@ -200,8 +212,9 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
   **(Sprint 3.6)**, readiness endpoint `/health/ready` **(Sprint 3.7)**,
   estratégia de borda Nginx + WAF **(Sprint 3.8, docs/ADR-first)**, Nginx reverse
   proxy **local/staging** implementado **(Sprint 3.9)**, backend **containerizado**
-  + e2e Nginx→backend→DB/Redis **(Sprint 3.10)**; restantes: **TLS real**
-  (HTTP→HTTPS + HSTS), **WAF** (detection-only → blocking), **deploy real**
+  + e2e Nginx→backend→DB/Redis **(Sprint 3.10)**, TLS local/staging + HTTP→HTTPS
+  **(Sprint 3.11)**; restantes: **TLS real em produção** (cert ACME/gerenciado +
+  domínio + HSTS), **WAF** (detection-only → blocking), **deploy real**
   (HTTPS/reverse proxy, secrets
   manager, banco/Redis gerenciados, monitoramento), provisionar Redis/proxy de
   produção, **validação jurídica** da política de retenção, **offsite/produção**
