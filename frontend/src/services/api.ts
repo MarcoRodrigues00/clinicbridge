@@ -82,12 +82,24 @@ export type LoginOutcome = LoginResponse | MfaRequiredResponse;
 export interface MfaStatusResponse {
   mfa_enabled: boolean;
   mfa_enabled_at: string | null;
+  // Count of unused backup codes (Sprint 3.21). Never the codes themselves.
+  backup_codes_remaining: number;
 }
 
 export interface MfaSetupResponse {
   otpauth_url: string;
   manual_key: string;
   qr_data_url: string;
+}
+
+// MFA backup codes (Sprint 3.21). Plaintext codes are returned ONLY here — on
+// confirm (initial) and on regenerate — and shown to the user just once.
+export interface MfaConfirmResponse extends MfaStatusResponse {
+  backup_codes: string[];
+}
+export interface MfaBackupCodesResponse {
+  backup_codes: string[];
+  count: number;
 }
 
 export interface PublicImportFile {
@@ -546,8 +558,9 @@ export const api = {
     return apiFetch<MfaSetupResponse>('/auth/mfa/setup', { method: 'POST', token });
   },
 
-  confirmMfa(token: string, code: string): Promise<MfaStatusResponse> {
-    return apiFetch<MfaStatusResponse>('/auth/mfa/confirm', {
+  // Confirms MFA setup. Response includes the first set of backup codes (shown once).
+  confirmMfa(token: string, code: string): Promise<MfaConfirmResponse> {
+    return apiFetch<MfaConfirmResponse>('/auth/mfa/confirm', {
       method: 'POST',
       body: { code },
       token,
@@ -556,6 +569,16 @@ export const api = {
 
   disableMfa(token: string, code: string): Promise<MfaStatusResponse> {
     return apiFetch<MfaStatusResponse>('/auth/mfa/disable', {
+      method: 'POST',
+      body: { code },
+      token,
+    });
+  },
+
+  // Regenerates backup codes (requires a valid current TOTP code). Returns the new
+  // codes once; the previous set is invalidated server-side.
+  regenerateMfaBackupCodes(token: string, code: string): Promise<MfaBackupCodesResponse> {
+    return apiFetch<MfaBackupCodesResponse>('/auth/mfa/backup-codes/regenerate', {
       method: 'POST',
       body: { code },
       token,

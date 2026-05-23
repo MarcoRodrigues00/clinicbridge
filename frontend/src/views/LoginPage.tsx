@@ -54,9 +54,11 @@ export function LoginPage(): JSX.Element {
   async function handleMfaSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
     setFormError(null);
-    const code = mfaCode.replace(/\D/g, '');
+    // Accept a 6-digit TOTP code OR a backup/recovery code. The backend normalizes
+    // and decides; we only strip whitespace and enforce a minimum length.
+    const code = mfaCode.trim();
     if (code.length < 6) {
-      setFormError('Informe o código de 6 dígitos do autenticador.');
+      setFormError('Informe o código do app autenticador ou um código de recuperação.');
       return;
     }
     if (!mfaChallenge) return;
@@ -173,21 +175,20 @@ export function LoginPage(): JSX.Element {
           <form className={styles.form} onSubmit={handleMfaSubmit} noValidate>
             <p className={styles.subtitle}>
               Verificação em duas etapas ativada. Informe o código de 6 dígitos do seu
-              app autenticador.
+              app autenticador ou um código de recuperação.
             </p>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="login-mfa-code">
-                Código do autenticador
+                Código do app autenticador ou de recuperação
               </label>
               <input
                 id="login-mfa-code"
                 className={styles.input}
                 type="text"
-                inputMode="numeric"
                 autoComplete="one-time-code"
-                maxLength={6}
+                maxLength={14}
                 value={mfaCode}
-                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\s/g, ''))}
                 autoFocus
               />
             </div>

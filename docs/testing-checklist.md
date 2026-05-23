@@ -35,6 +35,52 @@ Esperado: código errado em confirm → 400; em verify-login → 401; em disable
 sem PII. Usuários sem MFA continuam logando normalmente. Frontend: aba Segurança
 → "Ativar MFA" (QR + chave manual) → confirmar; login pede código; "Desativar MFA".
 
+## MFA backup codes / códigos de recuperação (Sprint 3.21)
+
+Códigos de recuperação de uso único (só hash argon2). Para gerar um TOTP a partir
+do `manual_key` no teste: `node -e "const {generateSync}=require('otplib');
+console.log(generateSync({secret:process.argv[1]}))" <SECRET>` (rodar em `backend/`).
+
+```bash
+B=http://localhost:3001; H='Content-Type: application/json'
+# Ativar MFA (setup -> confirm) devolve os backup codes UMA vez:
+curl -s -X POST -H "$H" -H "Authorization: Bearer $TOKEN" \
+  -d '{"code":"<TOTP>"}' $B/auth/mfa/confirm
+#   -> { mfa_enabled:true, backup_codes_remaining:10, backup_codes:[ "ABCDE-FGHJK", ... ] }
+# /auth/me NÃO contém backup codes:
+curl -s $B/auth/me -H "Authorization: Bearer $TOKEN"          # sem 'backup_codes'
+# status só mostra a contagem (nunca os códigos):
+curl -s $B/auth/mfa/status -H "Authorization: Bearer $TOKEN"  # backup_codes_remaining: N
+# Login com backup code (em vez do TOTP), no passo verify-login:
+curl -s -X POST -H "$H" -d '{"challenge_token":"<CH>","code":"ABCDE-FGHJK"}' \
+  $B/auth/mfa/verify-login                                    # -> token
+# Regenerar (exige TOTP); invalida os anteriores e devolve novos 1x:
+curl -s -X POST -H "$H" -H "Authorization: Bearer $TOKEN" \
+  -d '{"code":"<TOTP>"}' $B/auth/mfa/backup-codes/regenerate  # -> { backup_codes:[...10], count:10 }
+```
+
+Esperado (validado e2e por curl — 11/11):
+1. ativar MFA → 10 backup codes; `backup_codes_remaining=10`.
+2. `/auth/me` **não** contém backup codes.
+3. login com TOTP continua funcionando.
+4. login com backup code funciona (uso único).
+5. reutilizar o mesmo backup code → **401** `invalid_mfa_code`.
+6. backup code inválido → **401** `invalid_mfa_code` (genérico; não revela TOTP×backup).
+7. regenerar (com TOTP) invalida os antigos; novo conjunto de 10.
+8. login com código novo funciona.
+9. usuário **sem MFA** não regenera → **400** `mfa_not_enabled`.
+10. `audit_logs` têm `auth.mfa.backup_codes.generated/regenerated.success` e
+    `auth.mfa.backup_code.used.success`, **sem** nenhum código; `code_hash` começa
+    com `$argon2id`; log do backend sem códigos/secret.
+
+> Dica: o backend em execução pode estar com código antigo. Para testar o fluxo
+> novo, suba uma instância efêmera do código atual numa porta livre
+> (`AUTH_RATE_LIMIT_MAX=2000 BACKEND_PORT=3025 pnpm exec tsx src/server.ts`) e use
+> um usuário descartável (`register` → `login`). Encerre o listener da porta ao fim.
+> Frontend: aba Segurança mostra os códigos 1x (copiar + checkbox "salvei"),
+> contagem restante e "Gerar novos códigos"; login aceita "código do app **ou** de
+> recuperação".
+
 ## Build / typecheck
 
 ```bash

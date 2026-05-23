@@ -21,6 +21,14 @@ authRouter.post('/auth/mfa/setup', requireAuth, asyncHandler(authController.mfaS
 authRouter.post('/auth/mfa/confirm', requireAuth, asyncHandler(authController.mfaConfirm));
 authRouter.get('/auth/mfa/status', requireAuth, asyncHandler(authController.mfaStatus));
 authRouter.post('/auth/mfa/disable', requireAuth, asyncHandler(authController.mfaDisable));
+// Backup codes (Sprint 3.21): regenerate requires an authenticated session AND a
+// valid current TOTP code (checked in the service). Initial codes are issued by
+// /auth/mfa/confirm. There is no GET that returns codes — they are shown once.
+authRouter.post(
+  '/auth/mfa/backup-codes/regenerate',
+  requireAuth,
+  asyncHandler(authController.regenerateMfaBackupCodes),
+);
 // /auth/me intentionally does NOT compose requireClinic: admin_sistema users
 // have no clinic and the service safely returns clinic:null in that case.
 // Future tenant-scoped routes (patients, imports, exports) MUST add

@@ -17,15 +17,17 @@
 
 ## Estado atual (resumido — atualizado 2026-05-23)
 
-**Última sprint aprovada: Sprint 3.19** — MFA por TOTP no login (app autenticador;
-secret cifrado em repouso; sem SMS/e-mail OTP/serviço externo).
+**Última sprint aprovada: Sprint 3.20** — dados sintéticos + roteiro/checklist de
+demo do piloto v0.1 (CSV demo fictício em `docs/demo-data/`, seed dev-only de
+agenda `backend/scripts/seed-demo-scheduling.ts` com cleanup, docs de demo).
 
-**Em validação/finalização: Sprint 3.20** — dados sintéticos + roteiro/checklist
-de demo do piloto v0.1: CSV demo fictício (`docs/demo-data/`), **seed dev-only**
-de agenda (`backend/scripts/seed-demo-scheduling.ts`, com modo cleanup) e docs
-(`docs/demo-pilot-v0.1-script.md` / `-checklist.md`). Administrativo, **não
-clínico**; sem WhatsApp API / envio automático / job / cron. Aguarda validação
-visual no `/app`.
+**Em validação/finalização: Sprint 3.21** — **MFA backup codes** (códigos de
+recuperação). Tabela `user_mfa_backup_codes` (só hash argon2, uso único); gerados
+no confirm do MFA e no novo `POST /auth/mfa/backup-codes/regenerate` (exige TOTP,
+invalida os anteriores); `verify-login` aceita TOTP **ou** backup code (erro
+genérico); disable apaga os códigos; status expõe só a contagem restante. Sem
+SMS/e-mail/WhatsApp OTP, sem recovery por suporte/bypass. Aguarda validação visual
+no `/app` (e2e por curl: 11/11 OK).
 
 **Fase:** Fase 3 (produção/governança) + trilha da Agenda Administrativa em curso;
 Sprint 2 (pipeline de importação) completa. **Este MVP NÃO está pronto para
@@ -50,7 +52,8 @@ job/cron; gestão de usuários/papéis na UI (papel é definido no registro/SQL)
 `20260523000000_import_sessions` · `20260524000000_patients` ·
 `20260525000000_import_sessions_summary` · `20260526000000_scheduling`
 (clinic_professionals/appointments — Agenda Administrativa, Sprint 3.14) ·
-`20260527000000_user_mfa` (campos MFA/TOTP em users — Sprint 3.19).
+`20260527000000_user_mfa` (campos MFA/TOTP em users — Sprint 3.19) ·
+`20260528000000_user_mfa_backup_codes` (tabela `user_mfa_backup_codes` — Sprint 3.21).
 
 **Invariantes locais (sanity-check, podem mudar):** patients=6 (base, sem demo),
 import_files=24, import_sessions=7. `clinic_professionals`/`appointments` contêm
@@ -196,7 +199,14 @@ segredos/PII em logs; backup; fluxos LGPD de export/exclusão.
 - MFA por TOTP (Sprint 3.19): app autenticador, sem SMS/e-mail OTP/serviço externo;
   secret cifrado em repouso (AES-GCM); login em 2 passos (`mfa_required` →
   `verify-login`); secret nunca logado/retornado após ativar. Detalhe em
-  `docs/security-notes.md`. Ressalva: backup codes + chave dedicada/KMS são futuros.
+  `docs/security-notes.md`. Ressalva: chave dedicada/KMS de cifra do secret é futura (P1).
+- MFA backup codes (Sprint 3.21): tabela `user_mfa_backup_codes`, **só hash
+  argon2** (nunca texto puro), **uso único** (`used_at` por CAS), só para usuários
+  com MFA ativo. Gerados no confirm e no `POST /auth/mfa/backup-codes/regenerate`
+  (exige TOTP; invalida os anteriores). `verify-login` aceita TOTP **ou** backup
+  code com erro genérico (`invalid_mfa_code`). Códigos exibidos **uma única vez**;
+  **nunca** em `/auth/me`/status (status só devolve `backup_codes_remaining`);
+  nunca logados. Disable apaga os códigos.
 - DB: nunca concatenar SQL com input; usar ORM/queries parametrizadas.
 - Frontend: evitar `dangerouslySetInnerHTML`; escapar conteúdo; sem stack traces.
 - Secrets: nunca commitar `.env`; `.env.example` só com placeholders.

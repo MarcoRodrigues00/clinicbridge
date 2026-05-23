@@ -100,6 +100,16 @@ export interface PatientRow {
   atualizado_em: Date;
 }
 
+// MFA backup (recovery) codes (Sprint 3.21). Only the argon2 HASH is stored;
+// single-use via used_at. Codes exist only while the user has MFA enabled.
+export interface UserMfaBackupCodeRow {
+  id: string;
+  user_id: string;
+  code_hash: string;
+  used_at: Date | null;
+  created_at: Date;
+}
+
 // Administrative Scheduling (Sprint 3.14). Administrative data only — no clinical
 // fields. Tenant-scoped by clinica_id.
 export interface ClinicProfessionalRow {
@@ -135,6 +145,7 @@ declare module 'knex/types/tables' {
     import_files: ImportFileRow;
     import_sessions: ImportSessionRow;
     patients: PatientRow;
+    user_mfa_backup_codes: UserMfaBackupCodeRow;
     clinic_professionals: ClinicProfessionalRow;
     appointments: AppointmentRow;
   }

@@ -669,3 +669,36 @@ Direção: reforço de segurança (Fase 3). **MFA por TOTP (app autenticador). S
 - **Auditoria:** `auth.mfa.setup.started/confirmed`, `auth.mfa.login.challenge/success/failure`, `auth.mfa.disable.success/failure` (recurso `auth`, sem PII/secret/código).
 - **Ressalvas:** backup codes (futuro); cifra do secret derivada do `JWT_SECRET` por padrão → P1: chave dedicada/KMS em produção (trocar `JWT_SECRET` sem chave dedicada invalida secrets MFA). MVP não pronto para produção.
 - **Confirmado:** sem SMS/e-mail OTP/serviço externo; sem dado clínico; usuários sem MFA intactos; `.env` real não alterado; sem secret/código em logs; sem commit/push.
+
+---
+
+## Sprint 3.20 (dados sintéticos + roteiro/checklist de demo do piloto v0.1)
+
+**Entregáveis:**
+- `docs/demo-data/pacientes-demo.csv` (12 pacientes fictícios; cabeçalhos casam com o auto-mapeamento; 1 duplicado intencional + 1 só-email; CPFs inválidos/placeholder; e-mails `@example.com`) + `docs/demo-data/README.md`.
+- Seed dev-only `backend/scripts/seed-demo-scheduling.ts` + scripts `seed:demo`/`seed:demo:clean`: guard `NODE_ENV=production`, tenant-scoped (clínica com mais pacientes ou `SEED_CLINIC_ID`), cria pacientes (`origem='seed_demo'`) + profissionais `[DEMO]` + agendamentos fictícios (notas administrativas neutras); idempotente; cleanup remove só o demo (pacientes por `origem`, profissionais por nome `[DEMO]`).
+- `docs/demo-pilot-v0.1-script.md` + `docs/demo-pilot-v0.1-checklist.md`.
+
+**Notes:**
+- Administrativo, **não clínico**; sem migration/endpoint/WhatsApp/envio automático/job/cron. Validado e2e (seed/clean/idempotência); typecheck OK. Sem commit.
+
+---
+
+## Sprint 3.21 (MFA backup codes / códigos de recuperação — backend + frontend)
+
+**Migration:**
+- `20260528000000_user_mfa_backup_codes`: tabela `user_mfa_backup_codes` (`id`, `user_id` FK→users CASCADE, `code_hash`, `used_at`, `created_at`; índices `user_id` e `user_id,used_at`). Só **hash**, nunca texto puro. (`types/db.d.ts` atualizado.)
+
+**Backend:**
+- `mfaBackupCodeDao` (replaceForUser/deleteForUser/listUnusedByUser/markUsed por CAS/countUnusedByUser). `mfaBackupCodeService` (gera 10 códigos alfanuméricos sem `0/O/1/I/L`, formato `ABCDE-FGHJK`, ~49 bits; hash via `passwordService`/argon2id; `consume` = verify + markUsed uso único).
+- `authService`: `mfaConfirm` ativa MFA **e** gera os códigos numa transação, retornando-os 1x (`MfaConfirmResult`) + audit `auth.mfa.backup_codes.generated.success`; `verifyMfaLogin` aceita **TOTP ou backup code** (erro genérico `invalid_mfa_code`; backup uso único → `auth.mfa.backup_code.used.success`); `mfaDisable` apaga os códigos (transação); `mfaStatus` retorna `backup_codes_remaining` (nunca os códigos); novo `regenerateBackupCodes` (exige TOTP, invalida os anteriores → `auth.mfa.backup_codes.regenerated.success` / `.regenerate.failure`).
+- Endpoint novo `POST /auth/mfa/backup-codes/regenerate` (requireAuth + TOTP), sob `/auth/*` → herda `authRateLimit`. `VerifyMfaLoginSchema.code` ampliado p/ max 32 (acomoda backup formatado).
+
+**Frontend:**
+- `api.ts`: `confirmMfa` retorna `MfaConfirmResponse` (com `backup_codes`); novo `regenerateMfaBackupCodes`; `MfaStatusResponse` ganhou `backup_codes_remaining`.
+- `MfaSettings`: mostra os códigos **1x** (lista + "Copiar todos" + checkbox "Eu salvei meus códigos" + "Concluir"); quando MFA ativo mostra contagem restante e "Gerar novos códigos de recuperação" (com aviso de invalidação + campo TOTP).
+- `LoginPage`: passo MFA aceita "código do app autenticador **ou** de recuperação" (input alfanumérico, sem forçar 6 dígitos).
+
+**Verificação (e2e por curl, backend efêmero :3025, usuários descartáveis):** 11/11 — ativar→10 codes; `/auth/me` sem codes; login TOTP; login backup; reuso→401; inválido→401 `invalid_mfa_code`; regenerar invalida antigos; login com novo; sem-MFA→400 `mfa_not_enabled`; audit com os eventos esperados e **sem** códigos; `code_hash` `$argon2id`; log sem códigos/secret. `migrate:latest` batch 9; backend build + frontend typecheck/build OK.
+
+**Ressalvas:** verify de backup faz argon2.verify sequencial sobre os códigos não usados (custo aceitável p/ login de recuperação raro); chave dedicada/KMS do secret TOTP segue P1 (não afeta backup codes — são hash). Sem SMS/e-mail/WhatsApp OTP, sem recovery por suporte/bypass, sem job/cron. Validação **visual** do frontend pendente (ambiente sem browser). Sem dado clínico. Sem commit/push.
