@@ -54,6 +54,37 @@ Objetivo: tornar a base administrativa apta a produção, com governança real.
 - signed URL para download de arquivos de importação **apenas se** houver caso de
   uso real (não implementar especulativamente).
 
+## Trilha — Módulo Agenda Administrativa (piloto v0.1)
+
+Objetivo: agendamento **administrativo** (não clínico) para fortalecer o piloto
+v0.1. Escopo/decisão: ADR `docs/adr/0006-administrative-scheduling-module.md` +
+`docs/administrative-scheduling-scope.md` (Sprint 3.12, docs/ADR-only). Mantém a
+fronteira administrativo/clínico (Opção C): **sem** diagnóstico/prescrição/
+evolução/CID/anamnese/exames/prontuário; observações administrativas mínimas.
+
+Lembretes/WhatsApp: escopo definido na Sprint 3.13 (adendo ADR 0006 +
+`docs/administrative-scheduling-scope.md` Parte II) — **manual-first**, opt-in,
+templates neutros, **sem dado clínico**; WhatsApp automático/API é gated (sprint
+futura com ADR própria). Sequência (numeração atualizada na 3.13):
+
+- **Sprint 3.14 — Backend da Agenda:** migrations (ClinicProfessional,
+  Appointment), DAO/service/controller/routes, validação, `requireAuth`/
+  `requireClinic`/`requireRole`, audit, testes curl.
+- **Sprint 3.15 — Frontend da Agenda:** tela, filtros, criação, status,
+  remarcação, UX para não técnicos.
+- **Sprint 3.16 — Lembrete manual/assistido:** "copiar mensagem" + "abrir
+  WhatsApp" com texto neutro; humano decide enviar; registro interno opcional.
+- **Sprint 3.17 — Dados sintéticos + demo/piloto v0.1:** seed sintético, roteiro
+  de demo, perguntas de validação, polish.
+- **Sprint 3.18 — Polimento UX/dashboard v0.1:** navegação, cards, estados vazios,
+  responsividade, textos amigáveis.
+- **Sprint futura — WhatsApp API oficial:** opt-in, templates aprovados, logs de
+  status, opt-out, config por clínica — **só com ADR/sprint própria** + análise
+  jurídica/técnica.
+
+> Nada clínico entra por esta trilha — qualquer dado clínico continua exigindo ADR
+> clínica dedicada (ADR 0001). Mensagens de lembrete são neutras/administrativas.
+
 ## Fase 4 — Operação e UX administrativa
 
 Objetivo: melhorar operação do dia a dia sobre o que já existe.
