@@ -89,8 +89,13 @@ futura com ADR própria). Sequência (numeração atualizada na 3.13):
 - **Sprint 3.18 — Lembrete manual/assistido ✅ (concluída):** `utils/reminders.ts`
   (mensagem neutra) + botões "Copiar lembrete" / "Abrir WhatsApp" (`wa.me`) por
   card; humano decide enviar; sem API oficial/job/envio automático/registro de envio.
-- **Sprint 3.19 — Dados sintéticos + demo/piloto v0.1:** seed sintético, roteiro
-  de demo, perguntas de validação, polish final.
+- **Sprint 3.20 — Dados sintéticos + demo/piloto v0.1 ✅ (entregue):** CSV demo
+  fictício (`docs/demo-data/`), **seed dev-only** de agenda
+  (`backend/scripts/seed-demo-scheduling.ts` — pacientes/profissionais/agendamentos
+  fictícios, marcado `origem='seed_demo'`, com modo cleanup), roteiro
+  (`docs/demo-pilot-v0.1-script.md`) e checklist (`docs/demo-pilot-v0.1-checklist.md`)
+  com perguntas de validação. (A Sprint 3.19 foi o **MFA por TOTP**, trilha de
+  segurança — por isso a demo virou 3.20.) Sem dado clínico.
 - **Sprint futura — WhatsApp API oficial:** opt-in, templates aprovados, logs de
   status, opt-out, config por clínica — **só com ADR/sprint própria** + análise
   jurídica/técnica.
