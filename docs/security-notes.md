@@ -346,6 +346,43 @@
   (recurso `auth`, sem código/secret). Erros genéricos (`invalid_mfa_code`), sem
   enumeração. Rate limit de `/auth/*` cobre os endpoints MFA.
 
+## MFA backup codes / códigos de recuperação (Sprint 3.21)
+
+- **Tabela separada `user_mfa_backup_codes`** (`id`, `user_id` FK→users CASCADE,
+  `code_hash`, `used_at`, `created_at`; índices `user_id` e `user_id,used_at`). Os
+  códigos **nunca** ficam na linha de `users`.
+- **Só hash, nunca texto puro:** `code_hash` é argon2id (reusa `passwordService`).
+  `mfaBackupCodeService` gera **10** códigos de alta entropia (alfabeto sem
+  `0/O/1/I/L`, formato `ABCDE-FGHJK`, ~49 bits) e os exibe ao usuário **uma única
+  vez**. `normalize()` (uppercase + só alfanuméricos) torna a entrada tolerante a
+  maiúsculas/hífen/espaços sem enfraquecer o casamento.
+- **Uso único:** `consume()` verifica o código contra os **não usados** do usuário
+  (argon2.verify) e, no match, marca `used_at` por **compare-and-set** (`where
+  used_at is null`) — protege contra corrida/duplo uso. Verificação sequencial
+  sobre os códigos não usados (custo aceitável: login de recuperação é raro).
+- **Só com MFA ativo:** gerados no `mfaConfirm` (transação: ativa MFA **e** grava
+  os hashes) e no `regenerateBackupCodes`. **Regenerar invalida os anteriores**
+  (substitui o conjunto) e exige um **TOTP válido** (mesmo fator do disable).
+  `mfaDisable` apaga todos os códigos (transação com o disable).
+- **Login:** `verifyMfaLogin` aceita **TOTP _ou_ backup code**. Erro **idêntico** e
+  genérico (`invalid_mfa_code`, 401) em qualquer falha — não revela qual fator nem
+  se a conta existe. Backup consumido → audit `auth.mfa.backup_code.used.success` +
+  `auth.mfa.login.success`.
+- **Nunca exposto/loggado:** os códigos só voltam na resposta de `confirm` e de
+  `regenerate` (1x). `GET /auth/me` e `mfaStatus` **nunca** retornam códigos —
+  status só devolve `backup_codes_remaining` (contagem). Códigos/secret **nunca**
+  em logs (verificado: grep no log do backend = 0).
+- **Endpoint:** `POST /auth/mfa/backup-codes/regenerate` (requireAuth + TOTP), sob
+  `/auth/*` → herda `authRateLimit`. **Sem** GET que devolva códigos.
+- **Auditoria:** `auth.mfa.backup_codes.generated.success`,
+  `auth.mfa.backup_codes.regenerated.success`, `auth.mfa.backup_codes.regenerate.failure`,
+  `auth.mfa.backup_code.used.success` (recurso `auth`, **sem** código/PII). Mantém o
+  prefixo `auth.mfa.*` por consistência com os demais audits de auth.
+- **Fora de escopo (não implementado):** SMS/e-mail/WhatsApp OTP, recovery por
+  suporte, bypass manual, job/cron. **Ressalva:** backup codes mitigam a perda do
+  app autenticador, mas a recuperação total ainda depende de processo
+  operacional/admin (futuro).
+
 ## Limites intencionais (MVP)
 
 - `IMPORT_MAX_ROWS=100` — limite conservador intencional para MVP.

@@ -3,11 +3,13 @@ import { env } from '../config/env';
 import { logger } from '../config/logger';
 import { auditLogDao } from '../dao/auditLogDao';
 import { clinicDao } from '../dao/clinicDao';
+import { mfaBackupCodeDao } from '../dao/mfaBackupCodeDao';
 import { userDao } from '../dao/userDao';
 import { HttpError } from '../middlewares/errorHandler';
 import { toPublicClinic, type PublicClinic } from '../models/clinic';
 import { toSafeUser, type SafeUser, type UserRow } from '../models/user';
 import { decryptSecret, encryptSecret } from '../config/mfaCrypto';
+import { mfaBackupCodeService } from './mfaBackupCodeService';
 import { passwordService } from './passwordService';
 import { tokenService } from './tokenService';
 import { totpService } from './totpService';
@@ -60,6 +62,18 @@ export interface MfaSetupResult {
 export interface MfaStatusResult {
   mfa_enabled: boolean;
   mfa_enabled_at: string | null;
+  // Count of UNUSED backup codes. Never the codes themselves (Sprint 3.21).
+  backup_codes_remaining: number;
+}
+
+// Returned ONLY when codes are (re)generated — the plaintext codes are shown to
+// the user this one time and never again.
+export interface MfaConfirmResult extends MfaStatusResult {
+  backup_codes: string[];
+}
+export interface MfaBackupCodesResult {
+  backup_codes: string[];
+  count: number;
 }
 
 export interface MeResult {
@@ -269,8 +283,14 @@ export const authService = {
       throw invalid;
     }
 
+    // Accept either a valid TOTP code OR a single-use backup code. The error is
+    // identical for any failure, so a caller can't tell which factor was wrong
+    // (or whether the account exists).
     const secret = decryptSecret(user.mfa_secret_encrypted);
-    if (!totpService.verify(input.code, secret)) {
+    const totpOk = totpService.verify(input.code, secret);
+    const usedBackupCode = totpOk ? false : await mfaBackupCodeService.consume(user.id, input.code);
+
+    if (!totpOk && !usedBackupCode) {
       await safeAudit({
         acao: 'auth.mfa.login.failure',
         usuario_id: user.id,
@@ -278,6 +298,15 @@ export const authService = {
         ctx,
       });
       throw invalid;
+    }
+
+    if (usedBackupCode) {
+      await safeAudit({
+        acao: 'auth.mfa.backup_code.used.success',
+        usuario_id: user.id,
+        clinica_id: user.clinica_id,
+        ctx,
+      });
     }
 
     await userDao.touchMfaVerified(user.id);
@@ -313,26 +342,39 @@ export const authService = {
     return { otpauth_url: otpauth, manual_key: secret, qr_data_url: qr };
   },
 
-  // Confirms setup: verifies a code against the pending secret, then activates MFA.
-  async mfaConfirm(userId: string, code: string, ctx: AuthContext): Promise<MfaStatusResult> {
+  // Confirms setup: verifies a code against the pending secret, then activates MFA
+  // and generates the first set of backup codes (returned ONCE in this response).
+  async mfaConfirm(userId: string, code: string, ctx: AuthContext): Promise<MfaConfirmResult> {
     const user = await userDao.findById(userId);
     if (!user || !user.ativo) throw new HttpError(401, 'unauthorized', 'Sessão inválida.');
     if (user.mfa_enabled) throw new HttpError(409, 'mfa_already_enabled', 'MFA já está ativado.');
     if (!user.mfa_pending_secret_encrypted || !user.mfa_pending_created_at) {
       throw new HttpError(400, 'mfa_setup_required', 'Inicie a configuração do MFA primeiro.');
     }
+    const pendingEncrypted = user.mfa_pending_secret_encrypted;
     const ageMs = Date.now() - new Date(user.mfa_pending_created_at).getTime();
     if (ageMs > 10 * 60 * 1000) {
       throw new HttpError(400, 'mfa_setup_expired', 'Configuração expirada. Recomece a ativação.');
     }
-    const secret = decryptSecret(user.mfa_pending_secret_encrypted);
+    const secret = decryptSecret(pendingEncrypted);
     if (!totpService.verify(code, secret)) {
       throw new HttpError(400, 'invalid_mfa_code', 'Código inválido.');
     }
 
-    await userDao.enableMfa(userId, user.mfa_pending_secret_encrypted);
+    // Enable MFA and store the backup-code hashes atomically.
+    const { codes, hashes } = await mfaBackupCodeService.generate();
+    await db.transaction(async (trx) => {
+      await userDao.enableMfa(userId, pendingEncrypted, trx);
+      await mfaBackupCodeDao.replaceForUser(userId, hashes, trx);
+    });
     await safeAudit({
       acao: 'auth.mfa.setup.confirmed',
+      usuario_id: user.id,
+      clinica_id: user.clinica_id,
+      ctx,
+    });
+    await safeAudit({
+      acao: 'auth.mfa.backup_codes.generated.success',
       usuario_id: user.id,
       clinica_id: user.clinica_id,
       ctx,
@@ -341,15 +383,19 @@ export const authService = {
     return {
       mfa_enabled: true,
       mfa_enabled_at: updated?.mfa_enabled_at ? new Date(updated.mfa_enabled_at).toISOString() : null,
+      backup_codes_remaining: codes.length,
+      backup_codes: codes,
     };
   },
 
   async mfaStatus(userId: string): Promise<MfaStatusResult> {
     const user = await userDao.findById(userId);
     if (!user || !user.ativo) throw new HttpError(401, 'unauthorized', 'Sessão inválida.');
+    const remaining = user.mfa_enabled ? await mfaBackupCodeDao.countUnusedByUser(userId) : 0;
     return {
       mfa_enabled: user.mfa_enabled,
       mfa_enabled_at: user.mfa_enabled_at ? new Date(user.mfa_enabled_at).toISOString() : null,
+      backup_codes_remaining: remaining,
     };
   },
 
@@ -371,14 +417,54 @@ export const authService = {
       throw new HttpError(400, 'invalid_mfa_code', 'Código inválido.');
     }
 
-    await userDao.disableMfa(userId);
+    // Disabling MFA also discards all backup codes (they only exist while MFA is on).
+    await db.transaction(async (trx) => {
+      await userDao.disableMfa(userId, trx);
+      await mfaBackupCodeDao.deleteForUser(userId, trx);
+    });
     await safeAudit({
       acao: 'auth.mfa.disable.success',
       usuario_id: user.id,
       clinica_id: user.clinica_id,
       ctx,
     });
-    return { mfa_enabled: false, mfa_enabled_at: null };
+    return { mfa_enabled: false, mfa_enabled_at: null, backup_codes_remaining: 0 };
+  },
+
+  // Regenerates the backup-code set for a user who already has MFA enabled.
+  // Requires a valid current TOTP code (same factor that disable requires), and
+  // invalidates the previous set by replacing it. Returns the new plaintext codes
+  // ONCE in this response.
+  async regenerateBackupCodes(
+    userId: string,
+    code: string,
+    ctx: AuthContext,
+  ): Promise<MfaBackupCodesResult> {
+    const user = await userDao.findById(userId);
+    if (!user || !user.ativo) throw new HttpError(401, 'unauthorized', 'Sessão inválida.');
+    if (!user.mfa_enabled || !user.mfa_secret_encrypted) {
+      throw new HttpError(400, 'mfa_not_enabled', 'MFA não está ativado.');
+    }
+    const secret = decryptSecret(user.mfa_secret_encrypted);
+    if (!totpService.verify(code, secret)) {
+      await safeAudit({
+        acao: 'auth.mfa.backup_codes.regenerate.failure',
+        usuario_id: user.id,
+        clinica_id: user.clinica_id,
+        ctx,
+      });
+      throw new HttpError(400, 'invalid_mfa_code', 'Código inválido.');
+    }
+
+    const { codes, hashes } = await mfaBackupCodeService.generate();
+    await mfaBackupCodeDao.replaceForUser(userId, hashes);
+    await safeAudit({
+      acao: 'auth.mfa.backup_codes.regenerated.success',
+      usuario_id: user.id,
+      clinica_id: user.clinica_id,
+      ctx,
+    });
+    return { backup_codes: codes, count: codes.length };
   },
 
   async me(userId: string): Promise<MeResult> {

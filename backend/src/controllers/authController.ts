@@ -27,7 +27,9 @@ const LoginSchema = z.object({
 
 const VerifyMfaLoginSchema = z.object({
   challenge_token: z.string().min(1, 'Token de desafio é obrigatório.').max(2000),
-  code: z.string().min(1, 'Código é obrigatório.').max(12),
+  // Accepts a 6-digit TOTP code OR a formatted backup code (e.g. ABCDE-FGHJK),
+  // so the cap is larger than the TOTP-only schemas below.
+  code: z.string().min(1, 'Código é obrigatório.').max(32),
 });
 
 const MfaCodeSchema = z.object({
@@ -119,6 +121,15 @@ export const authController = {
     if (!req.auth) throw new HttpError(401, 'unauthorized', 'Autenticação necessária.');
     const input = parseOrThrow(MfaCodeSchema, req.body);
     const result = await authService.mfaDisable(req.auth.sub, input.code, buildContext(req));
+    res.status(200).json(result);
+  },
+
+  // Regenerates backup codes (requires a valid current TOTP code). The new codes
+  // are returned only in this response and the previous set is invalidated.
+  async regenerateMfaBackupCodes(req: Request, res: Response): Promise<void> {
+    if (!req.auth) throw new HttpError(401, 'unauthorized', 'Autenticação necessária.');
+    const input = parseOrThrow(MfaCodeSchema, req.body);
+    const result = await authService.regenerateBackupCodes(req.auth.sub, input.code, buildContext(req));
     res.status(200).json(result);
   },
 

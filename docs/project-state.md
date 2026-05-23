@@ -7,7 +7,39 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.19** — segurança: **MFA por TOTP no login** (app autenticador; sem SMS/
+**Sprint 3.21** (em validação/finalização) — segurança: **MFA backup codes**
+(códigos de recuperação). Migration `20260528000000_user_mfa_backup_codes` cria
+`user_mfa_backup_codes` (id, user_id FK CASCADE, `code_hash`, `used_at`,
+`created_at`; índices por user e user+used_at): **só hash argon2**, nunca texto
+puro; **uso único** via `used_at` (compare-and-set). `mfaBackupCodeDao` +
+`mfaBackupCodeService` (10 códigos alfanuméricos sem caracteres ambíguos, formato
+`ABCDE-FGHJK`; hash via `passwordService`/argon2; `consume` = verify + markUsed).
+`authService`: confirm ativa MFA **e** gera os códigos numa transação (retorna 1x)
++ audit `auth.mfa.backup_codes.generated.success`; `verifyMfaLogin` aceita **TOTP
+ou backup code** (erro genérico `invalid_mfa_code`; backup uso único marcado na
+hora → `auth.mfa.backup_code.used.success`); disable apaga os códigos (transação);
+`mfaStatus` retorna `backup_codes_remaining` (**nunca** os códigos); novo
+`regenerateBackupCodes` (exige TOTP; invalida os anteriores →
+`auth.mfa.backup_codes.regenerated.success`). Endpoint novo: `POST
+/auth/mfa/backup-codes/regenerate` (requireAuth + TOTP, sob `/auth/*` → rate
+limit). Frontend: `MfaSettings` mostra os códigos **1x** (copiar todos + checkbox
+"salvei" + concluir), contagem restante e "Gerar novos códigos" (aviso de
+invalidação); `LoginPage` aceita "código do app autenticador ou de recuperação".
+e2e por curl (backend efêmero): **11/11** cenários; `code_hash` `$argon2id`;
+audit/log sem códigos/secret; `migrate:latest` batch 9; backend+frontend
+typecheck/build OK. **Ressalvas:** verify de backup faz argon2 sequencial sobre os
+códigos não usados (custo aceitável p/ login de recuperação raro); chave dedicada/
+KMS do secret TOTP segue P1 (não afeta backup codes, que são hash). Sem SMS/e-mail/
+WhatsApp OTP, sem recovery por suporte/bypass. Sem dado clínico. Sem commit.
+
+**Sprint 3.20** — produto: **dados sintéticos + roteiro/checklist de demo do piloto
+v0.1**. CSV demo fictício (`docs/demo-data/`), **seed dev-only** de agenda
+(`backend/scripts/seed-demo-scheduling.ts`; `pnpm --filter backend seed:demo` /
+`seed:demo:clean`; pacientes `origem='seed_demo'` + profissionais `[DEMO]` +
+agendamentos fictícios), docs `demo-pilot-v0.1-script.md`/`-checklist.md`.
+Administrativo, **não clínico**; sem migration/endpoint.
+
+**Sprint anterior: 3.19** — segurança: **MFA por TOTP no login** (app autenticador; sem SMS/
 e-mail OTP/serviço externo). Backend: `otplib`+`qrcode`; migration
 `20260527000000_user_mfa` (campos MFA em `users`); secret **cifrado em repouso**
 (AES-256-GCM, chave via HKDF do `JWT_SECRET` ou `MFA_ENCRYPTION_KEY` opcional).
@@ -219,7 +251,11 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 - Auth completo (registro, login JWT, `/auth/me`, rate limit, audit logs)
 - **MFA por TOTP** (Sprint 3.19): setup/confirm/status/disable + login em 2 passos
   (`mfa_required` → `verify-login`); secret cifrado em repouso; sem SMS/e-mail OTP/
-  serviço externo; backup codes futuros
+  serviço externo
+- **MFA backup codes** (Sprint 3.21): códigos de recuperação (só hash argon2, uso
+  único); gerados no confirm + `POST /auth/mfa/backup-codes/regenerate` (exige
+  TOTP, invalida anteriores); `verify-login` aceita TOTP ou backup code; status só
+  mostra `backup_codes_remaining`; nunca em `/auth/me`; apagados ao desativar MFA
 - Upload de CSV/XLSX com validação de extensão, MIME, tamanho e conteúdo real por magic bytes (Sprint 2–2.1, 2.23)
 - Preview de arquivo com mapeamento sugerido (Sprint 2.2–2.3)
 - Validação local de mapeamento no frontend (Sprint 2.4–2.5)
@@ -292,6 +328,7 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
 - `20260525000000_import_sessions_summary` — import_summary_json, imported_at, imported_by_user_id
 - `20260526000000_scheduling` — clinic_professionals, appointments (Sprint 3.14)
 - `20260527000000_user_mfa` — campos MFA/TOTP em users (Sprint 3.19)
+- `20260528000000_user_mfa_backup_codes` — tabela user_mfa_backup_codes (Sprint 3.21)
 
 ## Invariantes atuais (ambiente local)
 
