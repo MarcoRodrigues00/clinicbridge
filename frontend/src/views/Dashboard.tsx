@@ -52,6 +52,9 @@ export function Dashboard(): JSX.Element {
   const navigate = useNavigate();
   const { user, clinic, logout, refreshMe } = useAuth();
   const [sessionsRefresh, setSessionsRefresh] = useState(0);
+  // Shared counter so the patient list and the duplicates panel reload each other
+  // after a create/edit/archive/restore (Sprint 3.22/3.23).
+  const [patientsRefresh, setPatientsRefresh] = useState(0);
   const [tab, setTab] = useState<TabKey>('inicio');
 
   // Sprint 3.1: only the clinic owner can run sensitive administrative actions.
@@ -159,8 +162,14 @@ export function Dashboard(): JSX.Element {
 
         {tab === 'pacientes' && (
           <>
-            <PatientsList />
-            <DuplicatesList />
+            <PatientsList
+              refreshKey={patientsRefresh}
+              onPatientsChanged={() => setPatientsRefresh((n) => n + 1)}
+            />
+            <DuplicatesList
+              refreshKey={patientsRefresh}
+              onPatientsChanged={() => setPatientsRefresh((n) => n + 1)}
+            />
           </>
         )}
 

@@ -212,6 +212,30 @@ WHERE acao LIKE 'patient.%' ORDER BY criado_em DESC LIMIT 10;
 > Soft-delete: arquivar **não** apaga linha nem agendamentos. Não há delete físico.
 > Limpe contas/pacientes de teste após o run para não poluir os invariantes.
 
+## Duplicados acionáveis (Sprint 3.23 — só frontend, sem endpoint novo)
+
+A tela reusa o CRUD da 3.22 (`PATCH /patients/:id`, `.../archive`, `.../restore`).
+Não há endpoint de duplicados além do `GET /patients/duplicates` (read-only).
+Matriz por API verificada (**13/13**); criar 2 pacientes com o **mesmo CPF** forma
+um grupo `cpf_match`:
+
+1. `GET /patients/duplicates` mostra o grupo com os 2 registros (CPF só `cpf_masked`, **nunca** bruto; `group_key` não-reversível)
+2. secretaria edita um membro (`PATCH /patients/:id`) → 200
+3. secretaria arquivar membro → **403 `forbidden_role`**
+4. dono arquiva membro → 200; ao reanalisar, o membro aparece **`archived`** (scan inclui todos os status — grupo **muda**, não some)
+5. dono restaura o membro → 200 `active`
+6. cross-tenant arquivar/editar → **404 `patient_not_found`**
+7. audit com `patient.update/archive/restore.success`, **sem PII**
+
+```sql
+-- scan de duplicados inclui arquivados (sem filtro de status):
+SELECT status, count(*) FROM patients GROUP BY status;
+```
+
+> UX: editar = dono + secretaria; arquivar/restaurar = só dono (UI esconde, backend
+> valida). Destaque dos campos que bateram; paginação de grupos é **client-side**
+> ("Carregar mais grupos"). **Sem merge**, sem mover agendamentos, sem delete físico.
+
 ## Retenção dry-run (Sprint 2.24/2.26)
 
 - Resposta só com metadados seguros (sem nome/hash/path/conteúdo)

@@ -117,14 +117,18 @@ dados importados. Nada clínico (Opção C / ADR 0001).
   mascarado. Inclui ajuste de **copy/UX** da tela de Pacientes (deixar claro que é
   uma lista **paginada/filtrada**, não "todos os pacientes"; incentivar busca/
   filtro; cards mais compactos). **Sem migration.**
-- **Sprint 3.23 — RECOMENDADA: duplicados acionáveis / correção de importação.**
-  Hoje `GET /patients/duplicates` é **só informativo**. Objetivo: permitir corrigir
-  e entregar a lista 100% correta, agindo sobre cada grupo. Ações candidatas (a
-  detalhar na sprint): **editar** o paciente envolvido (reusa `PATCH /patients/:id`
-  da 3.22), **arquivar** o duplicado (reusa archive), e — **possivelmente depois**
-  — um **merge seguro** com confirmação + auditoria. **Sem merge automático**; nada
-  destrutivo sem confirmação explícita e audit. **Paginação de duplicados** entra
-  aqui (movida da Fase 4).
+- **Sprint 3.23 — Duplicados acionáveis ✅ (em validação, frontend apenas).** A tela
+  `Possíveis duplicados` deixou de ser só informativa: por registro do grupo dá
+  para **editar** (reusa `PATCH /patients/:id`; dono + secretaria) e **arquivar/
+  restaurar** (reusa archive/restore; **só dono**) — **sem endpoint/backend novo**.
+  Destaque dos campos que bateram, status por registro, só CPF mascarado, paginação
+  de grupos no **frontend**, refresh cruzado com a lista de pacientes. **Sem merge**
+  (auto ou manual), sem mover agendamentos, sem delete físico, sem mexer no import.
+- **Próximo no tema (recomendado):** **merge seguro** de duplicados — escolher o
+  registro "mestre", revisar campos, consolidar com **confirmação + auditoria**;
+  **sem merge automático** e nada destrutivo sem confirmação. Mover/realocar
+  agendamentos entre pacientes exige decisão própria. **Paginação backend** de
+  duplicados quando a base crescer (hoje o corte é client-side + cap do scan).
 - **Sprint futura — Gestão de equipe / convite de secretaria.** Hoje `secretaria`
   só existe alterando o banco via SQL, então o papel **não é testável pelo
   navegador** (gap conhecido da 3.22). Escopo proposto (exige decisão/ADR própria):

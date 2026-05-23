@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Users,
   Search,
@@ -113,7 +113,15 @@ function apiMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-export function PatientsList(): JSX.Element {
+// `refreshKey` lets a sibling (the duplicates panel) force a reload after it
+// edits/archives a patient; `onPatientsChanged` lets this panel notify siblings.
+export function PatientsList({
+  refreshKey = 0,
+  onPatientsChanged,
+}: {
+  refreshKey?: number;
+  onPatientsChanged?: () => void;
+} = {}): JSX.Element {
   const { user } = useAuth();
   // Owner + secretaria can create/edit. Archive/restore and export are owner-only
   // (Sprint 3.1/3.22) — the backend enforces this; the UI just hides the controls.
@@ -179,8 +187,29 @@ export function PatientsList(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
+  // External refresh (e.g., a duplicate action in the sibling panel). Skip the
+  // initial mount (the status-filter effect already loads) and preserve the
+  // current search + filter so the user's view isn't reset.
+  const didMountRef = useRef(false);
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    void loadFirstPage(activeSearch, statusFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
+
   function reload(): void {
     void loadFirstPage(activeSearch, statusFilter);
+  }
+
+  // After a successful write: tell the parent (which bumps refreshKey, reloading
+  // both this list and the duplicates panel). Falls back to a local reload when
+  // used standalone (no parent callback).
+  function notifyChanged(): void {
+    if (onPatientsChanged) onPatientsChanged();
+    else reload();
   }
 
   function handleSearch(e: React.FormEvent): void {
@@ -242,7 +271,7 @@ export function PatientsList(): JSX.Element {
         await api.createPatient(token, payload);
       }
       closeForm();
-      reload();
+      notifyChanged();
     } catch (err) {
       setFormError(apiMessage(err, 'Não foi possível salvar o paciente.'));
     } finally {
@@ -257,7 +286,7 @@ export function PatientsList(): JSX.Element {
     setActionError(null);
     try {
       await api.archivePatient(token, p.id);
-      reload();
+      notifyChanged();
     } catch (err) {
       setActionError(apiMessage(err, 'Não foi possível arquivar o paciente.'));
     } finally {
@@ -272,7 +301,7 @@ export function PatientsList(): JSX.Element {
     setActionError(null);
     try {
       await api.restorePatient(token, p.id);
-      reload();
+      notifyChanged();
     } catch (err) {
       setActionError(apiMessage(err, 'Não foi possível restaurar o paciente.'));
     } finally {

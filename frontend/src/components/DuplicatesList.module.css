@@ -198,14 +198,50 @@
   min-width: 0;
 }
 
+.recordTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .recordName {
-  display: block;
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--text-0);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+}
+
+.statusBadge {
+  flex-shrink: 0;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.status_active {
+  color: var(--success);
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.status_inactive {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.status_archived {
+  color: var(--text-3);
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.3);
 }
 
 .recordFields {
@@ -233,11 +269,93 @@
   opacity: 0.75;
 }
 
+/* Field that contributed to the match — highlighted so it's obvious what coincided. */
+.recordFieldMatched {
+  color: var(--cyan-soft);
+  font-weight: 600;
+}
+
+.recordFieldMatched svg {
+  opacity: 1;
+}
+
 .recordMeta {
   display: block;
   margin-top: 0.45rem;
   color: var(--text-3);
   font-size: 0.78rem;
+}
+
+.recordActions {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.recordActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.36rem 0.7rem;
+  border-radius: var(--r-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--surface-border-strong);
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.recordActionBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-0);
+}
+
+.recordActionBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.recordActionDanger {
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.recordActionDanger:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.actionError {
+  margin-top: 1rem;
+  color: var(--danger);
+  font-size: 0.86rem;
+}
+
+.moreRow {
+  margin-top: 1.1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.moreBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.2rem;
+  border-radius: var(--r-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--cyan-soft);
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  transition: background 0.18s ease;
+}
+
+.moreBtn:hover {
+  background: rgba(34, 211, 238, 0.14);
 }
 
 .spin {

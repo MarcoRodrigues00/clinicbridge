@@ -1,0 +1,142 @@
+.form {
+  margin-top: 0.7rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.close:hover {
+  color: var(--text-0);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.7rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  min-width: 0;
+}
+
+.label {
+  color: var(--text-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.input {
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-0);
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.input::placeholder {
+  color: var(--text-3);
+}
+
+.input:focus {
+  outline: 2px solid rgba(34, 211, 238, 0.4);
+  outline-offset: 1px;
+}
+
+.error {
+  margin-top: 0.7rem;
+  color: var(--danger);
+  font-size: 0.84rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.save {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--r-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #04141a;
+  background: var(--cyan);
+  border: 1px solid var(--cyan);
+  transition: filter 0.18s ease;
+}
+
+.save:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancel {
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--r-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--surface-border-strong);
+  transition: background 0.18s ease;
+}
+
+.cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spin {
+  animation: patientEditSpin 0.9s linear infinite;
+}
+
+@keyframes patientEditSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

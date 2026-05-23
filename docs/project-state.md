@@ -7,7 +7,45 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.22** (em validação/finalização) — **CRUD administrativo de pacientes**
+**Sprint 3.23** (em validação/finalização) — **duplicados acionáveis / correção de
+pacientes** (**frontend apenas, SEM backend, SEM migration**). A tela "Possíveis
+duplicados" deixou de ser só informativa: cada registro de um grupo agora tem
+ações que **reusam o CRUD da Sprint 3.22** — **editar** (`PATCH /patients/:id`,
+dono + secretaria) via form inline `PatientEditForm`, e **arquivar/restaurar**
+(`PATCH /patients/:id/archive|restore`, **somente dono**). Nenhum endpoint novo;
+nenhuma mudança de resposta/PII.
+
+- **`PatientEditForm.tsx`** (novo, + `.module.css`): form de edição administrativa
+  reutilizável (nome/telefone/e-mail/CPF/nascimento/convênio/carteirinha); na
+  edição o CPF em branco **mantém** o atual (só vem mascarado). Mantém o form da
+  `PatientsList` intacto (sem refactor de risco no código recém-commitado da 3.22).
+- **`DuplicatesList.tsx`:** ações por registro (editar dono+secretaria; arquivar/
+  restaurar só dono — backend valida, UI esconde); **destaque dos campos que
+  bateram** (`reasons → campos`); **status por registro**; **só CPF mascarado**;
+  paginação simples de grupos no frontend ("Carregar mais grupos", `GROUPS_PAGE=8`);
+  avisos "Revise os dados antes de arquivar", "Arquivar não apaga histórico nem
+  agendamentos", "Merge automático ainda não existe".
+- **Refresh cruzado:** `Dashboard` ganhou `patientsRefresh` (contador compartilhado,
+  padrão do `sessionsRefresh`); `PatientsList` e `DuplicatesList` recebem
+  `refreshKey` + `onPatientsChanged`. Após editar/arquivar/restaurar em qualquer um
+  dos painéis, **ambos** recarregam. (`PatientsList` preserva busca/filtro ao
+  recarregar por `refreshKey`.)
+- **Decisão (sem backend):** o scan de duplicados inclui **todos os status**
+  (`listForDuplicateScan` não filtra status). Por isso arquivar um duplicado **não
+  faz o grupo sumir**: o registro passa a aparecer marcado **Arquivado** (e ganha
+  ação **Restaurar**). É o comportamento "grupo muda corretamente"; restaurar a
+  partir dos duplicados faz sentido justamente porque arquivados aparecem.
+- **Não feito (fora de escopo):** merge (auto/manual), mover agendamentos, delete
+  físico, paginação backend de duplicados, alteração de import/dry-run, gestão de
+  equipe.
+
+Verificação: frontend typecheck/build OK; matriz por API (Node fetch, backend dev
+:3001, contas descartáveis) **13/13** — duplicados aparecem; CPF só mascarado;
+secretaria edita membro; secretaria **não** arquiva (403); dono arquiva → grupo
+mostra "archived"; dono restaura; cross-tenant → 404; audit com as 4 ações e **sem
+PII**. Dados de teste removidos. Validação **visual** no navegador pendente. Sem commit.
+
+**Sprint 3.22** — **CRUD administrativo de pacientes**
 (Escopo A: criar manual + editar + arquivar/restaurar). **Sem migration**
 (`patients.status` já aceita `active/inactive/archived`; `origem` já existe).
 
@@ -333,7 +371,7 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 - Recibo persistido da importação (`import_summary_json`, `imported_at`) (Sprint 2.18)
 - Listagem de pacientes: `GET /patients` (CPF mascarado, paginação simples, busca; `status=active|archived|inactive|all`, default `active` — Sprint 3.22) (Sprint 2.19)
 - CRUD administrativo de pacientes (Sprint 3.22): `POST /patients` + `PATCH /patients/:id` (dono + secretaria); `PATCH /patients/:id/archive` + `.../restore` (só dono; soft-delete via `status`, **sem delete físico**); cross-tenant/inexistente → 404 genérico
-- Detecção informativa de duplicados: `GET /patients/duplicates` (read-only, sem merge/edit/delete) (Sprint 2.20)
+- Detecção de duplicados: `GET /patients/duplicates` (detecção read-only, sem merge) (Sprint 2.20); **tela acionável** no frontend (editar/arquivar/restaurar por registro reusando o CRUD de pacientes, **sem novo endpoint**) (Sprint 3.23)
 - Exportação limpa CSV/XLSX: `GET /patients/export` (read-only, CPF mascarado, anti-formula-injection) (Sprint 2.21)
 - Rate limit por grupo em todos os endpoints sensíveis (auth, upload, import pipeline, patients, duplicates, export) (Sprint 2.22)
 - Retenção de arquivos em DRY-RUN: `GET /import-files/retention/dry-run` (read-only, NÃO apaga) (Sprint 2.24)
