@@ -285,7 +285,10 @@ tenant-scoped (inclui toda a agenda).
 
 - **Fase A — Agenda manual:** criar agendamento, status, filtros. **Sem lembrete.**
 - **Fase B — Lembrete assistido/manual:** "Copiar mensagem" + "Abrir WhatsApp" com
-  texto neutro; **humano decide enviar**; **sem API oficial**.
+  texto neutro; **humano decide enviar**; **sem API oficial**. **✅ Implementada na
+  Sprint 3.18** (`utils/reminders.ts` + botões por card; `wa.me`; mensagem
+  **editável localmente** sem persistência + aviso anti-clínico; sem envio
+  automático/registro de envio).
 - **Fase C — Registro interno de lembrete:** registrar que um lembrete foi
   preparado/enviado manualmente (canal + horário); **sem** conteúdo clínico.
 - **Fase D — WhatsApp automático (futuro):** só com **opt-in**, **templates

@@ -493,6 +493,64 @@
   margin-top: 0.8rem;
 }
 
+.reminder {
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--surface-border-strong);
+}
+
+.reminderLabel {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-3);
+  margin-bottom: 0.4rem;
+}
+
+.reminderActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.reminderBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-1);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.reminderBtn:hover {
+  border-color: var(--cyan);
+  color: var(--text-0);
+}
+
+.reminderEditor {
+  margin-top: 0.6rem;
+}
+
+.reminderEditorFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
+.reminderCount {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
 .reschedule {
   display: flex;
   flex-wrap: wrap;
