@@ -257,8 +257,26 @@
   patient/professional → 400 seguro; detalhe cross-tenant → 404. Auditoria
   (`appointment.*`/`clinic_professional.*`) **sem PII e sem `administrative_notes`**;
   o schema do `audit_logs` não tem coluna de conteúdo. **Nenhum dado clínico** em
-  nenhuma camada; `administrative_notes` nunca é logado. **Frontend e lembretes
-  ainda não implementados.**
+  nenhuma camada; `administrative_notes` nunca é logado.
+- **Frontend implementado (Sprint 3.15):** painéis no Dashboard (profissionais +
+  agenda). **Aviso anti-clínico** visível no campo de observação ("Não inclua
+  diagnóstico, queixa, medicação, tratamento, exame, CID, prontuário ou informação
+  clínica"). A UI esconde a gestão de profissionais para não-owner (defesa real é o
+  `requireRole` no backend); 403/400 viram mensagens amigáveis. O cliente API só
+  ganhou suporte a **PATCH** (sem mudança de backend). Sem WhatsApp/lembretes.
+  Times tratados em UTC no MVP (simplificação para alinhar criação/filtro/exibição).
+- **QA visual (Sprint 3.17):** polimento da agenda (cabeçalho de data, timeline,
+  form colapsável) e troca de "especialidade" por "função/rótulo interno" — reforça
+  que o rótulo do profissional **não** é dado clínico. Landing: seção de Roadmap
+  interno (Sprint 0/1/2/3) substituída por capacidades de produto ("piloto
+  administrativo"; sem afirmar produção pronta nem compliance completo). Avisos
+  anti-clínico da agenda mantidos. Sem mudança de backend/contrato.
+- **App shell (Sprint 3.16):** `/app` em abas + footer; cache via
+  `@tanstack/react-query` (sem token persistido no cache — o token segue em
+  `authStorage`; as queries leem o token por request via `getToken()`). A
+  reorganização não afrouxa nenhuma checagem: defesa continua no backend
+  (`requireAuth`/`requireClinic`/`requireRole`). Footer reforça que o produto é
+  **administrativo** ("Não substitui prontuário ou sistema clínico").
 - **Administrativa, não clínica:** a agenda **não** pode conter diagnóstico,
   prescrição, evolução, CID, anamnese, exames, medicação nem prontuário. Campo
   `administrative_notes` é opcional/curto e **administrativo** (✅ "pediu contato

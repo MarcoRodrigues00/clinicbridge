@@ -310,6 +310,47 @@ Esperado também: `clinic_professionals`/`appointments` tenant-scoped (cross-ten
 → 400/404); audit `appointment.*`/`clinic_professional.*` sem PII/notes; counts de
 patients/import_files/import_sessions inalterados.
 
+**Frontend da Agenda (Sprint 3.15)** — Dashboard, dois painéis. Build:
+`pnpm --filter frontend typecheck && pnpm --filter frontend build`. Manual (backend
++ frontend rodando, login owner e secretaria):
+- Painel "Profissionais da clínica": owner cria/edita/desativa; secretaria vê lista
+  + nota (sem botões de gestão).
+- Painel "Agenda administrativa": filtra por data/profissional/status; cria
+  agendamento (buscar paciente → selecionar; profissional opcional; início/fim;
+  observação com **aviso anti-clínico**); confirma/conclui/falta/cancela; remarca.
+- Estados: vazio "Nenhum agendamento para esta data."; sucesso "Agendamento
+  criado."/"Status atualizado."/"Agendamento remarcado."; 403 vira mensagem amigável.
+- Status em PT (Agendado/Confirmado/Cancelado/Remarcado/Faltou/Concluído).
+- Responsivo: cards (não tabela espremida); ações empilham < 32rem.
+> Tempos tratados em UTC no MVP (o horário digitado é exibido verbatim).
+
+**App shell / navegação / cache (Sprint 3.16):** Build:
+`pnpm --filter frontend typecheck && pnpm --filter frontend build`. Manual:
+- `/app` em abas: Início/Importações/Pacientes/Agenda/Segurança — alternar não
+  quebra nenhum painel; cada aba mostra só o seu conteúdo (página mais curta).
+- **Cache/invalidação (corrige bug 3.15):** na aba Agenda, criar/editar/desativar
+  um profissional no painel "Profissionais da clínica" deve atualizar o select de
+  profissional da "Agenda administrativa" **sem F5** (chave `['clinic-professionals']`).
+- Criar/alterar status/remarcar agendamento atualiza a lista automaticamente
+  (`['appointments']`).
+- Footer aparece no app autenticado com o aviso administrativo.
+- Mobile: nav e footer quebram linha sem corte horizontal.
+
+**QA visual da Agenda + Landing (Sprint 3.17):** Build: `pnpm --filter frontend
+typecheck && build`. Manual:
+- Aba Agenda: cabeçalho mostra "Agenda de {dia da semana}, {DD de mês de AAAA}";
+  botões Anterior/Hoje/Próximo mudam o dia e recarregam a lista.
+- Resumo do dia (chips Total/Agendados/Confirmados/Concluídos/Faltas-Cancelados)
+  reflete os agendamentos do dia.
+- Lista em timeline ordenada por horário (início em destaque); estado vazio com
+  botão "+ Novo agendamento".
+- Formulário só aparece ao clicar "+ Novo agendamento"; "Fechar" recolhe; criar
+  fecha e atualiza a lista.
+- Profissionais: campo "Função/rótulo interno" (não "especialidade").
+- Landing pública (`/`): seção mostra "O que o ClinicBridge entrega no piloto"
+  (sem "Sprint 0/1/2/3"); responsiva.
+- Mobile: timeline colapsa (trilha de horário vira linha), sem corte horizontal.
+
 **Lembretes / WhatsApp (Sprint 3.13) — ESCOPO/ADR, ainda NÃO implementados:** sem
 testes (sem envio real/WhatsApp API/SDK/job/cron). Escopo: ADR 0006 (adendo) +
 `docs/administrative-scheduling-scope.md` Parte II. Quando houver lembrete

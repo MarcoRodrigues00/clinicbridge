@@ -103,8 +103,64 @@
   overflow-wrap: anywhere;
 }
 
+.nav {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.navItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--r-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.navItem:hover {
+  color: var(--text-0);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.navItemActive,
+.navItemActive:hover {
+  color: var(--cyan-soft);
+  background: rgba(34, 211, 238, 0.1);
+  border-color: rgba(34, 211, 238, 0.32);
+}
+
+.sectionHead {
+  margin-top: 2rem;
+}
+
+.sectionTitle {
+  font-size: clamp(1.4rem, 2.4vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--text-0);
+}
+
+.sectionSubtitle {
+  margin-top: 0.4rem;
+  max-width: 70ch;
+  color: var(--text-1);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
 .identity {
-  margin-top: 2.25rem;
+  margin-top: 1.5rem;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   gap: 1rem;
@@ -251,6 +307,49 @@
 
 .iconPending {
   color: var(--warning);
+}
+
+.footer {
+  margin-top: auto;
+  border-top: 1px solid var(--surface-border);
+  background: rgba(5, 7, 13, 0.5);
+}
+
+.footerInner {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.5rem var(--gutter);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem 1.5rem;
+}
+
+.footerBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  color: var(--text-1);
+  font-size: 0.95rem;
+}
+
+.footerNote {
+  flex: 1 1 16rem;
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.footerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  color: var(--text-3);
+  font-size: 0.85rem;
 }
 
 @media (max-width: 30rem) {

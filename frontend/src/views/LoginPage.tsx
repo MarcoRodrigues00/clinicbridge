@@ -55,7 +55,8 @@ export function LoginPage(): JSX.Element {
         <span className={styles.eyebrow}>Entrar</span>
         <h1 className={styles.title}>Acesse sua conta</h1>
         <p className={styles.subtitle}>
-          Entre para acessar o painel da clínica e acompanhar a migração de dados.
+          Entre para acessar o painel da clínica: pacientes, importação/exportação,
+          duplicados, agenda administrativa e auditoria.
         </p>
 
         {formError ? (

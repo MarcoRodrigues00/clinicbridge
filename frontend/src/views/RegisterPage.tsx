@@ -122,8 +122,8 @@ export function RegisterPage(): JSX.Element {
         <span className={styles.eyebrow}>Criar conta</span>
         <h1 className={styles.title}>Cadastre sua clínica</h1>
         <p className={styles.subtitle}>
-          Crie o acesso de administrador da clínica para começar a organizar a migração de
-          dados administrativos.
+          Crie o acesso de administrador da clínica para organizar dados administrativos,
+          pacientes e agenda em um ambiente seguro.
         </p>
 
         {success ? (

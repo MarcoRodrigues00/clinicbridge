@@ -1,0 +1,528 @@
+.panel {
+  margin-top: 2.75rem;
+  padding: clamp(1.5rem, 3vw, 2.1rem);
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(135deg, rgba(20, 30, 52, 0.7), rgba(10, 15, 30, 0.5)),
+    radial-gradient(circle at 100% 0%, rgba(34, 211, 238, 0.1), transparent 55%);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-card);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-0);
+}
+
+.subtitle {
+  margin-top: 0.5rem;
+  max-width: 64ch;
+  color: var(--text-1);
+  font-size: 0.96rem;
+  line-height: 1.55;
+}
+
+.filters,
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.fieldLabel {
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--surface-border-strong);
+  background: var(--surface);
+  color: var(--text-0);
+  font: inherit;
+}
+
+.textarea {
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.createForm {
+  margin-top: 1.6rem;
+  padding: 1.1rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+}
+
+.formTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.patientPicker {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.patientPicker .input {
+  flex: 1 1 14rem;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.primaryBtn {
+  margin-top: 0.9rem;
+  background: var(--cyan);
+  color: #04121a;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  background: var(--cyan-soft);
+}
+
+.secondaryBtn,
+.actionBtn {
+  background: var(--surface-strong);
+  color: var(--text-0);
+  border-color: var(--surface-border-strong);
+}
+
+.secondaryBtn:hover:not(:disabled),
+.actionBtn:hover:not(:disabled) {
+  border-color: var(--cyan);
+}
+
+.actionBtn {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.primaryBtn:disabled,
+.secondaryBtn:disabled,
+.actionBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--r-sm);
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.warning svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.usesDate {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+
+.notice {
+  margin-top: 1.1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--r-sm);
+  color: var(--success);
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  font-size: 0.9rem;
+}
+
+.error {
+  margin-top: 0.8rem;
+  color: var(--danger);
+  font-size: 0.88rem;
+}
+
+.muted {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+  color: var(--text-2);
+}
+
+.empty {
+  margin-top: 1.3rem;
+  padding: 1.6rem 1.2rem;
+  border-radius: var(--r-md);
+  border: 1px dashed var(--surface-border-strong);
+  color: var(--text-2);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.empty svg {
+  color: var(--text-3);
+}
+
+/* --- Date bar (Sprint 3.17) --- */
+.dateBar {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-top: 1.3rem;
+}
+
+.dateNav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.navIconBtn,
+.todayBtn,
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--surface-strong);
+  color: var(--text-0);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.navIconBtn {
+  padding: 0.45rem 0.5rem;
+}
+
+.todayBtn {
+  padding: 0.45rem 0.9rem;
+}
+
+.navIconBtn:hover,
+.todayBtn:hover,
+.addBtn:hover {
+  border-color: var(--cyan);
+}
+
+.dateTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-0);
+  text-transform: capitalize;
+  overflow-wrap: anywhere;
+}
+
+.todayBtnActive {
+  color: var(--cyan-soft);
+  background: rgba(34, 211, 238, 0.1);
+  border-color: rgba(34, 211, 238, 0.4);
+}
+
+/* Badge that classifies the selected date relative to today. Discreet colors. */
+.dateBadge {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--surface-strong);
+  color: var(--text-1);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.dk_today {
+  color: var(--cyan-soft);
+  background: rgba(34, 211, 238, 0.1);
+  border-color: rgba(34, 211, 238, 0.4);
+}
+
+.dk_tomorrow {
+  color: var(--teal, var(--success));
+  background: rgba(45, 212, 191, 0.1);
+  border-color: rgba(45, 212, 191, 0.4);
+}
+
+.dk_yesterday {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.dk_other {
+  color: var(--text-2);
+}
+
+/* --- Day summary chips --- */
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.chip {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: var(--text-1);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.chip strong {
+  color: var(--text-0);
+}
+
+.chipScheduled { border-color: rgba(148, 163, 184, 0.4); }
+.chipConfirmed { border-color: rgba(34, 197, 94, 0.4); color: var(--success); }
+.chipCompleted { border-color: rgba(34, 211, 238, 0.4); color: var(--cyan); }
+.chipAbsent { border-color: rgba(245, 158, 11, 0.4); color: var(--warning); }
+
+.addBtn {
+  margin-top: 1.25rem;
+  padding: 0.6rem 1rem;
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--cyan-soft);
+  border-color: rgba(34, 211, 238, 0.32);
+}
+
+.formHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* --- Timeline --- */
+.timeline {
+  list-style: none;
+  margin: 1.3rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.slot {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+.slotTime {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-top: 0.9rem;
+  border-right: 2px solid var(--surface-border-strong);
+  padding-right: 0.7rem;
+}
+
+.slotStart {
+  font-weight: 800;
+  color: var(--text-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.slotEnd {
+  font-size: 0.82rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.cardPatient {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 700;
+  color: var(--text-0);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 32rem) {
+  .slot {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+  .slotTime {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.5rem;
+    border-right: none;
+    border-bottom: 1px solid var(--surface-border-strong);
+    padding: 0 0 0.3rem 0;
+  }
+}
+
+.list {
+  list-style: none;
+  margin: 1.3rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.card {
+  padding: 0.9rem 1rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.cardRow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+  color: var(--text-1);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.cardRow svg {
+  flex-shrink: 0;
+  color: var(--text-3);
+}
+
+.cardNotes {
+  margin-top: 0.55rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--r-sm);
+  background: var(--surface-strong);
+  color: var(--text-1);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--surface-strong);
+  color: var(--text-1);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.st_confirmed { color: var(--success); border-color: rgba(34, 197, 94, 0.4); }
+.st_cancelled { color: var(--danger); border-color: rgba(239, 68, 68, 0.4); }
+.st_no_show { color: var(--warning); border-color: rgba(245, 158, 11, 0.4); }
+.st_completed { color: var(--cyan); border-color: rgba(34, 211, 238, 0.4); }
+.st_rescheduled { color: var(--cyan-soft); }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+}
+
+.reschedule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--surface-border-strong);
+}
+
+.reschedule .input {
+  width: auto;
+  flex: 0 1 auto;
+}
+
+.spin {
+  animation: scheduleSpin 0.9s linear infinite;
+}
+
+@keyframes scheduleSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 32rem) {
+  .actions,
+  .reschedule {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .reschedule .input {
+    width: 100%;
+  }
+}

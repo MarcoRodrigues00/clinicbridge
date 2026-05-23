@@ -1,0 +1,228 @@
+.panel {
+  margin-top: 2.75rem;
+  padding: clamp(1.5rem, 3vw, 2.1rem);
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(135deg, rgba(20, 30, 52, 0.7), rgba(10, 15, 30, 0.5)),
+    radial-gradient(circle at 100% 0%, rgba(34, 211, 238, 0.1), transparent 55%);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-card);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-0);
+}
+
+.subtitle {
+  margin-top: 0.5rem;
+  max-width: 64ch;
+  color: var(--text-1);
+  font-size: 0.96rem;
+  line-height: 1.55;
+}
+
+.createForm {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.createForm .input {
+  flex: 1 1 12rem;
+}
+
+.input {
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--surface-border-strong);
+  background: var(--surface);
+  color: var(--text-0);
+  font: inherit;
+}
+
+.input:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.primaryBtn {
+  background: var(--cyan);
+  color: #04121a;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  background: var(--cyan-soft);
+}
+
+.secondaryBtn,
+.actionBtn {
+  background: var(--surface-strong);
+  color: var(--text-0);
+  border-color: var(--surface-border-strong);
+}
+
+.actionBtn {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.secondaryBtn:hover:not(:disabled),
+.actionBtn:hover:not(:disabled) {
+  border-color: var(--cyan);
+}
+
+.primaryBtn:disabled,
+.actionBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.roleNote {
+  margin-top: 1.1rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--r-sm);
+  color: var(--cyan-soft);
+  background: rgba(34, 211, 238, 0.07);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.notice {
+  margin-top: 1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--r-sm);
+  color: var(--success);
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  font-size: 0.9rem;
+}
+
+.error {
+  margin-top: 0.8rem;
+  color: var(--danger);
+  font-size: 0.88rem;
+}
+
+.muted {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+  color: var(--text-2);
+}
+
+.empty {
+  margin-top: 1.3rem;
+  padding: 1.2rem;
+  border-radius: var(--r-md);
+  border: 1px dashed var(--surface-border-strong);
+  color: var(--text-2);
+  text-align: center;
+}
+
+.list {
+  list-style: none;
+  margin: 1.3rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding: 0.8rem 1rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.name {
+  font-weight: 700;
+  color: var(--text-0);
+  overflow-wrap: anywhere;
+}
+
+.label {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: var(--surface-strong);
+  color: var(--text-1);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.inactive {
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+
+.actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.editRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.editRow .input {
+  flex: 1 1 10rem;
+}
+
+.spin {
+  animation: profSpin 0.9s linear infinite;
+}
+
+@keyframes profSpin {
+  to { transform: rotate(360deg); }
+}
