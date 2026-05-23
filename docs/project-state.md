@@ -7,7 +7,18 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.9** — produção/governança: **Nginx reverse proxy local/staging
+**Sprint 3.10** — produção/governança: **backend containerizado** para teste ponta
+a ponta com Nginx. `backend/Dockerfile` (multi-stage, node:20-slim, non-root,
+prod-only, sem `.env`) + `.dockerignore` + serviço `backend` no compose (profile
+`edge`, `expose: 3001`, env apontando para `postgres`/`redis` services,
+`TRUST_PROXY=1`, `RATE_LIMIT_STORE=redis`, volume `./storage/uploads`). Nginx passou
+a proxyar `backend:3001` (resolução DNS em runtime), **resolvendo a limitação Docker
+Desktop + WSL2 da 3.9**. Verificado e2e: `Nginx → backend → Postgres/Redis`,
+health/live/ready 200 via `localhost:8080`, readiness 503 com DB parado e 200 ao
+voltar, anti-spoof de XFF (chave de rate limit usa IP real), logs seguros, counts
+intactos (6/24/7). Sem TLS/WAF/domínio/AWS; sem migration/schema; sem commit.
+
+**Sprint anterior: 3.9** — produção/governança: **Nginx reverse proxy local/staging
 implementado** (sem WAF, sem TLS real, sem domínio). `infra/nginx/` (nginx.conf +
 conf.d) + serviço `nginx` opcional no compose (profile `edge`, 127.0.0.1:8080) →
 upstream `host.docker.internal:3001`; `client_max_body_size 10m` (≥
@@ -123,6 +134,9 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 - Nginx reverse proxy **local/staging** (`infra/nginx/` + serviço opcional no
   compose, profile `edge`): body size, IP real (anti-spoof), logs sem PII — sem
   TLS/WAF (Sprint 3.9)
+- Backend **containerizado** local/staging (`backend/Dockerfile` + serviço `backend`
+  no compose, profile `edge`): fluxo Nginx→backend→Postgres/Redis validado e2e
+  (Sprint 3.10)
 - Tabela `patients` criada e populável; `import_sessions` com recibo persistido
 - Frontend: UploadPanel, ImportPreviewPanel, ValidationReport, ImportSessionsList (com DryRunSection, ImportExecutionSection, ImportReceipt embutidos), PatientsList (com exportação CSV/XLSX), DuplicatesList, ImportFileRetentionPanel
 
@@ -185,9 +199,10 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
   **(Sprint 3.5)**, baseline de deploy seguro + revisão de CORS/env prod
   **(Sprint 3.6)**, readiness endpoint `/health/ready` **(Sprint 3.7)**,
   estratégia de borda Nginx + WAF **(Sprint 3.8, docs/ADR-first)**, Nginx reverse
-  proxy **local/staging** implementado **(Sprint 3.9)**; restantes: **TLS real**
-  (HTTP→HTTPS + HSTS), backend alcançável pelo host do Docker (ou containerizado),
-  **WAF** (detection-only → blocking), **deploy real** (HTTPS/reverse proxy, secrets
+  proxy **local/staging** implementado **(Sprint 3.9)**, backend **containerizado**
+  + e2e Nginx→backend→DB/Redis **(Sprint 3.10)**; restantes: **TLS real**
+  (HTTP→HTTPS + HSTS), **WAF** (detection-only → blocking), **deploy real**
+  (HTTPS/reverse proxy, secrets
   manager, banco/Redis gerenciados, monitoramento), provisionar Redis/proxy de
   produção, **validação jurídica** da política de retenção, **offsite/produção**
   do backup (destino, gestão de chave, agendamento, monitoramento)

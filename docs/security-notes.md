@@ -205,13 +205,21 @@
 - **Documento:** `docs/edge-security-strategy.md`; **decisão:** ADR
   `docs/adr/0005-edge-security-reverse-proxy-waf.md`; **runbook local/staging:**
   `docs/nginx-local-staging-runbook.md`.
-- **Implementado (Sprint 3.9, local/staging):** Nginx reverse proxy em
+- **Implementado (Sprint 3.9 + 3.10, local/staging):** Nginx reverse proxy em
   `infra/nginx/` + serviço `nginx` opcional no compose (profile `edge`,
   127.0.0.1:8080). `client_max_body_size 10m` (≥ `UPLOAD_MAX_BYTES`); headers de
   borda `X-Real-IP`/`X-Forwarded-For` **com anti-spoof** (Nginx sobrescreve o XFF
-  do cliente → comprovado: header chega como o IP real, não o forjado); logs sem
-  `Authorization`/`Cookie`/corpo; backend atrás do proxy usa `TRUST_PROXY=1`.
-  **Ainda SEM TLS real, domínio ou WAF.**
+  do cliente → comprovado: a chave de rate limit usa o IP real, não o forjado);
+  logs sem `Authorization`/`Cookie`/corpo; backend atrás do proxy usa `TRUST_PROXY=1`.
+- **Backend containerizado (Sprint 3.10):** `backend/Dockerfile` (multi-stage,
+  node:20-slim, **non-root** `node`, deps **prod-only**, **sem `.env`** na imagem;
+  `.dockerignore` bloqueia `.env`/secrets/`node_modules`/`storage`/`backups` em
+  qualquer nível) + serviço `backend` no compose (profile `edge`, **`expose`** sem
+  publicar porta). Nginx → `backend:3001` na rede do compose (resolve a limitação
+  Docker Desktop + WSL2 da 3.9). Segredos do container via env (placeholder
+  local/staging; `NODE_ENV=development` para usar o Postgres de dev). Verificado
+  e2e: health/live/ready via proxy, readiness 503 com DB parado, anti-spoof, logs
+  seguros, counts do banco intactos (6/24/7). **Ainda SEM TLS real, domínio ou WAF.**
 - **Decisão:** **Nginx** reverse proxy baseline (Caddy/Traefik avaliados, não
   escolhidos). TLS termina no Nginx; backend continua **HTTP interno**, **não**
   exposto direto na internet.

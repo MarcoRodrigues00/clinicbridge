@@ -271,38 +271,46 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3011/health           
 # pgrep -af 'tsx src/server.ts' e mate o PID do node/MainThread em :3011.
 ```
 
-## Nginx reverse proxy local/staging (Sprint 3.9) — sem TLS/WAF
+## Nginx + backend containerizado, e2e (Sprint 3.10) — sem TLS/WAF
 
 Detalhe: `docs/nginx-local-staging-runbook.md`. Profile `edge` (não sobe no
-`docker compose up` padrão).
+`docker compose up` padrão). Tudo containerizado — resolve a limitação WSL2 da 3.9.
 
 ```bash
-# Subir Postgres/Redis + backend (atrás do proxy use TRUST_PROXY=1) + Nginx:
-docker compose up -d postgres redis
-TRUST_PROXY=1 pnpm --filter backend dev        # backend host :3001
-docker compose --profile edge up -d nginx      # proxy em 127.0.0.1:8080
-
-# Validar config e proxy:
+# Build da imagem do backend + subir a stack edge:
+docker compose --profile edge build backend
+docker compose --profile edge up -d postgres redis backend nginx
+docker compose ps
 docker compose exec nginx nginx -t             # syntax is ok / test is successful
-curl -i http://localhost:8080/health           # 200 (quando o Nginx alcança o backend)
+
+# e2e via proxy (Nginx -> backend:3001 -> Postgres/Redis):
+curl -i http://localhost:8080/health           # 200
 curl -i http://localhost:8080/health/live      # 200
-curl -i http://localhost:8080/health/ready     # 200 database ok (Postgres up) / 503 se DB cair
+curl -i http://localhost:8080/health/ready     # 200 {"checks":{"database":"ok"}}
 
-# Logs seguros (sem Authorization/Cookie/corpo; path sem query string):
-docker compose logs nginx --tail=20
+# Readiness com DB parado (volta sozinho ao religar):
+docker compose stop postgres
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/health/ready   # 503
+docker compose --profile edge up -d postgres   # ready volta a 200 quando healthy
 
-# Parar o proxy:
-docker compose --profile edge stop nginx
+# Logs seguros + segurança da imagem:
+docker compose logs nginx --tail=20            # sem Authorization/Cookie/corpo
+docker compose exec backend id                 # uid=1000(node) — non-root
+docker compose exec backend sh -c 'ls -a /repo/backend | grep "^\.env$" || echo "(sem .env)"'
+
+# Parar a stack edge:
+docker compose --profile edge stop nginx backend
 ```
 
 > **Anti-spoof XFF:** o Nginx sobrescreve `X-Forwarded-For`/`X-Real-IP` com o IP
-> real da conexão; um `X-Forwarded-For` forjado pelo cliente é descartado (com
-> `TRUST_PROXY=1`, o `req.ip`/rate limit/audit usam o IP real).
+> real da conexão; um `X-Forwarded-For` forjado é descartado. Com
+> `RATE_LIMIT_STORE=redis`, dá p/ confirmar pela chave de rate limit no Redis (usa
+> o IP real do Nginx, não o forjado):
+> `docker compose exec redis redis-cli --scan --pattern 'clinicbridge:ratelimit:*'`.
 >
-> **Nota Docker Desktop + WSL2:** se o backend roda na distro WSL (não em
-> container), o Nginx (VM do Docker) pode não alcançar `:3001` (502) — ver
-> "Limitação conhecida" no runbook. Config correta; funciona com backend
-> alcançável pelo host do Docker.
+> **Fallback host-run (modo 3.9):** trocar o upstream para `host.docker.internal:3001`
+> + `TRUST_PROXY=1 pnpm --filter backend dev` — sujeito à limitação Docker Desktop +
+> WSL2 (502); ver runbook.
 
 ## Edge security — Nginx + WAF (Sprint 3.8) — estratégia (WAF ainda NÃO implementado)
 

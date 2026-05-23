@@ -38,11 +38,53 @@ services:
       timeout: 5s
       retries: 5
 
-  # Nginx reverse proxy — OPTIONAL, LOCAL/STAGING only (Sprint 3.9).
+  # Backend API — OPTIONAL, LOCAL/STAGING only (Sprint 3.10). Containerized so the
+  # Nginx container can proxy to it over the compose network, resolving the
+  # host-run WSL2 limitation from Sprint 3.9. Opt-in via the "edge" profile; built
+  # from backend/Dockerfile with the repo ROOT as build context. NO real secrets:
+  # the JWT_SECRET below is a LOCAL/STAGING placeholder; production uses a real one.
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: clinicbridge-backend:local
+    container_name: clinicbridge-backend
+    profiles: ["edge"]
+    restart: unless-stopped
+    environment:
+      # development keeps the production placeholder guards off so the container can
+      # use the dev Postgres password. Production uses NODE_ENV=production + real
+      # secrets (see docs/deploy-security-checklist.md).
+      NODE_ENV: development
+      BACKEND_PORT: "3001"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-clinicbridge}:${POSTGRES_PASSWORD:-change-me-locally}@postgres:5432/${POSTGRES_DB:-clinicbridge}"
+      JWT_SECRET: "${BACKEND_JWT_SECRET:-local-staging-placeholder-not-a-real-secret-0123456789}"
+      TRUST_PROXY: "1"
+      RATE_LIMIT_STORE: "redis"
+      REDIS_URL: "redis://redis:6379"
+      FRONTEND_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:5173}"
+    # Not published to the host — Nginx is the entry point. (For debug you could add
+    # a 127.0.0.1-bound port mapping, but keep the backend private by default.)
+    expose:
+      - "3001"
+    volumes:
+      # Persist uploads across restarts. Host dir is gitignored; the image's node
+      # user (uid 1000) matches the host user, so the bind mount stays writable.
+      # Production uses external/persistent storage.
+      - ./storage/uploads:/repo/backend/storage/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Nginx reverse proxy — OPTIONAL, LOCAL/STAGING only (Sprint 3.9 / 3.10).
   # Opt-in via the "edge" profile so a plain `docker compose up -d` never starts
   # it: `docker compose --profile edge up -d nginx`. NO TLS, NO domain, NO WAF
-  # here (those are future). Proxies to the HOST-run backend (:3001) through
-  # host.docker.internal. Bound to 127.0.0.1 so it isn't exposed beyond the host.
+  # here (those are future). Since Sprint 3.10 it proxies to the containerized
+  # `backend` service over the compose network (backend:3001). Bound to 127.0.0.1
+  # so it isn't exposed beyond the host. extra_hosts is kept so the host-run
+  # backend mode still works if you switch the upstream back to host.docker.internal.
   # Config + details: infra/nginx/ and docs/nginx-local-staging-runbook.md.
   nginx:
     image: nginx:alpine
@@ -55,11 +97,12 @@ services:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
     extra_hosts:
-      # Lets the container resolve the host-run backend on Linux/WSL Docker.
+      # Kept for the host-run backend fallback (host.docker.internal upstream).
       - "host.docker.internal:host-gateway"
     depends_on:
       - postgres
       - redis
+      - backend
 
 volumes:
   clinicbridge_postgres_data:

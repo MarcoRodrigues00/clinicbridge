@@ -11,43 +11,50 @@
 ## Status e escopo
 
 - Nginx reverse proxy **opcional** (profile `edge`) proxyando o **backend/API**.
+- **Sprint 3.10:** o backend agora roda **containerizado** (serviço `backend`),
+  então o Nginx proxya para `backend:3001` na rede do compose — o que **resolve a
+  limitação Docker Desktop + WSL2** da Sprint 3.9 (ver no fim).
 - Proxy → backend HTTP interno; **sem TLS aqui** (TLS termina no Nginx só em
   produção, futuro). Frontend via Nginx fica para sprint futura.
 - WAF (ModSecurity + OWASP CRS) **não** entra nesta sprint (detection-only first
   no futuro).
 
-## Arquitetura (local/staging)
+## Arquitetura (local/staging) — Sprint 3.10
 
 ```
 curl/browser
   → Nginx (container, 127.0.0.1:8080 → :80)   # headers de borda, body size, logs
-    → backend HTTP interno (host :3001 via host.docker.internal)
-      → Postgres / Redis (compose)
+    → backend (container, backend:3001, NÃO publicado no host)
+      → Postgres / Redis (containers, rede do compose)
 ```
 
 ## Pré-requisitos
 
-- Docker + Docker Compose (Postgres/Redis já no compose).
-- Backend rodando em `:3001` e **alcançável a partir do host do Docker**
-  (ver "Limitação conhecida" abaixo).
+- Docker + Docker Compose.
+- Tudo containerizado via profile `edge` (não precisa de backend no host).
+- Migrations aplicadas (rodadas do host: `pnpm --filter backend migrate:latest`).
 
-## Como subir
+## Como subir (backend containerizado — recomendado, Sprint 3.10)
 
 ```bash
-# Postgres/Redis (se ainda não estiverem de pé)
-docker compose up -d postgres redis
+# Build da imagem do backend (multi-stage; contexto = raiz do repo):
+docker compose --profile edge build backend
 
-# Backend no host (porta 3001). Atrás do proxy, use TRUST_PROXY=1:
-TRUST_PROXY=1 pnpm --filter backend dev
+# Sobe Postgres + Redis + backend + Nginx (profile edge não sobe no up padrão):
+docker compose --profile edge up -d postgres redis backend nginx
 
-# Nginx (opcional, profile edge — NÃO sobe no `docker compose up` padrão):
-docker compose --profile edge up -d nginx
-
-# Validar a config:
+# Validar a config do Nginx:
 docker compose exec nginx nginx -t
+docker compose ps
 ```
 
-Porta do proxy: `127.0.0.1:8080` (ajustável via `NGINX_PORT`).
+Porta do proxy: `127.0.0.1:8080` (ajustável via `NGINX_PORT`). O backend **não** é
+publicado no host (só `expose: 3001`); o Nginx é a entrada.
+
+> **Fallback host-run:** para rodar o backend no host (modo Sprint 3.9), troque o
+> upstream em `infra/nginx/conf.d/clinicbridge.local.conf` de `backend:3001` para
+> `host.docker.internal:3001`, recarregue o Nginx (`nginx -s reload`) e rode
+> `TRUST_PROXY=1 pnpm --filter backend dev`. Sujeito à limitação WSL2 abaixo.
 
 ## TRUST_PROXY (IP real)
 
@@ -93,24 +100,22 @@ Esperado (quando o Nginx alcança o backend): `200` em `/health` e `/health/live
 - proxy do frontend (futuro);
 - produção pronta / compliance completo.
 
-## Limitação conhecida (Docker Desktop + WSL2)
+## Limitação Docker Desktop + WSL2 — RESOLVIDA na Sprint 3.10
 
-Quando o backend roda **dentro da distro WSL** (não em container) e o Docker usa o
-**Docker Desktop (VM)**, o container Nginx vive numa rede separada e **não alcança**
-o backend do host em `:3001` (testado: `host.docker.internal`/gateway/IP da WSL →
-`connection refused`/`timeout`; o proxy retorna **502**). Não é bug de config — é
-isolamento de rede do ambiente.
+Na Sprint 3.9, com o backend rodando **dentro da distro WSL** (não em container) e
+o Docker no **Docker Desktop (VM)**, o container Nginx vivia numa rede separada e
+**não alcançava** o backend do host em `:3001` (`host.docker.internal`/gateway/IP
+da WSL → `connection refused`/`timeout`; proxy retornava **502**).
 
-Como obter um proxy funcional ponta a ponta:
-- **Docker nativo Linux** (ou staging VM): `host.docker.internal:3001` com
-  `extra_hosts: host.docker.internal:host-gateway` (já no compose) alcança o
-  backend do host.
-- **Backend containerizado** na mesma rede do compose: trocar o upstream para o
-  nome do serviço (sprint futura).
-- A config do Nginx em si foi **validada** (`nginx -t` OK) e o encaminhamento +
-  headers `X-Real-IP`/`X-Forwarded-For` (com anti-spoof) + logs seguros foram
-  **comprovados** com um upstream de eco acessível na rede do Docker; o readiness
-  com DB já foi validado direto no backend na Sprint 3.7.
+**Resolvido na Sprint 3.10:** com o backend **containerizado** (serviço `backend`
+na rede do compose), o Nginx proxya para `backend:3001` e o fluxo ponta a ponta
+funciona. Verificado: `/health`, `/health/live`, `/health/ready` → 200 via
+`http://localhost:8080`; readiness → 503 com Postgres parado e 200 ao voltar;
+anti-spoof confirmado (a chave de rate limit no Redis usa o IP real do Nginx, não
+o `X-Forwarded-For` forjado pelo cliente).
+
+O modo **host-run** (backend no host) continua sujeito à limitação acima — use o
+fallback documentado em "Como subir" apenas em Docker nativo Linux/staging VM.
 
 ## Troubleshooting
 
