@@ -7,7 +7,73 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.21** (em validação/finalização) — segurança: **MFA backup codes**
+**Sprint 3.22** (em validação/finalização) — **CRUD administrativo de pacientes**
+(Escopo A: criar manual + editar + arquivar/restaurar). **Sem migration**
+(`patients.status` já aceita `active/inactive/archived`; `origem` já existe).
+
+Backend:
+- `patientDao` ganhou escritas **tenant-scoped**: `findByIdForClinic`, `create`
+  (força `origem='manual'`, `status='active'`, `import_session_id=null`),
+  `updateForClinic` (patch parcial; toca `atualizado_em`), `setStatusForClinic`
+  (archive/restore). **Sem delete físico** (preserva histórico de agendamentos —
+  `appointments.patient_id` é `ON DELETE CASCADE`).
+- `patientService`: validação administrativa (nome obrigatório; CPF 11 dígitos;
+  e-mail; data AAAA-MM-DD ou DD/MM/AAAA, sem futuro; limites de tamanho) **sem
+  ecoar valor** no erro (`patient_invalid`/400). `listForClinic` agora aplica
+  `status` (default `active`). `createForClinic`/`updateForClinic`/
+  `archiveForClinic`/`restoreForClinic`; cross-tenant/inexistente → **404
+  genérico** `patient_not_found`. Audits `patient.create/update/archive/restore.
+  success` (só `recurso_id` UUID; **sem PII**).
+- Controller/rotas: `POST /patients` e `PATCH /patients/:id` (dono + secretaria);
+  `PATCH /patients/:id/archive` e `.../restore` (**só dono**, `requireRole`
+  após `requireClinic`); `GET /patients?status=active|archived|inactive|all`
+  (default `active`). Reusa `patientsRateLimit` (IP-keyed, antes do auth).
+
+Frontend: `PatientsList` ganhou "Novo paciente" + formulário (criar/editar),
+filtro de status (Ativos/Arquivados/Todos), ações por card de Editar (dono +
+secretaria) e Arquivar/Restaurar (**só dono**), e empty states por contexto. CPF
+nunca é exibido bruto (só `cpf_masked`); na edição o campo CPF em branco **mantém**
+o atual (não dá para pré-preencher o mascarado). O seletor de paciente da agenda
+(`AdministrativeSchedulePanel`) reusa `GET /patients` default → arquivados somem
+automaticamente do agendamento.
+
+Verificação: backend + frontend typecheck/build OK; matriz por API (Node fetch,
+backend dev :3001, contas descartáveis) **25/25** — inclui os 10 cenários
+obrigatórios + CPF mascarado/sem bruto, origem/status no create, CPF inválido →
+400 sem eco, e auditoria sem PII. Dados de teste removidos após o run. Validação
+**visual** no navegador pendente. Sem commit.
+
+Inclui também (working tree, mantido) os **polimentos de copy** anteriores da
+3.22: landing (Hero/Footer "Sprint 0" → "piloto v0.1"; `HowItWorks` cita os
+campos reais e remove a promessa de "mesclar/corrigir" no import) e Dashboard
+("Checklist do MVP" honesto: lembrete manual concluído, auth+MFA+códigos de
+recuperação, "Preparação para produção" pendente); docs de demo com os códigos de
+recuperação (3.21).
+
+**Ajuste de copy/UX da tela de Pacientes (após validação visual):** com muitos
+registros a tela ficava longa/poluída. Sem refactor grande (mantida a lista de
+cards + "Carregar mais"): subtítulo deixa claro que a lista é **paginada e
+filtrada** (não mostra todos de uma vez) e incentiva busca/filtro; o contador
+mostra o filtro atual e, quando há mais páginas, sinaliza "(página atual — há mais
+registros)" + uma dica para refinar; cards mais **compactos** (grid mais denso,
+espaçamentos menores) via CSS. typecheck/build do frontend OK.
+
+**Gap de teste conhecido:** o papel `secretaria` **não é testável pelo navegador**
+porque ainda não existe gestão de equipe/funcionário na UI — `secretaria` só passa
+a existir alterando o banco via SQL. A matriz por API cobriu o papel (criando a
+secretaria por SQL), mas a validação ponta-a-ponta pelo navegador do fluxo de
+secretaria fica **pendente** até a sprint de gestão de equipe.
+
+**Próximas sprints recomendadas (detalhe em `docs/roadmap-next-phase.md`):**
+- **3.23 (recomendada): duplicados acionáveis / correção de importação** — tornar
+  `GET /patients/duplicates` acionável (editar/arquivar por grupo reusando o CRUD
+  da 3.22; **merge seguro só depois**, com confirmação+audit, **sem** merge
+  automático; inclui paginação de duplicados).
+- **Sprint futura: gestão de equipe / convite de secretaria** — secretaria
+  solicita entrada → dono aprova/recusa → papel aplicado só após aprovação, tudo
+  auditado, **sem autoentrada**; inclui a UI de usuários/papéis que falta hoje.
+
+**Sprint 3.21** — segurança: **MFA backup codes**
 (códigos de recuperação). Migration `20260528000000_user_mfa_backup_codes` cria
 `user_mfa_backup_codes` (id, user_id FK CASCADE, `code_hash`, `used_at`,
 `created_at`; índices por user e user+used_at): **só hash argon2**, nunca texto
@@ -265,7 +331,8 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 - Preparação: `POST /import-sessions/:id/mark-ready` (`validated → ready_for_import`) (Sprint 2.15)
 - Importação controlada: `POST /import-sessions/:id/import` (`ready_for_import → import_completed`) (Sprint 2.16–2.18)
 - Recibo persistido da importação (`import_summary_json`, `imported_at`) (Sprint 2.18)
-- Listagem somente leitura de pacientes: `GET /patients` (CPF mascarado, paginação simples, busca) (Sprint 2.19)
+- Listagem de pacientes: `GET /patients` (CPF mascarado, paginação simples, busca; `status=active|archived|inactive|all`, default `active` — Sprint 3.22) (Sprint 2.19)
+- CRUD administrativo de pacientes (Sprint 3.22): `POST /patients` + `PATCH /patients/:id` (dono + secretaria); `PATCH /patients/:id/archive` + `.../restore` (só dono; soft-delete via `status`, **sem delete físico**); cross-tenant/inexistente → 404 genérico
 - Detecção informativa de duplicados: `GET /patients/duplicates` (read-only, sem merge/edit/delete) (Sprint 2.20)
 - Exportação limpa CSV/XLSX: `GET /patients/export` (read-only, CPF mascarado, anti-formula-injection) (Sprint 2.21)
 - Rate limit por grupo em todos os endpoints sensíveis (auth, upload, import pipeline, patients, duplicates, export) (Sprint 2.22)
@@ -301,7 +368,8 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 ## O que NÃO existe (fora de escopo até sprint explícita)
 
 - prontuário / dados clínicos (diagnóstico, prescrição, exames, CID, medicamentos)
-- edição / exclusão / merge de pacientes
+- merge de pacientes; **delete físico** de paciente (arquivar = soft-delete via
+  `status='archived'`; criar/editar/arquivar/restaurar administrativos existem — Sprint 3.22)
 - limpeza real de arquivos (retenção é só dry-run)
 - signed URL / download de arquivos de importação
 - job/cron automático

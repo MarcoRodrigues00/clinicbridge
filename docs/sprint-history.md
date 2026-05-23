@@ -702,3 +702,77 @@ Direção: reforço de segurança (Fase 3). **MFA por TOTP (app autenticador). S
 **Verificação (e2e por curl, backend efêmero :3025, usuários descartáveis):** 11/11 — ativar→10 codes; `/auth/me` sem codes; login TOTP; login backup; reuso→401; inválido→401 `invalid_mfa_code`; regenerar invalida antigos; login com novo; sem-MFA→400 `mfa_not_enabled`; audit com os eventos esperados e **sem** códigos; `code_hash` `$argon2id`; log sem códigos/secret. `migrate:latest` batch 9; backend build + frontend typecheck/build OK.
 
 **Ressalvas:** verify de backup faz argon2.verify sequencial sobre os códigos não usados (custo aceitável p/ login de recuperação raro); chave dedicada/KMS do secret TOTP segue P1 (não afeta backup codes — são hash). Sem SMS/e-mail/WhatsApp OTP, sem recovery por suporte/bypass, sem job/cron. Validação **visual** do frontend pendente (ambiente sem browser). Sem dado clínico. Sem commit/push.
+
+---
+
+## Sprint 3.22 (CRUD administrativo de pacientes — Escopo A)
+
+Direção: Opção C (base administrativa segura). **CRUD administrativo de pacientes**
+— criar manual, editar, **arquivar/restaurar por soft-delete**. Decisões aceitas:
+Escopo A agora (B depois); criar/editar = `dono_clinica` + `secretaria`;
+arquivar/restaurar = **só `dono_clinica`**; soft-delete via `status='archived'`
+(**sem delete físico**); **sem migration** (`patients.status` já aceita
+`active/inactive/archived`, `origem` já existe); arquivar **não** apaga
+agendamentos; arquivado sai da listagem padrão **e** do seletor da agenda; filtro
+para ver/restaurar arquivados; audits **sem PII**; CPF nunca volta bruto.
+
+**Backend:**
+- `patientDao`: + `findByIdForClinic`, `create` (força `origem='manual'`/
+  `status='active'`/`import_session_id=null`), `updateForClinic` (patch parcial,
+  toca `atualizado_em`), `setStatusForClinic` (archive/restore). Tudo filtra
+  `{ id, clinica_id }`. **Sem delete físico.**
+- `patientService`: validação administrativa (nome obrigatório; CPF 11 dígitos;
+  e-mail; data AAAA-MM-DD ou DD/MM/AAAA, sem futuro; limites de tamanho) **sem
+  ecoar o valor** no erro (`patient_invalid`/400). `listForClinic` aplica
+  `status` (default `active`). `createForClinic`/`updateForClinic`/
+  `archiveForClinic`/`restoreForClinic`; id inexistente/cross-tenant → **404
+  genérico** `patient_not_found`. Audits `patient.create/update/archive/restore.
+  success` (só `recurso_id` UUID).
+- Controller/rotas: `POST /patients` + `PATCH /patients/:id` (dono + secretaria);
+  `PATCH /patients/:id/archive` + `.../restore` (`requireRole(CLINIC_ADMIN_ROLES)`
+  após `requireClinic`, **só dono**); `GET /patients?status=active|archived|
+  inactive|all` (default `active`). Reusa `patientsRateLimit`.
+
+**Frontend:**
+- `api.ts`: `ListPatientsParams.status`; `createPatient`/`updatePatient`/
+  `archivePatient`/`restorePatient`; tipos `PatientWritePayload`/`PatientResponse`/
+  `PatientStatusFilter`.
+- `PatientsList.tsx`: "Novo paciente" + formulário (criar/editar), filtro de status
+  (Ativos/Arquivados/Todos), ações por card de Editar (dono + secretaria) e
+  Arquivar/Restaurar (**só dono**), empty states por contexto (sem ativos / sem
+  arquivados / erro seguro). CPF só mascarado; na edição, campo CPF em branco
+  **mantém** o atual. Agenda (`AdministrativeSchedulePanel`) já reusa `GET
+  /patients` default → arquivados somem do seletor automaticamente.
+
+**Verificação:** backend + frontend `typecheck` + `build` OK. Matriz por API (Node
+`fetch`, backend dev :3001, contas descartáveis em 1 clínica + 1 cross-tenant)
+**25/25**: secretaria cria/edita; secretaria **não** arquiva (403 `forbidden_role`);
+dono arquiva (status `archived`); arquivado some da listagem padrão; `?status=
+archived` mostra; dono restaura; cross-tenant edit/archive/restore → **404**
+`patient_not_found` e listagem cross-tenant não vê o paciente; resposta com
+`cpf_masked` e **sem** CPF bruto; `origem='manual'`/`status='active'` no create;
+CPF inválido → 400 `patient_invalid` sem ecoar valor; audit com as 4 ações e **sem**
+PII (schema sem `metadata`/`entidade_tipo`). Dados de teste removidos após o run.
+Validação **visual** no navegador pendente. Sem commit/push.
+
+**Ressalvas/limites:** CPF não pode ser **limpo** na edição pela UI (campo em
+branco = manter), porque o cliente só tem o mascarado — aceitável no MVP. Sem
+merge, sem delete físico, sem reidratação de agendamentos órfãos (arquivar
+preserva, não toca agendamentos). Papel vem do JWT (stale até expirar, igual aos
+demais endpoints). Sem dado clínico.
+
+**Inclui ainda — polimentos de copy (working tree, mantidos):**
+- `Hero.tsx` / `Footer.tsx` (landing): rótulo desatualizado "Sprint 0" → "piloto v0.1" / "Piloto administrativo · v0.1".
+- `HowItWorks.tsx`: passo "Revise o mapeamento" cita os campos reais (nome/telefone/e-mail/CPF/data de nascimento, sem "convênio", que não é mapeado); passo de inconsistências deixou de prometer "Corrija ou mescle direto na revisão" (o import **não** edita/mescla pacientes) → "sinalizados na validação, antes de importar".
+- `Dashboard.tsx` (aba Segurança, "Checklist do MVP"): "Lembretes administrativos (em breve)" estava desatualizado (lembrete manual entregue na 3.18) → itens atualizados (auth + MFA + códigos de recuperação; importação; agenda + lembrete manual; "Preparação para produção (em andamento)" como item pendente honesto).
+- `docs/demo-pilot-v0.1-script.md` / `-checklist.md`: etapa de Segurança/login atualizada com os **códigos de recuperação** (3.21) — exibidos 1x, copiar + "salvei", regenerar invalida anteriores, login aceita app **ou** código de recuperação.
+
+**Decidido NÃO alterar (registrado):** CTAs de marketing da landing ("Analisar arquivo", "Solicitar análise", "Entrar na lista de espera") — apontam para `/register`, framing de piloto aceitável; rota não muda. "Links" inertes do footer do Dashboard (Segurança/Privacidade/Suporte/Roadmap) — baixo valor, risco de layout; mantidos. Claim LGPD "solicitar exclusão" na landing — usa "solicitar" (posture), mantido.
+
+**Ajuste de copy/UX da tela de Pacientes (após validação visual):** achado — com muitos registros a tela fica longa/poluída e parece tentar mostrar "todos os pacientes". Ajuste **pequeno e seguro** (sem refactor/tabela grande): subtítulo explica que a lista é **paginada/filtrada** e incentiva busca + filtros; contador mostra o filtro atual e, quando há mais páginas, sinaliza "(página atual — há mais registros)" com dica para refinar; cards mais **compactos** (grid mais denso `minmax(17.5rem)`, gaps menores) via CSS. Mantidos paginação/"Carregar mais". `frontend typecheck`+`build` OK.
+
+**Gap conhecido:** o papel `secretaria` **não é testável pelo navegador** (só existe via SQL) até existir gestão de equipe na UI — a matriz por API cobriu o papel criando a secretaria por SQL.
+
+**Próximas sprints recomendadas (em `docs/roadmap-next-phase.md`):** (a) **3.23 — duplicados acionáveis / correção de importação** (editar/arquivar por grupo reusando o CRUD da 3.22; **merge seguro só depois**, com confirmação+audit, **sem** merge automático; paginação de duplicados); (b) **sprint futura — gestão de equipe / convite de secretaria** (secretaria solicita entrada → dono aprova → papel aplicado só após aprovação, tudo auditado, **sem autoentrada**).
+
+**Verificação:** backend + frontend `typecheck`/`build` OK; matriz por API **25/25** (contas descartáveis; dados removidos no fim). Validação **visual** no navegador pendente (e o fluxo de secretaria depende de gestão de equipe). Sem commit/push.

@@ -32,11 +32,40 @@ export const patientController = {
         search: req.query.search,
         limit: req.query.limit,
         offset: req.query.offset,
+        status: req.query.status,
       },
       ctx,
     );
 
     res.status(200).json(result);
+  },
+
+  async create(req: Request, res: Response): Promise<void> {
+    const actor = clinicContext(req);
+    const ctx = buildAuthContext(req);
+    const patient = await patientService.createForClinic(actor, req.body, ctx);
+    res.status(201).json({ patient });
+  },
+
+  async update(req: Request, res: Response): Promise<void> {
+    const actor = clinicContext(req);
+    const ctx = buildAuthContext(req);
+    const patient = await patientService.updateForClinic(actor, req.params.id, req.body, ctx);
+    res.status(200).json({ patient });
+  },
+
+  async archive(req: Request, res: Response): Promise<void> {
+    const actor = clinicContext(req);
+    const ctx = buildAuthContext(req);
+    const patient = await patientService.archiveForClinic(actor, req.params.id, ctx);
+    res.status(200).json({ patient });
+  },
+
+  async restore(req: Request, res: Response): Promise<void> {
+    const actor = clinicContext(req);
+    const ctx = buildAuthContext(req);
+    const patient = await patientService.restoreForClinic(actor, req.params.id, ctx);
+    res.status(200).json({ patient });
   },
 
   async duplicates(req: Request, res: Response): Promise<void> {

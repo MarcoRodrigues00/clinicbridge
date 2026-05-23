@@ -103,13 +103,44 @@ futura com ADR própria). Sequência (numeração atualizada na 3.13):
 > Nada clínico entra por esta trilha — qualquer dado clínico continua exigindo ADR
 > clínica dedicada (ADR 0001). Mensagens de lembrete são neutras/administrativas.
 
+## Trilha — Pacientes (cadastro administrativo)
+
+Objetivo: gerir o cadastro **administrativo** de pacientes e a qualidade dos
+dados importados. Nada clínico (Opção C / ADR 0001).
+
+- **Sprint 3.22 — CRUD administrativo de pacientes ✅ (em validação):** criar
+  manual, editar, **arquivar/restaurar** (soft-delete via `status='archived'`,
+  **sem delete físico**). Criar/editar = `dono_clinica` + `secretaria`;
+  arquivar/restaurar = **só `dono_clinica`**. `GET /patients?status=active|archived|
+  inactive|all` (default `active`); arquivado sai da listagem padrão **e** do
+  seletor da agenda; cross-tenant → 404 genérico; audits sem PII; CPF só
+  mascarado. Inclui ajuste de **copy/UX** da tela de Pacientes (deixar claro que é
+  uma lista **paginada/filtrada**, não "todos os pacientes"; incentivar busca/
+  filtro; cards mais compactos). **Sem migration.**
+- **Sprint 3.23 — RECOMENDADA: duplicados acionáveis / correção de importação.**
+  Hoje `GET /patients/duplicates` é **só informativo**. Objetivo: permitir corrigir
+  e entregar a lista 100% correta, agindo sobre cada grupo. Ações candidatas (a
+  detalhar na sprint): **editar** o paciente envolvido (reusa `PATCH /patients/:id`
+  da 3.22), **arquivar** o duplicado (reusa archive), e — **possivelmente depois**
+  — um **merge seguro** com confirmação + auditoria. **Sem merge automático**; nada
+  destrutivo sem confirmação explícita e audit. **Paginação de duplicados** entra
+  aqui (movida da Fase 4).
+- **Sprint futura — Gestão de equipe / convite de secretaria.** Hoje `secretaria`
+  só existe alterando o banco via SQL, então o papel **não é testável pelo
+  navegador** (gap conhecido da 3.22). Escopo proposto (exige decisão/ADR própria):
+  secretaria **se cadastra e solicita entrada** na clínica do dono; o **dono
+  aprova/recusa** no sistema; o papel `secretaria` é aplicado **somente após
+  aprovação**; **tudo auditado**; **sem autoentrada** em clínica sem aprovação.
+  Inclui a UI de gestão de usuários/papéis (inexistente hoje) e mitiga o tradeoff
+  de "papel stale" no JWT.
+
 ## Fase 4 — Operação e UX administrativa
 
 Objetivo: melhorar operação do dia a dia sobre o que já existe.
 
 - histórico visual de auditoria (read-only, sem PII);
 - UX de revisões/importações (clareza de status e próximos passos);
-- paginação de duplicados;
+- paginação de duplicados (ver Trilha — Pacientes, Sprint 3.23 recomendada);
 - export streaming/assíncrono para bases grandes;
 - limpeza real de arquivos com soft-delete/quarentena/auditoria/idempotência/lock
   (evolução do dry-run atual; ainda administrativo);

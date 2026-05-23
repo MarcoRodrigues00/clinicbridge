@@ -321,10 +321,32 @@ export interface ListPatientsResponse {
   };
 }
 
+// status filter (Sprint 3.22). Omitted = backend default 'active'. 'all' returns
+// every status. Archived patients are excluded from the default listing and the
+// agenda picker (which calls listPatients with no status).
+export type PatientStatusFilter = PatientStatus | 'all';
+
 export interface ListPatientsParams {
   search?: string;
   limit?: number;
   offset?: number;
+  status?: PatientStatusFilter;
+}
+
+// Manual patient input (Sprint 3.22). Administrative fields ONLY — no clinical
+// data. cpf is sent raw on write and only ever returned masked (cpf_masked).
+export interface PatientWritePayload {
+  nome: string;
+  telefone?: string | null;
+  email?: string | null;
+  cpf?: string | null;
+  data_nascimento?: string | null;
+  convenio?: string | null;
+  numero_carteirinha?: string | null;
+}
+
+export interface PatientResponse {
+  patient: PublicPatient;
 }
 
 export type DuplicateReason =
@@ -678,9 +700,43 @@ export const api = {
     }
     if (params.limit !== undefined) query.set('limit', String(params.limit));
     if (params.offset !== undefined) query.set('offset', String(params.offset));
+    if (params.status) query.set('status', params.status);
     const qs = query.toString();
     return apiFetch<ListPatientsResponse>(`/patients${qs ? `?${qs}` : ''}`, {
       method: 'GET',
+      token,
+    });
+  },
+
+  // Manual patient CRUD (Sprint 3.22). Administrative fields only. Create + edit
+  // are allowed for owner + secretaria; archive + restore are owner-only (the
+  // backend returns 403 forbidden_role otherwise).
+  createPatient(token: string, payload: PatientWritePayload): Promise<PatientResponse> {
+    return apiFetch<PatientResponse>('/patients', { method: 'POST', body: payload, token });
+  },
+
+  updatePatient(
+    token: string,
+    id: string,
+    payload: PatientWritePayload,
+  ): Promise<PatientResponse> {
+    return apiFetch<PatientResponse>(`/patients/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: payload,
+      token,
+    });
+  },
+
+  archivePatient(token: string, id: string): Promise<PatientResponse> {
+    return apiFetch<PatientResponse>(`/patients/${encodeURIComponent(id)}/archive`, {
+      method: 'PATCH',
+      token,
+    });
+  },
+
+  restorePatient(token: string, id: string): Promise<PatientResponse> {
+    return apiFetch<PatientResponse>(`/patients/${encodeURIComponent(id)}/restore`, {
+      method: 'PATCH',
       token,
     });
   },

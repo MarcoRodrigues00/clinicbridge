@@ -196,7 +196,7 @@ export function Dashboard(): JSX.Element {
               <ul className={styles.checklist}>
                 <li className={styles.checkItem}>
                   <CheckCircle2 size={18} className={styles.iconDone} aria-hidden="true" />
-                  <span>Autenticação e sessão</span>
+                  <span>Autenticação, MFA e códigos de recuperação</span>
                 </li>
                 <li className={styles.checkItem}>
                   <CheckCircle2 size={18} className={styles.iconDone} aria-hidden="true" />
@@ -204,11 +204,11 @@ export function Dashboard(): JSX.Element {
                 </li>
                 <li className={styles.checkItem}>
                   <CheckCircle2 size={18} className={styles.iconDone} aria-hidden="true" />
-                  <span>Agenda administrativa</span>
+                  <span>Agenda administrativa e lembrete manual</span>
                 </li>
                 <li className={styles.checkItem}>
                   <Clock size={18} className={styles.iconPending} aria-hidden="true" />
-                  <span>Lembretes administrativos (em breve)</span>
+                  <span>Preparação para produção (em andamento)</span>
                 </li>
               </ul>
             </section>

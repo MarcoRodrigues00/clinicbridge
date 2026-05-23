@@ -16,7 +16,8 @@
 - [ ] Agenda demo populada: `pnpm --filter backend seed:demo`
       → loga "created … 3 professionals, 5 patients, 7 appointments".
 - [ ] CSV de import à mão: `docs/demo-data/pacientes-demo.csv`.
-- [ ] (Opcional) MFA ativado no owner (aba Segurança) para demonstrar 2 passos.
+- [ ] (Opcional) MFA ativado no owner (aba Segurança) para demonstrar 2 passos —
+      ao ativar, **anote os códigos de recuperação** (exibidos uma única vez).
 - [ ] (Opcional) Login de **secretaria** pronto para mostrar permissões.
 - [ ] Credenciais e abas testadas 1x antes de apresentar (login entra; aba Agenda
       mostra o dia de hoje com agendamentos).
@@ -28,7 +29,8 @@
 ### Login
 - [ ] Landing `/` mostra "O que o ClinicBridge entrega no piloto".
 - [ ] Login do owner entra no `/app`.
-- [ ] (Se MFA) senha → passo de código → entra; código errado → erro seguro.
+- [ ] (Se MFA) senha → passo de código (aceita **app autenticador ou código de
+      recuperação**) → entra; código errado → erro seguro genérico.
 
 ### Importação
 - [ ] Upload de `pacientes-demo.csv` aceito.
@@ -56,6 +58,14 @@
       CPF/dado clínico).
 - [ ] "Abrir WhatsApp" abre `wa.me` preenchido (paciente sem telefone → aviso).
 - [ ] Reforçar: **nada é enviado pelo sistema** — humano decide.
+
+### Segurança / MFA (backup codes)
+- [ ] Ativar MFA exibe os **códigos de recuperação uma única vez** (lista +
+      "Copiar todos" + checkbox "Eu salvei" antes de concluir).
+- [ ] Aba Segurança mostra **códigos restantes** e "Gerar novos códigos de
+      recuperação" (aviso de que invalida os anteriores).
+- [ ] Login digitando um **código de recuperação** funciona (uso único).
+- [ ] Reforçar: códigos **não** reaparecem; **sem** SMS/e-mail/WhatsApp OTP.
 
 ## C. Mensagens-chave (não escorregar)
 

@@ -23,7 +23,8 @@ WhatsApp. Nada de diagnóstico/prescrição/exame/CID — **não é** prontuári
 - Arquivo de import à mão: [`docs/demo-data/pacientes-demo.csv`](demo-data/pacientes-demo.csv).
 - Login de **owner** (`dono_clinica`) da clínica de demo. Opcional: um login de
   **secretaria** para mostrar a diferença de permissões.
-- (Opcional) MFA ativado nesse owner para demonstrar o login em 2 passos.
+- (Opcional) MFA ativado nesse owner para demonstrar o login em 2 passos — ao
+  ativar, **anote os códigos de recuperação** (exibidos uma única vez).
 
 > A agenda demo entra na **mesma clínica** do owner que faz login (o seed mira a
 > clínica com pacientes). Assim a aba Agenda já aparece com conteúdo.
@@ -37,11 +38,13 @@ WhatsApp. Nada de diagnóstico/prescrição/exame/CID — **não é** prontuári
 1. Abrir a **landing** (`/`): mostrar a seção "O que o ClinicBridge entrega no
    piloto" — posicionamento administrativo, sem jargão de produção.
 2. Ir para **`/login`** e entrar como **owner**.
-3. **Se MFA estiver ativo:** a senha leva ao passo de **código** (app
-   autenticador). Falar: "MFA por TOTP, sem SMS/serviço externo; o segredo fica
-   cifrado em repouso." Digitar o código → entra no `/app`.
+3. **Se MFA estiver ativo:** a senha leva ao passo de **código** — aceita o código
+   do **app autenticador** ou um **código de recuperação** (backup code). Falar:
+   "MFA por TOTP, sem SMS/serviço externo; o segredo fica cifrado em repouso."
+   Digitar o código → entra no `/app`.
 
-> Mensagem: autenticação real (JWT), com **MFA opcional** e **papéis** de acesso.
+> Mensagem: autenticação real (JWT), com **MFA opcional** (TOTP + códigos de
+> recuperação) e **papéis** de acesso.
 
 ### 2. Importação administrativa (≈6 min) — coração da demo
 
@@ -104,11 +107,20 @@ Num card `scheduled`/`confirmed`/`rescheduled`, linha **"Lembrete administrativo
 > Mensagem: lembrete **manual-first**. WhatsApp **automático/API é futuro** (com
 > ADR/opt-in próprios), **não** está nesta versão.
 
-### 6. Segurança e governança (falar, ≈1 min)
+### 6. Segurança e governança (≈2 min)
 
-Mencionar (sem prometer compliance): **papéis** (owner × secretaria), **MFA**,
-**auditoria sem PII**, **isolamento por clínica** (multi-tenant), **retenção em
-dry-run** (nada é apagado), **backup/restore** validado localmente.
+Aba **Segurança**:
+1. **MFA (2 etapas):** ativar mostra QR + chave manual; ao confirmar, o sistema
+   exibe **códigos de recuperação uma única vez** (copiar todos + "Eu salvei").
+   Falar: "uso único, só hash no banco, nunca exibidos de novo." Mostrar a
+   contagem de **códigos restantes** e a ação **"Gerar novos códigos"** (aviso de
+   que invalida os anteriores).
+2. Mencionar (sem prometer compliance): **papéis** (owner × secretaria),
+   **auditoria sem PII**, **isolamento por clínica** (multi-tenant), **retenção em
+   dry-run** (nada é apagado), **backup/restore** validado localmente.
+
+> Backup codes: TOTP + códigos de recuperação cobrem a perda do app autenticador.
+> **Sem** SMS/e-mail/WhatsApp OTP, sem recovery por suporte/bypass.
 
 ---
 

@@ -197,17 +197,37 @@
   font-size: 0.88rem;
 }
 
+.hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--surface-border);
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
+.hint svg {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  opacity: 0.8;
+}
+
 .grid {
   list-style: none;
   margin: 0.75rem 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
+  gap: 0.7rem;
 }
 
 .card {
-  padding: 1rem 1.1rem;
+  padding: 0.85rem 0.95rem;
   border-radius: var(--r-md);
   background: var(--surface);
   border: 1px solid var(--surface-border);
@@ -219,8 +239,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
-  padding-bottom: 0.7rem;
-  margin-bottom: 0.7rem;
+  padding-bottom: 0.55rem;
+  margin-bottom: 0.55rem;
   border-bottom: 1px solid var(--surface-border);
 }
 
@@ -258,16 +278,22 @@
   border-color: rgba(245, 158, 11, 0.3);
 }
 
+.status_archived {
+  color: var(--text-3);
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
 .fields {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.38rem;
   margin: 0;
 }
 
 .field {
   display: grid;
-  grid-template-columns: 8.5rem 1fr;
-  gap: 0.6rem;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.55rem;
   align-items: baseline;
 }
 
@@ -322,6 +348,241 @@
 .moreBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* --- New patient button --------------------------------------------------- */
+.newBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--r-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #04141a;
+  background: var(--cyan);
+  border: 1px solid var(--cyan);
+  transition: filter 0.18s ease;
+}
+
+.newBtn:hover {
+  filter: brightness(1.06);
+}
+
+/* --- Create / edit form --------------------------------------------------- */
+.form {
+  margin-top: 1.25rem;
+  padding: 1.1rem 1.2rem;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.formHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+
+.formTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.formClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.formClose:hover {
+  color: var(--text-0);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.8rem;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.formLabel {
+  color: var(--text-2);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.formInput {
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-0);
+  font-size: 0.92rem;
+  min-width: 0;
+}
+
+.formInput::placeholder {
+  color: var(--text-3);
+}
+
+.formInput:focus {
+  outline: 2px solid rgba(34, 211, 238, 0.4);
+  outline-offset: 1px;
+}
+
+.formError {
+  margin-top: 0.8rem;
+  color: var(--danger);
+  font-size: 0.86rem;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--r-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #04141a;
+  background: var(--cyan);
+  border: 1px solid var(--cyan);
+  transition: filter 0.18s ease;
+}
+
+.saveBtn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--r-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--surface-border-strong);
+  transition: background 0.18s ease;
+}
+
+.cancelBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.cancelBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Status filter tabs --------------------------------------------------- */
+.filterTabs {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--surface-border-strong);
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.filterBtn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-0);
+}
+
+.filterBtnActive {
+  color: var(--cyan-soft);
+  background: rgba(34, 211, 238, 0.1);
+  border-color: rgba(34, 211, 238, 0.4);
+}
+
+/* --- Per-card actions ----------------------------------------------------- */
+.cardActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--surface-border);
+  flex-wrap: wrap;
+}
+
+.cardActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--r-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--surface-border-strong);
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.cardActionBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-0);
+}
+
+.cardActionBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cardActionDanger {
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.cardActionDanger:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.actionError {
+  margin-top: 1rem;
+  color: var(--danger);
+  font-size: 0.86rem;
 }
 
 .spin {
