@@ -776,3 +776,26 @@ demais endpoints). Sem dado clínico.
 **Próximas sprints recomendadas (em `docs/roadmap-next-phase.md`):** (a) **3.23 — duplicados acionáveis / correção de importação** (editar/arquivar por grupo reusando o CRUD da 3.22; **merge seguro só depois**, com confirmação+audit, **sem** merge automático; paginação de duplicados); (b) **sprint futura — gestão de equipe / convite de secretaria** (secretaria solicita entrada → dono aprova → papel aplicado só após aprovação, tudo auditado, **sem autoentrada**).
 
 **Verificação:** backend + frontend `typecheck`/`build` OK; matriz por API **25/25** (contas descartáveis; dados removidos no fim). Validação **visual** no navegador pendente (e o fluxo de secretaria depende de gestão de equipe). Sem commit/push.
+
+---
+
+## Sprint 3.23 (duplicados acionáveis / correção de pacientes — frontend)
+
+Direção: Opção C (base administrativa segura). Tornar a tela "Possíveis duplicados" **acionável**, **reusando o CRUD de pacientes da 3.22**. **Frontend apenas — SEM backend, SEM migration, SEM endpoint novo, SEM merge.**
+
+**Por que sem backend:** o `GET /patients/duplicates` já devolve `PublicPatient` completos por grupo (id + campos administrativos + `cpf_masked` + status), suficiente para editar/arquivar/restaurar via os endpoints da 3.22. As ações são `PATCH /patients/:id` (editar) e `.../archive` / `.../restore`. Nada novo no servidor.
+
+**Frontend:**
+- **`PatientEditForm.tsx`** (novo, + `.module.css`): form de edição administrativa reutilizável (nome/telefone/e-mail/CPF/nascimento/convênio/carteirinha). Na edição, CPF em branco **mantém** o atual (só vem mascarado). Decisão consciente: **não** refatorei o form da `PatientsList` (código recém-commitado da 3.22) — pequeno duplo aceitável, risco zero de regressão.
+- **`DuplicatesList.tsx`:** ações por registro — **Editar** (dono + secretaria, abre o form inline), **Arquivar** (não-arquivados) e **Restaurar** (arquivados), ambos **só dono** (backend valida com `requireRole`; UI esconde para os demais e trata 403 com mensagem amigável). **Destaque dos campos que bateram** (mapa `reasons → campos`), **status por registro**, **só CPF mascarado**, cabeçalho "Motivo: …". **Paginação simples de grupos no frontend** ("Carregar mais grupos", `GROUPS_PAGE=8`) — backend já limita o scan por `DUPLICATES_SCAN_MAX_ROWS` e ordena mais fortes primeiro. Avisos: "Revise os dados antes de arquivar", "Arquivar não apaga histórico nem agendamentos", "Merge automático ainda não existe".
+- **Refresh cruzado:** `Dashboard` ganhou `patientsRefresh` (contador compartilhado, mesmo padrão do `sessionsRefresh`); `PatientsList` e `DuplicatesList` recebem `refreshKey` + `onPatientsChanged`. Ação em qualquer painel recarrega **ambos**. `PatientsList` preserva busca/filtro ao recarregar por `refreshKey` (efeito separado, pula o mount).
+
+**Decisão (status no scan):** `listForDuplicateScan` não filtra status, então arquivar um duplicado **não some** o grupo — o registro fica marcado **Arquivado** com ação **Restaurar**. É o "grupo muda corretamente" do enunciado; restaurar a partir dos duplicados faz sentido porque arquivados aparecem. (Excluir arquivados do scan exigiria mexer no backend — fora do escopo desta sprint.)
+
+**Não feito (fora de escopo, registrado):** merge real (auto/manual); mover agendamentos entre pacientes; delete físico; paginação **backend** de duplicados; qualquer alteração de import sessions/dry-run/pipeline; gestão de equipe/secretaria.
+
+**Verificação:** `frontend typecheck` + `build` OK. Backend **não** tocado. Matriz por API (Node fetch, backend dev :3001, contas descartáveis: dono + secretaria na mesma clínica + dono de outra) **13/13**: grupo de CPF igual aparece; resposta só com `cpf_masked` (sem CPF bruto); secretaria edita membro do grupo; secretaria **não** arquiva (403 `forbidden_role`); dono arquiva → grupo mostra o membro `archived`; dono restaura; cross-tenant → 404; audit com `patient.create/update/archive/restore.success` e **sem PII**. Dados de teste removidos no fim.
+
+**Ressalvas/limites:** sem merge (entrega "lista 100% certa" continua manual: editar/arquivar registro a registro); CPF não pode ser **limpo** na edição pela UI (branco = manter); paginação de grupos é só visual (cliente) — base muito grande pede paginação backend (próxima melhoria). Validação **visual** no navegador pendente; fluxo de **secretaria** ainda não testável pelo navegador (só via SQL) até gestão de equipe. Sem dado clínico. Sem commit/push.
+
+**Próximo no tema (roadmap):** merge seguro com confirmação + auditoria (**sem** automático); paginação backend de duplicados; e, em trilha própria, gestão de equipe / convite de secretaria.

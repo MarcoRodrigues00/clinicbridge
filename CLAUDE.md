@@ -17,29 +17,29 @@
 
 ## Estado atual (resumido — atualizado 2026-05-23)
 
-**Última sprint aprovada: Sprint 3.21** — **MFA backup codes** (códigos de
-recuperação): tabela `user_mfa_backup_codes` (só hash argon2, uso único); gerados
-no confirm do MFA e no `POST /auth/mfa/backup-codes/regenerate` (exige TOTP,
-invalida os anteriores); `verify-login` aceita TOTP **ou** backup code (erro
-genérico); disable apaga os códigos; status expõe só a contagem restante. Sem
-SMS/e-mail/WhatsApp OTP, sem recovery por suporte/bypass.
-
-**Em validação/finalização: Sprint 3.22** — **CRUD administrativo de pacientes**
+**Última sprint aprovada: Sprint 3.22** — **CRUD administrativo de pacientes**
 (criação manual + edição + arquivar/restaurar via soft-delete). Backend:
 `POST /patients` e `PATCH /patients/:id` (dono + secretaria), `PATCH
 /patients/:id/archive` e `.../restore` (**somente dono**); `GET /patients` aceita
 `status=active|archived|inactive|all` (**default `active`**). Soft-delete via
 `status='archived'` (**sem delete físico**; agendamentos preservados); arquivado
-sai da listagem padrão **e** do seletor da agenda (que reusa `GET /patients`
-default). Tenant isolado por `clinica_id`; cross-tenant → **404 genérico**
+sai da listagem padrão **e** do seletor da agenda. Cross-tenant → **404 genérico**
 (`patient_not_found`). CPF nunca volta bruto (só `cpf_masked`); audits
-`patient.create/update/archive/restore.success` **sem PII**. **Sem migration**
-(`patients.status`/`origem` já existiam). Inclui ajuste de **copy/UX** da tela de
-Pacientes (deixar claro que é lista **paginada/filtrada**, não "todos"; incentivar
-busca/filtro; cards mais compactos) + os polimentos de copy da landing/Dashboard
-(mantidos do working tree). Aguarda validação visual no `/app`. **Gap conhecido:**
-o papel `secretaria` não é testável pelo navegador (só existe via SQL) até haver
-gestão de equipe na UI — ver sprint futura no `docs/roadmap-next-phase.md`.
+`patient.create/update/archive/restore.success` **sem PII**. Sem migration.
+
+**Em validação/finalização: Sprint 3.23** — **duplicados acionáveis** (frontend,
+**sem backend**). A tela "Possíveis duplicados" passou de informativa a acionável,
+**reusando o CRUD da 3.22**: por registro do grupo dá para **editar** (dono +
+secretaria, form inline `PatientEditForm`) e **arquivar/restaurar** (**somente
+dono**). Destaca os campos que bateram, mostra status por registro, **só CPF
+mascarado**, paginação simples de grupos no frontend ("Carregar mais grupos").
+Após ação, recarrega duplicados **e** a lista de pacientes (contador compartilhado
+`patientsRefresh` no Dashboard). **Sem merge** (automático ou manual), **sem delete
+físico**, **sem** mexer no pipeline de import/dry-run. Avisos: "Revise os dados
+antes de arquivar", "Arquivar não apaga histórico nem agendamentos", "Merge
+automático ainda não existe". **Gap conhecido:** o papel `secretaria` não é
+testável pelo navegador (só existe via SQL) até haver gestão de equipe na UI — ver
+sprint futura no `docs/roadmap-next-phase.md`.
 
 **Fase:** Fase 3 (produção/governança) + trilha da Agenda Administrativa em curso;
 Sprint 2 (pipeline de importação) completa. **Este MVP NÃO está pronto para
@@ -50,8 +50,10 @@ produção** (ver ressalvas P1 em `docs/security-notes.md`). Nunca descrever com
 magic bytes; preview + mapeamento; validação full-file; sessões de migração;
 dry-run; mark-ready; importação controlada; recibo persistido; listagem de
 pacientes (CPF mascarado); **CRUD administrativo de pacientes (criar/editar
-manual + arquivar/restaurar por soft-delete, Sprint 3.22)**; duplicados read-only;
-export CSV/XLSX; hardening de rate limit; retenção dry-run (backend + painel
+manual + arquivar/restaurar por soft-delete, Sprint 3.22)**; duplicados —
+**detecção read-only + tela acionável** (editar/arquivar/restaurar por registro
+reusando o CRUD, Sprint 3.23; **sem merge**); export CSV/XLSX; hardening de rate
+limit; retenção dry-run (backend + painel
 frontend); responsividade mobile; `requireRole` por papel nos endpoints
 administrativos sensíveis (Sprint 3.1); `TRUST_PROXY` configurável + rate limit
 com store memory/redis (Sprint 3.2). Detalhe e endpoints: `docs/project-state.md`.
@@ -87,14 +89,15 @@ fases: `docs/roadmap-next-phase.md`.
 
 ## Próximas prioridades prováveis
 
-- **Produto (trilha pacientes):** **3.23 recomendada = duplicados acionáveis /
-  correção de importação** (editar/arquivar por grupo reusando o CRUD da 3.22;
-  **merge seguro só depois**, com confirmação+audit, **sem** merge automático;
-  inclui paginação de duplicados). Sprint futura = **gestão de equipe / convite de
-  secretaria** (secretaria solicita entrada → dono aprova → papel aplicado, tudo
-  auditado, **sem autoentrada**); enquanto não existir, o **teste do papel
-  secretaria pelo navegador segue pendente** (hoje só via SQL). Detalhe:
-  `docs/roadmap-next-phase.md`.
+- **Produto (trilha pacientes):** **3.23 entregue (frontend)** = duplicados
+  acionáveis (editar/arquivar/restaurar por registro reusando o CRUD da 3.22;
+  paginação de grupos no frontend). **Próximo no tema:** **merge seguro** (com
+  confirmação + audit, **sem** merge automático; mover agendamentos exige decisão
+  própria) e **paginação backend** de duplicados se a base crescer. Sprint futura =
+  **gestão de equipe / convite de secretaria** (secretaria solicita entrada → dono
+  aprova → papel aplicado, tudo auditado, **sem autoentrada**); enquanto não
+  existir, o **teste do papel secretaria pelo navegador segue pendente** (hoje só
+  via SQL). Detalhe: `docs/roadmap-next-phase.md`.
 - **P1 (antes de produção):** ~~trust proxy~~ + ~~Redis/shared store p/ rate
   limit~~ (feitos na Sprint 3.2; falta só provisionar Redis/proxy reais e setar
   `TRUST_PROXY`/`REDIS_URL` em prod); ~~requireRole/dono-admin~~ (Sprint 3.1);

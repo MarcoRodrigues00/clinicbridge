@@ -32,6 +32,7 @@
 
 - `GET /patients`, `/patients/duplicates`, `/patients/export` nunca retornam CPF bruto — só `cpf_masked` (`***.***.789-01`). `include_cpf_raw=true` no export → 400.
 - As escritas de paciente (`POST /patients`, `PATCH /patients/:id`) aceitam CPF bruto no corpo (gravado para mascarar na leitura) mas a resposta volta **só** `cpf_masked`; o CPF bruto nunca é devolvido. A validação de entrada (`patient_invalid`/400) **nunca ecoa o valor** ofensivo (ex.: "CPF deve ter 11 dígitos", sem o número). Na edição, como o CPF só existe mascarado no cliente, o frontend envia o campo CPF em branco para **manter** o atual (não pré-preenche o mascarado).
+- **Duplicados acionáveis (Sprint 3.23, só frontend):** a tela de duplicados **não** tem endpoint próprio de ação — ela reusa o CRUD de pacientes (`PATCH /patients/:id`, `.../archive`, `.../restore`). Logo herda as mesmas garantias: tenant por `clinica_id`, **404 genérico** cross-tenant, **arquivar/restaurar só dono** (`requireRole`), editar dono+secretaria, CPF só `cpf_masked`, audits `patient.*` sem PII. O `group_key` continua não-reversível (hash dos ids, nunca CPF/e-mail/telefone). O scan (`/patients/duplicates`) inclui registros **arquivados** (sem filtro de status), então a UI exibe o status por registro; nada é apagado fisicamente.
 
 ## audit_logs (schema real)
 
