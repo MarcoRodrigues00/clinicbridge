@@ -350,6 +350,69 @@ export interface RetentionDryRunParams {
   limit?: number;
 }
 
+// Administrative Scheduling (Sprint 3.14 backend / 3.15 frontend). Administrative
+// data only — NO clinical fields. administrative_notes is short/administrative.
+export interface PublicClinicProfessional {
+  id: string;
+  name: string;
+  specialty_label: string | null;
+  is_active: boolean;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export type AppointmentStatus =
+  | 'scheduled'
+  | 'confirmed'
+  | 'cancelled'
+  | 'rescheduled'
+  | 'no_show'
+  | 'completed';
+
+export interface PublicAppointment {
+  id: string;
+  patient_id: string;
+  professional_id: string | null;
+  starts_at: string;
+  ends_at: string;
+  status: AppointmentStatus;
+  administrative_notes: string | null;
+  created_by_user_id: string | null;
+  updated_by_user_id: string | null;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface ListClinicProfessionalsResponse {
+  professionals: PublicClinicProfessional[];
+}
+
+export interface ClinicProfessionalResponse {
+  professional: PublicClinicProfessional;
+}
+
+export interface ListAppointmentsParams {
+  date?: string;
+  professional_id?: string;
+  status?: AppointmentStatus;
+}
+
+export interface ListAppointmentsResponse {
+  appointments: PublicAppointment[];
+}
+
+export interface AppointmentResponse {
+  appointment: PublicAppointment;
+}
+
+export interface CreateAppointmentPayload {
+  patient_id: string;
+  professional_id?: string | null;
+  starts_at: string;
+  ends_at: string;
+  administrative_notes?: string | null;
+}
+
 export interface ApiErrorBody {
   code: string;
   message: string;
@@ -370,7 +433,7 @@ export class ApiError extends Error {
 }
 
 interface FetchOptions {
-  method: 'GET' | 'POST';
+  method: 'GET' | 'POST' | 'PATCH';
   body?: unknown;
   token?: string;
 }
@@ -549,6 +612,98 @@ export const api = {
 
   listPatientDuplicates(token: string): Promise<DuplicateScanResult> {
     return apiFetch<DuplicateScanResult>('/patients/duplicates', { method: 'GET', token });
+  },
+
+  // --- Administrative Scheduling (Sprint 3.15) ---------------------------------
+
+  listClinicProfessionals(
+    token: string,
+    params: { active?: boolean } = {},
+  ): Promise<ListClinicProfessionalsResponse> {
+    const query = new URLSearchParams();
+    if (params.active !== undefined) query.set('active', String(params.active));
+    const qs = query.toString();
+    return apiFetch<ListClinicProfessionalsResponse>(
+      `/clinic-professionals${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  createClinicProfessional(
+    token: string,
+    payload: { name: string; specialty_label?: string | null },
+  ): Promise<ClinicProfessionalResponse> {
+    return apiFetch<ClinicProfessionalResponse>('/clinic-professionals', {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
+  updateClinicProfessional(
+    token: string,
+    id: string,
+    payload: { name?: string; specialty_label?: string | null; is_active?: boolean },
+  ): Promise<ClinicProfessionalResponse> {
+    return apiFetch<ClinicProfessionalResponse>(
+      `/clinic-professionals/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: payload, token },
+    );
+  },
+
+  deactivateClinicProfessional(token: string, id: string): Promise<ClinicProfessionalResponse> {
+    return apiFetch<ClinicProfessionalResponse>(
+      `/clinic-professionals/${encodeURIComponent(id)}/deactivate`,
+      { method: 'PATCH', token },
+    );
+  },
+
+  listAppointments(
+    token: string,
+    params: ListAppointmentsParams = {},
+  ): Promise<ListAppointmentsResponse> {
+    const query = new URLSearchParams();
+    if (params.date) query.set('date', params.date);
+    if (params.professional_id) query.set('professional_id', params.professional_id);
+    if (params.status) query.set('status', params.status);
+    const qs = query.toString();
+    return apiFetch<ListAppointmentsResponse>(`/appointments${qs ? `?${qs}` : ''}`, {
+      method: 'GET',
+      token,
+    });
+  },
+
+  createAppointment(
+    token: string,
+    payload: CreateAppointmentPayload,
+  ): Promise<AppointmentResponse> {
+    return apiFetch<AppointmentResponse>('/appointments', {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
+  updateAppointmentStatus(
+    token: string,
+    id: string,
+    status: AppointmentStatus,
+  ): Promise<AppointmentResponse> {
+    return apiFetch<AppointmentResponse>(
+      `/appointments/${encodeURIComponent(id)}/status`,
+      { method: 'PATCH', body: { status }, token },
+    );
+  },
+
+  rescheduleAppointment(
+    token: string,
+    id: string,
+    payload: { starts_at: string; ends_at: string },
+  ): Promise<AppointmentResponse> {
+    return apiFetch<AppointmentResponse>(
+      `/appointments/${encodeURIComponent(id)}/reschedule`,
+      { method: 'PATCH', body: payload, token },
+    );
   },
 
   getImportFileRetentionDryRun(

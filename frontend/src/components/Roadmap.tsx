@@ -1,73 +1,50 @@
 import { motion } from 'framer-motion';
-import { Check, Circle } from 'lucide-react';
+import { Check } from 'lucide-react';
 import styles from './Roadmap.module.css';
 
-type SprintStatus = 'done' | 'now' | 'next';
-
-type Sprint = {
-  tag: string;
-  status: SprintStatus;
-  sprint: string;
+// Sprint 3.17: replaced the old internal "Sprint 0/1/2/3" roadmap (stale and
+// confusing for a demo) with a product-oriented "what the pilot delivers" view.
+// Honest framing: it's an administrative pilot — not production-ready, no full
+// compliance claims, no clinical records.
+type Capability = {
   title: string;
-  items: { label: string; done: boolean }[];
+  items: string[];
 };
 
-const ROADMAP: Sprint[] = [
+const CAPABILITIES: Capability[] = [
   {
-    tag: 'Concluído',
-    status: 'done',
-    sprint: 'Sprint 0',
-    title: 'Fundação',
+    title: 'Migração de dados',
     items: [
-      { label: 'Monorepo pnpm', done: true },
-      { label: 'Backend Express + TS', done: true },
-      { label: 'Frontend React + Vite', done: true },
-      { label: 'Docker Compose · Postgres', done: true },
+      'Importação de CSV/XLSX',
+      'Mapeamento de colunas',
+      'Validação e revisão',
     ],
   },
   {
-    tag: 'Em planejamento',
-    status: 'now',
-    sprint: 'Sprint 1',
-    title: 'Autenticação e clínica',
+    title: 'Pacientes administrativos',
     items: [
-      { label: 'Cadastro com argon2', done: false },
-      { label: 'Login com sessão/token', done: false },
-      { label: 'Cadastro de clínica + LGPD', done: false },
-      { label: 'Upload básico (skeleton)', done: false },
+      'Listagem com busca',
+      'Detecção de duplicados',
+      'Exportação CSV/XLSX',
     ],
   },
   {
-    tag: 'Previsto',
-    status: 'next',
-    sprint: 'Sprint 2',
-    title: 'Migração e revisão',
+    title: 'Agenda administrativa',
     items: [
-      { label: 'Parse CSV/XLSX em background', done: false },
-      { label: 'Mapeamento de colunas', done: false },
-      { label: 'Validação e duplicados', done: false },
-      { label: 'Exportação limpa + relatório', done: false },
+      'Profissionais da clínica',
+      'Agendamentos por dia',
+      'Confirmar, remarcar, concluir',
     ],
   },
   {
-    tag: 'Previsto',
-    status: 'next',
-    sprint: 'Sprint 3',
-    title: 'Segurança e auditoria',
+    title: 'Segurança e governança',
     items: [
-      { label: 'Audit logs append-only', done: false },
-      { label: 'Hardening de upload (MIME, hash)', done: false },
-      { label: 'Rate limit e headers', done: false },
-      { label: 'Backup e restore testado', done: false },
+      'Isolamento por clínica',
+      'Papéis e auditoria',
+      'Retenção e backup (local)',
     ],
   },
 ];
-
-const STATUS_CLASS: Record<SprintStatus, string> = {
-  done: styles.statusDone,
-  now: styles.statusNow,
-  next: styles.statusNext,
-};
 
 export function Roadmap(): JSX.Element {
   return (
@@ -79,35 +56,31 @@ export function Roadmap(): JSX.Element {
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
-          <span className="eyebrow">Roadmap</span>
-          <h2 className="section-title">Roadmap do MVP</h2>
+          <span className="eyebrow">Piloto</span>
+          <h2 className="section-title">O que o ClinicBridge entrega no piloto</h2>
           <p className="section-lead">
-            Quatro sprints curtas para chegar a um produto vendável, sem prontuário clínico nem
+            Uma versão piloto administrativa: migração, revisão e operação de dados
+            administrativos com segurança desde o início — sem prontuário clínico nem
             integrações complexas.
           </p>
         </motion.div>
 
         <ul className={styles.grid}>
-          {ROADMAP.map((r, i) => (
+          {CAPABILITIES.map((c, i) => (
             <motion.li
-              key={r.sprint}
+              key={c.title}
               className={styles.card}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.5, delay: i * 0.08, ease: 'easeOut' }}
             >
-              <span className={`${styles.tag} ${STATUS_CLASS[r.status]}`}>{r.tag}</span>
-              <div className={styles.sprint}>{r.sprint}</div>
-              <h3 className={styles.title}>{r.title}</h3>
+              <h3 className={styles.title}>{c.title}</h3>
               <ul className={styles.items}>
-                {r.items.map((item) => (
-                  <li
-                    key={item.label}
-                    className={`${styles.item} ${item.done ? styles.itemDone : ''}`}
-                  >
-                    {item.done ? <Check size={14} strokeWidth={2.5} /> : <Circle size={12} />}
-                    <span>{item.label}</span>
+                {c.items.map((item) => (
+                  <li key={item} className={`${styles.item} ${styles.itemDone}`}>
+                    <Check size={14} strokeWidth={2.5} />
+                    <span>{item}</span>
                   </li>
                 ))}
               </ul>

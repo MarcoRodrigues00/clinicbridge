@@ -7,7 +7,44 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.14** — produto/implementação: **backend da Agenda Administrativa**
+**Sprint 3.17** — frontend/UX (QA visual + landing): polimento da **Agenda
+Administrativa** e refatoração do **Roadmap público**. Agenda ganhou cabeçalho de
+data legível ("Agenda de sábado, 23 de maio de 2026") com navegação Anterior/Hoje/
+Próximo, **resumo do dia** (total/agendados/confirmados/concluídos/faltas-cancelados),
+**timeline por horário** (ordenada por `starts_at`, horário em destaque) e
+**formulário "+ Novo agendamento" colapsável** (não fica mais sempre aberto).
+Label "especialidade" → "função/rótulo interno". Landing: seção `Roadmap`
+("Sprint 0/1/2/3", desatualizada) substituída por **"O que o ClinicBridge entrega
+no piloto"** (capacidades de produto; sem linguagem de obra; sem afirmar produção/
+compliance). frontend typecheck+build OK. **Sem backend/migration/schema; sem
+WhatsApp/lembretes.** (Browser não automatizado no ambiente.) Sem commit.
+
+**Sprint anterior: 3.16** — frontend (app shell): **navegação por abas + cache/invalidação +
+footer**. Adicionado `@tanstack/react-query` (`QueryClientProvider` em `main.tsx`).
+Os painéis da agenda (`ClinicProfessionalsPanel`/`AdministrativeSchedulePanel`)
+passaram a usar `useQuery`/`useMutation` com a **chave compartilhada
+`['clinic-professionals']`** — criar/editar/desativar profissional **invalida e
+atualiza o select da agenda sem F5** (corrige o bug de QA); mutations de
+agendamento invalidam `['appointments']`. `/app` reorganizado em abas
+(Início/Importações/Pacientes/Agenda/Segurança) com título/subtítulo por seção +
+**footer** ("Ferramenta administrativa. Não substitui prontuário…"). frontend
+typecheck+build OK. **Sem backend/migration/schema; sem WhatsApp/lembretes.**
+(Teste de browser não automatizado no ambiente — ver ressalvas.) Sem commit.
+
+**Sprint anterior: 3.15** — produto/implementação: **frontend da Agenda Administrativa**
+(piloto v0.1). Dois painéis no Dashboard: `ClinicProfessionalsPanel` (lista;
+owner cria/edita/desativa; secretaria read-only com nota) e
+`AdministrativeSchedulePanel` (filtros data/profissional/status; criar agendamento
+com seletor de paciente reusando `GET /patients`; ações de status
+Confirmar/Concluir/Faltou/Cancelar; remarcação inline). `services/api.ts` ganhou
+PATCH + tipos/métodos da agenda. **Aviso anti-clínico** visível no campo de
+observação. Status em PT (Agendado/Confirmado/Cancelado/Remarcado/Faltou/
+Concluído). Sem WhatsApp/lembretes. frontend typecheck+build OK. **Sem alterar
+backend** (só o client ganhou PATCH); sem migration; sem dado clínico. **Frontend
+e lembretes:** UI feita; **envio de lembrete/WhatsApp ainda pendente** (3.16+).
+Sem commit. (Teste de browser não automatizado neste ambiente — ver ressalvas.)
+
+**Sprint anterior: 3.14** — produto/implementação: **backend da Agenda Administrativa**
 (ADR 0006). Migration `20260526000000_scheduling` cria `clinic_professionals` e
 `appointments` (tenant-scoped por `clinica_id`, FKs, CHECK de status + `ends_at >
 starts_at`, índices). Models/DAOs/services/controllers/routes novos: profissionais
@@ -186,11 +223,14 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 - TLS **local/staging** no Nginx (cert autoassinado via `scripts/generate-local-nginx-cert.sh`)
   + redirect HTTP→HTTPS; HSTS desligado em local — sem cert/domínio real (Sprint 3.11)
 - Tabela `patients` criada e populável; `import_sessions` com recibo persistido
-- **Backend da Agenda Administrativa** (Sprint 3.14): tabelas `clinic_professionals`
-  e `appointments`; endpoints de profissionais (writes owner-only) e agendamentos
-  (owner + secretaria); tenant-scoped, sem DELETE (cancelamento por status),
-  auditado sem PII; **sem dado clínico**. Sem frontend/lembretes ainda
-- Frontend: UploadPanel, ImportPreviewPanel, ValidationReport, ImportSessionsList (com DryRunSection, ImportExecutionSection, ImportReceipt embutidos), PatientsList (com exportação CSV/XLSX), DuplicatesList, ImportFileRetentionPanel
+- **Agenda Administrativa** — backend (Sprint 3.14: `clinic_professionals` +
+  `appointments`; endpoints tenant-scoped, sem DELETE, auditado sem PII) +
+  **frontend (Sprint 3.15: painéis de profissionais e agenda no Dashboard, status
+  em PT, aviso anti-clínico)**. **Sem dado clínico**; lembretes/WhatsApp ainda não
+- Frontend: UploadPanel, ImportPreviewPanel, ValidationReport, ImportSessionsList (com DryRunSection, ImportExecutionSection, ImportReceipt embutidos), PatientsList (com exportação CSV/XLSX), DuplicatesList, ImportFileRetentionPanel, ClinicProfessionalsPanel, AdministrativeSchedulePanel
+- **App shell (Sprint 3.16):** `/app` em abas (Início/Importações/Pacientes/Agenda/
+  Segurança) + footer; `@tanstack/react-query` para cache/invalidação (agenda e
+  profissionais sincronizam sem F5)
 
 ## O que NÃO existe (fora de escopo até sprint explícita)
 
@@ -201,10 +241,10 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 - job/cron automático
 - gestão de usuários/papéis pela UI (papel é definido no registro como
   `dono_clinica`, ou via SQL); RBAC complexo com tabela de permissões
-- **Agenda Administrativa — frontend e lembretes** ainda não existem: backend
-  implementado (Sprint 3.14), mas **sem telas** (3.15) e **sem envio de lembrete/
-  WhatsApp** (3.16+, manual-first). Sempre **administrativo**, nunca clínico;
-  mensagens neutras (ADR 0006)
+- **Agenda Administrativa — lembretes/WhatsApp** ainda não existem: backend
+  (3.14) + frontend (3.15) prontos, mas **sem envio de lembrete/WhatsApp**
+  (3.16+, manual-first). Sempre **administrativo**, nunca clínico; mensagens
+  neutras (ADR 0006)
 
 ## Sprints aprovadas
 
@@ -266,10 +306,10 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
   produção, **validação jurídica** da política de retenção, **offsite/produção**
   do backup (destino, gestão de chave, agendamento, monitoramento)
 - **Módulo Agenda Administrativa** (ADR 0006 + `docs/administrative-scheduling-scope.md`):
-  **3.14 backend ✅** → **3.15** frontend → **3.16** lembrete manual/assistido →
-  **3.17** dados sintéticos/demo v0.1 → **3.18** polimento UX/dashboard → futura
-  **WhatsApp API** (gated, ADR própria). Sempre administrativo, nunca clínico;
-  mensagens neutras.
+  **3.14 backend ✅** → **3.15 frontend ✅** → **3.16 app shell/navegação/cache ✅** →
+  **3.17 QA visual da agenda + landing ✅** → **3.18** lembrete manual/assistido →
+  **3.19** dados sintéticos/demo v0.1 → futura **WhatsApp API** (gated, ADR própria).
+  Sempre administrativo, nunca clínico; mensagens neutras.
 - Download assinado de arquivos de importação (só se houver caso de uso real)
 - LGPD: endpoint de exportação e exclusão de dados por clínica
 - Limpeza real de arquivos (com confirmação/soft-delete/quarentena/auditoria)

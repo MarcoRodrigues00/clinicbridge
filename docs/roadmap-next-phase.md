@@ -72,14 +72,21 @@ futura com ADR própria). Sequência (numeração atualizada na 3.13):
   controller/routes, validação, `requireAuth`/`requireClinic`/`requireRole`, audit
   sem PII, testes curl (positivos/negativos/cross-tenant). Sem DELETE; sem dado
   clínico.
-- **Sprint 3.15 — Frontend da Agenda:** tela, filtros, criação, status,
-  remarcação, UX para não técnicos.
-- **Sprint 3.16 — Lembrete manual/assistido:** "copiar mensagem" + "abrir
+- **Sprint 3.15 — Frontend da Agenda ✅ (concluída):** painéis de profissionais e
+  agenda no Dashboard; filtros (data/profissional/status), criação com seletor de
+  paciente, ações de status, remarcação inline; status em PT; aviso anti-clínico;
+  client API com PATCH. typecheck+build OK. (Browser não automatizado no ambiente.)
+- **Sprint 3.16 — App shell / navegação / cache ✅ (concluída):** `/app` em abas
+  (Início/Importações/Pacientes/Agenda/Segurança) + footer; `@tanstack/react-query`
+  para cache/invalidação (corrige sync profissionais→agenda sem F5). Polimento
+  estrutural; sem WhatsApp/lembretes.
+- **Sprint 3.17 — QA visual da agenda + landing ✅ (concluída):** cabeçalho de data
+  legível + navegação dia, resumo do dia, timeline por horário, formulário
+  colapsável; landing com "O que o piloto entrega" (Roadmap antigo removido).
+- **Sprint 3.18 — Lembrete manual/assistido:** "copiar mensagem" + "abrir
   WhatsApp" com texto neutro; humano decide enviar; registro interno opcional.
-- **Sprint 3.17 — Dados sintéticos + demo/piloto v0.1:** seed sintético, roteiro
-  de demo, perguntas de validação, polish.
-- **Sprint 3.18 — Polimento UX/dashboard v0.1:** navegação, cards, estados vazios,
-  responsividade, textos amigáveis.
+- **Sprint 3.19 — Dados sintéticos + demo/piloto v0.1:** seed sintético, roteiro
+  de demo, perguntas de validação, polish final.
 - **Sprint futura — WhatsApp API oficial:** opt-in, templates aprovados, logs de
   status, opt-out, config por clínica — **só com ADR/sprint própria** + análise
   jurídica/técnica.
