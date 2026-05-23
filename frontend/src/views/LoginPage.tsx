@@ -9,13 +9,17 @@ import styles from './Auth.module.css';
 
 export function LoginPage(): JSX.Element {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, completeMfaLogin } = useAuth();
 
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [showSenha, setShowSenha] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // MFA step. The challenge token is kept ONLY in component state (never persisted).
+  const [mfaChallenge, setMfaChallenge] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
@@ -28,7 +32,12 @@ export function LoginPage(): JSX.Element {
 
     setSubmitting(true);
     try {
-      await login(email.trim(), senha);
+      const result = await login(email.trim(), senha);
+      if (result.mfaRequired && result.challengeToken) {
+        setMfaChallenge(result.challengeToken);
+        setSubmitting(false);
+        return;
+      }
       navigate('/app', { replace: true });
     } catch (err) {
       // Keep the message generic to avoid account enumeration / leaking details.
@@ -40,6 +49,36 @@ export function LoginPage(): JSX.Element {
       }
       setSubmitting(false);
     }
+  }
+
+  async function handleMfaSubmit(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    setFormError(null);
+    const code = mfaCode.replace(/\D/g, '');
+    if (code.length < 6) {
+      setFormError('Informe o código de 6 dígitos do autenticador.');
+      return;
+    }
+    if (!mfaChallenge) return;
+    setSubmitting(true);
+    try {
+      await completeMfaLogin(mfaChallenge, code);
+      navigate('/app', { replace: true });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        setFormError(err.message);
+      } else {
+        setFormError('Código inválido ou expirado.');
+      }
+      setSubmitting(false);
+    }
+  }
+
+  function backToPassword(): void {
+    setMfaChallenge(null);
+    setMfaCode('');
+    setFormError(null);
+    setSubmitting(false);
   }
 
   return (
@@ -65,68 +104,110 @@ export function LoginPage(): JSX.Element {
           </div>
         ) : null}
 
-        <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="login-email">
-              E-mail
-            </label>
-            <input
-              id="login-email"
-              className={styles.input}
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+        {!mfaChallenge ? (
+          <>
+            <form className={styles.form} onSubmit={handleSubmit} noValidate>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="login-email">
+                  E-mail
+                </label>
+                <input
+                  id="login-email"
+                  className={styles.input}
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
 
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="login-senha">
-              Senha
-            </label>
-            <div className={styles.inputWrap}>
-              <input
-                id="login-senha"
-                className={`${styles.input} ${styles.inputToggle}`}
-                type={showSenha ? 'text' : 'password'}
-                autoComplete="current-password"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-              />
-              <button
-                type="button"
-                className={styles.toggle}
-                onClick={() => setShowSenha((v) => !v)}
-                aria-label={showSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                aria-pressed={showSenha}
-              >
-                {showSenha ? (
-                  <EyeOff size={18} aria-hidden="true" />
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="login-senha">
+                  Senha
+                </label>
+                <div className={styles.inputWrap}>
+                  <input
+                    id="login-senha"
+                    className={`${styles.input} ${styles.inputToggle}`}
+                    type={showSenha ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className={styles.toggle}
+                    onClick={() => setShowSenha((v) => !v)}
+                    aria-label={showSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                    aria-pressed={showSenha}
+                  >
+                    {showSenha ? (
+                      <EyeOff size={18} aria-hidden="true" />
+                    ) : (
+                      <Eye size={18} aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button className={styles.submit} type="submit" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 size={16} className="spin" aria-hidden="true" />
+                    Entrando…
+                  </>
                 ) : (
-                  <Eye size={18} aria-hidden="true" />
+                  'Entrar'
                 )}
               </button>
+            </form>
+
+            <p className={styles.footer}>
+              Ainda não tem conta?{' '}
+              <Link to="/register" className={styles.link}>
+                Cadastre sua clínica
+              </Link>
+            </p>
+          </>
+        ) : (
+          <form className={styles.form} onSubmit={handleMfaSubmit} noValidate>
+            <p className={styles.subtitle}>
+              Verificação em duas etapas ativada. Informe o código de 6 dígitos do seu
+              app autenticador.
+            </p>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="login-mfa-code">
+                Código do autenticador
+              </label>
+              <input
+                id="login-mfa-code"
+                className={styles.input}
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                autoFocus
+              />
             </div>
-          </div>
-
-          <button className={styles.submit} type="submit" disabled={submitting}>
-            {submitting ? (
-              <>
-                <Loader2 size={16} className="spin" aria-hidden="true" />
-                Entrando…
-              </>
-            ) : (
-              'Entrar'
-            )}
-          </button>
-        </form>
-
-        <p className={styles.footer}>
-          Ainda não tem conta?{' '}
-          <Link to="/register" className={styles.link}>
-            Cadastre sua clínica
-          </Link>
-        </p>
+            <button className={styles.submit} type="submit" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 size={16} className="spin" aria-hidden="true" />
+                  Verificando…
+                </>
+              ) : (
+                'Verificar código'
+              )}
+            </button>
+            <p className={styles.footer}>
+              <button type="button" className={styles.link} onClick={backToPassword}>
+                Voltar para e-mail e senha
+              </button>
+            </p>
+          </form>
+        )}
           </div>
 
           <AuthAside />

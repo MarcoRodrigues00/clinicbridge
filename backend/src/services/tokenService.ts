@@ -24,6 +24,32 @@ export const tokenService = {
     return jwt.sign(claims, env.JWT_SECRET, options);
   },
 
+  // Short-lived, single-purpose token issued after password OK when MFA is on.
+  // It is NOT a session token: it carries typ='mfa_challenge' and no `papel`, so
+  // verify() (and therefore requireAuth) rejects it on protected routes.
+  signMfaChallenge(sub: string): string {
+    return jwt.sign({ sub, typ: 'mfa_challenge' }, env.JWT_SECRET, {
+      expiresIn: '5m',
+      algorithm: 'HS256',
+    });
+  },
+
+  // Returns the user id from a valid MFA challenge token, or throws.
+  verifyMfaChallenge(token: string): string {
+    const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] });
+    if (typeof decoded !== 'object' || decoded === null) {
+      throw new Error('Invalid challenge payload');
+    }
+    const payload = decoded as jwt.JwtPayload;
+    if (payload.typ !== 'mfa_challenge') {
+      throw new Error('Invalid challenge type');
+    }
+    if (typeof payload.sub !== 'string' || !UUID_RE.test(payload.sub)) {
+      throw new Error('Invalid challenge subject');
+    }
+    return payload.sub;
+  },
+
   verify(token: string): AuthClaims {
     const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] });
     if (typeof decoded !== 'object' || decoded === null) {

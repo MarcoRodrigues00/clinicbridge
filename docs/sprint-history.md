@@ -653,3 +653,19 @@ Direção: ADR 0006 (adendo de lembretes) + `docs/administrative-scheduling-scop
 - **CSS:** botões de lembrete discretos (linha própria com rótulo), quebram linha no mobile.
 - **Verificação:** `pnpm --filter frontend typecheck` + `build` OK. **Browser não automatizado neste ambiente CLI/WSL** — validado por typecheck/build + revisão; passos manuais no `docs/testing-checklist.md`.
 - **Confirmado:** sem backend/migration/schema; sem WhatsApp API/SDK/envio automático/job/cron/fila/webhook; sem token/secret; sem dado clínico; sem commit/push. Nenhuma feature removida.
+
+---
+
+## Sprint 3.19 (MFA no login com TOTP — backend + frontend)
+
+Direção: reforço de segurança (Fase 3). **MFA por TOTP (app autenticador). Sem SMS, sem e-mail OTP, sem serviço externo/pago, sem dado clínico, sem commit/push.**
+
+- **Libs:** `otplib@13` (TOTP) + `qrcode` (+ `@types/qrcode`) no backend. QR gerado no backend como data URL (frontend só renderiza `<img>`). Sem serviço externo de QR.
+- **Secret cifrado em repouso:** `config/mfaCrypto.ts` (AES-256-GCM; chave HKDF-SHA256 do `JWT_SECRET`, ou `MFA_ENCRYPTION_KEY` opcional). `MFA_ENCRYPTION_KEY` adicionada ao `env.ts` (opcional) + `.env.example` (sem alterar `.env` real). `services/totpService.ts` (generateSecret/otpauthUrl/verify com `epochTolerance` 30s/qrDataUrl).
+- **Migration `20260527000000_user_mfa`:** campos em `users` (`mfa_enabled` default false, `mfa_secret_encrypted`, `mfa_pending_secret_encrypted`, `mfa_pending_created_at`, `mfa_enabled_at`, `mfa_last_verified_at`). Aditiva: 13 usuários existentes ficaram `mfa_enabled=false`. `types/db.d.ts` + `userDao` (setPendingMfaSecret/enableMfa/disableMfa/touchMfaVerified).
+- **Fluxo login 2 passos:** `tokenService.signMfaChallenge/verifyMfaChallenge` (JWT 5min, `typ=mfa_challenge`, sem `papel` → rejeitado por `requireAuth`). `authService.login` retorna `LoginOutcome` (sessão normal **ou** `{mfa_required, mfa_challenge_token}` quando MFA on — senha validada mas sem JWT). `verifyMfaLogin` valida challenge+código e emite o JWT. `mfaSetup/mfaConfirm/mfaStatus/mfaDisable` (setup grava pending cifrado, expira 10min; confirm ativa; disable exige TOTP válido). `authController` + rotas sob `/auth/*` (herdam `authRateLimit`): `/auth/mfa/verify-login` (sem auth, usa challenge), `/setup|/confirm|/status|/disable` (requireAuth).
+- **Frontend:** `api.ts` (login union + verifyMfaLogin/getMfaStatus/setupMfa/confirmMfa/disableMfa); `AuthProvider` (`login` retorna `{mfaRequired, challengeToken?}` + `completeMfaLogin`; challenge só em state, nunca persistido); `LoginPage` (passo de código de 6 dígitos + "Voltar"); `MfaSettings` na aba Segurança (status; ativar → QR + chave manual + confirmar; desativar com código) — secret nunca exibido após ativado, nunca em localStorage.
+- **Verificação e2e (backend efêmero, usuário descartável):** register→login (token) → status false → setup (manual_key+otpauth+qr) → confirm código errado **400** / válido **enabled true** → status enabled sem secret → login **mfa_required sem token** → verify-login errado **401** / válido **token** → disable errado **400** / válido **disabled** → login normal pós-disable. Audit `auth.mfa.*` presente sem secret/código; **log do backend sem o secret** (grep count 0). `migrate:latest` (batch 8); backend+frontend typecheck/build OK.
+- **Auditoria:** `auth.mfa.setup.started/confirmed`, `auth.mfa.login.challenge/success/failure`, `auth.mfa.disable.success/failure` (recurso `auth`, sem PII/secret/código).
+- **Ressalvas:** backup codes (futuro); cifra do secret derivada do `JWT_SECRET` por padrão → P1: chave dedicada/KMS em produção (trocar `JWT_SECRET` sem chave dedicada invalida secrets MFA). MVP não pronto para produção.
+- **Confirmado:** sem SMS/e-mail OTP/serviço externo; sem dado clínico; usuários sem MFA intactos; `.env` real não alterado; sem secret/código em logs; sem commit/push.

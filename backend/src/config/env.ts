@@ -120,6 +120,11 @@ const EnvSchema = z.object({
   // before reporting the database as not ready. Kept short so an orchestrator/
   // proxy gets a fast 503 instead of hanging on knex's long acquire timeout.
   HEALTH_READY_DB_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
+
+  // MFA/TOTP secret encryption-at-rest key (Sprint 3.19). OPTIONAL: when unset,
+  // the key is derived from JWT_SECRET (works in dev). In production, set a
+  // dedicated value (P1). Never logged.
+  MFA_ENCRYPTION_KEY: z.string().optional(),
 }).superRefine((val, ctx) => {
   if (val.RATE_LIMIT_STORE === 'redis' && !val.REDIS_URL) {
     ctx.addIssue({

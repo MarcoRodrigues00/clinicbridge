@@ -25,6 +25,15 @@ const LoginSchema = z.object({
   senha: z.string().min(1, 'Senha é obrigatória.').max(200),
 });
 
+const VerifyMfaLoginSchema = z.object({
+  challenge_token: z.string().min(1, 'Token de desafio é obrigatório.').max(2000),
+  code: z.string().min(1, 'Código é obrigatório.').max(12),
+});
+
+const MfaCodeSchema = z.object({
+  code: z.string().min(1, 'Código é obrigatório.').max(12),
+});
+
 function parseOrThrow<T extends z.ZodTypeAny>(schema: T, body: unknown): z.output<T> {
   const result = schema.safeParse(body);
   if (!result.success) {
@@ -60,12 +69,57 @@ export const authController = {
   async login(req: Request, res: Response): Promise<void> {
     const input = parseOrThrow(LoginSchema, req.body);
     const result = await authService.login(input, buildContext(req));
+    // MFA-enabled accounts get a challenge instead of a session token.
+    if ('mfa_required' in result) {
+      res.status(200).json({
+        mfa_required: true,
+        mfa_challenge_token: result.mfa_challenge_token,
+      });
+      return;
+    }
     res.status(200).json({
       message: 'Login realizado com sucesso.',
       user: result.user,
       token: result.token,
       expires_in: result.expires_in,
     });
+  },
+
+  async verifyMfaLogin(req: Request, res: Response): Promise<void> {
+    const input = parseOrThrow(VerifyMfaLoginSchema, req.body);
+    const result = await authService.verifyMfaLogin(input, buildContext(req));
+    res.status(200).json({
+      message: 'Login realizado com sucesso.',
+      user: result.user,
+      token: result.token,
+      expires_in: result.expires_in,
+    });
+  },
+
+  async mfaSetup(req: Request, res: Response): Promise<void> {
+    if (!req.auth) throw new HttpError(401, 'unauthorized', 'Autenticação necessária.');
+    const result = await authService.mfaSetup(req.auth.sub, buildContext(req));
+    res.status(200).json(result);
+  },
+
+  async mfaConfirm(req: Request, res: Response): Promise<void> {
+    if (!req.auth) throw new HttpError(401, 'unauthorized', 'Autenticação necessária.');
+    const input = parseOrThrow(MfaCodeSchema, req.body);
+    const result = await authService.mfaConfirm(req.auth.sub, input.code, buildContext(req));
+    res.status(200).json(result);
+  },
+
+  async mfaStatus(req: Request, res: Response): Promise<void> {
+    if (!req.auth) throw new HttpError(401, 'unauthorized', 'Autenticação necessária.');
+    const result = await authService.mfaStatus(req.auth.sub);
+    res.status(200).json(result);
+  },
+
+  async mfaDisable(req: Request, res: Response): Promise<void> {
+    if (!req.auth) throw new HttpError(401, 'unauthorized', 'Autenticação necessária.');
+    const input = parseOrThrow(MfaCodeSchema, req.body);
+    const result = await authService.mfaDisable(req.auth.sub, input.code, buildContext(req));
+    res.status(200).json(result);
   },
 
   async me(req: Request, res: Response): Promise<void> {

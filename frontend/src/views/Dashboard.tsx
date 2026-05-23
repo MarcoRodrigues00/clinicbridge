@@ -19,6 +19,7 @@ import { DuplicatesList } from '../components/DuplicatesList';
 import { ImportFileRetentionPanel } from '../components/ImportFileRetentionPanel';
 import { ClinicProfessionalsPanel } from '../components/ClinicProfessionalsPanel';
 import { AdministrativeSchedulePanel } from '../components/AdministrativeSchedulePanel';
+import { MfaSettings } from '../components/MfaSettings';
 import { useAuth } from '../services/AuthProvider';
 import type { SafeUser } from '../services/api';
 import styles from './Dashboard.module.css';
@@ -171,6 +172,8 @@ export function Dashboard(): JSX.Element {
         )}
 
         {tab === 'seguranca' && (
+          <>
+          <MfaSettings />
           <div className={styles.grid}>
             <section className={styles.card}>
               <span className={`${styles.cardBadge} ${styles.cardBadgeOk}`}>
@@ -210,6 +213,7 @@ export function Dashboard(): JSX.Element {
               </ul>
             </section>
           </div>
+          </>
         )}
       </main>
 
