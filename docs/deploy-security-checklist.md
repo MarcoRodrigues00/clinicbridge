@@ -83,13 +83,18 @@ Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passaria no `min(48)`.
 - **WAF staged:** detection-only/log-only → tuning por rota (upload/import/export/
   auth) → blocking gradual. WAF **não** substitui auth/role/rate limit/validação.
 - Logs do Nginx sem corpo, sem `Authorization`/`Cookie`, sem PII.
-- **Implementado (Sprint 3.9, local/staging):** Nginx reverse proxy em
-  `infra/nginx/` + serviço `nginx` opcional no compose (profile `edge`):
-  `docker compose --profile edge up -d nginx` → `127.0.0.1:8080`; valida com
-  `docker compose exec nginx nginx -t`. `client_max_body_size 10m` (≥
-  `UPLOAD_MAX_BYTES`); headers `X-Real-IP`/`X-Forwarded-For` com **anti-spoof**
-  (overwrite); logs sem `Authorization`/`Cookie`/corpo. Backend atrás do proxy:
-  `TRUST_PROXY=1`. Runbook: `docs/nginx-local-staging-runbook.md`.
+- **Implementado (Sprint 3.9 + 3.10, local/staging):** Nginx reverse proxy em
+  `infra/nginx/` + serviço `nginx` opcional no compose (profile `edge`).
+  **Sprint 3.10:** backend **containerizado** (`backend/Dockerfile` multi-stage,
+  node:20-slim, **non-root**, prod-only, sem `.env`) + serviço `backend` no compose
+  (profile `edge`, `expose: 3001` — não publicado); Nginx proxya para `backend:3001`
+  na rede do compose (resolve a limitação WSL2 da 3.9). Subir:
+  `docker compose --profile edge up -d postgres redis backend nginx` → proxy em
+  `127.0.0.1:8080`. `client_max_body_size 10m` (≥ `UPLOAD_MAX_BYTES`); headers
+  `X-Real-IP`/`X-Forwarded-For` com **anti-spoof** (overwrite); backend com
+  `TRUST_PROXY=1` + `RATE_LIMIT_STORE=redis`; logs sem `Authorization`/`Cookie`/
+  corpo. Verificado e2e: health/live/ready 200, readiness 503 com DB parado.
+  Runbook: `docs/nginx-local-staging-runbook.md`.
 - **Fora do escopo desta fase:** TLS/certificado real, domínio, ModSecurity/WAF,
   deploy real (apenas estratégia/ADR + proxy local/staging).
 
