@@ -7,7 +7,21 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.13** — produto/escopo (docs/ADR-only): **escopo futuro de lembretes e
+**Sprint 3.14** — produto/implementação: **backend da Agenda Administrativa**
+(ADR 0006). Migration `20260526000000_scheduling` cria `clinic_professionals` e
+`appointments` (tenant-scoped por `clinica_id`, FKs, CHECK de status + `ends_at >
+starts_at`, índices). Models/DAOs/services/controllers/routes novos: profissionais
+(`GET /clinic-professionals`, `POST`/`PATCH /:id`/`PATCH /:id/deactivate` — writes
+só `dono_clinica`) e agendamentos (`GET /appointments`, `POST`, `GET /:id`,
+`PATCH /:id/status`, `PATCH /:id/reschedule` — owner + secretaria). `requireAuth`
++ `requireClinic` (+ `requireRole` nos writes de profissional); tenant isolation no
+DAO; sem `listAll`; **sem DELETE** (cancelamento é status `cancelled`). Auditoria
+sem PII/notes. **Administrativo, sem dado clínico.** typecheck+build OK; testes
+curl (positivos/negativos/cross-tenant) OK; counts intactos (6/24/7;
+clinic_professionals/appointments criadas e limpas pós-teste). **Frontend e
+lembretes ainda pendentes.** Sem commit.
+
+**Sprint anterior: 3.13** — produto/escopo (docs/ADR-only): **escopo futuro de lembretes e
 WhatsApp** para a Agenda Administrativa. Adendo no ADR 0006 + Parte II em
 `docs/administrative-scheduling-scope.md`: **manual-first** (copiar mensagem/abrir
 WhatsApp com texto neutro; humano decide enviar), **opt-in/opt-out**, **templates
@@ -172,6 +186,10 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 - TLS **local/staging** no Nginx (cert autoassinado via `scripts/generate-local-nginx-cert.sh`)
   + redirect HTTP→HTTPS; HSTS desligado em local — sem cert/domínio real (Sprint 3.11)
 - Tabela `patients` criada e populável; `import_sessions` com recibo persistido
+- **Backend da Agenda Administrativa** (Sprint 3.14): tabelas `clinic_professionals`
+  e `appointments`; endpoints de profissionais (writes owner-only) e agendamentos
+  (owner + secretaria); tenant-scoped, sem DELETE (cancelamento por status),
+  auditado sem PII; **sem dado clínico**. Sem frontend/lembretes ainda
 - Frontend: UploadPanel, ImportPreviewPanel, ValidationReport, ImportSessionsList (com DryRunSection, ImportExecutionSection, ImportReceipt embutidos), PatientsList (com exportação CSV/XLSX), DuplicatesList, ImportFileRetentionPanel
 
 ## O que NÃO existe (fora de escopo até sprint explícita)
@@ -183,11 +201,10 @@ completa. Este MVP **não** está pronto para produção (ver ressalvas P1 em
 - job/cron automático
 - gestão de usuários/papéis pela UI (papel é definido no registro como
   `dono_clinica`, ou via SQL); RBAC complexo com tabela de permissões
-- **módulo Agenda Administrativa** — **escopo/ADR aprovados (Sprint 3.12)** +
-  **escopo de lembretes/WhatsApp (Sprint 3.13)**, mas **não implementado**: sem
-  entidades/migrations/endpoints/telas de agendamento, sem envio de lembrete/
-  WhatsApp (planejado para 3.14+). Será **administrativo**, nunca clínico; mensagens
-  neutras (ADR 0006)
+- **Agenda Administrativa — frontend e lembretes** ainda não existem: backend
+  implementado (Sprint 3.14), mas **sem telas** (3.15) e **sem envio de lembrete/
+  WhatsApp** (3.16+, manual-first). Sempre **administrativo**, nunca clínico;
+  mensagens neutras (ADR 0006)
 
 ## Sprints aprovadas
 
@@ -203,13 +220,15 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
 - `20260523000000_import_sessions`
 - `20260524000000_patients`
 - `20260525000000_import_sessions_summary` — import_summary_json, imported_at, imported_by_user_id
+- `20260526000000_scheduling` — clinic_professionals, appointments (Sprint 3.14)
 
 ## Invariantes atuais (ambiente local)
 
 - patients = 6
 - import_files = 24
 - import_sessions = 7
-- audit_logs registra ações (ex.: `import_file.retention.dry_run.success`) sem PII
+- clinic_professionals = 0, appointments = 0 (criadas na Sprint 3.14; dados de teste limpos)
+- audit_logs registra ações (ex.: `appointment.create.success`) sem PII
 
 > Observação: estes counts são do ambiente local atual e **podem mudar** após
 > novos testes/uploads/importações. Use-os como sanity-check, não como verdade
@@ -246,9 +265,8 @@ painel frontend). Detalhe de cada uma em `docs/sprint-history.md`.
   manager, banco/Redis gerenciados, monitoramento), provisionar Redis/proxy de
   produção, **validação jurídica** da política de retenção, **offsite/produção**
   do backup (destino, gestão de chave, agendamento, monitoramento)
-- **Módulo Agenda Administrativa** (escopo/ADR — ADR 0006 +
-  `docs/administrative-scheduling-scope.md`; lembretes/WhatsApp escopados na 3.13):
-  **3.14** backend → **3.15** frontend → **3.16** lembrete manual/assistido →
+- **Módulo Agenda Administrativa** (ADR 0006 + `docs/administrative-scheduling-scope.md`):
+  **3.14 backend ✅** → **3.15** frontend → **3.16** lembrete manual/assistido →
   **3.17** dados sintéticos/demo v0.1 → **3.18** polimento UX/dashboard → futura
   **WhatsApp API** (gated, ADR própria). Sempre administrativo, nunca clínico;
   mensagens neutras.

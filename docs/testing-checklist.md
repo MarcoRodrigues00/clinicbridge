@@ -281,6 +281,35 @@ concluir agendamento (owner+secretaria); `clinica_id` obrigatório e cross-tenan
 403; status validado e `ends_at > starts_at`; cancelamento soft (`cancelled`);
 auditoria sem PII; **nenhum** dado clínico em nenhum campo.
 
+**Backend implementado (Sprint 3.14).** Endpoints (tenant-scoped; `requireAuth`+
+`requireClinic`; writes de profissional só `dono_clinica`; sem DELETE):
+
+```bash
+# Tokens: assine localmente com o tokenService (mesmo JWT_SECRET), variando papel,
+# usando um sub = id de user REAL da clínica (FK created_by_user_id) e o clinica_id
+# real (ver SQL de papéis abaixo). Backend em :3001 (host ou container).
+B=http://localhost:3001; H='Content-Type: application/json'
+# Sem token -> 401
+curl -s -o /dev/null -w "%{http_code}\n" $B/clinic-professionals          # 401
+# Owner: profissionais
+curl -s -X POST -H "$H" -H "Authorization: Bearer $OWNER" -d '{"name":"Dr. A","specialty_label":"Geral"}' $B/clinic-professionals   # 201
+curl -s -H "Authorization: Bearer $OWNER" "$B/clinic-professionals?active=true"   # 200
+curl -s -X PATCH -H "$H" -H "Authorization: Bearer $OWNER" -d '{"name":"Dr. B"}' $B/clinic-professionals/<id>            # 200
+curl -s -X PATCH -H "Authorization: Bearer $OWNER" $B/clinic-professionals/<id>/deactivate                              # 200
+# Secretaria: NÃO cria profissional
+curl -s -o /dev/null -w "%{http_code}\n" -X POST -H "$H" -H "Authorization: Bearer $SEC" -d '{"name":"x"}' $B/clinic-professionals   # 403
+# Agendamentos (owner + secretaria)
+curl -s -X POST -H "$H" -H "Authorization: Bearer $SEC" -d '{"patient_id":"<pid>","starts_at":"2026-06-01T10:00:00Z","ends_at":"2026-06-01T11:00:00Z"}' $B/appointments   # 201
+curl -s -H "Authorization: Bearer $OWNER" "$B/appointments?date=2026-06-01"   # 200
+curl -s -X PATCH -H "$H" -H "Authorization: Bearer $SEC" -d '{"status":"confirmed"}' $B/appointments/<id>/status         # 200
+curl -s -X PATCH -H "$H" -H "Authorization: Bearer $SEC" -d '{"starts_at":"2026-06-02T10:00:00Z","ends_at":"2026-06-02T11:00:00Z"}' $B/appointments/<id>/reschedule  # 200
+# Negativos: status inválido/ends<=starts/patient ou professional de outra clínica/notes>500 -> 400; DELETE -> 404
+```
+
+Esperado também: `clinic_professionals`/`appointments` tenant-scoped (cross-tenant
+→ 400/404); audit `appointment.*`/`clinic_professional.*` sem PII/notes; counts de
+patients/import_files/import_sessions inalterados.
+
 **Lembretes / WhatsApp (Sprint 3.13) — ESCOPO/ADR, ainda NÃO implementados:** sem
 testes (sem envio real/WhatsApp API/SDK/job/cron). Escopo: ADR 0006 (adendo) +
 `docs/administrative-scheduling-scope.md` Parte II. Quando houver lembrete

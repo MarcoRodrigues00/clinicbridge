@@ -9,7 +9,7 @@
 > - **Runbook backup/restore local (scripts em `scripts/`):** `docs/backup-restore-local-runbook.md`
 > - **Checklist de deploy seguro / CORS / env prod:** `docs/deploy-security-checklist.md` (+ ADR `docs/adr/0004-deploy-security-baseline.md`)
 > - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
-> - **Escopo do módulo Agenda Administrativa + lembretes/WhatsApp (futuro, não clínico, manual-first/opt-in):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
+> - **Agenda Administrativa (backend implementado na 3.14; frontend/lembretes futuros; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
 > - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
@@ -42,10 +42,12 @@ job/cron; gestão de usuários/papéis na UI (papel é definido no registro/SQL)
 **Migrações (em ordem):** `20260520000000_init` (users/clinics/tokens) ·
 `20260521000000_audit_logs` · `20260522000000_import_files` ·
 `20260523000000_import_sessions` · `20260524000000_patients` ·
-`20260525000000_import_sessions_summary`.
+`20260525000000_import_sessions_summary` · `20260526000000_scheduling`
+(clinic_professionals/appointments — Agenda Administrativa, Sprint 3.14).
 
 **Invariantes locais (sanity-check, podem mudar):** patients=6, import_files=24,
-import_sessions=7; audit sem PII. Reconfira via `docs/testing-checklist.md`.
+import_sessions=7; clinic_professionals=0, appointments=0; audit sem PII. Reconfira
+via `docs/testing-checklist.md`.
 
 ## Direção estratégica (aceita 2026-05-22)
 

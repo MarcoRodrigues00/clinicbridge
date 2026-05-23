@@ -9,6 +9,8 @@ import { importPreviewRouter } from './routes/importPreview';
 import { importValidationRouter } from './routes/importValidation';
 import { importSessionsRouter } from './routes/importSessions';
 import { patientsRouter } from './routes/patients';
+import { clinicProfessionalsRouter } from './routes/clinicProfessionals';
+import { appointmentsRouter } from './routes/appointments';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -76,6 +78,8 @@ export function createApp(): Express {
   app.use(importValidationRouter);
   app.use(importSessionsRouter);
   app.use(patientsRouter);
+  app.use(clinicProfessionalsRouter);
+  app.use(appointmentsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

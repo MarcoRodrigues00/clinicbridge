@@ -244,11 +244,21 @@
 - **WAF não substitui:** `requireAuth`/`requireClinic`/`requireRole`, rate limit do
   app, validação por magic bytes, CPF mascarado, CORS, errorHandler seguro.
 
-## Agenda Administrativa — riscos e proibição clínica (escopo, Sprint 3.12)
+## Agenda Administrativa — riscos e proibição clínica (escopo 3.12, backend 3.14)
 
 - **Documento/decisão:** `docs/administrative-scheduling-scope.md` + ADR
-  `docs/adr/0006-administrative-scheduling-module.md`. **Escopo/ADR-only — não
-  implementado** (sem migrations/endpoints/telas).
+  `docs/adr/0006-administrative-scheduling-module.md`.
+- **Backend implementado (Sprint 3.14):** tabelas `clinic_professionals` e
+  `appointments` (tenant-scoped por `clinica_id`; CHECK de status + `ends_at >
+  starts_at`); endpoints `/clinic-professionals` (writes só `dono_clinica`) e
+  `/appointments` (owner + secretaria). `requireAuth`+`requireClinic`(+`requireRole`);
+  tenant isolation no DAO (sem `listAll`); **sem DELETE** (cancelamento por status
+  `cancelled`); validação de UUID/datas/status/notes (max 500). Cross-tenant de
+  patient/professional → 400 seguro; detalhe cross-tenant → 404. Auditoria
+  (`appointment.*`/`clinic_professional.*`) **sem PII e sem `administrative_notes`**;
+  o schema do `audit_logs` não tem coluna de conteúdo. **Nenhum dado clínico** em
+  nenhuma camada; `administrative_notes` nunca é logado. **Frontend e lembretes
+  ainda não implementados.**
 - **Administrativa, não clínica:** a agenda **não** pode conter diagnóstico,
   prescrição, evolução, CID, anamnese, exames, medicação nem prontuário. Campo
   `administrative_notes` é opcional/curto e **administrativo** (✅ "pediu contato
