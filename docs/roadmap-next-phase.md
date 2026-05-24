@@ -124,11 +124,29 @@ dados importados. Nada clínico (Opção C / ADR 0001).
   Destaque dos campos que bateram, status por registro, só CPF mascarado, paginação
   de grupos no **frontend**, refresh cruzado com a lista de pacientes. **Sem merge**
   (auto ou manual), sem mover agendamentos, sem delete físico, sem mexer no import.
-- **Próximo no tema (recomendado):** **merge seguro** de duplicados — escolher o
-  registro "mestre", revisar campos, consolidar com **confirmação + auditoria**;
-  **sem merge automático** e nada destrutivo sem confirmação. Mover/realocar
-  agendamentos entre pacientes exige decisão própria. **Paginação backend** de
-  duplicados quando a base crescer (hoje o corte é client-side + cap do scan).
+- **Sprint 3.32 (entregue — ADR/docs) — Merge seguro de duplicados (decisão).**
+  ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`: merge administrativo
+  **B-safe**. Motivação: arquivar um duplicado com agendamentos os deixa apontando
+  para paciente arquivado → nome-fallback ruim na Agenda. Decisão (owner-only, em
+  transação): escolher **principal** → **mover agendamentos** dos secundários
+  (reassign tenant-scoped) → **fill-blanks não-destrutivo** (só preenche vazios;
+  nunca sobrescreve) → **arquivar** secundários (soft-delete) → proveniência via
+  migration mínima `patients.merged_into_id` + `merged_at`. Audit sem PII; CPF
+  nunca bruto; cross-tenant → 404; idempotência via CAS; **sem undo completo**.
+  **NÃO** nesta trilha: seleção campo-a-campo, merge automático sem confirmação,
+  undo/snapshot, qualquer dado clínico, delete físico.
+- **Sprint 3.33 (próxima) — Backend + migration + API do merge.** Migration
+  `merged_into_id`/`merged_at`; `POST /patients/:id/merge` (múltiplos
+  `secondary_ids` atômicos); DAOs (`countByPatient`, `reassignPatient`,
+  `setMergedInto`); service transacional com CAS; audit `patient.merge.success`
+  sem PII; matriz de testes por API (cross-tenant, idempotência, fill-blanks).
+- **Sprint 3.34 — Frontend/UX + validação visual do merge.** `DuplicatesList`:
+  escolher principal, diffs mascarados, editar antes (reusa `PatientEditForm`),
+  `ConfirmDialog` forte, contagem de agendamentos; validação visual (Agenda mostra
+  nome certo após mover; arquivado com "merge em X").
+- **Ainda no tema:** **undo/snapshot** completo (exige tabela própria + ADR) e
+  **paginação backend** de duplicados quando a base crescer (hoje o corte é
+  client-side + cap do scan).
 - **Sprint 3.24 (entregue) — Gestão de equipe / convite de funcionário(a).** Antes
   desta sprint o papel `secretaria` só existia via SQL e **não era testável pelo
   navegador** (gap herdado da 3.22). Entregue: cadastro de funcionário(a) sem

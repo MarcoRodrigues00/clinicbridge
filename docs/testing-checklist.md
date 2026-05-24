@@ -876,3 +876,24 @@ Sem mudança de API/contrato. Cenários (18/18):
 > Atenção ao rate limit de auth (`AUTH_RATE_LIMIT_MAX=20`/15min, IP-keyed): o
 > script usa ~6 contas (12 requests de auth). Reexecuções em sequência podem
 > precisar aguardar a janela ou reiniciar o backend (store em memória no dev).
+
+## Merge seguro de duplicados — plano de testes (planejado, Sprint 3.33/3.34)
+
+> **Decidido na Sprint 3.32 (ADR 0007), ainda NÃO implementado.** A matriz
+> completa será escrita na 3.33 (API) e 3.34 (visual). Esboço para referência:
+
+- **API (3.33):** merge move N agendamentos secundário→principal; secundário fica
+  `archived` + `merged_into_id`/`merged_at` setados; `fill_blanks` só preenche
+  campos vazios do principal (não sobrescreve); re-merge idempotente (no-op/erro
+  seguro via CAS); principal/secundário não-`active` → erro seguro; **cross-tenant**
+  (principal de A + secundário de B → 404; agendamentos de outra clínica intactos);
+  audit `patient.merge.success` com `recurso_id="<primaryId>|<secId>"` e **sem PII**;
+  CPF nunca bruto.
+- **SQL:** `appointments.patient_id` reassinado; contagem total preservada (nada
+  deletado); `merged_into_id`/`merged_at` nos secundários.
+- **Visual (3.34):** escolher principal, diffs mascarados, editar antes
+  (`PatientEditForm`), `ConfirmDialog`, grupo sai da fila; **Agenda mostra o nome
+  certo após o merge**; arquivado em Pacientes › Arquivados com "merge em X";
+  secretaria não vê/não executa o merge.
+- **Borda:** secundário sem agendamentos; principal e secundário com horário
+  coincidente; restore do arquivado.
