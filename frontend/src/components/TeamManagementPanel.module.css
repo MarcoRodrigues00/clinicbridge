@@ -64,20 +64,41 @@
 }
 
 .inviteCode {
-  padding: 0.4rem 0.7rem;
+  padding: 0.45rem 0.85rem;
   border-radius: var(--r-sm);
   background: rgba(34, 211, 238, 0.1);
   border: 1px solid rgba(34, 211, 238, 0.32);
   color: var(--cyan-soft);
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 1rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+/* Sprint 3.27 — subtle category chip next to the section title, used to
+   distinguish "Acesso ao sistema" (team) from "Aparece na agenda"
+   (professionals). Neutral by design — must never look like a status badge. */
+.categoryChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  margin-left: 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
   letter-spacing: 0.04em;
+  color: var(--text-2);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+  white-space: nowrap;
 }
 
 .copyBtn,
 .primaryBtn,
 .secondaryBtn,
-.dangerBtn {
+.dangerBtn,
+.ghostBtn {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -88,6 +109,24 @@
   font-size: 0.9rem;
   cursor: pointer;
   border: 1px solid transparent;
+}
+
+/* Sprint 3.27 — "ghost" variant: no background, only border. Used by
+   Regenerar so it stays clearly secondary to Copiar without looking dangerous. */
+.ghostBtn {
+  background: transparent;
+  color: var(--text-1);
+  border-color: var(--surface-border-strong);
+}
+
+.ghostBtn:hover:not(:disabled) {
+  border-color: var(--cyan);
+  color: var(--text-0);
+}
+
+.ghostBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .copyBtn,
@@ -187,6 +226,13 @@
   border-radius: var(--r-md);
   border: 1px solid var(--surface-border);
   background: var(--surface);
+}
+
+/* Sprint 3.27 — visual lane for inactive members. Cool, neutral border-left so
+   the list stays scannable without flagging "danger". */
+.cardInactive {
+  border-left: 3px solid rgba(120, 140, 180, 0.45);
+  background: rgba(15, 22, 38, 0.55);
 }
 
 .cardMain {
@@ -312,4 +358,20 @@
 
 @keyframes teamSpin {
   to { transform: rotate(360deg); }
+}
+
+/* Sprint 3.27 — narrow viewports: stack the action buttons under the card
+   content and let them span full width so touch targets stay comfortable. */
+@media (max-width: 480px) {
+  .actions {
+    width: 100%;
+  }
+  .actions > button {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  .categoryChip {
+    margin-left: 0;
+    margin-top: 0.35rem;
+  }
 }

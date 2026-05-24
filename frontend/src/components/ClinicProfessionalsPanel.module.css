@@ -22,10 +22,28 @@
   display: flex;
   align-items: center;
   gap: 0.55rem;
+  flex-wrap: wrap;
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text-0);
+}
+
+/* Sprint 3.27 — category chip mirrors the one in TeamManagementPanel; neutral
+   colors keep it distinct from status badges. */
+.categoryChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+  white-space: nowrap;
 }
 
 .subtitle {
@@ -225,4 +243,20 @@
 
 @keyframes profSpin {
   to { transform: rotate(360deg); }
+}
+
+/* Sprint 3.27 — mirror the narrow-viewport tweaks from TeamManagementPanel so
+   actions span full width and the category chip gets a bit of breathing room
+   when the title wraps. */
+@media (max-width: 480px) {
+  .actions {
+    width: 100%;
+  }
+  .actions > button {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  .categoryChip {
+    margin-top: 0.35rem;
+  }
 }

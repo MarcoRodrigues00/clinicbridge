@@ -7,7 +7,54 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.26** (em validação/finalização) — **regenerar código de convite da
+**Sprint 3.27** (em validação/finalização) — **polimento visual da aba Equipe**.
+Frontend only; **sem backend, sem API, sem migration, sem permissão**. Apenas
+copy/CSS/markup ajustados.
+
+Mudanças visíveis ao usuário:
+- **Chips de categoria** nos títulos: "Acesso ao sistema" no `TeamManagementPanel`
+  (membros com login) e "Aparece na agenda" no `ClinicProfessionalsPanel`
+  (profissionais que aparecem como responsável do agendamento, podem não ter
+  login). Chips são neutros (cinza), distintos visualmente dos status badges.
+- **Código de convite** ganhou peso (mono 1.15rem, letter-spacing 0.08em); vira
+  o foco natural do bloco em demo/piloto.
+- **Regenerar** virou `ghostBtn` (transparente, só borda) — claramente secundário
+  a "Copiar" sem parecer danger. Texto do `window.confirm` reduzido.
+- **Recusar** (solicitação pendente) virou `secondaryBtn` (neutro) — recusar não
+  é destrutivo. **Desativar acesso** (membro) segue sendo o único `dangerBtn` da
+  lista de membros, mantendo o sinal correto.
+- **Cards de membros inativos** ganharam `border-left` cinza-azulado frio +
+  fundo levemente mais escuro. Escaneáveis sem virar alerta vermelho.
+- **Copy nova nos empty states e nos avisos:**
+  - Solicitações vazias: "Sem solicitações no momento. Compartilhe o código…"
+  - Membros (só dono): "Só você por enquanto. Quando alguém entrar com o
+    código, vai aparecer aqui."
+  - Profissionais vazio: "Nenhum profissional cadastrado. Adicione quem realiza
+    atendimentos — eles aparecem como responsáveis na agenda."
+  - Confirm Regenerar: "Gerar um novo código de convite? O código atual deixa
+    de aceitar NOVAS solicitações. Membros atuais e pedidos pendentes continuam
+    intactos."
+  - Confirm Desativar acesso: "Remover o acesso de {nome}? O histórico e os
+    dados continuam preservados. A pessoa pode pedir entrada de novo com o
+    código de convite."
+- **Profissionais** ganhou rótulo no botão: "Desativar profissional" (em vez
+  de "Desativar" genérico) — qualifica a ação e evita confusão com "Desativar
+  acesso" (membro).
+- **Subtítulo do ClinicProfessionalsPanel** começa agora com a ideia central
+  em negrito leve ("Pessoas que aparecem como responsável no agendamento.").
+- **Mobile** (`@max-width: 480px`): action buttons em `.actions` viram
+  full-width nos dois painéis; chip de categoria ganha breathing room quando
+  o título quebra.
+
+Verificação: `pnpm --filter frontend typecheck` ✅ e `pnpm --filter frontend
+build` ✅. Backend **não** rodado. Validação visual no navegador pendente.
+Sem commit/push.
+
+---
+
+## Sprint anterior (3.26)
+
+**Sprint 3.26** — **regenerar código de convite da
 clínica**. Backend + frontend, **sem migration**.
 
 Owner-only `POST /clinics/invite-code/regenerate` rotaciona `clinics.invite_code`

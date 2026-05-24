@@ -162,6 +162,7 @@ export function TeamManagementPanel(): JSX.Element | null {
         <h2 className={styles.title}>
           <Users size={20} aria-hidden="true" />
           Equipe da clínica
+          <span className={styles.categoryChip}>Acesso ao sistema</span>
         </h2>
         <button
           type="button"
@@ -177,9 +178,9 @@ export function TeamManagementPanel(): JSX.Element | null {
         </button>
       </div>
       <p className={styles.subtitle}>
-        Compartilhe o código de convite com o(a) funcionário(a) por um canal seguro
-        (WhatsApp pessoal, voz, e-mail confiável). Cada solicitação precisa ser
-        aprovada por você — não existe entrada automática na equipe.
+        Pessoas com login no sistema (você + funcionários(as) aprovados(as)).
+        Compartilhe o código de convite por um canal seguro; cada solicitação
+        precisa ser aprovada por você — não existe entrada automática.
       </p>
 
       <div className={styles.inviteRow}>
@@ -209,11 +210,11 @@ export function TeamManagementPanel(): JSX.Element | null {
             </button>
             <button
               type="button"
-              className={styles.copyBtn}
+              className={styles.ghostBtn}
               disabled={regenerateInviteMutation.isPending}
               onClick={() => {
                 const ok = window.confirm(
-                  'Regenerar o código de convite da clínica?\n\nO código antigo deixará de funcionar para NOVAS solicitações. Compartilhe o novo código apenas com funcionários(as) autorizados(as).\n\nSolicitações pendentes e membros atuais NÃO são afetados.',
+                  'Gerar um novo código de convite?\n\nO código atual deixa de aceitar NOVAS solicitações. Membros atuais e pedidos pendentes continuam intactos.',
                 );
                 if (ok) regenerateInviteMutation.mutate();
               }}
@@ -246,7 +247,10 @@ export function TeamManagementPanel(): JSX.Element | null {
           Carregando solicitações…
         </div>
       ) : pending.length === 0 ? (
-        <div className={styles.empty}>Nenhuma solicitação pendente no momento.</div>
+        <div className={styles.empty}>
+          Sem solicitações no momento. Compartilhe o código de convite por um
+          canal seguro para receber pedidos de entrada.
+        </div>
       ) : (
         <ul className={styles.list}>
           {pending.map((req: PendingJoinRequest) => (
@@ -284,10 +288,10 @@ export function TeamManagementPanel(): JSX.Element | null {
                 </button>
                 <button
                   type="button"
-                  className={styles.dangerBtn}
+                  className={styles.secondaryBtn}
                   onClick={() => {
                     const ok = window.confirm(
-                      `Recusar a solicitação de ${req.applicant_name}? Essa ação pode ser repetida pelo(a) próprio(a) solicitante com o mesmo código.`,
+                      `Recusar a solicitação de ${req.applicant_name}? A pessoa pode pedir de novo com o mesmo código.`,
                     );
                     if (ok) rejectMutation.mutate(req.id);
                   }}
@@ -337,8 +341,8 @@ export function TeamManagementPanel(): JSX.Element | null {
             return (
               <div className={styles.empty}>
                 {showRemoved
-                  ? 'Nenhum membro registrado nesta clínica.'
-                  : 'Nenhum membro ativo. Compartilhe o código de convite para receber solicitações.'}
+                  ? 'Nenhum membro registrado nesta clínica ainda.'
+                  : 'Só você por enquanto. Quando alguém entrar com o código, vai aparecer aqui.'}
               </div>
             );
           }
@@ -350,7 +354,12 @@ export function TeamManagementPanel(): JSX.Element | null {
                 const isBusy =
                   deactivateMutation.isPending && deactivateMutation.variables === m.user_id;
                 return (
-                  <li key={m.user_id} className={styles.card}>
+                  <li
+                    key={m.user_id}
+                    className={`${styles.card} ${
+                      m.status === 'removed' ? styles.cardInactive : ''
+                    }`}
+                  >
                     <div className={styles.cardMain}>
                       <div className={styles.applicant}>
                         <strong className={styles.applicantName}>
@@ -387,7 +396,7 @@ export function TeamManagementPanel(): JSX.Element | null {
                           className={styles.dangerBtn}
                           onClick={() => {
                             const ok = window.confirm(
-                              `Desativar o acesso de ${m.nome} (${m.email}) à clínica?\n\nIsso NÃO apaga o(a) usuário(a) nem o histórico. O acesso é removido imediatamente e a pessoa pode pedir entrada de novo com o código de convite.`,
+                              `Remover o acesso de ${m.nome}?\n\nO histórico e os dados continuam preservados. A pessoa pode pedir entrada de novo com o código de convite.`,
                             );
                             if (ok) deactivateMutation.mutate(m.user_id);
                           }}

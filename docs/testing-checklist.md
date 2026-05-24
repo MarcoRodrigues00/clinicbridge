@@ -737,3 +737,34 @@ Validação **visual** no navegador (pendente automatizar):
 - Após confirmar, o novo código aparece em destaque no campo de código + mensagem de sucesso (`notice`) mostra o novo código uma vez.
 - **Copiar** continua funcionando com o novo código.
 - Após regenerar, qualquer aba aberta com `JoinClinicGate` que use o código antigo recebe `invalid_invite` ao tentar submeter (a aba do dono não é afetada — ele lê o atualizado).
+
+## Polimento visual da aba Equipe (Sprint 3.27)
+
+Sem mudança de API. Validação puramente visual no navegador:
+
+1. **Chips de categoria:**
+   - `TeamManagementPanel` (topo): título "Equipe da clínica" + chip neutro "Acesso ao sistema".
+   - `ClinicProfessionalsPanel` (abaixo): título "Profissionais da agenda" + chip neutro "Aparece na agenda".
+   - Os dois chips são cinza neutro — não devem virar status badges (verde/laranja).
+2. **Código de convite:**
+   - Aparece em mono, fundo cyan suave, levemente maior que antes (1.15rem, letter-spacing 0.08em).
+   - Botão **Copiar** mantém o peso visual (solid surface).
+   - Botão **Regenerar** está claramente menos atrativo (variante ghost — transparente, só borda).
+3. **Avisos (`window.confirm`):**
+   - Regenerar: "Gerar um novo código de convite? O código atual deixa de aceitar NOVAS solicitações. Membros atuais e pedidos pendentes continuam intactos."
+   - Desativar acesso: "Remover o acesso de {nome}? O histórico e os dados continuam preservados. A pessoa pode pedir entrada de novo com o código de convite."
+   - Recusar solicitação: tom neutro ("A pessoa pode pedir de novo com o mesmo código.").
+4. **Hierarquia de risco:**
+   - "Recusar" virou neutro (não-danger). É correto: não é destrutivo.
+   - "Desativar acesso" (membro) é o único `dangerBtn` no card de membro — coerente com a gravidade real.
+   - "Desativar profissional" (no painel de profissionais) usa estilo `actionBtn` (não-danger). Suficiente para a sprint.
+5. **Estado vazio:**
+   - Solicitações: "Sem solicitações no momento. Compartilhe o código de convite por um canal seguro para receber pedidos de entrada."
+   - Membros (só dono): "Só você por enquanto. Quando alguém entrar com o código, vai aparecer aqui."
+   - Membros (showRemoved=true sem nenhum): "Nenhum membro registrado nesta clínica ainda."
+   - Profissionais: "Nenhum profissional cadastrado. Adicione quem realiza atendimentos — eles aparecem como responsáveis na agenda."
+6. **Card de membro inativo:** ao marcar "Mostrar inativos" e ver um ex-membro, o card deve ter `border-left` cinza-azulado fino (não vermelho) e fundo levemente mais escuro.
+7. **Mobile (`@max-width: 480px`):**
+   - Botões de ação (Aprovar/Recusar/Desativar) ocupam linha inteira.
+   - Chip de categoria pode quebrar para a linha de baixo do título com folga.
+   - Painel de profissionais segue o mesmo comportamento.

@@ -993,3 +993,48 @@ Dados de teste limpos via SQL transacional ao final.
 - Validação **visual** no navegador pendente.
 
 **Próximo no tema (`roadmap-next-phase.md`):** sair voluntariamente da clínica; histórico de ações de equipe visível ao dono; e — em sprint própria com ADR — roles granulares (recepção/financeiro/gestor).
+
+
+---
+
+## Sprint 3.27 (polimento visual da aba Equipe — frontend only, sem commit)
+
+**Sem backend, sem API, sem migration, sem permissão.** Pequena rodada de UX/copy/CSS para deixar a aba Equipe mais clara antes da demo/piloto v0.1.
+
+**Pre-implementação:** chamei um agent de revisão UX (general-purpose) lendo apenas os 4 arquivos da aba Equipe. Output principal: chips de categoria nos títulos, código de convite com peso visual maior, `Regenerar` como "ghost" (não-danger), `Recusar` deixar de ser danger, cards inativos como faixa lateral (não vermelha), mobile full-width nas actions, copy mais humana nos empties/confirms. Escolhi 6 itens pequenos e seguros; deixei como follow-up: substituir `window.confirm` por modal custom.
+
+**Mudanças (frontend only):**
+
+- `frontend/src/components/TeamManagementPanel.tsx`:
+  - chip `Acesso ao sistema` ao lado do título.
+  - subtítulo agora abre com "Pessoas com login no sistema…".
+  - botão **Regenerar** virou variante `ghostBtn`; `window.confirm` reescrito ("Gerar um novo código de convite? …").
+  - empty state de solicitações: "Sem solicitações no momento. Compartilhe o código de convite por um canal seguro…".
+  - **Recusar** virou `secondaryBtn` (não-danger); copy do confirm simplificada.
+  - empty state de membros (só dono): "Só você por enquanto. Quando alguém entrar com o código, vai aparecer aqui."; `showRemoved=true` empty: "Nenhum membro registrado nesta clínica ainda.".
+  - copy do confirm de **Desativar acesso**: "Remover o acesso de {nome}? O histórico e os dados continuam preservados. A pessoa pode pedir entrada de novo com o código de convite.".
+  - `<li>` de membro inativo agora recebe `${styles.card} ${styles.cardInactive}`.
+- `frontend/src/components/TeamManagementPanel.module.css`:
+  - novo `.categoryChip` (chip cinza neutro, mais peso tipográfico que badge).
+  - `.inviteCode` ganhou `font-size: 1.15rem`, `font-weight: 600`, `letter-spacing: 0.08em`.
+  - novo `.ghostBtn` (transparente, só borda; hover → borda cyan).
+  - novo `.cardInactive` (border-left `rgba(120,140,180,0.45)` + fundo levemente mais escuro).
+  - media query `@media (max-width: 480px)`: `.actions` full-width + botões `flex: 1 1 100%`; `.categoryChip` ganha `margin-top` quando o título quebra.
+- `frontend/src/components/ClinicProfessionalsPanel.tsx`:
+  - título virou "Profissionais da agenda" + chip `Aparece na agenda`.
+  - subtítulo reescrito: primeira frase em `<strong>` ("Pessoas que aparecem como responsável no agendamento.").
+  - empty state: "Nenhum profissional cadastrado. Adicione quem realiza atendimentos — eles aparecem como responsáveis na agenda."
+  - botão **Desativar** renomeado para **Desativar profissional** (qualifica a ação, evita confusão com "Desativar acesso" do bloco de membros).
+- `frontend/src/components/ClinicProfessionalsPanel.module.css`:
+  - `.title` ganhou `flex-wrap: wrap`.
+  - novo `.categoryChip` (espelha o do TeamManagementPanel).
+  - media query `@media (max-width: 480px)`: mesma estratégia (actions full-width, chip com `margin-top`).
+
+**Pós-implementação:** segundo review do mesmo agent (prompt curto, só sobre os 4 arquivos). Veredito: ok nos 6 itens; um pequeno fix apontado (espelhar a media query também no `ClinicProfessionalsPanel.module.css` para evitar "actions sem full-width" e chip sem breathing room em ≤480px). Apliquei na hora. Sem follow-ups bloqueantes.
+
+**Verificação:** `pnpm --filter frontend typecheck` ✅, `pnpm --filter frontend build` ✅. Backend **não** rodado (sem alterações). Validação visual no navegador pendente. Sem commit/push.
+
+**Ressalvas / follow-ups futuros:**
+- `window.confirm` nativo segue em uso. Funciona, mas quebra o ar dark do app. Substituir por modal custom é trabalho de sprint própria.
+- Empty state dashed border é idêntico entre os 2 painéis — variar a copy foi suficiente; estilos diferentes só se aparecer demanda visual real.
+- Subtítulo do ClinicProfessionalsPanel ainda tem várias frases; se virar problema na demo, dá pra encurtar mais (não fiz agora pra não perder a regra de segurança "não é prontuário/clínico").
