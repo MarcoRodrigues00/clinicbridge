@@ -163,7 +163,8 @@
 
 .primaryBtn:disabled,
 .dangerBtn:disabled,
-.copyBtn:disabled {
+.copyBtn:disabled,
+.secondaryBtn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }

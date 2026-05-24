@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import styles from './ConfirmDialog.module.css';
 
@@ -10,6 +10,9 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   variant?: 'default' | 'danger';
   isBusy?: boolean;
+  // When set, the dialog stays open and shows the error in context so the user
+  // can retry or cancel — instead of closing and surfacing it elsewhere.
+  error?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -22,10 +25,13 @@ export function ConfirmDialog({
   cancelLabel = 'Cancelar',
   variant = 'default',
   isBusy = false,
+  error = null,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps): JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
+  // Unique id so multiple dialogs mounted at once don't collide on the DOM id.
+  const titleId = useId();
 
   // Sync React open state with the native dialog open/close
   useEffect(() => {
@@ -56,15 +62,20 @@ export function ConfirmDialog({
     <dialog
       ref={ref}
       className={styles.dialog}
-      aria-labelledby="confirm-dialog-title"
+      aria-labelledby={titleId}
       aria-modal="true"
       onClick={handleBackdropClick}
     >
       <div className={styles.content}>
-        <h2 id="confirm-dialog-title" className={styles.title}>
+        <h2 id={titleId} className={styles.title}>
           {title}
         </h2>
         <p className={styles.description}>{description}</p>
+        {error ? (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        ) : null}
         <div className={styles.actions}>
           <button
             type="button"
