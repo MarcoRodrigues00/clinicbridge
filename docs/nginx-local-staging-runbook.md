@@ -8,6 +8,11 @@
 >
 > Decisão/estratégia de borda: `docs/adr/0005-edge-security-reverse-proxy-waf.md` +
 > `docs/edge-security-strategy.md`. Config: `infra/nginx/`.
+>
+> **Para DNS real + Let's Encrypt + Nginx de produção/staging:** ver
+> `docs/dns-tls-staging-runbook.md` (Sprint 3.38) e os templates
+> `infra/nginx/conf.d/clinicbridge.production.conf.example` /
+> `infra/nginx/conf.d/clinicbridge.staging.conf.example`.
 
 ## Status e escopo
 

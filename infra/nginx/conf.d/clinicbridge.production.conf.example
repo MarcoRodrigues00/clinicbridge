@@ -1,0 +1,92 @@
+# ClinicBridge — Nginx reverse proxy — PRODUCTION TEMPLATE (Sprint 3.38).
+# Target domain: api.clinicbridge.com.br
+# TLS: Let's Encrypt / Certbot (real cert — NOT a self-signed cert).
+#
+# HOW TO USE:
+#   1. Issue the cert first (see docs/dns-tls-staging-runbook.md §3).
+#   2. Copy this file to clinicbridge.production.conf (remove the .example suffix).
+#   3. Replace every <PLACEHOLDER> with real values.
+#   4. Mount /etc/letsencrypt in the Nginx container (see §5 of the runbook).
+#   5. Test: docker compose exec nginx nginx -t
+#   6. Reload: docker compose exec nginx nginx -s reload
+#
+# IMPORTANT: this file is NOT loaded by docker-compose as-is (the .example suffix
+# keeps it out of the `include /etc/nginx/conf.d/*.conf` glob). It is a template
+# only. Rename to .conf when deploying to production.
+#
+# This file does NOT contain any secrets. Cert paths point to Let's Encrypt
+# directories, which must be mounted into the Nginx container at runtime.
+# HSTS is intentionally commented out — enable only after stable HTTPS is confirmed
+# (see the HSTS section at the bottom of this file).
+
+# --- HTTP (:80) — redirect everything to HTTPS --------------------------------
+server {
+    listen 80;
+    server_name api.clinicbridge.com.br;
+
+    # 301 permanent redirect; browser/client follows to HTTPS.
+    return 301 https://$host$request_uri;
+}
+
+# --- HTTPS (:443) — terminate TLS and proxy to the backend -------------------
+server {
+    listen 443 ssl;
+    server_name api.clinicbridge.com.br;
+
+    # Let's Encrypt cert. The /etc/letsencrypt directory must be mounted
+    # read-only into the Nginx container in the production docker-compose file:
+    #   volumes:
+    #     - /etc/letsencrypt:/etc/letsencrypt:ro
+    ssl_certificate     /etc/letsencrypt/live/api.clinicbridge.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.clinicbridge.com.br/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_timeout 10m;
+
+    # Edge body-size ceiling. Must be >= UPLOAD_MAX_BYTES (default 5 MB).
+    # Uploads above this are rejected with 413 before reaching the app.
+    client_max_body_size 10m;
+
+    # Proxy timeouts: generous enough for CSV/XLSX uploads; not wide open.
+    proxy_connect_timeout  5s;
+    proxy_send_timeout    60s;
+    proxy_read_timeout    60s;
+
+    # HSTS — INTENTIONALLY DISABLED until HTTPS is stable and verified.
+    # Enable only after:
+    #   - Real cert is issued and auto-renewal confirmed (certbot renew --dry-run OK).
+    #   - HTTP→HTTPS redirect tested from external clients.
+    #   - Browser HSTS pin consequences understood (hard to undo for 1 year).
+    # When ready, uncomment this line:
+    # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Resolve the backend service name at runtime (Docker embedded DNS).
+    # If backend runs on host (no compose), replace with: set $cb_backend "127.0.0.1:3001";
+    # If using Docker Compose, the service name must match the compose service name.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+
+    location / {
+        # Docker Compose service name. Change to "127.0.0.1:3001" for host-run backend.
+        set $cb_backend "backend:3001";
+        proxy_pass http://$cb_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+
+        # Anti-spoof: OVERWRITE X-Forwarded-For and X-Real-IP with the real
+        # connecting IP ($remote_addr), discarding any client-supplied XFF.
+        # With Express TRUST_PROXY=1, req.ip becomes this value — correct for
+        # rate-limit keying and audit_logs. Never use $proxy_add_x_forwarded_for
+        # here (it would let clients forge their IP).
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $remote_addr;
+
+        # Tell the app the original scheme so it can build HTTPS links.
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Disable keep-alive upgrade header forwarding (standard proxy hygiene).
+        proxy_set_header Connection        "";
+
+        # CORS stays in the backend app (FRONTEND_ORIGIN allowlist).
+        # Nginx does NOT emit Access-Control-* headers to avoid duplicates.
+    }
+}

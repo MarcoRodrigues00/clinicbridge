@@ -7,6 +7,37 @@
 
 ## Última sprint aprovada
 
+**Sprint 3.38** (entregue — Dockerfile + Nginx templates + runbook DNS/TLS) —
+**preparação de staging/produção para DNS/TLS/Nginx, sem deploy real.** Sem
+migration, sem feature de produto, sem commit/push.
+
+**Mudança de código:** `backend/Dockerfile` linha 29 — `ENV NODE_ENV=development`
+→ `ENV NODE_ENV=production`. Imagem agora tem default seguro; `docker-compose.yml`
+local continua sobrescrevendo para `development` explicitamente (não há impacto
+local). Build verificado: `docker compose --profile edge build backend` ✅;
+health/ready 200 via proxy ✅; `NODE_ENV=development` no container local (compose
+override) ✅.
+
+**Arquivos criados:**
+- `infra/nginx/conf.d/clinicbridge.production.conf.example` — template Nginx para
+  `api.clinicbridge.com.br` (Let's Encrypt, TLS, anti-spoof, HSTS comentado,
+  proxy headers completos). Extensão `.conf.example` evita carga automática pelo glob.
+- `infra/nginx/conf.d/clinicbridge.staging.conf.example` — idem para
+  `staging.clinicbridge.com.br`.
+- `docs/dns-tls-staging-runbook.md` — passo a passo completo: pré-requisitos EC2,
+  DNS Registro.br (4 registros A), Certbot standalone, dry-run renovação, reload
+  automático, testes curl/openssl, HSTS go/no-go, rollback, checklist go/no-go.
+
+**Docs atualizados:** `docs/production-minimum-plan.md` (NODE_ENV corrigido nas
+tabelas; Sprint 3.38 como entregue), `docs/nginx-local-staging-runbook.md` (ponteiro
+para novo runbook), `docs/deploy-security-checklist.md` (§5 com Sprint 3.38),
+`docs/project-state.md` (esta entrada), `docs/sprint-history.md`, `CLAUDE.md`.
+
+**DNS real e cert real:** pendentes — dependem de EC2 provisionada e Elastic IP.
+Ver `docs/dns-tls-staging-runbook.md` para executar quando disponível.
+
+---
+
 **Sprint 3.37** (entregue — planejamento/docs only) — **Plano de produção mínima
 segura com AWS como provedor preferido.** Sem backend, sem frontend, sem migration,
 sem nova feature, sem código, sem infra real, sem commit/push.
