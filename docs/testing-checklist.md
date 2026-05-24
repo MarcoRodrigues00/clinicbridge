@@ -791,6 +791,10 @@ Sem mudança de API. Validação puramente visual no navegador:
 
 ## Fluxo completo da aba Equipe — checklist visual integrado (Sprint 3.29)
 
+> **Sprint 3.30:** fluxo validado visualmente no navegador pelo usuário em
+> 2026-05-24. Nenhum bug bloqueante encontrado. Todos os itens abaixo foram
+> aprovados manualmente. Validação sem automação de browser.
+
 > Roteiro de validação ponta a ponta do fluxo Equipe, com contas descartáveis.
 > Cobre sprints 3.24–3.28 num único passe. Exige backend `:3001` rodando.
 

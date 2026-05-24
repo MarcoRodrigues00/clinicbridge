@@ -1112,3 +1112,36 @@ O `ClinicProfessionalsPanel` não tinha `window.confirm` — o botão disparava 
 - `CLAUDE.md`: sprint atual atualizada para Sprint 3.29.
 
 **Verificação:** nenhum build necessário (docs only). Sem commit/push.
+
+---
+
+## Sprint 3.30 (QA / validação visual — sem backend, sem feature)
+
+**Sem backend, sem API, sem migration, sem permissão, sem nova feature.** Sprint de QA: validação visual manual do fluxo completo da aba Equipe no navegador, cobrindo sprints 3.24–3.28.
+
+**O que foi validado (aprovado pelo usuário):**
+
+| Item | Resultado |
+|---|---|
+| Login do owner | ✅ |
+| Aba Equipe visível para owner | ✅ |
+| Código de convite em destaque (mono) | ✅ |
+| Botões Copiar e Regenerar lado a lado | ✅ |
+| Regenerar abre `ConfirmDialog` custom (não `window.confirm`) | ✅ |
+| Cancelar não executa a ação | ✅ |
+| Confirmar executa a ação | ✅ |
+| Solicitações pendentes aparecem na aba Equipe | ✅ |
+| Aprovar/Recusar usam modal custom | ✅ |
+| Membros da equipe com badge ativo/inativo | ✅ |
+| Desativar acesso usa modal `danger` | ✅ |
+| Profissionais da agenda dentro da aba Equipe | ✅ |
+| Criar/editar/desativar profissional visualmente correto | ✅ |
+| Aba Agenda consome profissionais ativos (seletor sincronizado) | ✅ |
+| `ConfirmDialog` visual aprovado | ✅ |
+| Layout geral aprovado | ✅ |
+
+**Metodologia:** validação manual no navegador pelo usuário. Sem automação de browser, sem CI, sem prints anexados. Nenhum bug bloqueante encontrado.
+
+**Sem alteração de código frontend ou backend.** Apenas registro de validação nos docs.
+
+**Verificação:** nenhum build necessário (docs only). Sem commit/push.

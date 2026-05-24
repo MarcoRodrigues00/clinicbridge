@@ -7,9 +7,19 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.29** (em validação/finalização) — **docs/QA** sprint. Sem backend, sem API, sem migration, sem permissão, sem nova feature. Docs atualizados para refletir Sprint 3.28 (modal custom) e as correções pós-revisão (nits). Checklist visual integrado do fluxo Equipe adicionado em `docs/testing-checklist.md`. Demo script e checklist piloto expandidos com bloco de demo da aba Equipe. `sprint-history.md` com Sprint 3.29.
+**Sprint 3.30** (entregue) — **QA / validação visual** do fluxo completo da aba Equipe. Sem backend, sem API, sem migration, sem permissão, sem nova feature.
 
-Verificação: nenhum comando de build necessário (docs only). Sem commit/push.
+Validação manual no navegador pelo usuário cobrindo sprints 3.24–3.28: login owner, aba Equipe, código de convite, Copiar/Regenerar (ConfirmDialog), solicitações pendentes, Aprovar/Recusar (modal custom), membros ativos/inativos, Desativar acesso (modal danger), profissionais da agenda (criar/editar/desativar), seletor da aba Agenda sincronizado, layout geral. **Nenhum bug bloqueante encontrado. Fluxo aprovado.**
+
+Metodologia: manual, sem automação de browser, sem prints anexados.
+
+Verificação: nenhum build necessário (docs only). Sem commit/push.
+
+---
+
+**Sprint 3.29** (entregue) — **docs/QA** sprint. Sem backend, sem API, sem migration, sem permissão, sem nova feature. Docs atualizados para refletir Sprint 3.28 (modal custom) e as correções pós-revisão (nits). Checklist visual integrado do fluxo Equipe adicionado em `docs/testing-checklist.md`. Demo script e checklist piloto expandidos com bloco de demo da aba Equipe. `sprint-history.md` com Sprint 3.29.
+
+Verificação: nenhum build necessário (docs only).
 
 ---
 

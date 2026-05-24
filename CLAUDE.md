@@ -17,11 +17,18 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Em validação/finalização: Sprint 3.29** — **docs/QA** sprint. Sem backend, sem
-API, sem migration, sem permissão, sem nova feature. Docs atualizados para
-refletir Sprint 3.28 (modal custom) e os nits pós-revisão. Checklist visual
-integrado do fluxo Equipe adicionado em `docs/testing-checklist.md`. Demo script
-e checklist piloto expandidos com bloco de demo da aba Equipe.
+**Em validação/finalização: Sprint 3.30** — **QA / validação visual** do fluxo
+completo da aba Equipe. Sem backend, sem API, sem migration, sem permissão, sem
+nova feature. Validação manual no navegador pelo usuário (sprints 3.24–3.28):
+login owner, código de convite, Copiar/Regenerar (ConfirmDialog), solicitações
+pendentes, Aprovar/Recusar, membros ativos/inativos, Desativar acesso (modal
+danger), profissionais da agenda, seletor da aba Agenda sincronizado. Nenhum bug
+bloqueante. Fluxo Equipe aprovado.
+
+**Sprint 3.29** (entregue) — **docs/QA** sprint. Docs atualizados para refletir
+Sprint 3.28 (modal custom) e os nits pós-revisão. Checklist visual integrado do
+fluxo Equipe em `docs/testing-checklist.md`. Demo script e checklist piloto
+expandidos com bloco da aba Equipe.
 
 **Sprint 3.28** (entregue, nits pós-revisão aplicados) — **modal custom de
 confirmação** para ações sensíveis da aba Equipe (frontend only; sem
