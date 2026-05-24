@@ -369,3 +369,19 @@
     margin-top: 2rem;
   }
 }
+
+.agendaHint {
+  margin-top: 1.25rem;
+  padding: 0.7rem 0.95rem;
+  border-radius: var(--r-sm);
+  background: rgba(34, 211, 238, 0.06);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  color: var(--text-1);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.agendaHint strong {
+  color: var(--text-0);
+  font-weight: 600;
+}

@@ -15,31 +15,76 @@
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
 > - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
 
-## Estado atual (resumido — atualizado 2026-05-23)
+## Estado atual (resumido — atualizado 2026-05-24)
 
-**Última sprint aprovada: Sprint 3.22** — **CRUD administrativo de pacientes**
-(criação manual + edição + arquivar/restaurar via soft-delete). Backend:
-`POST /patients` e `PATCH /patients/:id` (dono + secretaria), `PATCH
-/patients/:id/archive` e `.../restore` (**somente dono**); `GET /patients` aceita
-`status=active|archived|inactive|all` (**default `active`**). Soft-delete via
-`status='archived'` (**sem delete físico**; agendamentos preservados); arquivado
-sai da listagem padrão **e** do seletor da agenda. Cross-tenant → **404 genérico**
-(`patient_not_found`). CPF nunca volta bruto (só `cpf_masked`); audits
-`patient.create/update/archive/restore.success` **sem PII**. Sem migration.
+**Em validação/finalização: Sprint 3.25 + 3.25.1** — **gestão de membros da
+equipe** (3.25, backend + frontend) + **reorganização Agenda↔Equipe** (3.25.1,
+frontend only). Aba **Equipe** agora tem 3 seções, na ordem: (1) Código de convite
++ Solicitações pendentes, (2) Membros da equipe (acesso ao sistema, 3.25), (3)
+Profissionais da agenda (cadastro administrativo migrado da aba Agenda em 3.25.1;
+podem ou não ter login). A aba **Agenda** ficou focada nos agendamentos e
+consome o seletor de profissionais ativos via cache compartilhada
+`['clinic-professionals']`. Backend, rotas, permissões e contrato de
+`clinic_professionals` **não mudaram**. Dono lista
+**ativos + inativos** e pode **desativar acesso** de funcionários(as) (não deleta
+usuário, não toca em audit/dados criados). Migration leve
+(`20260530000000_clinic_join_requests_revoked`) estende o CHECK do status de
+`clinic_join_requests` para aceitar `revoked` (linha histórica do desligamento).
+Endpoints owner-only `GET /clinic-members` e `PATCH
+/clinic-members/:userId/deactivate`. Sem reativação por endpoint — funcionário(a)
+desligado(a) pode pedir entrada de novo via invite (fluxo da 3.24). Audits sem
+PII: `clinic.member.list.success`, `clinic.member.deactivated.success`. Para
+fechar o gap de stale JWT, `requireClinic` agora faz **1 SELECT por request
+tenant-scoped** verificando `users.ativo` e `users.clinica_id === auth.clinica_id`
+— mismatch → 403 `clinic_membership_revoked` (efetivo imediato, sem rotação de
+token). Auto-desativação bloqueada (400 `cannot_deactivate_self`); dono não pode
+ser removido por aqui (`cannot_deactivate_owner`); cross-tenant → 404
+`member_not_found`. Validação por API **14/14**.
 
-**Em validação/finalização: Sprint 3.23** — **duplicados acionáveis** (frontend,
+**Sprint anterior: Sprint 3.24.1** (entregue) — copy generalizada para
+"funcionário(a)/equipe" no frontend; role técnica `secretaria` mantida no backend.
+
+**Sprint 3.23** — **duplicados acionáveis** (frontend,
 **sem backend**). A tela "Possíveis duplicados" passou de informativa a acionável,
-**reusando o CRUD da 3.22**: por registro do grupo dá para **editar** (dono +
-secretaria, form inline `PatientEditForm`) e **arquivar/restaurar** (**somente
-dono**). Destaca os campos que bateram, mostra status por registro, **só CPF
-mascarado**, paginação simples de grupos no frontend ("Carregar mais grupos").
-Após ação, recarrega duplicados **e** a lista de pacientes (contador compartilhado
-`patientsRefresh` no Dashboard). **Sem merge** (automático ou manual), **sem delete
-físico**, **sem** mexer no pipeline de import/dry-run. Avisos: "Revise os dados
-antes de arquivar", "Arquivar não apaga histórico nem agendamentos", "Merge
-automático ainda não existe". **Gap conhecido:** o papel `secretaria` não é
-testável pelo navegador (só existe via SQL) até haver gestão de equipe na UI — ver
-sprint futura no `docs/roadmap-next-phase.md`.
+reusando o CRUD da 3.22: editar por registro (dono + secretaria, form inline
+`PatientEditForm`) e arquivar/restaurar (**só dono**). Destaque dos campos que
+bateram; status por registro; só CPF mascarado; paginação simples de grupos no
+frontend. **Sem merge** (automático ou manual), **sem delete físico**.
+
+**Sprint 3.22** — **CRUD administrativo de pacientes** (criação manual + edição +
+arquivar/restaurar via soft-delete). Backend: `POST /patients` e `PATCH
+/patients/:id` (dono + secretaria), `PATCH /patients/:id/archive` e `.../restore`
+(**somente dono**); `GET /patients` aceita `status=active|archived|inactive|all`
+(**default `active`**). Soft-delete via `status='archived'` (**sem delete físico**).
+CPF nunca volta bruto. Audits sem PII. Sem migration.
+
+**Em validação/finalização: Sprint 3.24** — **gestão de equipe / solicitação de
+entrada de funcionário(a)** (primeira sprint da trilha "equipe"). Backend + frontend.
+**Linguagem de produto (3.24.1):** UI fala em "funcionário(a)" / "equipe" /
+"membro da equipe"; a role técnica do backend permanece `secretaria` no JWT/DB
+(sem migration/refactor). Outras roles (recepção, financeiro, gestor) ficam para
+sprint futura — não implementadas agora.
+Migration `20260529000000_clinic_team` adiciona `clinics.invite_code` (unique) e
+a tabela `clinic_join_requests`. Cadastro agora aceita `account_type: owner|staff`
+(default `owner`; staff cria `secretaria` **sem** clínica). Dono vê o código de
+convite em `GET /clinics/invite-code` e gerencia pendentes em `GET
+/clinic-join-requests/pending` + `.../approve|reject` (`requireRole`). Secretaria
+sem clínica usa `POST /clinic-join-requests` (código + nome opcional como
+**confirmação** + mensagem ≤280) e gerencia as próprias em `.../me` + `.../cancel`.
+**Sem busca/listagem pública de clínicas**, **sem invite automático por
+e-mail/WhatsApp**, **sem autoentrada**, **sem regeneração de código** (sprint
+futura). Erros do invite são **genéricos** (`invalid_invite`) para impedir
+enumeração. Aprovar é atômico (setStatus + setClinic + cancela outras pendentes
+do mesmo usuário). Cross-tenant/inexistente → **404 genérico** `request_not_found`.
+Audits `clinic.join_request.created/cancelled/approved/rejected.success` **sem
+PII**. Frontend: seletor owner/staff no `RegisterPage` (rótulos "funcionário(a)
+/ membro da equipe"); `JoinClinicGate` para usuários sem clínica (form do código
++ lista das próprias com cancelar); `TeamManagementPanel` (aba **Equipe**, só
+dono — código + Copiar + pendentes com Aprovar/Recusar; rótulo do papel exibido
+como "funcionário(a) (acesso administrativo)"). Polling leve via TanStack Query.
+Validação por API **23/23**.
+**Gap (encerrado):** a partir desta sprint o papel `secretaria` é testável pelo
+navegador (cadastro de funcionário(a) + aprovação pelo dono).
 
 **Fase:** Fase 3 (produção/governança) + trilha da Agenda Administrativa em curso;
 Sprint 2 (pipeline de importação) completa. **Este MVP NÃO está pronto para
@@ -69,7 +114,10 @@ na UI (papel é definido no registro/SQL).
 `20260525000000_import_sessions_summary` · `20260526000000_scheduling`
 (clinic_professionals/appointments — Agenda Administrativa, Sprint 3.14) ·
 `20260527000000_user_mfa` (campos MFA/TOTP em users — Sprint 3.19) ·
-`20260528000000_user_mfa_backup_codes` (tabela `user_mfa_backup_codes` — Sprint 3.21).
+`20260528000000_user_mfa_backup_codes` (tabela `user_mfa_backup_codes` — Sprint 3.21) ·
+`20260529000000_clinic_team` (`clinics.invite_code` + `clinic_join_requests` —
+Sprint 3.24) · `20260530000000_clinic_join_requests_revoked` (estende
+`cjr_status_check` para incluir `'revoked'` — Sprint 3.25).
 
 **Invariantes locais (sanity-check, podem mudar):** patients=6 (base, sem demo),
 import_files=24, import_sessions=7. `clinic_professionals`/`appointments` contêm
@@ -93,11 +141,16 @@ fases: `docs/roadmap-next-phase.md`.
   acionáveis (editar/arquivar/restaurar por registro reusando o CRUD da 3.22;
   paginação de grupos no frontend). **Próximo no tema:** **merge seguro** (com
   confirmação + audit, **sem** merge automático; mover agendamentos exige decisão
-  própria) e **paginação backend** de duplicados se a base crescer. Sprint futura =
-  **gestão de equipe / convite de secretaria** (secretaria solicita entrada → dono
-  aprova → papel aplicado, tudo auditado, **sem autoentrada**); enquanto não
-  existir, o **teste do papel secretaria pelo navegador segue pendente** (hoje só
-  via SQL). Detalhe: `docs/roadmap-next-phase.md`.
+  própria) e **paginação backend** de duplicados se a base crescer.
+- **Produto (trilha equipe):** **3.24/3.24.1/3.25 entregues** = solicitação de
+  entrada por código de convite, aprovação pelo dono, copy generalizada para
+  "funcionário(a)/equipe", **gestão de membros (listar ativos/inativos,
+  desativar acesso)** com fechamento do gap de stale JWT via DB check em
+  `requireClinic`. **Próximo no tema:** **regenerar invite code** (invalidando
+  pendentes opcionalmente), **sair voluntariamente** da clínica, e — quando
+  necessário — **roles granulares** (recepção, financeiro, gestor) com ADR
+  própria. Troca de dono **continua fora de escopo**. Detalhe:
+  `docs/roadmap-next-phase.md`.
 - **P1 (antes de produção):** ~~trust proxy~~ + ~~Redis/shared store p/ rate
   limit~~ (feitos na Sprint 3.2; falta só provisionar Redis/proxy reais e setar
   `TRUST_PROXY`/`REDIS_URL` em prod); ~~requireRole/dono-admin~~ (Sprint 3.1);
@@ -162,14 +215,34 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
   `requireClinic` (nunca burla tenant) e gateia os endpoints administrativos
   sensíveis a `dono_clinica`: `POST /import-sessions/:id/import`, `.../mark-ready`,
   `GET /patients/export`, `GET /import-files/retention/dry-run`, **`PATCH
-  /patients/:id/archive`** e **`PATCH /patients/:id/restore`** (Sprint 3.22).
-  `secretaria` (operator) faz upload/preview/validate/create-session/dry-run,
-  leitura de pacientes/duplicados e **criar/editar paciente** (`POST /patients`,
-  `PATCH /patients/:id`) — mas **não** arquivar/restaurar. 403 → `{ error: {
-  code: 'forbidden_role', ... } }`. Papel vem do JWT (sem hit no DB); risco de
-  papel stale até o token expirar — aceitável enquanto não há gestão de usuários
-  na UI (ver `docs/security-notes.md`).
+  /patients/:id/archive`** e **`PATCH /patients/:id/restore`** (Sprint 3.22), **e
+  `GET /clinics/invite-code`, `GET /clinic-join-requests/pending`, `POST
+  /clinic-join-requests/:id/approve|reject` (Sprint 3.24)**, **e `GET
+  /clinic-members` + `PATCH /clinic-members/:userId/deactivate` (Sprint 3.25)**.
+  `secretaria`
+  (operator) faz upload/preview/validate/create-session/dry-run, leitura de
+  pacientes/duplicados, **criar/editar paciente** (`POST /patients`, `PATCH
+  /patients/:id`) e **solicitar entrada/cancelar a própria** em
+  `clinic-join-requests` quando ainda não tem clínica — mas **não** arquivar/
+  restaurar paciente nem aprovar/recusar solicitações. 403 → `{ error: { code:
+  'forbidden_role', ... } }`. Papel vem do JWT (sem hit no DB); risco de papel
+  stale até o token expirar — aceitável enquanto não há gestão de sessão na UI
+  (ver `docs/security-notes.md`).
 - **Limites MVP:** `IMPORT_MAX_ROWS=100` (intencional).
+- **`requireClinic` faz DB check (Sprint 3.25):** além de validar
+  `req.auth.clinica_id` do JWT, busca `users` por id e exige `ativo=true` e
+  `users.clinica_id === auth.clinica_id`. Inconsistente → 403
+  `clinic_membership_revoked`. Custo: 1 SELECT indexado por request
+  tenant-scoped. Garante que desativação de membro é **efetiva imediatamente**,
+  sem rotação de token. `papel` ainda NÃO é re-validado contra DB (única transição
+  possível seria `dono_clinica → secretaria`, não implementada — documentado em
+  `docs/security-notes.md`).
+- **Vocabulário de produto (3.24.1):** UI fala em "funcionário(a)", "equipe" e
+  "membro da equipe" / "funcionário(a) com acesso administrativo". A role técnica
+  do backend permanece `secretaria` (JWT, DB, `requested_role`, audit acoes) —
+  **não trocar** sem migration/refactor. Evitar termos visíveis como "secretaria"
+  / "sua secretária" / "cadastro de secretaria". Outras roles (recepção,
+  financeiro, gestor) ficam para sprint futura — não criar agora.
 
 ## Project identity
 

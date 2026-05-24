@@ -1,0 +1,376 @@
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Users,
+  KeyRound,
+  Copy,
+  Check,
+  Loader2,
+  RefreshCw,
+  UserCheck,
+  UserX,
+  UserMinus,
+  Crown,
+} from 'lucide-react';
+import {
+  api,
+  ApiError,
+  type ClinicMember,
+  type PendingJoinRequest,
+} from '../services/api';
+import { getToken } from '../services/authStorage';
+import { useAuth } from '../services/AuthProvider';
+import styles from './TeamManagementPanel.module.css';
+
+// Owner-only panel (Sprint 3.24). Shows the clinic's invite code (to share
+// out-of-band) and pending join requests from prospective staff. The backend
+// gates writes with requireRole; the UI hides the panel for non-owners but the
+// real defense is server-side. No public search — entry is invite-only.
+
+function errMsg(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? err.message : fallback;
+}
+
+function formatDate(iso: string): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('pt-BR');
+}
+
+// Sprint 3.24.1: a role técnica continua sendo `secretaria` no backend, mas a
+// UI mostra um rótulo neutro de produto. Outras roles podem entrar no futuro
+// (recepção, financeiro, gestor) e ganhar entradas próprias aqui.
+function requestedRoleLabel(role: string): string {
+  if (role === 'secretaria') return 'funcionário(a) (acesso administrativo)';
+  return role;
+}
+
+function memberRoleLabel(papel: ClinicMember['papel']): string {
+  if (papel === 'dono_clinica') return 'Dono(a) da clínica';
+  if (papel === 'secretaria') return 'Funcionário(a) (acesso administrativo)';
+  return papel;
+}
+
+export function TeamManagementPanel(): JSX.Element | null {
+  const { user } = useAuth();
+  const isOwner = user?.papel === 'dono_clinica';
+  const queryClient = useQueryClient();
+  const token = getToken();
+
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const inviteCodeQuery = useQuery({
+    queryKey: ['clinic-invite-code'],
+    enabled: !!token && isOwner,
+    queryFn: async () => api.getClinicInviteCode(token as string),
+  });
+
+  const pendingQuery = useQuery({
+    queryKey: ['clinic-join-requests', 'pending'],
+    enabled: !!token && isOwner,
+    queryFn: async () => {
+      const res = await api.listPendingJoinRequests(token as string);
+      return res.requests;
+    },
+    refetchInterval: 20_000,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => api.approveJoinRequest(token as string, id),
+    onSuccess: () => {
+      setNotice('Solicitação aprovada. O acesso foi liberado.');
+      setError(null);
+      void queryClient.invalidateQueries({ queryKey: ['clinic-join-requests', 'pending'] });
+    },
+    onError: (err) => setError(errMsg(err, 'Não foi possível aprovar a solicitação.')),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => api.rejectJoinRequest(token as string, id),
+    onSuccess: () => {
+      setNotice('Solicitação recusada.');
+      setError(null);
+      void queryClient.invalidateQueries({ queryKey: ['clinic-join-requests', 'pending'] });
+    },
+    onError: (err) => setError(errMsg(err, 'Não foi possível recusar a solicitação.')),
+  });
+
+  // Sprint 3.25 — team members (active + removed).
+  const [showRemoved, setShowRemoved] = useState(false);
+
+  const membersQuery = useQuery({
+    queryKey: ['clinic-members'],
+    enabled: !!token && isOwner,
+    queryFn: async () => {
+      const res = await api.listClinicMembers(token as string);
+      return res.members;
+    },
+    refetchInterval: 30_000,
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: (userId: string) => api.deactivateClinicMember(token as string, userId),
+    onSuccess: () => {
+      setNotice('Acesso desativado. O histórico do(a) funcionário(a) foi mantido.');
+      setError(null);
+      void queryClient.invalidateQueries({ queryKey: ['clinic-members'] });
+    },
+    onError: (err) => setError(errMsg(err, 'Não foi possível desativar o acesso.')),
+  });
+
+  if (!isOwner) return null;
+
+  async function copyCode(): Promise<void> {
+    const code = inviteCodeQuery.data?.invite_code;
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Clipboard may be unavailable on insecure contexts — silently ignore.
+    }
+  }
+
+  const pending = pendingQuery.data ?? [];
+  const busyId =
+    approveMutation.isPending || rejectMutation.isPending
+      ? (approveMutation.variables ?? rejectMutation.variables ?? null)
+      : null;
+
+  return (
+    <section className={styles.panel}>
+      <div className={styles.head}>
+        <h2 className={styles.title}>
+          <Users size={20} aria-hidden="true" />
+          Equipe da clínica
+        </h2>
+        <button
+          type="button"
+          className={styles.secondaryBtn}
+          onClick={() => {
+            void queryClient.invalidateQueries({ queryKey: ['clinic-invite-code'] });
+            void queryClient.invalidateQueries({ queryKey: ['clinic-join-requests', 'pending'] });
+            void queryClient.invalidateQueries({ queryKey: ['clinic-members'] });
+          }}
+        >
+          <RefreshCw size={14} aria-hidden="true" />
+          Atualizar
+        </button>
+      </div>
+      <p className={styles.subtitle}>
+        Compartilhe o código de convite com o(a) funcionário(a) por um canal seguro
+        (WhatsApp pessoal, voz, e-mail confiável). Cada solicitação precisa ser
+        aprovada por você — não existe entrada automática na equipe.
+      </p>
+
+      <div className={styles.inviteRow}>
+        <div className={styles.inviteLabel}>
+          <KeyRound size={16} aria-hidden="true" />
+          Código de convite
+        </div>
+        {inviteCodeQuery.isLoading ? (
+          <div className={styles.muted}>
+            <Loader2 size={14} className={styles.spin} aria-hidden="true" />
+            Carregando…
+          </div>
+        ) : inviteCodeQuery.isError ? (
+          <span className={styles.error}>Não foi possível carregar o código.</span>
+        ) : inviteCodeQuery.data ? (
+          <>
+            <code className={styles.inviteCode} aria-label="Código de convite">
+              {inviteCodeQuery.data.invite_code}
+            </code>
+            <button type="button" className={styles.copyBtn} onClick={() => void copyCode()}>
+              {copied ? (
+                <Check size={14} aria-hidden="true" />
+              ) : (
+                <Copy size={14} aria-hidden="true" />
+              )}
+              {copied ? 'Copiado' : 'Copiar'}
+            </button>
+            <span className={styles.clinicName}>
+              {inviteCodeQuery.data.clinic_name}
+            </span>
+          </>
+        ) : null}
+      </div>
+
+      {notice ? <div className={styles.notice}>{notice}</div> : null}
+      {error ? <div className={styles.error}>{error}</div> : null}
+
+      <h3 className={styles.subTitle}>Solicitações pendentes</h3>
+      {pendingQuery.isLoading ? (
+        <div className={styles.muted}>
+          <Loader2 size={14} className={styles.spin} aria-hidden="true" />
+          Carregando solicitações…
+        </div>
+      ) : pending.length === 0 ? (
+        <div className={styles.empty}>Nenhuma solicitação pendente no momento.</div>
+      ) : (
+        <ul className={styles.list}>
+          {pending.map((req: PendingJoinRequest) => (
+            <li key={req.id} className={styles.card}>
+              <div className={styles.cardMain}>
+                <div className={styles.applicant}>
+                  <strong className={styles.applicantName}>{req.applicant_name}</strong>
+                  <span className={styles.applicantEmail}>{req.applicant_email}</span>
+                </div>
+                <div className={styles.meta}>
+                  Solicitado em {formatDate(req.created_at)} · Papel: {requestedRoleLabel(req.requested_role)}
+                </div>
+                {req.message ? (
+                  <div className={styles.message}>“{req.message}”</div>
+                ) : null}
+              </div>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.primaryBtn}
+                  onClick={() => {
+                    const ok = window.confirm(
+                      `Aprovar ${req.applicant_name} (${req.applicant_email}) como funcionário(a) com acesso administrativo desta clínica? A pessoa entra na equipe e poderá usar as áreas administrativas (pacientes, agenda, importações).`,
+                    );
+                    if (ok) approveMutation.mutate(req.id);
+                  }}
+                  disabled={busyId === req.id}
+                >
+                  {busyId === req.id && approveMutation.isPending ? (
+                    <Loader2 size={14} className={styles.spin} aria-hidden="true" />
+                  ) : (
+                    <UserCheck size={14} aria-hidden="true" />
+                  )}
+                  Aprovar
+                </button>
+                <button
+                  type="button"
+                  className={styles.dangerBtn}
+                  onClick={() => {
+                    const ok = window.confirm(
+                      `Recusar a solicitação de ${req.applicant_name}? Essa ação pode ser repetida pelo(a) próprio(a) solicitante com o mesmo código.`,
+                    );
+                    if (ok) rejectMutation.mutate(req.id);
+                  }}
+                  disabled={busyId === req.id}
+                >
+                  {busyId === req.id && rejectMutation.isPending ? (
+                    <Loader2 size={14} className={styles.spin} aria-hidden="true" />
+                  ) : (
+                    <UserX size={14} aria-hidden="true" />
+                  )}
+                  Recusar
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className={styles.membersHeader}>
+        <h3 className={styles.subTitle}>Membros da equipe</h3>
+        <label className={styles.toggleRow}>
+          <input
+            type="checkbox"
+            checked={showRemoved}
+            onChange={(e) => setShowRemoved(e.target.checked)}
+          />
+          Mostrar inativos
+        </label>
+      </div>
+      <p className={styles.helperText}>
+        Desativar acesso não apaga o(a) usuário(a) nem o histórico; apenas remove o
+        acesso à clínica. A pessoa pode pedir entrada de novo com o código de convite.
+      </p>
+
+      {membersQuery.isLoading ? (
+        <div className={styles.muted}>
+          <Loader2 size={14} className={styles.spin} aria-hidden="true" />
+          Carregando membros…
+        </div>
+      ) : membersQuery.isError ? (
+        <div className={styles.error}>Não foi possível carregar os membros.</div>
+      ) : (
+        (() => {
+          const all = membersQuery.data ?? [];
+          const filtered = showRemoved ? all : all.filter((m) => m.status === 'active');
+          if (filtered.length === 0) {
+            return (
+              <div className={styles.empty}>
+                {showRemoved
+                  ? 'Nenhum membro registrado nesta clínica.'
+                  : 'Nenhum membro ativo. Compartilhe o código de convite para receber solicitações.'}
+              </div>
+            );
+          }
+          return (
+            <ul className={styles.list}>
+              {filtered.map((m: ClinicMember) => {
+                const canDeactivate =
+                  m.status === 'active' && !m.is_owner && m.user_id !== user?.id;
+                const isBusy =
+                  deactivateMutation.isPending && deactivateMutation.variables === m.user_id;
+                return (
+                  <li key={m.user_id} className={styles.card}>
+                    <div className={styles.cardMain}>
+                      <div className={styles.applicant}>
+                        <strong className={styles.applicantName}>
+                          {m.nome}
+                          {m.is_owner ? (
+                            <span className={styles.ownerBadge} title="Dono(a) da clínica">
+                              <Crown size={12} aria-hidden="true" /> Dono(a)
+                            </span>
+                          ) : null}
+                        </strong>
+                        <span className={styles.applicantEmail}>{m.email}</span>
+                      </div>
+                      <div className={styles.meta}>
+                        Papel: {memberRoleLabel(m.papel)}
+                        {m.joined_at ? ` · Entrou em ${formatDate(m.joined_at)}` : ''}
+                        {m.status === 'removed' && m.removed_at
+                          ? ` · Desativado(a) em ${formatDate(m.removed_at)}`
+                          : ''}
+                      </div>
+                      <div className={styles.statusRow}>
+                        <span
+                          className={`${styles.statusBadge} ${
+                            m.status === 'active' ? styles.statusActive : styles.statusInactive
+                          }`}
+                        >
+                          {m.status === 'active' ? 'Ativo(a)' : 'Inativo(a)'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.actions}>
+                      {canDeactivate ? (
+                        <button
+                          type="button"
+                          className={styles.dangerBtn}
+                          onClick={() => {
+                            const ok = window.confirm(
+                              `Desativar o acesso de ${m.nome} (${m.email}) à clínica?\n\nIsso NÃO apaga o(a) usuário(a) nem o histórico. O acesso é removido imediatamente e a pessoa pode pedir entrada de novo com o código de convite.`,
+                            );
+                            if (ok) deactivateMutation.mutate(m.user_id);
+                          }}
+                          disabled={isBusy}
+                        >
+                          {isBusy ? (
+                            <Loader2 size={14} className={styles.spin} aria-hidden="true" />
+                          ) : (
+                            <UserMinus size={14} aria-hidden="true" />
+                          )}
+                          Desativar acesso
+                        </button>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          );
+        })()
+      )}
+    </section>
+  );
+}

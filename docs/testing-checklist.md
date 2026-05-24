@@ -622,3 +622,73 @@ Testar `/app` no DevTools em 360, 390, 414 (iPhone XR), 430 e 768px e desktop:
 - cards de identidade e do rodapé colapsam para 1 coluna no mobile
 - painel "Arquivos antigos de importação": inputs/botões quebram linha; card não estoura; rótulos longos quebram
 - validação de input: dias 0/366 ou "Mostrar até" 0/101 → mensagem amigável, **sem** chamada à API
+
+## Gestão de membros — Equipe (Sprint 3.25)
+
+Pré-requisitos: backend dev `:3001` rodando (`pnpm --filter backend dev`), migration aplicada (`pnpm --filter backend migrate:latest`).
+
+Smoke por API (contas descartáveis com sufixo aleatório; limpar via SQL no fim):
+
+```bash
+# Owner (dono A) — cria conta + clínica + pega invite code
+# Owner B em outra clínica — para o cross-tenant
+# Staff 1, Staff 2 — funcionário(a)s solicitam entrada na clínica A; dono aprova
+
+# Matriz 14/14 já automatizada em /tmp/sprint-3.25-api-test.mjs.
+# Para verificar pontos individuais por curl, seguir a sequência abaixo (substitua TOKEN_*).
+```
+
+Cenários obrigatórios:
+
+1. **Dono lista membros:** `GET /clinic-members` → 200; vê a si mesmo (`is_owner=true`, `status=active`), staffs aprovados em ativos, `joined_at` preenchido.
+2. **Funcionário tenta listar:** `GET /clinic-members` com token de staff → 403 `forbidden_role`.
+3. **Cross-tenant:** dono B faz `PATCH /clinic-members/<staff-de-A>/deactivate` → 404 `member_not_found` (sem distinção de "outra clínica" vs "inexistente").
+4. **Dono tenta a si mesmo:** `PATCH /clinic-members/<owner-id>/deactivate` com token do próprio owner → 400 `cannot_deactivate_self`. (E se for o `responsavel_id` da clínica → 400 `cannot_deactivate_owner`.)
+5. **Desativar funcionário:** `PATCH /clinic-members/<staff-id>/deactivate` → 200 `{ status: 'deactivated' }`. Persistência: `users.clinica_id IS NULL` e linha nova em `clinic_join_requests` com `status='revoked'` e `decided_by_user_id` do dono.
+6. **Stale-JWT bloqueado imediatamente:** com o token antigo do staff, `GET /patients` → 403 `clinic_membership_revoked`. Idem qualquer rota tenant-scoped.
+7. **/auth/me coerente:** `GET /auth/me` no staff desativado → `clinic: null` (mesmo token).
+8. **Inativos aparecem:** dono em `GET /clinic-members` agora vê staff com `status='removed'` e `removed_at` preenchido. UI: toggle "Mostrar inativos".
+9. **Idempotência:** desativar duas vezes seguidas → segunda chamada retorna 404 `member_not_found`.
+10. **Re-entrada:** staff desligado consegue `POST /clinic-join-requests` (mesmo invite code) → 201; dono pode aprovar de novo (`approve` cria nova cadeia `pending→approved`; a linha `revoked` permanece como histórico).
+11. **Audit sem PII:** `SELECT acao, recurso, recurso_id IS NOT NULL FROM audit_logs WHERE acao LIKE 'clinic.member.%' ORDER BY criado_em DESC LIMIT 10;` → ver `clinic_member` em recurso, `recurso_id` UUID (deactivate) ou NULL (list). Nenhum nome/email.
+
+Limpeza (substituir `<TAG>` pelo sufixo aleatório usado):
+
+```sql
+BEGIN;
+DELETE FROM audit_logs WHERE usuario_id IN (SELECT id FROM users WHERE email LIKE 't325-%<TAG>@example.test');
+DELETE FROM clinic_join_requests WHERE user_id IN (SELECT id FROM users WHERE email LIKE 't325-%<TAG>@example.test');
+UPDATE users SET clinica_id = NULL WHERE email LIKE 't325-%<TAG>@example.test';
+DELETE FROM clinics WHERE responsavel_id IN (SELECT id FROM users WHERE email LIKE 't325-%<TAG>@example.test');
+DELETE FROM users WHERE email LIKE 't325-%<TAG>@example.test';
+COMMIT;
+```
+
+> A FK de `audit_logs.usuario_id`/`clinica_id` é `ON DELETE SET NULL` (invariante append-only), então rows de audit anteriores ficam preservadas com FK nulada após a limpeza. Esperado.
+
+Validação **visual** no navegador (pendente automatizar):
+- Aba **Equipe** mostra "Membros da equipe" abaixo de "Solicitações pendentes".
+- Membros ativos por padrão; checkbox "Mostrar inativos" alterna.
+- Badge "Dono(a)" no `is_owner`; botão "Desativar acesso" ausente para o dono e para o usuário logado.
+- `window.confirm` da desativação cita: "não apaga usuário", "não apaga histórico", "pessoa pode pedir entrada de novo".
+- Polling 30s atualiza a lista após uma ação.
+
+## Reorganização Agenda↔Equipe (Sprint 3.25.1)
+
+Validação visual no navegador (sem mudança de API):
+
+1. **Aba Equipe** mostra, na ordem:
+   - Código de convite + Solicitações pendentes;
+   - Membros da equipe (acesso ao sistema) com Ativos/Inativos;
+   - **Profissionais da agenda** (cadastro/edição/desativação).
+2. **Aba Agenda** mostra:
+   - Parágrafo curto `agendaHint` apontando para "Equipe → Profissionais da agenda".
+   - O painel de agendamentos (`AdministrativeSchedulePanel`) com o seletor de profissionais ativos.
+   - **Sem** form/lista de cadastro de profissionais.
+3. **Sincronização (cache compartilhada `['clinic-professionals']`):**
+   - Em Equipe, criar/editar/desativar um profissional → trocar para Agenda → o seletor reflete a mudança imediatamente, sem reload da página.
+4. **Permissões inalteradas:**
+   - Owner: form de cadastro/edição/desativação visível na Equipe; secretaria vê só a lista (mensagem "A gestão de profissionais é feita pelo dono(a)…").
+   - A agenda continua aceitando `professional_id` opcional na criação de agendamento.
+5. **Copy diferencia conceitos:**
+   - Subtítulo do painel reforça: alimenta o seletor da Agenda, profissional **pode ou não** ter login, não é dado clínico.

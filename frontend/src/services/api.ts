@@ -54,6 +54,65 @@ export interface RegisterResponse {
   clinic: PublicClinic;
 }
 
+// Staff (secretaria) self-registration (Sprint 3.24): no clinic is created.
+export interface RegisterStaffPayload {
+  nome: string;
+  email: string;
+  senha: string;
+  consentimento_lgpd: true;
+}
+
+export interface RegisterStaffResponse {
+  message: string;
+  user: SafeUser;
+}
+
+// Clinic join requests (Sprint 3.24).
+export type JoinRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export interface MyJoinRequest {
+  id: string;
+  clinic_id: string;
+  clinic_name: string | null;
+  requested_role: string;
+  status: JoinRequestStatus;
+  message: string | null;
+  created_at: string;
+  decided_at: string | null;
+}
+
+export interface PendingJoinRequest {
+  id: string;
+  applicant_name: string;
+  applicant_email: string;
+  requested_role: string;
+  message: string | null;
+  created_at: string;
+}
+
+export interface InviteCodeResponse {
+  invite_code: string;
+  clinic_name: string;
+}
+
+// Team members (Sprint 3.25). status='active' = currently linked to the clinic;
+// 'removed' = was a member, now has no clinic vínculo here. is_owner flags the
+// clinic's `responsavel_id`. papel is the technical role (currently always
+// `secretaria` for non-owners); the UI maps it to a friendly label.
+export type ClinicMemberStatus = 'active' | 'removed';
+
+export interface ClinicMember {
+  user_id: string;
+  nome: string;
+  email: string;
+  papel: 'admin_sistema' | 'dono_clinica' | 'secretaria';
+  ativo: boolean;
+  status: ClinicMemberStatus;
+  is_owner: boolean;
+  joined_at: string | null;
+  removed_at: string | null;
+}
+
 export interface LoginPayload {
   email: string;
   senha: string;
@@ -556,7 +615,19 @@ async function apiFetch<T>(path: string, opts: FetchOptions): Promise<T> {
 
 export const api = {
   register(payload: RegisterPayload): Promise<RegisterResponse> {
-    return apiFetch<RegisterResponse>('/auth/register', { method: 'POST', body: payload });
+    return apiFetch<RegisterResponse>(
+      '/auth/register',
+      { method: 'POST', body: { ...payload, account_type: 'owner' } },
+    );
+  },
+
+  // Staff self-registration (Sprint 3.24): the backend creates a 'secretaria'
+  // user with NO clinic; they must request to join one with an invite code.
+  registerStaff(payload: RegisterStaffPayload): Promise<RegisterStaffResponse> {
+    return apiFetch<RegisterStaffResponse>(
+      '/auth/register',
+      { method: 'POST', body: { ...payload, account_type: 'staff' } },
+    );
   },
 
   // Returns a normal LoginResponse, or { mfa_required, mfa_challenge_token } when
@@ -743,6 +814,83 @@ export const api = {
 
   listPatientDuplicates(token: string): Promise<DuplicateScanResult> {
     return apiFetch<DuplicateScanResult>('/patients/duplicates', { method: 'GET', token });
+  },
+
+  // --- Team management — clinic join requests (Sprint 3.24) -------------------
+  // No public clinic search: a secretaria joins by an invite code the owner shares.
+  // Errors at the join step are deliberately generic ('invalid_invite') so a
+  // caller cannot probe which clinic exists.
+
+  // Owner-only. Returns the clinic's invite code + clinic name (to share out-of-band).
+  getClinicInviteCode(token: string): Promise<InviteCodeResponse> {
+    return apiFetch<InviteCodeResponse>('/clinics/invite-code', { method: 'GET', token });
+  },
+
+  // Staff (no clinic yet). The optional clinic_name is a confirmation only;
+  // mismatch → same generic invalid_invite error.
+  createClinicJoinRequest(
+    token: string,
+    payload: { invite_code: string; clinic_name?: string; message?: string },
+  ): Promise<{ request: MyJoinRequest }> {
+    return apiFetch<{ request: MyJoinRequest }>('/clinic-join-requests', {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
+  listMyJoinRequests(token: string): Promise<{ requests: MyJoinRequest[] }> {
+    return apiFetch<{ requests: MyJoinRequest[] }>('/clinic-join-requests/me', {
+      method: 'GET',
+      token,
+    });
+  },
+
+  cancelMyJoinRequest(token: string, id: string): Promise<{ request: MyJoinRequest }> {
+    return apiFetch<{ request: MyJoinRequest }>(
+      `/clinic-join-requests/${encodeURIComponent(id)}/cancel`,
+      { method: 'PATCH', token },
+    );
+  },
+
+  // Owner-only. Returns pending requests for the owner's own clinic.
+  listPendingJoinRequests(token: string): Promise<{ requests: PendingJoinRequest[] }> {
+    return apiFetch<{ requests: PendingJoinRequest[] }>(
+      '/clinic-join-requests/pending',
+      { method: 'GET', token },
+    );
+  },
+
+  approveJoinRequest(token: string, id: string): Promise<{ status: 'approved' }> {
+    return apiFetch<{ status: 'approved' }>(
+      `/clinic-join-requests/${encodeURIComponent(id)}/approve`,
+      { method: 'POST', token },
+    );
+  },
+
+  rejectJoinRequest(token: string, id: string): Promise<{ status: 'rejected' }> {
+    return apiFetch<{ status: 'rejected' }>(
+      `/clinic-join-requests/${encodeURIComponent(id)}/reject`,
+      { method: 'POST', token },
+    );
+  },
+
+  // --- Team members (Sprint 3.25) --------------------------------------------
+  // Owner-only. Lists active + removed members of the owner's clinic.
+  listClinicMembers(token: string): Promise<{ members: ClinicMember[] }> {
+    return apiFetch<{ members: ClinicMember[] }>('/clinic-members', {
+      method: 'GET',
+      token,
+    });
+  },
+
+  // Owner-only. Removes a member from the clinic (sets users.clinica_id=NULL +
+  // history row). Refuses self-deactivation and owner-deactivation server-side.
+  deactivateClinicMember(token: string, userId: string): Promise<{ status: 'deactivated' }> {
+    return apiFetch<{ status: 'deactivated' }>(
+      `/clinic-members/${encodeURIComponent(userId)}/deactivate`,
+      { method: 'PATCH', token },
+    );
   },
 
   // --- Administrative Scheduling (Sprint 3.15) ---------------------------------

@@ -20,23 +20,29 @@ import { ImportFileRetentionPanel } from '../components/ImportFileRetentionPanel
 import { ClinicProfessionalsPanel } from '../components/ClinicProfessionalsPanel';
 import { AdministrativeSchedulePanel } from '../components/AdministrativeSchedulePanel';
 import { MfaSettings } from '../components/MfaSettings';
+import { JoinClinicGate } from '../components/JoinClinicGate';
+import { TeamManagementPanel } from '../components/TeamManagementPanel';
 import { useAuth } from '../services/AuthProvider';
 import type { SafeUser } from '../services/api';
 import styles from './Dashboard.module.css';
 
+// Sprint 3.24.1: rótulos do papel são "produto-facing". A role técnica continua
+// sendo `secretaria` no JWT/DB; a UI mostra um nome neutro (funcionário(a) com
+// acesso administrativo) para não amarrar o produto a uma profissão específica.
 const ROLE_LABELS: Record<SafeUser['papel'], string> = {
   admin_sistema: 'Administrador do sistema',
   dono_clinica: 'Dono(a) da clínica',
-  secretaria: 'Secretaria',
+  secretaria: 'Funcionário(a) (acesso administrativo)',
 };
 
-type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'seguranca';
+type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'equipe' | 'seguranca';
 
-const TABS: { key: TabKey; label: string; icon: typeof Home }[] = [
+const TABS: { key: TabKey; label: string; icon: typeof Home; ownerOnly?: boolean }[] = [
   { key: 'inicio', label: 'Início', icon: Home },
   { key: 'importacoes', label: 'Importações', icon: UploadCloud },
   { key: 'pacientes', label: 'Pacientes', icon: Users },
   { key: 'agenda', label: 'Agenda', icon: CalendarDays },
+  { key: 'equipe', label: 'Equipe', icon: Users, ownerOnly: true },
   { key: 'seguranca', label: 'Segurança', icon: ShieldCheck },
 ];
 
@@ -44,7 +50,8 @@ const SECTION_INTRO: Record<TabKey, { title: string; subtitle: string }> = {
   inicio: { title: 'Visão geral', subtitle: 'Resumo da sua conta e do que já está disponível no ClinicBridge.' },
   importacoes: { title: 'Importações', subtitle: 'Envie, valide e revise migrações de dados administrativos.' },
   pacientes: { title: 'Pacientes', subtitle: 'Pacientes administrativos importados, duplicados e exportações.' },
-  agenda: { title: 'Agenda administrativa', subtitle: 'Profissionais e agendamentos. Não é prontuário nem dado clínico.' },
+  agenda: { title: 'Agenda administrativa', subtitle: 'Agendamentos administrativos. Não é prontuário nem dado clínico.' },
+  equipe: { title: 'Equipe', subtitle: 'Acesso ao sistema (membros), solicitações pendentes e profissionais usados na agenda.' },
   seguranca: { title: 'Segurança e sessão', subtitle: 'Estado da autenticação e do MVP administrativo.' },
 };
 
@@ -67,6 +74,13 @@ export function Dashboard(): JSX.Element {
   function handleLogout(): void {
     logout();
     navigate('/login', { replace: true });
+  }
+
+  // Sprint 3.24: a logged-in user without a clinic (typically a freshly
+  // registered secretaria) hasn't been approved yet — show the join gate
+  // instead of the dashboard, so they can submit/track invite requests.
+  if (user && !clinic) {
+    return <JoinClinicGate />;
   }
 
   const intro = SECTION_INTRO[tab];
@@ -95,7 +109,7 @@ export function Dashboard(): JSX.Element {
         </section>
 
         <nav className={styles.nav} aria-label="Seções do app">
-          {TABS.map((t) => {
+          {TABS.filter((t) => !t.ownerOnly || isOwner).map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
             return (
@@ -175,8 +189,19 @@ export function Dashboard(): JSX.Element {
 
         {tab === 'agenda' && (
           <>
-            <ClinicProfessionalsPanel />
+            <p className={styles.agendaHint}>
+              Profissionais usados nos agendamentos são cadastrados em
+              <strong> Equipe → Profissionais da agenda</strong>. Aqui você só
+              consome os profissionais ativos da clínica.
+            </p>
             <AdministrativeSchedulePanel />
+          </>
+        )}
+
+        {tab === 'equipe' && isOwner && (
+          <>
+            <TeamManagementPanel />
+            <ClinicProfessionalsPanel />
           </>
         )}
 
