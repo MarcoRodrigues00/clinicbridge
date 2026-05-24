@@ -7,6 +7,14 @@
 
 ## Última sprint aprovada
 
+**Sprint 3.35** (entregue — docs/QA only) — **Validação visual da Sprint 3.34 + consolidação do checklist do merge B-safe**. Sem backend, sem frontend, sem migration, sem nova feature, sem commit/push.
+
+A Sprint 3.34 (UX do merge seguro) foi validada visualmente pelo usuário em 2026-05-24 ("ficou bem fera"). Nenhum bug bloqueante encontrado. Fluxo de merge B-safe considerado funcional e validado para piloto. Itens validados (conforme checklist em `docs/testing-checklist.md`): rádio "Manter como principal" (owner-only), selo "Principal", botão "Resolver duplicado" (habilitado só com seleção), `ConfirmDialog` variant danger com copy B-safe, mensagem verde inline com contagens, grupo some após merge, secundário aparece em Arquivados com badge "Mesclado em outro registro", Agenda atualiza nome para o principal, secretaria não vê rádio/botão, CPF sempre mascarado. Sem regressão nos outros fluxos.
+
+Docs atualizados nesta sprint: `docs/project-state.md` (esta entrada), `docs/sprint-history.md` (Sprint 3.35), `docs/testing-checklist.md` (cabeçalho atualizado), `CLAUDE.md` (estado atual), `docs/roadmap-next-phase.md` (trilha marcada como validada).
+
+---
+
 **Sprint 3.34** (entregue — backend model + frontend) — **UX do merge seguro de duplicados B-safe**. Consome a API da 3.33. Sem mudança em DAOs/services/migrations/agenda backend/importação/Equipe/Auth/MFA. **Sem** endpoint novo, **sem** seleção campo-a-campo, **sem** undo/snapshot, **sem** delete físico, **sem** lookup do nome do principal.
 
 **Backend (mudança mínima — model público apenas):** `backend/src/models/patient.ts` — `PublicPatient` ganha `merged_into_id: string | null` + `merged_at: string | null`; `toPublicPatient` popula a partir de `row.merged_into_id` / `row.merged_at`. **Não é PII** (UUID + timestamp); habilita o badge "Mesclado em outro registro" no frontend. Sem migration; sem nova rota; sem nova permissão.
@@ -23,7 +31,7 @@
 
 **Verificação:** `pnpm --filter backend typecheck` ✅, `pnpm --filter backend build` ✅, `pnpm --filter frontend typecheck` ✅, `pnpm --filter frontend build` ✅, `docker compose build backend && up -d backend` ✅. Smoke API (`/tmp/smoke-3.34.mjs`) confirma: (1) `PublicPatient` agora carrega `merged_into_id`/`merged_at` em criação/listagem/merge; (2) `POST /patients/:id/merge` continua devolvendo `{ patient, merge: {...} }`; (3) secundário arquivado lista com `merged_into_id` setado e `merged_at` ISO. Dados de teste removidos (clínica + usuário descartável). Sem commit/push.
 
-**Validação visual pendente** (manual no navegador) — checklist em `docs/testing-checklist.md` (Sprint 3.34): criar 2 pacientes duplicados, ver na aba Pacientes › Possíveis duplicados, escolher principal via rádio, confirmar no modal danger, validar grupo sumir, ver secundário em Arquivados com badge "Mesclado em outro registro", ver Agenda com nome do principal (se havia appointment), testar com secretaria (sem rádio/botão), CPF sempre mascarado.
+**Validação visual aprovada pelo usuário em 2026-05-24** — checklist de `docs/testing-checklist.md` (Sprint 3.34) percorrido manualmente no navegador. Nenhum bug bloqueante encontrado. Fluxo de merge B-safe aprovado ("ficou bem fera"). Detalhes registrados na Sprint 3.35 abaixo.
 
 ---
 

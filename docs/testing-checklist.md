@@ -950,7 +950,11 @@ COMMIT;
 
 Audits permanecem (FK `SET NULL` — append-only correto).
 
-### Visual (Sprint 3.34 — entregue; **validação manual pendente**)
+### Visual (Sprint 3.34 — entregue; **validado pelo usuário em 2026-05-24** — Sprint 3.35)
+
+> **Sprint 3.35:** fluxo validado visualmente no navegador pelo usuário em
+> 2026-05-24. Nenhum bug bloqueante encontrado. Fluxo de merge B-safe aprovado
+> ("ficou bem fera"). Os passos abaixo permanecem como referência de regressão.
 
 UI entregue na Sprint 3.34 sobre a API da 3.33. Sem endpoint novo, sem
 seleção campo-a-campo, sem undo, sem delete físico, sem lookup do nome do

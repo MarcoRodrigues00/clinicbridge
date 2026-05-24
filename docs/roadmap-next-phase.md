@@ -159,8 +159,13 @@ dados importados. Nada clínico (Opção C / ADR 0001).
   em outro registro" em Arquivados (sem lookup do nome do principal). Sem
   endpoint novo (contagem de appointments por paciente fica para futuro);
   sem seleção campo-a-campo; sem undo. `backend typecheck`/`build` ✅,
-  `frontend typecheck`/`build` ✅, smoke API confirma shape. Validação visual
-  manual pendente — checklist em `docs/testing-checklist.md`.
+  `frontend typecheck`/`build` ✅, smoke API confirma shape. **Validação visual
+  aprovada pelo usuário em 2026-05-24 (Sprint 3.35) — sem bug bloqueante.**
+- **Sprint 3.35 (entregue — docs/QA only) — Validação visual da Sprint 3.34.**
+  Sem backend, sem frontend, sem migration. Registro formal de que o merge
+  B-safe foi validado visualmente no navegador ("ficou bem fera"). Checklist
+  de `docs/testing-checklist.md` atualizado com nota de validação. Trilha
+  merge (3.32 ADR → 3.33 backend → 3.34 UX → 3.35 QA) **completa e validada**.
 - **Ainda no tema:** **undo/snapshot** completo (exige tabela própria + ADR) e
   **paginação backend** de duplicados quando a base crescer (hoje o corte é
   client-side + cap do scan).

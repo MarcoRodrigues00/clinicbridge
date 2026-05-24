@@ -1442,8 +1442,9 @@ descartável (`/tmp/smoke-3.34.mjs`) confirmou:
 Dados de teste (1 clínica + 1 owner + 2 pacientes) removidos via SQL no fim
 (cleanup pattern da 3.33). Baseline preservado (22 patients / 11 appointments).
 
-**Validação visual** (manual no navegador) **pendente** — checklist completo
-adicionado em `docs/testing-checklist.md` (Sprint 3.34).
+**Validação visual aprovada pelo usuário em 2026-05-24** (Sprint 3.35) —
+checklist de `docs/testing-checklist.md` (Sprint 3.34) percorrido manualmente
+no navegador. Nenhum bug bloqueante. Fluxo aprovado ("ficou bem fera").
 
 **Arquivos alterados:** `backend/src/models/patient.ts`,
 `frontend/src/services/api.ts`,
@@ -1475,3 +1476,42 @@ adicionado em `docs/testing-checklist.md` (Sprint 3.34).
   Se virar requisito, fazer com lookup no cliente sobre a lista carregada.
 
 Sem commit/push.
+
+
+---
+
+## Sprint 3.35 (docs/QA — sem backend, sem feature)
+
+**Sem backend, sem API, sem migration, sem permissão, sem nova feature.** Sprint de docs e QA: registrar formalmente que a Sprint 3.34 foi validada visualmente pelo usuário; consolidar o checklist do fluxo Pacientes/Duplicados/Merge; confirmar ausência de pendência bloqueante para piloto no fluxo de merge.
+
+**Motivação:** a Sprint 3.34 foi entregue com validação visual pendente. O usuário percorreu o checklist manualmente no navegador em 2026-05-24 e aprovou o fluxo ("ficou bem fera"). Esta sprint consolida esse registro.
+
+**O que foi validado (fluxo de merge B-safe, Sprint 3.34):**
+1. Rádio "Manter como principal" aparece por registro de cada grupo (owner-only, sem pré-seleção).
+2. Selo "Principal" e borda ciano no card escolhido.
+3. Hint e botão "Resolver duplicado" desabilitado sem seleção / habilitado com seleção.
+4. `ConfirmDialog` variant `danger` abre com copy explícita B-safe (mantém, move, preenche, arquiva, nada apagado, sem desfazer completo).
+5. Cancelar não dispara nenhuma request.
+6. Confirmar: spinner, modal fecha, mensagem verde inline com contagens.
+7. Grupo some da lista após merge (< 2 ativos restam).
+8. Fill-blanks: campo vazio do principal recebe valor do secundário.
+9. Fill-blanks não sobrescreve: campo já preenchido do principal é preservado.
+10. Aba Arquivados: secundário aparece com badge "Mesclado em outro registro".
+11. Aba Agenda: agendamento reassignado exibe nome do principal.
+12. CPF sempre mascarado (nenhum card/modal/network expõe CPF bruto).
+13. Secretaria: sem rádio, sem botão "Resolver duplicado"; aviso owner-only visível.
+14. Sem regressão em outros fluxos (Equipe, Agenda, Importações, MFA).
+
+**Pendências conhecidas aceitas (não bloqueantes):**
+- Sem contagem de agendamentos por paciente no modal (copy genérica cobre; endpoint futuro se UX exigir).
+- Sem undo completo (documentado no ADR 0007 e na copy do modal).
+- Badge "Mesclado em outro registro" sem lookup do nome do principal (intencional).
+
+**Docs atualizados nesta sprint:**
+- `docs/project-state.md`: Sprint 3.35 adicionada; "Validação visual pendente" → "aprovada pelo usuário em 2026-05-24".
+- `docs/sprint-history.md` (este arquivo): entrada Sprint 3.35 + atualização da Sprint 3.34.
+- `docs/testing-checklist.md`: cabeçalho da seção 3.34 atualizado; nota de validação adicionada.
+- `CLAUDE.md`: estado atual = Sprint 3.35 entregue; próximas prioridades atualizadas.
+- `docs/roadmap-next-phase.md`: Sprint 3.34 marcada como validada visualmente; Sprint 3.35 adicionada; trilha merge 3.32–3.35 fechada.
+
+Nenhum build necessário (docs only). Sem commit/push.
