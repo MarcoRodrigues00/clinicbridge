@@ -107,6 +107,36 @@ Num card `scheduled`/`confirmed`/`rescheduled`, linha **"Lembrete administrativo
 > Mensagem: lembrete **manual-first**. WhatsApp **automático/API é futuro** (com
 > ADR/opt-in próprios), **não** está nesta versão.
 
+### 5b. Equipe (opcional — ≈3 min)
+
+> Esta etapa é opcional: exige ter uma segunda conta (staff) preparada e o código
+> de convite à mão. Se a demo for só para o(a) dono(a) da clínica, é o momento
+> mais relevante. Pode ser pulada numa demo expressa.
+
+Aba **Equipe** (visível apenas para o owner).
+
+1. **Código de convite:** mostrar o código em destaque (mono, maior). Botão
+   **Copiar** ao lado de **Regenerar** (ghost). Falar: "você compartilha esse
+   código fora do sistema — por mensagem, e-mail — com quem vai operar o sistema.
+   Sem busca pública de clínicas; sem autoentrada."
+2. **Solicitar entrada (staff, outra aba):** abrir `/login` como staff → tela
+   `JoinClinicGate` → inserir o código + confirmar o nome da clínica → submeter.
+   Mostrar que a solicitação fica como "aguardando aprovação".
+3. **Aprovar (owner):** voltar à aba do owner → seção "Solicitações pendentes"
+   mostra a solicitação com nome/e-mail. Clicar **Aprovar** → **modal abre** com
+   os dados; confirmar. Falar: "toda entrada é manual — o dono decide, não existe
+   aprovação automática. A ação abre um modal — sem `window.confirm` nativo, sem
+   bloqueio do browser."
+4. **Membros da equipe:** seção abaixo das solicitações lista owner + funcionário(a)
+   aprovado(a) com badge de papel. Mencionar: dono pode **Desativar acesso** (modal
+   danger) — não apaga dados, a pessoa pode pedir entrada de novo.
+5. **Profissionais da agenda:** painel abaixo de Membros. Criar um profissional
+   com nome + rótulo ("Fisioterapeuta" — interno, não clínico). Mostrar que ao
+   trocar para a aba **Agenda**, o novo profissional já aparece no seletor.
+
+> Mensagem: **fluxo invite-only** (sem busca pública), **aprovação manual** pelo
+> dono, **modal custom** em cada ação sensível, **remoção preserva histórico**.
+
 ### 6. Segurança e governança (≈2 min)
 
 Aba **Segurança**:

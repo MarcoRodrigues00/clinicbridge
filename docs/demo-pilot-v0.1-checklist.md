@@ -19,6 +19,8 @@
 - [ ] (Opcional) MFA ativado no owner (aba Segurança) para demonstrar 2 passos —
       ao ativar, **anote os códigos de recuperação** (exibidos uma única vez).
 - [ ] (Opcional) Login de **secretaria** pronto para mostrar permissões.
+- [ ] (Opcional, se for demonstrar o fluxo Equipe) Conta de **staff sem clínica**
+      cadastrada (`account_type: staff`) e código de convite copiado para usar ao vivo.
 - [ ] Credenciais e abas testadas 1x antes de apresentar (login entra; aba Agenda
       mostra o dia de hoje com agendamentos).
 
@@ -52,6 +54,18 @@
 - [ ] Owner cria/edita/desativa profissional ("função/rótulo interno").
 - [ ] Criar agendamento (paciente + horário) com **aviso anti-clínico** visível.
 - [ ] Confirmar/Concluir/Faltou/Cancelar e **remarcar** funcionam.
+
+### Equipe (opcional — exige conta staff preparada)
+
+- [ ] Aba **Equipe** visível apenas para o owner.
+- [ ] Código de convite em destaque (mono, maior); **Copiar** (solid) + **Regenerar** (ghost) lado a lado.
+- [ ] (Se demo ao vivo) Staff entra no `JoinClinicGate`, insere o código + nome da clínica → solicitação "aguardando".
+- [ ] Owner vê a solicitação em "Solicitações pendentes" com nome/e-mail do staff.
+- [ ] **Aprovar** abre **modal custom** (não `window.confirm` nativo) → confirmar → staff acessa `/app`.
+- [ ] Seção "Membros da equipe" lista ambos; badge "Dono(a)" no owner; "Funcionário(a)" no staff.
+- [ ] **Desativar acesso** abre modal **danger**; cancelar não executa; confirmar desativa.
+- [ ] Seção "Profissionais da agenda": criar profissional → aparece no seletor da aba Agenda sem reload.
+- [ ] Reforçar: **sem autoentrada** — cada aprovação é manual; remoção preserva histórico/dados.
 
 ### Lembrete manual
 - [ ] "Copiar lembrete" copia mensagem **neutra** (sem profissional/observação/

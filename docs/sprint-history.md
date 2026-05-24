@@ -1063,14 +1063,52 @@ Dados de teste limpos via SQL transacional ao final.
 O `ClinicProfessionalsPanel` não tinha `window.confirm` — o botão disparava a mutation diretamente. Esta sprint adicionou confirmação também.
 
 **Padrão de estado:**
-- `TeamManagementPanel`: estado `pendingAction: PendingAction | null` (discriminated union `regenerate | approve | reject | deactivate`). `dialogConfig` derivado do tipo. `isBusy` = mutation correspondente `.isPending`. `setPendingAction(null)` em `onSuccess` e `onError` de todas as mutations afetadas.
-- `ClinicProfessionalsPanel`: estado `pendingDeactivate: { id, name } | null`. Mesmo padrão.
+- `TeamManagementPanel`: estado `pendingAction: PendingAction | null` (discriminated union `regenerate | approve | reject | deactivate`). `dialogConfig` derivado do tipo. `isBusy` = mutation correspondente `.isPending`. `openConfirm(action)` limpa notices/erros stale antes de abrir. `closeConfirm()` limpa erro ao cancelar. Mutations chamam `setPendingAction(null)` **apenas em `onSuccess`**; em `onError` o dialog permanece aberto e exibe o erro inline.
+- `ClinicProfessionalsPanel`: estado `pendingDeactivate: { id, name } | null`. Mesmo padrão: `onSuccess` fecha e limpa erro; `onError` mantém o dialog aberto.
 
 **Acessibilidade:** `role="dialog"` (nativo), `aria-modal="true"`, `aria-labelledby` apontando para o `<h2>` do título. Focus trap nativo do `<dialog>`. Foco inicial cai no primeiro elemento focável (botão "Cancelar") — pressing Enter acidentalmente cancela, nunca confirma.
 
 **Verificação:** `pnpm --filter frontend typecheck` ✅, `pnpm --filter frontend build` ✅. Backend **não** rodado. Validação visual no navegador pendente. Sem commit/push.
 
+**Nits pós-revisão (super revisão após 3.28 — aplicados ao mesmo conjunto de arquivos):**
+- `TeamManagementPanel.module.css`: `.secondaryBtn:disabled` adicionado ao bloco de disabled (estava ausente).
+- `ConfirmDialog.tsx`: `id="confirm-dialog-title"` estático substituído por `useId()` — evita colisão de IDs no DOM quando os dois dialogs (TeamManagementPanel + ClinicProfessionalsPanel) estão montados simultaneamente.
+- Tratamento de erro: mutations removeram `setPendingAction(null)` / `setPendingDeactivate(null)` do `onError`; dialog permanece aberto e renderiza o erro dentro do modal via prop `error`; `onCancel` limpa o erro. `openConfirm()` limpa notices/erros stale antes de abrir.
+
 **Ressalvas / follow-ups futuros:**
 - Polyfill de `<dialog>` não implementado (Safari < 15.4). Não é um requisito declarado do MVP.
-- Um único `id="confirm-dialog-title"` estático é suficiente enquanto só um dialog é aberto por vez. Se no futuro houver múltiplos dialogs simultâneos, usar ID dinâmico (ex.: `useId()`).
 - `ConfirmDialog` está pronto para reuso em outras telas (PatientsList, DuplicatesList, etc.) sem alteração.
+
+---
+
+## Sprint 3.29 (docs/QA — sem backend, sem feature)
+
+**Sem backend, sem API, sem migration, sem permissão, sem nova feature.** Sprint de docs e QA: corrigir referências stale a `window.confirm` nos docs operacionais; adicionar checklist visual integrado do fluxo Equipe; expandir o demo script e o checklist piloto com a aba Equipe; registrar os nits pós-3.28 no sprint-history.
+
+**Docs atualizados:**
+
+- `docs/testing-checklist.md`:
+  - §3.25, §3.26, §3.27: substituídas as referências a `window.confirm` por descrição do modal custom.
+  - §3.28: item 5 (comportamento de erro) e item 6 (isBusy) atualizados para refletir o comportamento pós-nit (dialog permanece aberto em erro; erro aparece inline com `role="alert"`).
+  - §3.28: adicionados itens 9 (erro inline) e 10 (IDs únicos via `useId`).
+  - Nova seção **"Fluxo completo da aba Equipe"** com checklist visual ponta a ponta cobrindo sprints 3.24–3.28 (código de convite, solicitação, aprovação, membros, desativar acesso, regenerar, recusar, profissionais da agenda, permissões de secretaria).
+
+- `docs/project-state.md`:
+  - Sprint 3.28 passou de "em validação/finalização" para "entregue, nits aplicados".
+  - Nits documentados (`.secondaryBtn:disabled`, `useId`, error inline).
+  - Sprint 3.29 adicionada como sprint atual.
+  - Referências a `window.confirm` nas seções descritivas de 3.24–3.27 atualizadas para "modal de confirmação custom (sprint 3.28)".
+
+- `docs/sprint-history.md`:
+  - Sprint 3.28: padrão de estado corrigido (dialog abre em `onSuccess`, não em `onError`); nits pós-revisão documentados.
+  - Sprint 3.29: esta entrada.
+
+- `docs/demo-pilot-v0.1-script.md`:
+  - Nova seção **§ Equipe (opcional — ≈3 min)** com passo a passo para demo do fluxo de convite, aprovação de funcionário(a) e gestão de profissionais da agenda.
+
+- `docs/demo-pilot-v0.1-checklist.md`:
+  - Nova seção **Equipe (opcional)** em §B (Durante a demo).
+
+- `CLAUDE.md`: sprint atual atualizada para Sprint 3.29.
+
+**Verificação:** nenhum build necessário (docs only). Sem commit/push.
