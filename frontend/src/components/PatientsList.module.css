@@ -284,6 +284,15 @@
   border-color: rgba(148, 163, 184, 0.3);
 }
 
+/* Safe-merge B-safe provenance tag (Sprint 3.34). Discreet — informational
+   only; the record is already marked "Arquivado" by the status badge above. */
+.mergedTag {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-2);
+  font-style: italic;
+}
+
 .fields {
   display: grid;
   gap: 0.38rem;

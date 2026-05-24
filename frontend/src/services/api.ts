@@ -367,6 +367,11 @@ export interface PublicPatient {
   status: PatientStatus;
   origem: string;
   import_session_id: string | null;
+  // Safe-merge B-safe provenance (Sprint 3.33 backend / 3.34 exposed).
+  // Both NULL on records that were never merged. The frontend only badges an
+  // archived secondary; we deliberately don't look up the primary's name.
+  merged_into_id: string | null;
+  merged_at: string | null;
   criado_em: string;
   atualizado_em: string;
 }
@@ -433,6 +438,29 @@ export interface DuplicateScanResult {
     groups_count: number;
     patients_in_duplicate_groups: number;
     scan_limited: boolean;
+  };
+}
+
+// Safe duplicate merge B-safe (Sprint 3.33 backend / 3.34 frontend). The backend
+// response carries only the updated primary, summary counts and the secondary
+// UUIDs the caller already sent — never any data from the secondaries beyond
+// their id, and never raw CPF. `filled_fields` lists which administrative
+// fields were filled on the primary (names only, never values).
+export type MergeFillableField =
+  | 'telefone'
+  | 'email'
+  | 'cpf'
+  | 'data_nascimento'
+  | 'convenio'
+  | 'numero_carteirinha';
+
+export interface PatientMergeResponse {
+  patient: PublicPatient;
+  merge: {
+    merged_count: number;
+    moved_appointments_count: number;
+    archived_secondary_ids: string[];
+    filled_fields: MergeFillableField[];
   };
 }
 
@@ -814,6 +842,22 @@ export const api = {
 
   listPatientDuplicates(token: string): Promise<DuplicateScanResult> {
     return apiFetch<DuplicateScanResult>('/patients/duplicates', { method: 'GET', token });
+  },
+
+  // Safe duplicate merge B-safe (Sprint 3.34). Owner-only at the API; the UI
+  // hides the action for other roles. Moves the secondaries' appointments to
+  // the primary, fills only blank fields on the primary (never overwrites),
+  // archives each secondary, and writes one audit row per pair. The response
+  // never carries raw CPF or per-secondary patient values.
+  mergePatients(
+    token: string,
+    primaryId: string,
+    secondaryIds: string[],
+  ): Promise<PatientMergeResponse> {
+    return apiFetch<PatientMergeResponse>(
+      `/patients/${encodeURIComponent(primaryId)}/merge`,
+      { method: 'POST', body: { secondary_ids: secondaryIds }, token },
+    );
   },
 
   // --- Team management — clinic join requests (Sprint 3.24) -------------------

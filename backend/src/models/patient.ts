@@ -20,6 +20,11 @@ export interface NormalizedPatientDraft {
 // Client-facing patient shape (Sprint 2.19, read-only listing). The raw CPF is
 // NEVER exposed — only a masked form. There are NO clinical fields here because
 // the MVP does not store any (no diagnosis/prescription/exams/records).
+//
+// merged_into_id / merged_at (Sprint 3.34, exposed) carry the safe-merge B-safe
+// provenance set in Sprint 3.33. They are NOT PII (UUID + timestamp; the
+// primary's name is NOT looked up here — only its id). The frontend uses them
+// to badge an archived secondary as "Mesclado em outro registro".
 export interface PublicPatient {
   id: string;
   nome: string;
@@ -32,6 +37,8 @@ export interface PublicPatient {
   status: PatientStatus;
   origem: string;
   import_session_id: string | null;
+  merged_into_id: string | null;
+  merged_at: string | null;
   criado_em: string;
   atualizado_em: string;
 }
@@ -80,6 +87,8 @@ export function toPublicPatient(row: PatientRow): PublicPatient {
     status: row.status as PatientStatus,
     origem: row.origem,
     import_session_id: row.import_session_id,
+    merged_into_id: row.merged_into_id,
+    merged_at: row.merged_at === null ? null : toIsoOrString(row.merged_at),
     criado_em: toIsoOrString(row.criado_em),
     atualizado_em: toIsoOrString(row.atualizado_em),
   };

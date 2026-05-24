@@ -18,6 +18,31 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
+**Sprint 3.34** (entregue) — **frontend/UX do merge seguro de duplicados
+B-safe** (consome a API da Sprint 3.33; ADR 0007). Sem mudança em
+backend/services/DAOs/migrations/agenda/importação. Backend mudou só no
+**model público** (`PublicPatient` ganha `merged_into_id` + `merged_at`;
+**não é PII** — UUID + timestamp; **nome do principal NÃO** é buscado/exposto).
+**Frontend:** `DuplicatesList` ganha **rádio "Manter como principal"**
+(owner-only, sem pré-seleção) por registro de cada grupo, **botão "Resolver
+duplicado"** no rodapé do grupo (desabilitado sem seleção), **`ConfirmDialog`
+variant `danger`** com copy explícita ("mantém o principal, move agendamentos
+dos duplicados, preenche apenas campos vazios, nunca sobrescreve, arquiva
+duplicados, nada é apagado fisicamente, esta versão ainda não tem desfazer
+completo"). Após sucesso: mensagem inline + invalida `['appointments']` e
+`['patients']` no TanStack Query (Agenda mostra o nome certo na próxima
+visualização). Secretaria/funcionário(a) **não vê** rádio nem botão (UI esconde;
+backend continua sendo defesa real — 403 `forbidden_role`). `PatientsList`
+mostra badge discreto "Mesclado em outro registro" em arquivados que têm
+`merged_into_id` (sem lookup do nome do principal). `secondary_ids` é derivado
+no cliente como `grupo - principal escolhido`; envio único `POST
+/patients/:id/merge` atômico. **Sem** seleção campo-a-campo, **sem** undo,
+**sem** delete físico, **sem** endpoint novo (contagem de agendamentos por
+paciente fica para sprint futura — copy genérica nesta versão). `backend
+typecheck`/`build` ✅, `frontend typecheck`/`build` ✅, container backend
+rebuildado. Smoke API confirma shape com `merged_into_id`/`merged_at` em todas
+as respostas de paciente. Validação visual manual no navegador pendente.
+
 **Sprint 3.33** (entregue) — **backend + migration + API do merge seguro de
 duplicados (B-safe)** (ADR 0007). Migration `20260601000000_patients_merged_into`
 adiciona `patients.merged_into_id` (uuid NULL FK → patients, `ON DELETE SET NULL`)
@@ -204,12 +229,15 @@ administrativos sensíveis (Sprint 3.1); `TRUST_PROXY` configurável + rate limi
 com store memory/redis (Sprint 3.2). Detalhe e endpoints: `docs/project-state.md`.
 
 **O que NÃO existe (precisa sprint explícita):** prontuário/dados clínicos;
-**frontend** do merge B-safe (backend + API entregues em 3.33; UI/UX vem na
-3.34); **delete físico** de paciente (arquivar é soft-delete); **undo completo
-do merge** (3.33 grava apenas `merged_into_id`/`merged_at`; não há snapshot dos
+**delete físico** de paciente (arquivar é soft-delete); **undo completo do
+merge** (3.33/3.34 só gravam `merged_into_id`/`merged_at`; não há snapshot dos
 campos antigos nem dos appointments movidos); **seleção campo-a-campo** no merge
-(só fill-blanks não-destrutivo); limpeza real de arquivos; signed URL/download;
-job/cron; gestão de usuários/papéis na UI (papel é definido no registro/SQL).
+(só fill-blanks não-destrutivo); **contagem de agendamentos por paciente** na
+UI do merge (3.34 usa copy genérica — sem endpoint novo nesta sprint); **lookup
+do nome do principal** no badge "Mesclado em outro registro" (intencional —
+mantém UI honesta e evita PII desnecessária); limpeza real de arquivos; signed
+URL/download; job/cron; gestão de usuários/papéis na UI (papel é definido no
+registro/SQL).
 
 **Migrações (em ordem):** `20260520000000_init` (users/clinics/tokens) ·
 `20260521000000_audit_logs` · `20260522000000_import_files` ·
@@ -242,17 +270,15 @@ fases: `docs/roadmap-next-phase.md`.
 
 ## Próximas prioridades prováveis
 
-- **Produto (trilha pacientes):** **3.23 entregue (frontend)** = duplicados
-  acionáveis (editar/arquivar/restaurar por registro reusando o CRUD da 3.22;
-  paginação de grupos no frontend). **3.32 entregue (ADR/docs)** + **3.33
-  entregue (backend)** = merge seguro B-safe — migration `merged_into_id`/
-  `merged_at`, `POST /patients/:id/merge` owner-only, reassign de agendamentos
-  tenant-scoped, fill-blanks não-destrutivo, arquivar secundário com CAS, audit
-  sem PII, 404 genérico anti-enumeração. **Próximo no tema:** **3.34** UX
-  (`DuplicatesList` com seleção de principal, contagem de appointments por
-  registro, `ConfirmDialog`) e validação visual (Agenda mostra nome certo após
-  merge; arquivado em Pacientes › Arquivados); **paginação backend** de
-  duplicados se a base crescer.
+- **Produto (trilha pacientes):** **3.23/3.32/3.33/3.34 entregues** = duplicados
+  acionáveis (3.23), decisão B-safe (3.32 ADR), backend+API do merge (3.33) e
+  **UX de merge na tela de duplicados** (3.34: rádio "Manter como principal",
+  botão "Resolver duplicado", `ConfirmDialog` danger, badge "Mesclado em outro
+  registro" em Arquivados, invalidação de cache de Agenda). **Próximo no tema:**
+  **validação visual** manual da 3.34 (script em `docs/testing-checklist.md`);
+  futuro: contagem de agendamentos por paciente na UI do merge (exige endpoint
+  novo); **paginação backend** de duplicados se a base crescer; **undo/snapshot**
+  completo (tabela própria + ADR).
 - **Produto (trilha equipe):** **3.24/3.24.1/3.25 entregues** = solicitação de
   entrada por código de convite, aprovação pelo dono, copy generalizada para
   "funcionário(a)/equipe", **gestão de membros (listar ativos/inativos,

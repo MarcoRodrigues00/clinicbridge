@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CopyCheck,
   RefreshCw,
@@ -11,6 +12,8 @@ import {
   Pencil,
   Archive,
   ShieldCheck,
+  Merge,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   api,
@@ -23,6 +26,7 @@ import {
 } from '../services/api';
 import { getToken } from '../services/authStorage';
 import { useAuth } from '../services/AuthProvider';
+import { ConfirmDialog } from './ConfirmDialog';
 import { PatientEditForm } from './PatientEditForm';
 import styles from './DuplicatesList.module.css';
 
@@ -104,9 +108,11 @@ export function DuplicatesList({
   onPatientsChanged?: () => void;
 } = {}): JSX.Element {
   const { user } = useAuth();
-  // Edit: owner + secretaria. Archive/restore: owner only (backend enforces; UI hides).
+  // Edit: owner + secretaria. Archive/restore + merge: owner only (backend
+  // enforces with requireRole; the UI hides the controls).
   const canWrite = user?.papel === 'dono_clinica' || user?.papel === 'secretaria';
   const isOwner = user?.papel === 'dono_clinica';
+  const queryClient = useQueryClient();
 
   const [result, setResult] = useState<DuplicateScanResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,6 +121,15 @@ export function DuplicatesList({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Safe-merge B-safe (Sprint 3.34). One selection per group, keyed by the
+  // backend's stable group_key (a hash, not PII). Cleared on every reload so a
+  // stale selection from a previous scan can't be acted on.
+  const [primaryByGroup, setPrimaryByGroup] = useState<Record<string, string>>({});
+  const [confirmGroupKey, setConfirmGroupKey] = useState<string | null>(null);
+  const [mergeBusy, setMergeBusy] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+  const [mergeNotice, setMergeNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const token = getToken();
@@ -128,6 +143,9 @@ export function DuplicatesList({
       const res = await api.listPatientDuplicates(token);
       setResult(res);
       setVisibleCount(GROUPS_PAGE);
+      // Stale selection from the previous scan can no longer be acted on safely
+      // (the group may have changed). Drop it on every reload.
+      setPrimaryByGroup({});
     } catch (err) {
       setError(apiMessage(err, 'Não foi possível analisar os duplicados.'));
       setResult(null);
@@ -147,6 +165,75 @@ export function DuplicatesList({
     setActionError(null);
     if (onPatientsChanged) onPatientsChanged();
     else void load();
+  }
+
+  // After a merge: bump the patients panels (refreshKey) AND invalidate the
+  // TanStack caches that the Agenda / scheduling picker read from — so the
+  // owner can switch to the Agenda tab and immediately see the appointment
+  // listed under the primary's name (no more "Paciente abc12345…" fallback).
+  function afterMerge(): void {
+    if (onPatientsChanged) onPatientsChanged();
+    else void load();
+    void queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    void queryClient.invalidateQueries({ queryKey: ['patients'] });
+  }
+
+  function selectPrimary(groupKey: string, patientId: string): void {
+    setPrimaryByGroup((prev) => ({ ...prev, [groupKey]: patientId }));
+    // Clear any stale notice from a previous merge so it doesn't linger over
+    // a new selection.
+    setMergeNotice(null);
+  }
+
+  function openMergeConfirm(groupKey: string): void {
+    setMergeError(null);
+    setMergeNotice(null);
+    setConfirmGroupKey(groupKey);
+  }
+
+  function closeMergeConfirm(): void {
+    if (mergeBusy) return;
+    setConfirmGroupKey(null);
+    setMergeError(null);
+  }
+
+  async function handleMergeConfirm(): Promise<void> {
+    if (!confirmGroupKey) return;
+    const group = activeGroups.find((g) => g.group_key === confirmGroupKey);
+    const primaryId = primaryByGroup[confirmGroupKey];
+    if (!group || !primaryId) return;
+    const secondaryIds = group.patients
+      .filter((p) => p.id !== primaryId && p.status === 'active')
+      .map((p) => p.id);
+    if (secondaryIds.length === 0) {
+      setMergeError('Selecione o principal e ao menos um duplicado para resolver.');
+      return;
+    }
+
+    const token = getToken();
+    if (!token) return;
+    setMergeBusy(true);
+    setMergeError(null);
+    try {
+      const res = await api.mergePatients(token, primaryId, secondaryIds);
+      setConfirmGroupKey(null);
+      setMergeNotice(
+        `Duplicado resolvido. ${res.merge.merged_count} registro${
+          res.merge.merged_count === 1 ? '' : 's'
+        } arquivado${res.merge.merged_count === 1 ? '' : 's'}; ${
+          res.merge.moved_appointments_count
+        } agendamento${
+          res.merge.moved_appointments_count === 1 ? '' : 's'
+        } movido${res.merge.moved_appointments_count === 1 ? '' : 's'} para o principal.`,
+      );
+      afterMerge();
+    } catch (err) {
+      // Modal stays open with the error inline (consistent with the rest of the
+      // app) so the owner can read it without losing the selection.
+      setMergeError(apiMessage(err, 'Não foi possível resolver o duplicado.'));
+    } finally {
+      setMergeBusy(false);
+    }
   }
 
   async function handleArchive(p: PublicPatient): Promise<void> {
@@ -213,8 +300,15 @@ export function DuplicatesList({
         <p className={styles.notice}>
           <ShieldCheck size={16} aria-hidden="true" />
           {canWrite
-            ? 'Você pode editar os registros. Arquivar/restaurar é exclusivo do dono da clínica.'
+            ? 'Você pode editar os registros. Arquivar/restaurar e resolver duplicados são exclusivos do dono da clínica.'
             : 'Visualização apenas. Ações de correção exigem permissão na clínica.'}
+        </p>
+      )}
+
+      {mergeNotice && (
+        <p className={styles.mergeNotice} role="status">
+          <CheckCircle2 size={16} aria-hidden="true" />
+          {mergeNotice}
         </p>
       )}
 
@@ -280,13 +374,50 @@ export function DuplicatesList({
                     </p>
                   )}
 
+                  {isOwner && (
+                    <p className={styles.groupHint}>
+                      Para resolver de uma vez, escolha o paciente principal abaixo e clique em
+                      “Resolver duplicado”. Agendamentos vinculados aos demais serão movidos para
+                      o principal; campos vazios do principal podem ser preenchidos (nunca
+                      sobrescritos); os duplicados são arquivados.
+                    </p>
+                  )}
+
                   <ul className={styles.records}>
-                    {g.patients.map((p) => (
-                      <li key={p.id} className={styles.record}>
+                    {g.patients.map((p) => {
+                      const isSelectedPrimary = primaryByGroup[g.group_key] === p.id;
+                      return (
+                      <li
+                        key={p.id}
+                        className={`${styles.record} ${
+                          isSelectedPrimary ? styles.recordPrimary : ''
+                        }`}
+                      >
                         <div className={styles.recordTop}>
+                          {isOwner && (
+                            <label
+                              className={styles.primaryRadio}
+                              title="Escolher este paciente como principal"
+                            >
+                              <input
+                                type="radio"
+                                name={`primary-${g.group_key}`}
+                                value={p.id}
+                                checked={isSelectedPrimary}
+                                onChange={() => selectPrimary(g.group_key, p.id)}
+                                disabled={mergeBusy}
+                              />
+                              <span className={styles.primaryRadioLabel}>
+                                Manter como principal
+                              </span>
+                            </label>
+                          )}
                           <span className={styles.recordName} title={p.nome}>
                             {p.nome}
                           </span>
+                          {isSelectedPrimary && (
+                            <span className={styles.primaryTag}>Principal</span>
+                          )}
                           <span
                             className={`${styles.statusBadge} ${
                               styles[`status_${p.status}`] ?? ''
@@ -367,8 +498,30 @@ export function DuplicatesList({
                           />
                         )}
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
+
+                  {isOwner && (
+                    <div className={styles.mergeBar}>
+                      <span className={styles.mergeBarHint}>
+                        {primaryByGroup[g.group_key]
+                          ? `Os outros ${g.patients.length - 1} registro${
+                              g.patients.length - 1 === 1 ? '' : 's'
+                            } serão arquivados como duplicados.`
+                          : 'Escolha o paciente principal antes de resolver.'}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.mergeBtn}
+                        onClick={() => openMergeConfirm(g.group_key)}
+                        disabled={!primaryByGroup[g.group_key] || mergeBusy}
+                      >
+                        <Merge size={14} aria-hidden="true" />
+                        Resolver duplicado
+                      </button>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -387,6 +540,21 @@ export function DuplicatesList({
           )}
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmGroupKey !== null}
+        title="Resolver pacientes duplicados?"
+        description={
+          'O ClinicBridge vai manter o paciente principal escolhido, mover agendamentos vinculados aos duplicados, se houver, para ele, preencher apenas os campos vazios do principal e arquivar os registros duplicados. Nenhum campo já preenchido do principal será sobrescrito. Nada será apagado fisicamente. Esta versão ainda não tem desfazer completo.'
+        }
+        confirmLabel="Resolver duplicado"
+        cancelLabel="Cancelar"
+        variant="danger"
+        isBusy={mergeBusy}
+        error={mergeError}
+        onConfirm={() => void handleMergeConfirm()}
+        onCancel={closeMergeConfirm}
+      />
     </section>
   );
 }

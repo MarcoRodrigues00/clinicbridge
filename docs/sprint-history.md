@@ -1351,3 +1351,127 @@ frontend/UX+validação visual.
 plano de testes futuro), `docs/roadmap-next-phase.md`.
 
 **Verificação:** nenhum build necessário (docs only). Sem commit/push.
+
+## Sprint 3.34 (frontend/UX do merge B-safe — consome a API da 3.33)
+
+**Consome o backend entregue na Sprint 3.33** (ADR 0007). Sem migration, sem
+novo endpoint, sem nova permissão, sem mudança em services/DAOs, sem mexer em
+agenda backend, importação, Equipe ou Auth/MFA. Backend muda **apenas no
+model público** para expor proveniência (não-PII) usada pelo frontend.
+
+**Backend (mudança mínima):**
+- `backend/src/models/patient.ts` — `PublicPatient` ganha `merged_into_id:
+  string | null` e `merged_at: string | null`. `toPublicPatient` popula a
+  partir de `row.merged_into_id` e `row.merged_at?.toISOString() ?? null`. Não
+  é PII; habilita o badge "Mesclado em outro registro" no frontend.
+
+**Frontend:**
+- `frontend/src/services/api.ts` — `PublicPatient` ganha as mesmas duas chaves.
+  Tipos novos: `MergeFillableField` (literal union dos campos que o backend
+  pode preencher), `PatientMergeResponse` (`{ patient, merge: { merged_count,
+  moved_appointments_count, archived_secondary_ids, filled_fields } }`). Método
+  novo: `api.mergePatients(token, primaryId, secondaryIds): Promise<PatientMergeResponse>`
+  (`POST /patients/:id/merge` com body `{ secondary_ids }`). Erros tratados
+  via `ApiError` no chamador (mapeia `forbidden_role` → FORBIDDEN_ROLE_MESSAGE
+  igual aos demais owner-only).
+- `frontend/src/components/DuplicatesList.tsx` — adicionado:
+  - rádio **"Manter como principal"** owner-only em cada registro do grupo,
+    sem pré-seleção; estado `primaryByGroup: Record<group_key, patientId>`,
+    **limpo a cada reload do scan** (uma seleção antiga não pode ser acionada
+    sobre um grupo que mudou);
+  - selo **"Principal"** + `.recordPrimary` no card escolhido;
+  - hint dinâmico no grupo: "Os outros N registros serão arquivados como
+    duplicados." / "Escolha o paciente principal antes de resolver.";
+  - **botão "Resolver duplicado"** no rodapé do grupo (owner-only,
+    desabilitado sem seleção ou enquanto outra ação merge está em andamento);
+  - **`ConfirmDialog` variant `danger`** com copy explícita do comportamento
+    B-safe (mantém o principal, move agendamentos vinculados aos duplicados se
+    houver, preenche apenas campos vazios do principal, nunca sobrescreve,
+    arquiva os registros duplicados, nada é apagado fisicamente, **não há
+    desfazer completo nesta versão**);
+  - `secondary_ids` derivado no submit como `group.patients.filter(p => p.id
+    !== primaryId && p.status === 'active').map(p => p.id)`;
+  - erro de API permanece **dentro** do modal (`error` prop), spinner via
+    `isBusy`, ESC/backdrop respeitam `isBusy`;
+  - após sucesso: mensagem inline `mergeNotice` (verde, `role="status"`,
+    `CheckCircle2`) com contagens da resposta + `onPatientsChanged()` (bump
+    `refreshKey` → recarrega `PatientsList` + `DuplicatesList`) +
+    `queryClient.invalidateQueries({queryKey:['appointments']})` e
+    `queryClient.invalidateQueries({queryKey:['patients']})` para sincronizar
+    Agenda/picker (TanStack);
+  - copy dos avisos atualizada para não-owner (inclui menção a "Resolver
+    duplicados" como exclusivo do dono).
+- `frontend/src/components/DuplicatesList.module.css` — classes novas:
+  `.mergeNotice` (sucesso verde), `.primaryRadio` + `.primaryRadioLabel`
+  (controle owner-only), `.recordPrimary` (borda ciano no card escolhido),
+  `.primaryTag` (selo "Principal"), `.mergeBar` + `.mergeBarHint` (rodapé
+  tracejado), `.mergeBtn` (cyan-soft forte).
+- `frontend/src/components/PatientsList.tsx` — badge discreto **"Mesclado em
+  outro registro"** quando `p.status === 'archived' && p.merged_into_id`.
+  Sem lookup do nome do principal (decisão consciente).
+- `frontend/src/components/PatientsList.module.css` — `.mergedTag` (itálico,
+  cinza-claro, sem fundo — informativo, não destacado).
+
+**Permissão.** UI esconde rádio + botão "Resolver duplicado" para qualquer
+papel `!== 'dono_clinica'`; backend continua sendo defesa real (3.33 já
+retorna 403 `forbidden_role` para `secretaria`). Secretaria/funcionário(a)
+permanece podendo editar registros e ver o badge de arquivados mesclados
+(read-only).
+
+**Cache invalidation.** `DuplicatesList` agora importa `useQueryClient`
+exclusivamente para o pós-merge — não migrou para TanStack no resto (mantém o
+padrão `refreshKey` já usado entre `PatientsList` e `DuplicatesList`).
+
+**Contagem de agendamentos por paciente.** **Não criada** nesta sprint. O
+endpoint `GET /appointments` aceita `date|professional_id|status`, não
+`patient_id`; criar endpoint novo só para contagem fugiria do escopo aprovado.
+Copy genérica no modal cobre o caso. Item de futuro se a UX exigir.
+
+**Verificação.** `pnpm --filter backend typecheck` ✅, `pnpm --filter backend
+build` ✅, `pnpm --filter frontend typecheck` ✅, `pnpm --filter frontend
+build` ✅, `docker compose build backend && docker compose up -d backend` ✅
+(rebuild necessário porque o container roda `node dist/server.js`). Smoke API
+descartável (`/tmp/smoke-3.34.mjs`) confirmou:
+1. `PublicPatient` carrega `merged_into_id` + `merged_at` em criação/listagem
+   (todas nulas no início);
+2. `POST /patients/:id/merge` continua devolvendo `{ patient, merge: {...} }`
+   com `filled_fields: ["telefone"]` no caso testado;
+3. listagem `status=archived` mostra o secundário com `merged_into_id` = id
+   do principal e `merged_at` em ISO timestamp.
+
+Dados de teste (1 clínica + 1 owner + 2 pacientes) removidos via SQL no fim
+(cleanup pattern da 3.33). Baseline preservado (22 patients / 11 appointments).
+
+**Validação visual** (manual no navegador) **pendente** — checklist completo
+adicionado em `docs/testing-checklist.md` (Sprint 3.34).
+
+**Arquivos alterados:** `backend/src/models/patient.ts`,
+`frontend/src/services/api.ts`,
+`frontend/src/components/DuplicatesList.tsx`,
+`frontend/src/components/DuplicatesList.module.css`,
+`frontend/src/components/PatientsList.tsx`,
+`frontend/src/components/PatientsList.module.css`,
+`CLAUDE.md`, `docs/project-state.md`, `docs/security-notes.md`,
+`docs/sprint-history.md` (esta entrada), `docs/testing-checklist.md`,
+`docs/roadmap-next-phase.md`.
+
+**Riscos/ressalvas conhecidos:**
+- **Sem contagem de agendamentos** por paciente na UI do merge (copy
+  genérica). Endpoint novo seria owner-only + tenant-scoped — sprint futura
+  se a UX exigir.
+- **Invalidação assume keys TanStack `['appointments']` / `['patients']`** —
+  hoje só `AdministrativeSchedulePanel` e `ClinicProfessionalsPanel` usam
+  TanStack para essas e seguem essa convenção. Se uma futura tela usar outra
+  key, a Agenda pode ficar stale até o próximo navegação.
+- **Sem undo completo** — o owner pode confirmar por engano. Mitigação:
+  `variant="danger"` + copy explícita "esta versão ainda não tem desfazer
+  completo". Restore individual funciona para o secundário, mas **não** devolve
+  appointments movidos nem reverte fill-blanks.
+- **`mergeNotice` é local ao painel** — se o owner trocar de aba antes de ler,
+  perde a mensagem. Aceitável: ela é apenas confirmação; o efeito visível
+  (grupo sumir, badge em Arquivados, Agenda atualizada) já comunica.
+- **Sem lookup do nome do principal** no badge "Mesclado em outro registro" —
+  intencional (PII desnecessária na fila de arquivados; mantém UI honesta).
+  Se virar requisito, fazer com lookup no cliente sobre a lista carregada.
+
+Sem commit/push.

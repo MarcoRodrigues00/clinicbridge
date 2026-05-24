@@ -950,13 +950,86 @@ COMMIT;
 
 Audits permanecem (FK `SET NULL` — append-only correto).
 
-### Visual (3.34, pendente)
+### Visual (Sprint 3.34 — entregue; **validação manual pendente**)
 
-- Escolher principal, diffs mascarados, editar antes (`PatientEditForm`),
-  `ConfirmDialog` forte, contagem de agendamentos por registro.
-- **Agenda mostra o nome certo após o merge** (não mais "Paciente abc12345…").
-- Arquivado em Pacientes › Arquivados com "merge em X".
-- Secretaria não vê/não executa o merge.
+UI entregue na Sprint 3.34 sobre a API da 3.33. Sem endpoint novo, sem
+seleção campo-a-campo, sem undo, sem delete físico, sem lookup do nome do
+principal. Use este checklist no navegador como **dono da clínica**, com a
+stack local rodando (`docker compose up -d`; frontend em `pnpm --filter
+frontend dev`).
+
+**Pré-condições:**
+1. Faça login como `dono_clinica` de uma clínica.
+2. Na aba **Pacientes**, crie 2 ou 3 pacientes que devem casar como duplicados
+   (mesmo CPF, ou mesmo telefone, ou mesmo nome + data de nascimento).
+3. Confirme que aparecem na seção "Possíveis duplicados" do mesmo painel.
+
+**Passos e verificações:**
+1. Em cada card do grupo, deve aparecer o rádio **"Manter como principal"**.
+   Nenhum vem pré-selecionado.
+2. O rodapé do grupo mostra a hint "Escolha o paciente principal antes de
+   resolver." e o botão **"Resolver duplicado"** está desabilitado.
+3. Marque um rádio. O card escolhido ganha borda ciano + selo **"Principal"**.
+   A hint vira "Os outros N registros serão arquivados como duplicados.". O
+   botão "Resolver duplicado" habilita.
+4. Clique em "Resolver duplicado". O `ConfirmDialog` abre com:
+   - título "Resolver pacientes duplicados?";
+   - descrição explicando: mantém o principal, move agendamentos vinculados
+     aos duplicados se houver, preenche apenas campos vazios do principal,
+     nunca sobrescreve, arquiva os duplicados, nada é apagado fisicamente,
+     **esta versão ainda não tem desfazer completo**;
+   - botão de confirmação rotulado "Resolver duplicado", variante **danger**;
+   - botão "Cancelar".
+5. Clique em **Cancelar**. Nada muda; nenhuma request sai (verifique no
+   DevTools › Network).
+6. Reabra o modal e clique em **Resolver duplicado**. O botão mostra spinner;
+   ao concluir, o modal fecha e aparece a mensagem verde **"Duplicado
+   resolvido. N registros arquivados; M agendamentos movidos para o
+   principal."**.
+7. O grupo **some** da lista (se sobrou <2 ativos). A lista de Pacientes
+   (mesma aba, acima) recarrega automaticamente.
+8. **Fill-blanks:** se o principal estava sem telefone/convenio e o
+   secundário tinha valor, o card do principal em "Pacientes" agora mostra
+   esse valor.
+9. **Fill-blanks não sobrescreve:** se o principal tinha e-mail A e o
+   secundário tinha e-mail B, o principal continua com A.
+10. Vá até a aba **Pacientes › Arquivados**. O secundário aparece como
+    "Arquivado" + o badge discreto **"Mesclado em outro registro"** abaixo do
+    cabeçalho do card. O nome do principal NÃO é mostrado (intencional).
+11. Se o secundário tinha agendamentos, abra a aba **Agenda**. O agendamento
+    aparece **com o nome do principal** (não mais "Paciente abc12345…").
+12. **CPF mascarado:** em nenhum card, modal ou rede o CPF aparece bruto;
+    sempre `***.***.XXX-XX`.
+13. **Permissão:** faça logout, entre como `secretaria`/funcionário(a) da
+    mesma clínica. Na aba Pacientes › "Possíveis duplicados":
+    - os rádios e o botão "Resolver duplicado" **não devem aparecer**;
+    - o aviso superior diz "Resolver duplicados são exclusivos do dono da
+      clínica";
+    - "Corrigir" (PatientEditForm) continua disponível;
+    - "Excluir duplicado" (arquivar) continua **escondido** para esse papel.
+14. **Erro de backend (opcional, com curl):** chame
+    `POST /patients/<id>/merge` autenticado como `secretaria` →
+    `403 forbidden_role` (cobertura backend; a UI já esconde).
+15. **3+ membros no grupo:** crie um grupo com 3 ativos. Marque 1 como
+    principal e resolva. Os outros 2 são arquivados em **uma única chamada**
+    (verifique no Network: 1 request `POST .../merge` com `secondary_ids`
+    com 2 UUIDs).
+16. **Atualizar análise** depois do sucesso: o grupo não volta; a seleção
+    anterior é limpa (não trazer estado stale entre scans).
+
+**Console/DevTools:** verifique que nenhum log do console exibe CPF,
+e-mail, telefone, valores de campo, ou valores dos secundários. Verifique
+`localStorage`: nenhum dado de paciente persistido.
+
+### Visual — borda e regressão
+
+- Secundário sem agendamentos: merge funciona; `moved_appointments_count = 0`.
+- Restore do arquivado (Pacientes › Arquivados → Restaurar): desarquiva mas
+  **não devolve appointments** movidos nem reverte fill-blanks (limite
+  documentado no ADR 0007).
+- Horário coincidente entre principal e secundário após reassign: permitido
+  sem alerta (UI da agenda pode/deve evoluir; backend não bloqueia).
+- Outras telas continuam funcionando (Equipe, Agenda, Importações, MFA).
 
 ### Borda
 
