@@ -135,15 +135,26 @@ dados importados. Nada clínico (Opção C / ADR 0001).
   nunca bruto; cross-tenant → 404; idempotência via CAS; **sem undo completo**.
   **NÃO** nesta trilha: seleção campo-a-campo, merge automático sem confirmação,
   undo/snapshot, qualquer dado clínico, delete físico.
-- **Sprint 3.33 (próxima) — Backend + migration + API do merge.** Migration
-  `merged_into_id`/`merged_at`; `POST /patients/:id/merge` (múltiplos
-  `secondary_ids` atômicos); DAOs (`countByPatient`, `reassignPatient`,
-  `setMergedInto`); service transacional com CAS; audit `patient.merge.success`
-  sem PII; matriz de testes por API (cross-tenant, idempotência, fill-blanks).
-- **Sprint 3.34 — Frontend/UX + validação visual do merge.** `DuplicatesList`:
-  escolher principal, diffs mascarados, editar antes (reusa `PatientEditForm`),
-  `ConfirmDialog` forte, contagem de agendamentos; validação visual (Agenda mostra
-  nome certo após mover; arquivado com "merge em X").
+- **Sprint 3.33 (entregue) — Backend + migration + API do merge.** Migration
+  `20260601000000_patients_merged_into` adiciona `patients.merged_into_id` (uuid
+  NULL FK `patients(id)` `ON DELETE SET NULL`) + `patients.merged_at` + índice
+  parcial. Endpoint owner-only `POST /patients/:id/merge` (body
+  `{ secondary_ids: [...] }`, 1–10, sem duplicatas, sem o próprio principal).
+  Em uma transação: re-fetch tenant-scoped + fill-blanks não-destrutivo
+  (`telefone|email|cpf|data_nascimento|convenio|numero_carteirinha`; nunca
+  `nome`; ordem = `secondary_ids` como enviado) + reassign tenant-scoped de
+  appointments + arquivar com CAS (`WHERE id AND clinica_id AND status='active'
+  AND merged_into_id IS NULL`) + audit `patient.merge.success` por par. CPF
+  bruto nunca sai; valores dos secundários nunca aparecem na resposta. Erros:
+  400 `merge_invalid` (validação), 404 `patient_not_found` genérico
+  (inexistente/cross-tenant/archived/CAS miss), 403 `forbidden_role`, 401.
+  Matriz por API **18/18** (`/tmp/sprint-3.33-merge-test.mjs`).
+- **Sprint 3.34 (próxima) — Frontend/UX + validação visual do merge.**
+  `DuplicatesList`: escolher principal, diffs mascarados, editar antes (reusa
+  `PatientEditForm`), `ConfirmDialog` forte, contagem de agendamentos por
+  registro; expor `merged_into_id` no `PublicPatient` para mostrar "mesclado em
+  X" em arquivados; validação visual (Agenda mostra nome certo após mover;
+  arquivado em Pacientes › Arquivados; secretaria não vê/não executa o merge).
 - **Ainda no tema:** **undo/snapshot** completo (exige tabela própria + ADR) e
   **paginação backend** de duplicados quando a base crescer (hoje o corte é
   client-side + cap do scan).

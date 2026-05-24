@@ -3,6 +3,7 @@ import { HttpError } from '../middlewares/errorHandler';
 import { patientService } from '../services/patientService';
 import { patientDuplicateService } from '../services/patientDuplicateService';
 import { patientExportService, type ExportFormat } from '../services/patientExportService';
+import { patientMergeService } from '../services/patientMergeService';
 import { buildAuthContext } from '../utils/authContext';
 
 function parseSearch(value: unknown): string | undefined {
@@ -66,6 +67,13 @@ export const patientController = {
     const ctx = buildAuthContext(req);
     const patient = await patientService.restoreForClinic(actor, req.params.id, ctx);
     res.status(200).json({ patient });
+  },
+
+  async merge(req: Request, res: Response): Promise<void> {
+    const actor = clinicContext(req);
+    const ctx = buildAuthContext(req);
+    const result = await patientMergeService.merge(actor, req.params.id, req.body, ctx);
+    res.status(200).json(result);
   },
 
   async duplicates(req: Request, res: Response): Promise<void> {

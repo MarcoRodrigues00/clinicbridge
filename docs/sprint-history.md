@@ -1223,6 +1223,125 @@ físico; undo completo/snapshot; merge automático sem confirmação humana.
 não existe** (restore desarquiva a linha, mas não devolve agendamentos movidos nem
 campos preenchidos) — undo/snapshot exigirá tabela própria + ADR futura.
 
+## Sprint 3.33 (backend + migration + API do merge B-safe)
+
+**Implementação do que a Sprint 3.32 decidiu no ADR 0007.** Sem frontend (3.34);
+sem delete físico; sem undo/snapshot; sem seleção campo-a-campo; sem dado clínico;
+sem mexer no pipeline de importação, Equipe ou Auth/MFA.
+
+**Migration `20260601000000_patients_merged_into.ts`** (aditiva, reversível):
+`patients.merged_into_id` (uuid NULL FK `patients(id)` `ON DELETE SET NULL` — FK
+defensiva; não há delete físico) + `patients.merged_at` (timestamptz NULL) +
+índice parcial `idx_patients_merged_into WHERE merged_into_id IS NOT NULL`. Sem
+snapshot/undo. `down` remove índice e colunas.
+
+**Endpoint `POST /patients/:id/merge`** (owner-only):
+- Middlewares: `patientsRateLimit` → `requireAuth` → `requireClinic` →
+  `requireRole(CLINIC_ADMIN_ROLES)`.
+- Body: `{ "secondary_ids": ["uuid", ...] }` — 1 a `PATIENT_MERGE_MAX_SECONDARIES`
+  (10, constante local no service; sem env nova), sem duplicatas, sem incluir o
+  próprio principal.
+- Response 200: `{ patient: PublicPatient (cpf_masked), merge: { merged_count,
+  moved_appointments_count, archived_secondary_ids, filled_fields } }`. **CPF
+  bruto nunca sai**; valores dos secundários nunca aparecem na resposta; só os
+  UUIDs que o caller já mandou.
+- Erros: 400 `merge_invalid` (principal em secondary_ids / vazio / duplicados /
+  > 10 / UUID inválido); 404 `patient_not_found` genérico para inexistente /
+  cross-tenant / archived / merged / CAS miss (anti-enumeração); 403
+  `forbidden_role` (secretaria); 401 (sem JWT).
+
+**Service `patientMergeService.merge`** — em **uma transação** (`db.transaction`):
+1. re-fetch tenant-scoped do principal + de cada secundário (status='active' e
+   `merged_into_id IS NULL`, senão 404);
+2. **fill-blanks não-destrutivo** apenas em `telefone|email|cpf|data_nascimento|
+   convenio|numero_carteirinha` — nunca `nome`, nunca sobrescreve; ordem de
+   tie-break = ordem enviada em `secondary_ids` (escolha consciente: reflete a
+   futura UI 3.34, que listará os secundários na ordem que o owner organizar);
+3. para cada secundário: `appointmentDao.reassignPatientForClinic` (UPDATE
+   tenant-scoped de `patient_id`; preserva status/data/notas; não mexe em
+   `updated_by_user_id` — não é edição clínica) + `patientDao.setMergedInto`
+   com **CAS** (`WHERE id AND clinica_id AND status='active' AND merged_into_id
+   IS NULL`); CAS miss → 404 + rollback total;
+4. audit `patient.merge.success` **dentro** da transação, uma linha por par,
+   `recurso='patient'`, `recurso_id="<primaryId>|<secondaryId>"` (73 chars; cabe
+   em varchar(80)); falha de audit aborta a transação (mais estrito que rotas de
+   leitura — evita estado merge sem evidência).
+
+**DAOs alterados:**
+- `patientDao.applyFillBlanks(id, clinica_id, patch, conn)` — UPDATE só dos
+  campos passados; tenant-scoped; touches `atualizado_em`; retorna `PatientRow |
+  undefined`.
+- `patientDao.setMergedInto(id, clinica_id, primary_id, conn)` — CAS
+  arquivamento + provenance.
+- `appointmentDao.countByPatientForClinic(patient_id, clinica_id, conn)` —
+  telemetria interna (count(*) tenant-scoped).
+- `appointmentDao.reassignPatientForClinic(from, to, clinica_id, conn)` —
+  UPDATE tenant-scoped retornando contagem.
+- `types/db.d.ts`: `PatientRow` agora inclui `merged_into_id: string | null` +
+  `merged_at: Date | null`. `PublicPatient` **não** expõe esses campos nesta
+  sprint (UI 3.34 decide).
+
+**Arquivos:** `backend/migrations/20260601000000_patients_merged_into.ts`
+(novo), `backend/src/services/patientMergeService.ts` (novo),
+`backend/src/dao/patientDao.ts`, `backend/src/dao/appointmentDao.ts`,
+`backend/src/controllers/patientController.ts`,
+`backend/src/routes/patients.ts`, `backend/src/types/db.d.ts`. Docs:
+`CLAUDE.md`, `docs/project-state.md`, `docs/security-notes.md`,
+`docs/sprint-history.md`, `docs/testing-checklist.md`,
+`docs/roadmap-next-phase.md`.
+
+**Verificação:** `pnpm --filter backend typecheck` ✅, `pnpm --filter backend
+build` ✅, `pnpm --filter backend migrate:latest` ✅ (batch 12, único pending).
+Matriz por API **18/18** (`/tmp/sprint-3.33-merge-test.mjs`, contas
+descartáveis, base TLS local em `https://localhost:8443`):
+1. happy 1-secundário sem appointments → archived + primary active;
+1b. resposta tem só `cpf_masked` (sem `cpf` bruto);
+2. happy 1-secundário com 2 appointments → reassigned (sec=0, prim=+2);
+3. fill-blanks preenche campos vazios (telefone, convenio);
+4. fill-blanks **não** sobrescreve (e-mail do principal preservado);
+5. ordem = secondary_ids como enviado (pB vence pA quando enviado `[pB, pA]`);
+6. fill de CPF → resposta com `***.***.789-01`;
+7. principal em secondary_ids → 400 `merge_invalid`;
+8. secondary_ids vazio → 400;
+9. secondary_ids duplicados → 400;
+10. > 10 secondaries → 400;
+11. cross-tenant principal → 404 `patient_not_found`;
+12. cross-tenant secundário → 404;
+12b. cross-tenant secundário: zero side-effect na clínica B (status ainda
+`active`);
+13. secundário já-archived → 404;
+14. secretaria → 403 `forbidden_role`;
+15. sem JWT → 401;
+16. batch 3 secundários com mix de appointments e blanks → tudo consistente.
+
+**SQL pós-teste** confirmou: 11 secondaries arquivados, todos com
+`status='archived'`, todos com `merged_at` NOT NULL, 11 audits
+`patient.merge.success` no formato `uuid|uuid`, **0** audits com `recurso_id`
+fora do padrão (nenhum PII). Counts de `patients`/`appointments` retornaram ao
+baseline após cleanup (22/11); 11 audits da operação ficaram historicamente (FK
+`SET NULL` — comportamento append-only correto).
+
+**Dados criados/removidos:** o script criou 10 clínicas (5 runs × 2) + 10
+owners + 4 staffs + ~30 pacientes + appointments. Removidos por SQL no fim:
+`DELETE FROM clinics WHERE nome LIKE 'Clinica 33%'` (cascata para
+patients/appointments/clinic_professionals/clinic_join_requests) + `DELETE FROM
+users WHERE email LIKE 'owner-33%@test.local' OR 'staff-33%@test.local'` (após
+`UPDATE users SET clinica_id = NULL` para quebrar o FK mútuo).
+
+**Riscos/ressalvas conhecidos:**
+- **Sem undo completo:** `restore` desarquiva o secundário (`status='active'`),
+  mas **não** devolve agendamentos movidos nem reverte os campos preenchidos.
+  Documentado no ADR; undo real exige tabela snapshot + ADR futura.
+- **Sobreposição de horário** no principal após mover agendamentos é possível
+  (sem constraint anti-overlap). Aceitável no MVP; UI da 3.34 pode alertar.
+- **Limite 10 por chamada** é conservador (ADR permitia até ~50). Se a base de
+  duplicados crescer, abrir env/decidir limite por ADR.
+- **`PublicPatient` ainda não expõe `merged_into_id`/`merged_at`** — a UI da
+  3.34 vai precisar (para mostrar "mesclado em X" em arquivados). Adicionar
+  como mudança coesa quando o frontend chegar.
+
+Sem commit/push.
+
 **Divisão de sprints:** 3.32 ADR/docs · 3.33 backend+migration+API · 3.34
 frontend/UX+validação visual.
 
