@@ -67,12 +67,21 @@ Aba **Importações**.
 > Mensagem: pipeline revisável — **upload → mapear → validar → simular →
 > importar**, com trilha de auditoria.
 
-### 3. Pacientes, duplicados e exportação (≈3 min)
+### 3. Pacientes, duplicados e exportação (≈4 min)
 
 1. Aba **Pacientes:** lista paginada, **CPF mascarado** (`***.***.789-01`),
    busca. "CPF bruto **nunca** sai pela API."
-2. **Duplicados:** detecção informativa (read-only) — aparece o par duplicado.
-   "Sem merge/edição/exclusão automáticos no MVP — é informativo."
+2. **Duplicados:** a tela "Possíveis duplicados" é **acionável**. Mostra o
+   par duplicado (ex.: Ana Beatriz Martins aparece duas vezes após o import
+   demo). Para o **dono** da clínica, cada card mostra o rádio **"Manter como
+   principal"** — escolher qual registro sobrevive. Clicar **"Resolver
+   duplicado"** abre um modal de confirmação `danger` com o comportamento
+   B-safe: mantém o principal, move agendamentos dos duplicados, preenche
+   apenas campos vazios, nunca sobrescreve, arquiva os duplicados — **nada é
+   apagado fisicamente**. Após confirmar: o grupo some e o secundário aparece
+   em Pacientes › Arquivados com o badge "Mesclado em outro registro". Falar:
+   "owner-only; a secretaria vê os grupos mas não executa o merge; **sem
+   desfazer completo** nesta versão."
 3. **Exportar** CSV/XLSX: arquivo limpo, CPF mascarado, com
    **neutralização de fórmula** (anti CSV-injection). "Read-only; sem link
    público."
@@ -169,14 +178,17 @@ Aba **Segurança**:
    migrar a base de vocês? O que falta?
 2. Os **campos administrativos** (nome, contato, CPF, nascimento, convênio) são
    suficientes para o cadastro inicial? Falta algum campo administrativo?
-3. A **detecção de duplicados** informativa ajuda? Vocês precisariam de
-   merge/edição (hoje fora do MVP)?
+3. A **detecção de duplicados acionável** (escolher principal + merge B-safe) resolve
+   a dor? O que falta (ex.: selecionar campo a campo, desfazer, contagem de
+   agendamentos antes de confirmar)?
 4. A **agenda administrativa** cobre o dia a dia da recepção? O que é essencial e
    ainda não tem?
 5. O **lembrete manual** (copiar / abrir WhatsApp) resolve no curto prazo? Há
    apetite/condições para WhatsApp **automático** (opt-in) no futuro?
-6. **MFA** e papéis (owner × secretaria) atendem à realidade de quem opera?
-7. Há algum dado que vocês **não** colocariam numa ferramenta administrativa?
+6. **MFA**, backup codes e papéis (owner × funcionário(a)) atendem à realidade de
+   quem opera? Falta algum papel ou permissão?
+7. O fluxo de **convite e aprovação de equipe** é claro? Alguma fricção?
+8. Há algum dado que vocês **não** colocariam numa ferramenta administrativa?
 
 ## Limpeza pós-demo
 

@@ -1042,3 +1042,149 @@ e-mail, telefone, valores de campo, ou valores dos secundários. Verifique
   agendamentos movidos nem reverte fill-blanks (limite documentado no ADR).
 - Horário coincidente principal × secundário após reassign: permitido sem
   alerta no backend; UI da 3.34 pode avisar.
+
+---
+
+## QA geral do piloto v0.1 — Sprint 3.36
+
+> Checklist de regressão consolidado para validar o produto como um todo antes do
+> piloto com clínica real. Cobrir manualmente no navegador com stack local rodando
+> (`docker compose up -d`, backend `:3001`, frontend `:5173`). Usar contas
+> descartáveis; não usar dados reais; rodar `seed:demo` se precisar de
+> agendamentos populados.
+>
+> Classificação de achados:
+> - **BLOCKER** — impede piloto ou cria risco de segurança/dados.
+> - **BUG PEQUENO** — corrigir antes do piloto se simples.
+> - **POLISH** — sprint visual separada.
+> - **ACEITÁVEL MVP** — documentado e aceito.
+> - **FUTURO** — pós-piloto.
+
+### 1. Autenticação e segurança de conta
+
+- [ ] Cadastro como owner: preenche nome, e-mail, senha, nome da clínica → login
+      bem-sucedido.
+- [ ] Cadastro como funcionário(a): seleciona "Sou funcionário(a)" → sem campo
+      de clínica → cria conta e vai para `JoinClinicGate`.
+- [ ] Login com credencial correta → entra no `/app`.
+- [ ] Login com senha errada → mensagem genérica, sem ecoar senha/e-mail.
+- [ ] (Se MFA ativo) login → passo de código → app autenticador ou backup code →
+      entra; código errado → 401 genérico `invalid_mfa_code`.
+- [ ] Logout → token inativo; navegação direta p/ `/app` redireciona ao login.
+- [ ] Console do navegador: sem token, segredo TOTP, CPF ou PII exibidos.
+
+### 2. Equipe
+
+- [ ] Aba Equipe visível só para owner (secretaria sem login ativo não vê a aba).
+- [ ] Código de convite em destaque; **Copiar** funciona; **Regenerar** abre modal
+      custom (não `window.confirm`); código muda; antigo rejeitado.
+- [ ] Funcionário(a): usa `JoinClinicGate`, insere código + nome da clínica →
+      solicitação "aguardando".
+- [ ] Owner aprova → modal custom cyan → staff acessa `/app`.
+- [ ] Owner recusa → modal custom neutro → solicitação some.
+- [ ] "Membros da equipe": ambos listados; badge "Dono(a)" no owner.
+- [ ] "Desativar acesso" → modal danger → confirmar → membro some da lista ativa;
+      token antigo do membro → 403 `clinic_membership_revoked` imediato.
+- [ ] "Mostrar inativos" exibe ex-membros.
+- [ ] "Profissionais da agenda": criar profissional → aparece no seletor da aba
+      Agenda sem reload (cache `['clinic-professionals']`).
+- [ ] Desativar profissional → some do seletor.
+
+### 3. Pacientes administrativos
+
+- [ ] Criar paciente manual (owner ou secretaria): campos válidos → 201, `status=active`.
+- [ ] Editar paciente (owner ou secretaria): atualiza; CPF em branco mantém o atual.
+- [ ] CPF sempre mascarado em todos os cards e na resposta da API.
+- [ ] Arquivar (owner): paciente some da lista ativa → aparece em "Arquivados".
+- [ ] Secretaria tenta arquivar → UI esconde botão; backend → 403 `forbidden_role`.
+- [ ] Restaurar (owner): volta para lista ativa.
+- [ ] Cross-tenant: token de outra clínica → 404 `patient_not_found`.
+- [ ] Nenhum campo de dado clínico presente (diagnóstico, prescrição, CID, prontuário).
+
+### 4. Duplicados e merge B-safe
+
+- [ ] "Possíveis duplicados" lista grupos com destaque dos campos que bateram.
+- [ ] (Owner) rádio "Manter como principal" visível por registro; nenhum pré-selecionado.
+- [ ] Sem seleção: botão "Resolver duplicado" desabilitado.
+- [ ] Com seleção: card escolhido ganha borda ciano + selo "Principal"; botão habilita.
+- [ ] ConfirmDialog danger abre com copy B-safe; cancelar → nenhuma request.
+- [ ] Confirmar: spinner; grupo some; mensagem verde com contagens (`N arquivados; M agendamentos movidos`).
+- [ ] Secundário em Pacientes › Arquivados → badge "Mesclado em outro registro".
+- [ ] Agendamento do secundário → aba Agenda mostra nome do principal (não fallback).
+- [ ] Fill-blanks: campo vazio do principal recebeu valor do secundário; campo já preenchido preservado.
+- [ ] CPF sempre mascarado; valores dos secundários nunca exibidos.
+- [ ] (Secretaria) rádio + botão "Resolver duplicado" não aparecem; aviso owner-only visível.
+- [ ] `POST /patients/:id/merge` com token de secretaria → 403 `forbidden_role`.
+
+### 5. Importação
+
+- [ ] Upload CSV aceito; XLSX aceito; arquivo binário → `invalid_file_content`.
+- [ ] Preview sugere mapeamento pelos cabeçalhos.
+- [ ] Validação mostra linhas válidas + duplicados detectados no arquivo.
+- [ ] Dry-run roda sem gravar pacientes.
+- [ ] Mark-ready e import (owner-only): gera recibo com contagens, sem PII.
+- [ ] Secretaria tenta import → nota explicativa (sem botão de ação destrutiva).
+- [ ] Resposta de preview/validação **nunca ecoa** conteúdo de célula em erros.
+- [ ] Import de arquivo com CPF → listagem de pacientes mostra só `cpf_masked`.
+
+### 6. Agenda administrativa
+
+- [ ] Criar agendamento (owner ou secretaria): paciente + horário → 201.
+- [ ] Aviso anti-clínico visível no campo de observações.
+- [ ] Confirmar / Concluir / Faltou / Cancelar funcionam.
+- [ ] Remarcar: novo horário substitui o anterior.
+- [ ] "Lembrete administrativo" aparece em cards `scheduled`/`confirmed`/`rescheduled`.
+- [ ] "Copiar lembrete": texto **neutro** (sem profissional, CPF, dado clínico).
+- [ ] "Abrir WhatsApp": abre `wa.me` sem enviar nada pelo sistema.
+- [ ] Paciente sem telefone → aviso "Paciente sem telefone disponível."
+- [ ] Nenhum campo de diagnóstico, especialidade sensível ou dado clínico presente.
+
+### 7. Exportação
+
+- [ ] Export CSV e XLSX baixam arquivo com `cpf_masked`.
+- [ ] `include_cpf_raw=true` → 400 `patients_export_cpf_raw_not_allowed`.
+- [ ] Formato inválido → 400 `patients_export_invalid_format`.
+- [ ] `Content-Disposition` com filename fixo; sem signed URL / link público.
+
+### 8. Retenção dry-run
+
+- [ ] Painel aparece para owner (secretaria vê nota explicativa ou não executa).
+- [ ] Dry-run **não apaga** nenhum arquivo/sessão/paciente (`SELECT count` antes/depois igual).
+- [ ] Resposta nunca carrega `nome_original`, path, SHA-256 ou conteúdo interno.
+- [ ] `retention_days` fora de 1–365 ou `limit` fora de 1–MAX → 400 `invalid_retention_params`.
+
+### 9. Layout / demo / mobile
+
+- [ ] Landing `/` coerente com framing administrativo; sem promessa de prontuário.
+- [ ] App shell `/app` em abas: Início/Importações/Pacientes/Agenda/Equipe/Segurança.
+- [ ] Alternar abas não quebra nenhum painel; polling não gera erro no console.
+- [ ] Mobile 390px (DevTools): sem scroll horizontal, nav funcional, cards colapsam.
+- [ ] Footer aparece em `/app` com aviso administrativo.
+- [ ] Estados vazios amigáveis em português em cada painel.
+- [ ] Nenhum texto visível diz "prontuário", "prescrição", "diagnóstico", "CID".
+
+### 10. Segurança geral
+
+- [ ] Endpoints sensíveis sem token → 401 (ex.: `GET /patients`, `POST /import-sessions/:id/import`).
+- [ ] Ações owner-only com token de secretaria → 403 `forbidden_role` (export, archive, merge, mark-ready, import, approve/reject join, deactivate member, invite code).
+- [ ] Cross-tenant: dados de outra clínica não vazam (paciente/arquivo/sessão/membros de outra clínica → 404 genérico).
+- [ ] `audit_logs` sem PII: nenhum nome/CPF/e-mail/telefone/conteúdo de campo em `acao/recurso/recurso_id`.
+- [ ] `errorHandler`: respostas 4xx/5xx nunca contêm stack/SQL/path.
+- [ ] Rate-limit: headers `RateLimit`/`Retry-After` presentes após 429.
+- [ ] `localStorage`: nenhum dado de paciente, token ou segredo persistido.
+- [ ] Dado clínico: nenhum campo de diagnóstico/prescrição/CID/prontuário em qualquer resposta de API.
+
+### Ressalvas aceitas (ACEITÁVEL MVP — não bloqueantes)
+
+| Item | Detalhe |
+|------|---------|
+| Sem undo completo no merge | Documentado ADR 0007 + copy do modal |
+| Sem contagem de agendamentos no modal | Copy genérica; endpoint futuro |
+| Badge sem nome do principal | Intencional — evita PII desnecessária |
+| Papel JWT stale até expirar | Exceto desativação de membro (imediata) |
+| Sem TLS real em produção | Só local/staging (cert autoassinado) |
+| Sem limpeza real de arquivos | Dry-run only; limpeza real é P2 |
+| Paginação de duplicados client-side | Base pequena; paginação backend é P2 |
+| Sem roles granulares | Só dono/secretaria no MVP |
+| Sem WhatsApp API/automático | Manual-first; API é sprint futura |
+| Histórico visual de auditoria | Leitura de `audit_logs` na UI é Fase 4 |

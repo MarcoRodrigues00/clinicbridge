@@ -17,6 +17,25 @@
 
 ---
 
+## QA geral do piloto v0.1 — Sprint 3.36 ✅
+
+> Rodada de QA consolidada entregue em 2026-05-24. 10 fluxos cobertos. Nenhum
+> BLOCKER identificado. Ressalvas aceitas documentadas em `docs/testing-checklist.md`.
+> O produto está apto para **piloto controlado** com dados sintéticos ou
+> anonimizados, desde que os P1 listados abaixo sejam resolvidos antes de qualquer
+> dado real de clínica em produção.
+
+**Próximos passos pós-QA (pré-produção real):**
+1. **TLS real + domínio** — cert ACME/gerenciado + HSTS (não usar cert autoassinado).
+2. **Redis + trust proxy em produção** — já implementado localmente; falta provisionar.
+3. **Secrets manager / env de produção** — `JWT_SECRET`, `DATABASE_URL`, `ENCRYPTION_KEY_HEX` fora do `.env` local.
+4. **Backup/restore offsite** — Restic local validado (Sprint 3.5); falta destino remoto.
+5. **Validação jurídica da política de retenção** — `docs/data-retention-policy.md` criada; falta validação jurídica dos prazos/base legal.
+6. **WAF (Nginx + ModSecurity/OWASP CRS)** — estratégia decidida (ADR 0005); falta implementar detection-only antes de blocking.
+7. **Piloto controlado** — com dados sintéticos ou anonimizados, clínica piloto previamente acordada, sem dados clínicos reais.
+
+---
+
 ## Fase 3 — Produção e governança administrativa (próxima prioridade)
 
 Objetivo: tornar a base administrativa apta a produção, com governança real.

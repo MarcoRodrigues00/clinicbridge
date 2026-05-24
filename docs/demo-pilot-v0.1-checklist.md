@@ -43,9 +43,20 @@
 - [ ] Dry-run roda sem gravar; mark-ready → import (como owner) gera **recibo**.
 - [ ] Como **secretaria**, mark-ready/import aparecem como nota (sem permissão).
 
-### Pacientes / duplicados / export
+### Pacientes / duplicados / merge B-safe / export
 - [ ] Lista de pacientes com **CPF mascarado** e busca.
-- [ ] Painel de **duplicados** mostra o par repetido (read-only).
+- [ ] Painel **"Possíveis duplicados"** mostra o par repetido.
+- [ ] (Owner) rádio **"Manter como principal"** visível por registro; nenhum
+      pré-selecionado.
+- [ ] Selecionar um rádio habilita o botão **"Resolver duplicado"**; sela escolhido
+      ganha borda ciano + selo "Principal".
+- [ ] Clicar "Resolver duplicado" abre o **ConfirmDialog danger** com copy B-safe
+      (move agendamentos, preenche apenas campos vazios, arquiva, nada apagado, sem
+      desfazer completo).
+- [ ] Confirmar: grupo some da lista; secundário aparece em Pacientes › Arquivados
+      com badge **"Mesclado em outro registro"**.
+- [ ] (Secretaria) rádio + botão "Resolver duplicado" **não aparecem**.
+- [ ] CPF sempre mascarado em todos os cards e no modal.
 - [ ] Export CSV/XLSX baixa arquivo limpo (CPF mascarado).
 
 ### Agenda
@@ -55,16 +66,31 @@
 - [ ] Criar agendamento (paciente + horário) com **aviso anti-clínico** visível.
 - [ ] Confirmar/Concluir/Faltou/Cancelar e **remarcar** funcionam.
 
-### Equipe (opcional — exige conta staff preparada)
+### Equipe
 
-- [ ] Aba **Equipe** visível apenas para o owner.
-- [ ] Código de convite em destaque (mono, maior); **Copiar** (solid) + **Regenerar** (ghost) lado a lado.
-- [ ] (Se demo ao vivo) Staff entra no `JoinClinicGate`, insere o código + nome da clínica → solicitação "aguardando".
+- [ ] Aba **Equipe** visível apenas para o owner (secretaria não vê a aba).
+- [ ] **Código de convite** em destaque (mono, maior); **Copiar** (solid) + **Regenerar**
+      (ghost) lado a lado.
+- [ ] **Regenerar** abre modal custom (não `window.confirm` nativo) explicando que o
+      código antigo para de aceitar novas solicitações; pendentes e membros atuais não
+      são afetados. Confirmar exibe o novo código.
+- [ ] (Se demo ao vivo) Staff entra no `JoinClinicGate`, insere o código + nome da
+      clínica → solicitação "aguardando aprovação".
 - [ ] Owner vê a solicitação em "Solicitações pendentes" com nome/e-mail do staff.
-- [ ] **Aprovar** abre **modal custom** (não `window.confirm` nativo) → confirmar → staff acessa `/app`.
-- [ ] Seção "Membros da equipe" lista ambos; badge "Dono(a)" no owner; "Funcionário(a)" no staff.
-- [ ] **Desativar acesso** abre modal **danger**; cancelar não executa; confirmar desativa.
-- [ ] Seção "Profissionais da agenda": criar profissional → aparece no seletor da aba Agenda sem reload.
+- [ ] **Aprovar** abre modal custom (cyan, não danger) com nome+e-mail; confirmar →
+      staff acessa `/app`; spinner durante ação; erro inline sem fechar o modal.
+- [ ] **Recusar** abre modal custom (não danger — é recusar pedido, não ação destrutiva).
+- [ ] Seção **"Membros da equipe"**: lista ativos; badge "Dono(a)" no owner;
+      "Funcionário(a) (acesso administrativo)" no staff. Botão "Desativar acesso"
+      ausente no próprio dono.
+- [ ] **Desativar acesso** abre modal **danger** com nome do membro; cancelar/ESC não
+      executa; confirmar desativa; membro some da lista ativa.
+- [ ] "Mostrar inativos" exibe ex-membros com `border-left` cinza-azulado.
+- [ ] Token stale do ex-membro → `GET /patients` retorna 403 `clinic_membership_revoked`
+      (imediato — não espera token expirar).
+- [ ] Seção **"Profissionais da agenda"**: criar profissional com nome + rótulo
+      → seletor na aba **Agenda** atualiza sem reload da página (cache `['clinic-professionals']`).
+- [ ] **Desativar profissional** abre modal danger; após confirmar, some do seletor.
 - [ ] Reforçar: **sem autoentrada** — cada aprovação é manual; remoção preserva histórico/dados.
 
 ### Lembrete manual
@@ -93,10 +119,12 @@
 
 - [ ] Fluxo de importação corresponde à dor real de migração?
 - [ ] Campos administrativos suficientes? Falta algum?
-- [ ] Detecção de duplicados ajuda? Precisariam de merge/edição?
+- [ ] Detecção de duplicados acionável (merge B-safe) resolve a dor? O que falta
+      (desfazer, contagem de agendamentos antes, seleção campo-a-campo)?
 - [ ] Agenda cobre o dia a dia da recepção? O que falta?
 - [ ] Lembrete manual resolve? Há apetite por WhatsApp automático (opt-in)?
-- [ ] MFA e papéis atendem à operação?
+- [ ] Fluxo de convite + aprovação da equipe é claro? Fricção?
+- [ ] MFA, backup codes e papéis (owner × funcionário(a)) atendem à operação?
 - [ ] Algum dado que **não** colocariam numa ferramenta administrativa?
 
 ## E. Pós-demo (limpeza)
