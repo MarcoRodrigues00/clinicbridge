@@ -38,6 +38,11 @@ configuração inválida derruba o processo (`process.exit(1)`).
 - `DATABASE_URL` (URL válida).
 - `JWT_SECRET` (≥ 48 chars; use `openssl rand -hex 32`).
 
+**Obrigatórias apenas em produção (boot falha se ausentes/inválidas com `NODE_ENV=production`):**
+- `MFA_ENCRYPTION_KEY` (≥ 32 chars; use `openssl rand -hex 32`). Em dev/test: opcional
+  (fallback para `JWT_SECRET`). **Aviso:** rotar esta chave invalida todos os TOTP armazenados.
+- `FRONTEND_ORIGIN` sem localhost/127.0.0.1/http:// (Sprint 3.39). Deve ser HTTPS com domínio real.
+
 **Importantes com default (revisar para produção):**
 - `NODE_ENV=production`, `BACKEND_PORT`, `LOG_LEVEL`.
 - `FRONTEND_ORIGIN` (ver §4), `JWT_EXPIRES_IN` (default `1h`).
@@ -45,13 +50,19 @@ configuração inválida derruba o processo (`process.exit(1)`).
 - Rate limit por escopo `<AUTH|UPLOAD|PATIENTS|EXPORT|IMPORT>_RATE_LIMIT_*`.
 - `TRUST_PROXY` (ver §6), `RATE_LIMIT_STORE` + `REDIS_URL`/`REDIS_PREFIX` (ver §7).
 
-**Guardas de produção (Sprint 3.6, `config/env.ts`):** com `NODE_ENV=production`,
-o boot **falha** se `JWT_SECRET` ainda contém o placeholder do `.env.example`
-(`replace-with…`/`change-me`) ou se `DATABASE_URL` contém `change-me-locally`.
-Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passaria no `min(48)`.
+**Guardas de produção (`config/env.ts`):** com `NODE_ENV=production`, o boot **falha** se:
+- `JWT_SECRET` contém o placeholder (`replace-with…`/`change-me`) — Sprint 3.6.
+- `DATABASE_URL` contém `change-me-locally` — Sprint 3.6.
+- `MFA_ENCRYPTION_KEY` ausente ou < 32 chars — Sprint 3.39.
+- `FRONTEND_ORIGIN` inclui localhost, 127.0.0.1 ou origem http:// — Sprint 3.39.
+
+Motivo do guard de `JWT_SECRET`: o placeholder tem > 48 chars e passaria no `min(48)`.
 
 > Frontend: `VITE_API_BASE_URL` (build-time, Vite) deve apontar para a URL pública
 > da API em produção.
+>
+> Secrets: gerar com `openssl rand -hex 32` e armazenar no AWS SSM Parameter Store
+> (SecureString). Ver `docs/secrets-env-production-runbook.md`.
 
 ## 4. CORS
 
@@ -218,10 +229,12 @@ Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passaria no `min(48)`.
 ## 15. Checklist antes de staging
 
 - [ ] `NODE_ENV=production`.
-- [ ] `JWT_SECRET` forte (≠ placeholder); `DATABASE_URL` real (≠ `change-me-locally`).
-- [ ] `FRONTEND_ORIGIN` explícito (sem `*`), HTTPS.
+- [ ] `JWT_SECRET` forte (≠ placeholder; `openssl rand -hex 32`); `DATABASE_URL` real (≠ `change-me-locally`).
+- [ ] `MFA_ENCRYPTION_KEY` definida (≥ 32 chars; `openssl rand -hex 32`). **Não reutilizar `JWT_SECRET`.**
+- [ ] `FRONTEND_ORIGIN` explícito (sem `*`, sem `localhost`, sem `http://`), HTTPS.
 - [ ] `TRUST_PROXY` = hop count real (se houver proxy).
 - [ ] `RATE_LIMIT_STORE=redis` + `REDIS_URL` se multi-instância.
+- [ ] Secrets armazenados no SSM Parameter Store (SecureString) — ver `docs/secrets-env-production-runbook.md`.
 - [ ] Migrations aplicadas (`migrate:status` limpo).
 - [ ] `/health` (e `/health/live`) responde 200; `/health/ready` 200 com DB up
   (e 503 quando o DB cai) — ligar nos probes de liveness/readiness.

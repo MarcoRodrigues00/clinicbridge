@@ -1696,3 +1696,73 @@ Sem migration, sem feature de produto, sem alterar regra de negócio, sem commit
 - `CLAUDE.md`: estado atual = Sprint 3.38 entregue.
 
 Nenhum build necessário (docs only). Sem commit/push.
+
+---
+
+## Sprint 3.39 (entregue 2026-05-24 — guards de boot + runbook de secrets)
+
+**Objetivo:** secrets e env de produção — garantir que `MFA_ENCRYPTION_KEY` seja
+obrigatória em produção, que `FRONTEND_ORIGIN` não aceite localhost/http em produção,
+e documentar geração/armazenamento de secrets via AWS SSM Parameter Store.
+Sem migration, sem feature de produto, sem commit/push.
+
+**Mudanças de código:**
+
+`backend/src/config/env.ts` — dois novos guards no `superRefine`, bloco `NODE_ENV=production`:
+
+1. **`MFA_ENCRYPTION_KEY` obrigatória:** `!val.MFA_ENCRYPTION_KEY || trim().length < 32`
+   → boot falha. Em dev/test: sem guard (fallback para `JWT_SECRET` funciona). Motivo:
+   isolar o secret de cifra TOTP do JWT; rotar `JWT_SECRET` sem `MFA_ENCRYPTION_KEY`
+   dedicada invalidaria todos os secrets TOTP silenciosamente.
+2. **`FRONTEND_ORIGIN` sem localhost/http:** filtra as origens da lista separada por
+   vírgula e rejeita qualquer que contenha `localhost`, `127.0.0.1` ou comece com
+   `http://`. Complementa o guard `*` já existente em `cors.ts`.
+
+`.env.example` — comentários atualizados:
+- `FRONTEND_ORIGIN`: exemplos de staging/prod; nota sobre guard de produção.
+- `MFA_ENCRYPTION_KEY`: nota de obrigatório em prod com instrução de geração.
+
+**Arquivo criado:**
+
+`docs/secrets-env-production-runbook.md` — 7 seções:
+(0) convenções e placeholders; (1) variáveis por ambiente (dev/staging/prod);
+(2) geração de secrets (`JWT_SECRET`, `MFA_ENCRYPTION_KEY`, `RESTIC_PASSWORD`,
+`DATABASE_URL`, `REDIS_URL` — todos via `openssl rand -hex 32` ou equivalente);
+(3) caminhos SSM sugeridos (`/clinicbridge/staging/*` e `/clinicbridge/prod/*`;
+comandos de referência `aws ssm put-parameter`/`get-parameter`; IAM mínimo com
+read-only no path correto, sem escrita na instance role);
+(4) injeção em runtime (script de bootstrap SSM + `source` antes do `docker compose`,
+`environment:` do compose, `.env` efêmero com `chmod 600`);
+(5) caveats de rotação (`JWT_SECRET` invalida sessões; `MFA_ENCRYPTION_KEY` invalida
+todos os TOTP — planejar ADR antes de rotar em produção; `RESTIC_PASSWORD` exige
+re-cifra e restore drill antes de descartar a antiga);
+(6) checklist de 14 itens antes do primeiro deploy real;
+(7) referências.
+
+**Validações executadas:**
+- `pnpm --filter backend typecheck` ✅ (sem erros de tipo).
+- `pnpm --filter backend build` ✅ (compilação limpa).
+- Cenário 1: `NODE_ENV=production` sem `MFA_ENCRYPTION_KEY` → `process.exit(1)` com
+  mensagem `MFA_ENCRYPTION_KEY is required in production` ✅.
+- Cenário 2: `NODE_ENV=production` com `MFA_ENCRYPTION_KEY` de 10 chars → exit 1 ✅.
+- Cenário 3: `NODE_ENV=production` com `FRONTEND_ORIGIN=http://localhost:5173` → exit 1
+  com mensagem sobre localhost/http ✅.
+- Cenário 4: `NODE_ENV=production` com valores corretos (64-char key, HTTPS origin) →
+  exit 0 ✅.
+- Cenário 5: `NODE_ENV=development` sem `MFA_ENCRYPTION_KEY` → exit 0 (dev funciona) ✅.
+
+**Docs atualizados:**
+- `backend/src/config/env.ts`: dois novos guards.
+- `.env.example`: comentários de `FRONTEND_ORIGIN` e `MFA_ENCRYPTION_KEY`.
+- `docs/secrets-env-production-runbook.md` (criado).
+- `docs/production-minimum-plan.md`: tabela de estado (guards ✅, runbook ✅);
+  P1 de `MFA_ENCRYPTION_KEY` marcado como entregue; Sprint 3.39 marcada.
+- `docs/deploy-security-checklist.md`: §3 com novos guards e referência ao runbook;
+  §15 com checklist atualizado (MFA_ENCRYPTION_KEY + SSM).
+- `docs/security-notes.md`: seção MFA atualizada (guard de prod, caveat de rotação,
+  ponteiro para runbook); seção Deploy seguro/CORS atualizada (lista de 4 guards).
+- `docs/project-state.md`: Sprint 3.39 adicionada.
+- `docs/sprint-history.md` (este arquivo): entrada Sprint 3.39.
+- `CLAUDE.md`: estado atual = Sprint 3.39 entregue.
+
+Sem commit/push.

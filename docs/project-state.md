@@ -7,6 +7,42 @@
 
 ## Última sprint aprovada
 
+**Sprint 3.39** (entregue — guards de boot + runbook de secrets) —
+**secrets e env de produção: `MFA_ENCRYPTION_KEY` obrigatória em prod; `FRONTEND_ORIGIN`
+sem localhost/http em prod.** Sem migration, sem feature de produto, sem commit/push.
+
+**Mudanças de código:**
+- `backend/src/config/env.ts`: dois novos guards no `superRefine` (bloco
+  `NODE_ENV=production`):
+  - `MFA_ENCRYPTION_KEY` ausente ou < 32 chars → boot falha com mensagem clara.
+  - `FRONTEND_ORIGIN` com localhost, 127.0.0.1 ou http:// → boot falha.
+- `.env.example`: comentários atualizados para refletir obrigatoriedade em produção
+  de `MFA_ENCRYPTION_KEY` e o guard de `FRONTEND_ORIGIN` com exemplos de staging/prod.
+
+**Arquivo criado:**
+- `docs/secrets-env-production-runbook.md` — geração de secrets (`openssl rand -hex 32`),
+  variáveis por ambiente (dev/staging/prod), caminhos SSM (`/clinicbridge/staging/*`,
+  `/clinicbridge/prod/*`), injeção em runtime (script SSM + compose), caveats de
+  rotação (JWT_SECRET invalida sessões; MFA_ENCRYPTION_KEY invalida TOTP), IAM mínimo
+  (instance profile read-only no path correto), checklist de 14 itens.
+
+**Validações executadas:**
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- 5 cenários de guard testados (NODE_ENV=production sem MFA_KEY → exit 1; com MFA_KEY
+  curta → exit 1; com localhost FRONTEND_ORIGIN → exit 1; tudo correto → exit 0;
+  dev sem MFA_KEY → exit 0) ✅
+
+**Docs atualizados:** `docs/secrets-env-production-runbook.md` (criado),
+`docs/production-minimum-plan.md`, `docs/deploy-security-checklist.md` (§3 + §15),
+`docs/security-notes.md` (seção MFA + seção Deploy seguro),
+`docs/project-state.md` (esta entrada), `docs/sprint-history.md`, `CLAUDE.md`.
+
+**Pendente (aguarda EC2):** executar `aws ssm put-parameter` com os valores reais;
+validar injeção de env no container de produção; emitir cert real (runbook DNS/TLS).
+
+---
+
 **Sprint 3.38** (entregue — Dockerfile + Nginx templates + runbook DNS/TLS) —
 **preparação de staging/produção para DNS/TLS/Nginx, sem deploy real.** Sem
 migration, sem feature de produto, sem commit/push.

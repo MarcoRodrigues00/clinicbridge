@@ -2,7 +2,9 @@
 
 > **Sprint 3.37** criou este plano. **Sprint 3.38** (2026-05-24) corrigiu
 > `NODE_ENV=production` no Dockerfile e criou templates Nginx de produção/staging
-> + runbook DNS/TLS. DNS e cert reais ficam para quando a EC2 estiver disponível.
+> + runbook DNS/TLS. **Sprint 3.39** (2026-05-24) adicionou guards de boot para
+> `MFA_ENCRYPTION_KEY` e `FRONTEND_ORIGIN` em produção + criou este runbook de
+> secrets. DNS e cert reais ficam para quando a EC2 estiver disponível.
 >
 > Provedor preferido: **AWS** (direção aceita em 2026-05-24; decisões de sub-opção
 > ainda pendentes — ver Seção 5). Outras opções (Hetzner, DigitalOcean, Railway)
@@ -36,7 +38,9 @@
 | Templates Nginx prod/staging | ✅ `infra/nginx/conf.d/clinicbridge.{production,staging}.conf.example` (Sprint 3.38) |
 | Runbook DNS/TLS | ✅ `docs/dns-tls-staging-runbook.md` (Sprint 3.38) — DNS real e cert pendentes |
 | WAF | ❌ Não implementado (estratégia decidida em ADR 0005) |
-| Secrets manager | ❌ Só `.env`; sem rotação, sem gestor externo |
+| Secrets manager | ⚠️ Só `.env`; runbook SSM criado (Sprint 3.39); execução pendente (aguarda EC2) |
+| Guards de boot de produção (env) | ✅ JWT_SECRET/DATABASE_URL placeholder (Sprint 3.6); MFA_ENCRYPTION_KEY + FRONTEND_ORIGIN localhost/http (Sprint 3.39) |
+| Runbook de secrets/env de prod | ✅ `docs/secrets-env-production-runbook.md` (Sprint 3.39) |
 | Logs centralizados | ❌ Stdout do container e arquivo Nginx; sem agregação |
 
 ---
@@ -182,13 +186,13 @@ público: Nginx (80/443) ou ALB (se adotado).
 | TLS real + domínio | Cert autoassinado ≠ produção; HSTS desabilitado. Templates prontos (Sprint 3.38); falta EC2 + DNS + Certbot real | EC2 + Nginx + Certbot (ver `docs/dns-tls-staging-runbook.md`) |
 | ~~`NODE_ENV=development` no container~~ | ✅ **Corrigido na Sprint 3.38** — Dockerfile runtime agora usa `production`; compose local sobrescreve | — |
 | Postgres/Redis expostos | docker-compose expõe porta 5432 localmente; em EC2 sem SG seria público | Security Group: só acesso interno; EC2 + RDS + ElastiCache com SG dedicados |
-| Secrets fora do `.env` local | `JWT_SECRET`, `DATABASE_URL`, `MFA_ENCRYPTION_KEY` no `.env` manual | SSM Parameter Store → injetar como variáveis de ambiente |
+| Secrets fora do `.env` local | `JWT_SECRET`, `DATABASE_URL`, `MFA_ENCRYPTION_KEY` no `.env` manual | SSM Parameter Store → injetar como variáveis de ambiente (runbook: `docs/secrets-env-production-runbook.md`) |
 
 ### P1 — necessário antes de primeiro usuário real
 
 | Gap | Detalhe | Solução preferida |
 |---|---|---|
-| `MFA_ENCRYPTION_KEY` dedicada | Hoje opcional; secret TOTP cifrado não deve derivar de `JWT_SECRET` | Obrigatório em prod; SSM SecureString |
+| `MFA_ENCRYPTION_KEY` dedicada | ✅ **Obrigatório em prod** desde Sprint 3.39 (guard de boot no `config/env.ts`); dev ainda usa fallback JWT_SECRET | SSM SecureString (runbook: `docs/secrets-env-production-runbook.md`) |
 | Storage persistente seguro | `./storage/uploads` bind mount não sobrevive a troca de EC2 | EBS persistente (etapa 1) → S3 (evolução) |
 | Backup offsite | Restic local validado; sem destino remoto | Restic → S3 bucket privado + agendamento |
 | Validação jurídica de retenção | `docs/data-retention-policy.md` existe; aprovação jurídica pendente | Validação externa dos prazos e base legal |
@@ -213,7 +217,7 @@ público: Nginx (80/443) ou ALB (se adotado).
 |---|---|---|
 | **3.37** (este doc) | Plano de produção mínima + decisão AWS como preferida | Docs/planejamento |
 | **3.38** ✅ | ~~TLS real + DNS~~ → Corrigir `NODE_ENV` no Dockerfile runtime ✅; templates Nginx prod/staging ✅; runbook DNS/TLS ✅. DNS e cert reais ficam para quando EC2 estiver disponível | Código (Dockerfile) + docs + templates |
-| **3.39** | Secrets + env de prod: SSM Parameter Store para `JWT_SECRET`/`DATABASE_URL`/`MFA_ENCRYPTION_KEY`; script de bootstrap seguro; checklist de variáveis; `FRONTEND_ORIGIN` de prod | Docs + config + script |
+| **3.39** ✅ | Guards de boot para `MFA_ENCRYPTION_KEY` (obrigatória em prod) e `FRONTEND_ORIGIN` (sem localhost/http em prod); runbook de secrets/env de produção com caminhos SSM, geração de secrets e caveats de rotação | Config + docs |
 | **3.40** | Backup offsite: Restic → S3 bucket privado; job agendado (cron/systemd); restore drill remoto | Scripts + docs |
 | **3.41** | Storage persistente + banco/Redis de prod: volume EBS nomeado OU provisionar RDS + ElastiCache (staging first); Security Groups; firewall de porta | Infra + docs |
 | **3.42** | Deploy checklist go/no-go: executar `docs/deploy-security-checklist.md` §15/§16; smoke tests em staging; confirmar todos P0/P1 resolvidos | QA/checklist |
@@ -265,3 +269,4 @@ As decisões abaixo **precisam ser tomadas antes de iniciar as sprints de infra*
 - `docs/nginx-local-staging-runbook.md` — runbook Nginx local/staging
 - `docs/backup-restore-local-runbook.md` — runbook Restic local
 - `docs/security-notes.md` — ressalvas P1/P2/P3 e invariantes de segurança
+- `docs/secrets-env-production-runbook.md` — geração de secrets, SSM, injeção, rotação

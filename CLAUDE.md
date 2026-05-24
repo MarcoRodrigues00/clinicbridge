@@ -11,6 +11,7 @@
 > - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
 > - **Plano de produção mínima segura (AWS preferido; gaps P0/P1/P2; sprints 3.37–3.43; decisões pendentes):** `docs/production-minimum-plan.md`
 > - **Runbook DNS/TLS/Nginx para staging+produção (Sprint 3.38; Registro.br → Certbot → testes):** `docs/dns-tls-staging-runbook.md` (templates: `infra/nginx/conf.d/clinicbridge.{production,staging}.conf.example`)
+> - **Runbook de secrets/env de produção (Sprint 3.39; geração de secrets, SSM, injeção, rotação):** `docs/secrets-env-production-runbook.md`
 > - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
 > - **Merge seguro de duplicados (B-safe; decidido 3.32, backend 3.33, UX 3.34, validado 3.35; administrativo, sem delete físico, sem undo completo):** ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
@@ -20,7 +21,22 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Em validação/finalização: Sprint 3.38** (entregue) —
+**Em validação/finalização: Sprint 3.39** (entregue) —
+**secrets e env de produção: guards de boot para `MFA_ENCRYPTION_KEY` e `FRONTEND_ORIGIN`
++ runbook de secrets**. Sem migration, sem feature de produto, sem commit/push.
+`backend/src/config/env.ts` ganha dois guards no bloco `NODE_ENV=production`:
+`MFA_ENCRYPTION_KEY` obrigatória (≥ 32 chars; em dev usa fallback JWT_SECRET) e
+`FRONTEND_ORIGIN` proibido de conter localhost/127.0.0.1/http://.
+`.env.example` atualizado com exemplos de staging/prod e nota de geração.
+Criado `docs/secrets-env-production-runbook.md` (geração com `openssl rand -hex 32`,
+caminhos SSM `/clinicbridge/{staging,prod}/*`, IAM mínimo, script de bootstrap,
+caveats de rotação — JWT invalida sessões; MFA invalida TOTP; RESTIC exige re-cifra).
+`pnpm --filter backend typecheck` ✅, `build` ✅, 5 cenários de guard testados ✅.
+Docs atualizados: `docs/production-minimum-plan.md`, `docs/deploy-security-checklist.md`
+(§3 + §15), `docs/security-notes.md`, `docs/project-state.md`, `docs/sprint-history.md`,
+`CLAUDE.md`.
+
+**Sprint 3.38** (entregue) —
 **Dockerfile `NODE_ENV=production` + templates Nginx prod/staging + runbook DNS/TLS**.
 Sem migration, sem feature de produto, sem commit/push.
 `backend/Dockerfile` runtime corrigido (`ENV NODE_ENV=production`; compose local
@@ -29,9 +45,6 @@ sobrescreve para `development`). Criados templates Nginx
 TLS, anti-spoof, HSTS comentado) e `docs/dns-tls-staging-runbook.md` (passo a
 passo Registro.br → Certbot → testes → go/no-go). DNS e cert reais pendentes —
 dependem de EC2 disponível. Build + health + redirect validados localmente.
-Docs atualizados: `backend/Dockerfile`, `docs/production-minimum-plan.md`,
-`docs/nginx-local-staging-runbook.md`, `docs/deploy-security-checklist.md`,
-`docs/project-state.md`, `docs/sprint-history.md`, `CLAUDE.md`.
 
 **Sprint 3.37** (entregue — planejamento/docs only) —
 **plano de produção mínima segura + decisão de AWS como provedor preferido**.
@@ -318,14 +331,14 @@ fases: `docs/roadmap-next-phase.md`.
 
 ## Próximas prioridades prováveis
 
-- **Produção (trilha infra — Sprint 3.38 entregue):** `NODE_ENV=production` no
-  Dockerfile runtime ✅; templates Nginx `api.clinicbridge.com.br` +
-  `staging.clinicbridge.com.br` em `infra/nginx/conf.d/*.conf.example` ✅; runbook
-  DNS/TLS `docs/dns-tls-staging-runbook.md` ✅. DNS real e cert pendentes —
-  dependem de EC2 disponível. 7 decisões pendentes do dono (ver
-  `docs/production-minimum-plan.md` §5). Sequência: **3.38 ✅** → **3.39**
-  (secrets + env prod) → **3.40** (backup offsite) → **3.41** (storage +
-  banco/Redis prod) → **3.42** (deploy go/no-go) → **3.43** (piloto real).
+- **Produção (trilha infra — Sprints 3.38 + 3.39 entregues):** `NODE_ENV=production`
+  no Dockerfile runtime ✅; templates Nginx ✅; runbook DNS/TLS ✅ (3.38);
+  guards de boot `MFA_ENCRYPTION_KEY` + `FRONTEND_ORIGIN` ✅; runbook de secrets/SSM
+  `docs/secrets-env-production-runbook.md` ✅ (3.39). DNS real, cert real e SSM
+  real pendentes — dependem de EC2 disponível. 7 decisões pendentes do dono (ver
+  `docs/production-minimum-plan.md` §5). Sequência: **3.38 ✅** → **3.39 ✅** →
+  **3.40** (backup offsite) → **3.41** (storage + banco/Redis prod) → **3.42**
+  (deploy go/no-go) → **3.43** (piloto real).
 - **QA geral (Sprint 3.36 entregue):** checklist consolidado 10 fluxos, nenhum
   BLOCKER. Produto apto para **piloto controlado** (dados sintéticos/anonimizados).
   **Achado corrigido:** `docs/demo-pilot-v0.1-script.md` descrevia duplicados como
@@ -357,9 +370,9 @@ fases: `docs/roadmap-next-phase.md`.
   **backend containerizado + e2e Nginx→backend→DB/Redis (3.10 — `backend/Dockerfile`)**
   + **TLS local/staging (cert autoassinado) + HTTP→HTTPS (3.11 —
   `scripts/generate-local-nginx-cert.sh`)**; **plano de produção com AWS (3.37 —
-  `docs/production-minimum-plan.md`)**; falta TLS real em produção (Sprint 3.38),
-  secrets manager (3.39), backup offsite (3.40), banco/Redis gerenciados (3.41),
-  WAF e o deploy real (3.42).
+  `docs/production-minimum-plan.md`)**; ~~falta TLS real em produção (Sprint 3.38)~~
+  ✅ runbook pronto; ~~secrets manager (3.39)~~ ✅ guards + runbook SSM entregues;
+  falta backup offsite (3.40), banco/Redis gerenciados (3.41), WAF e o deploy real (3.42).
 - **P2:** limpeza real de arquivos (confirmação/soft-delete/quarentena/auditoria/
   idempotência/lock); paginação de duplicados; export streaming/assíncrono;
   rate limit dedicado em GETs leves se necessário.
