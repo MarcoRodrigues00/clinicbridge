@@ -22,6 +22,21 @@ export const clinicDao = {
     return conn<ClinicRow>('clinics').where({ invite_code: code }).first();
   },
 
+  // Sprint 3.26 — owner-initiated invite-code rotation. Tenant-scoped: the
+  // caller must already hold the clinic id (via requireClinic). Throws to the
+  // upper layer if the unique index fires (caller retries with a fresh code).
+  async updateInviteCode(
+    id: string,
+    newCode: string,
+    conn: Knex = db,
+  ): Promise<ClinicRow | undefined> {
+    const [row] = await conn<ClinicRow>('clinics')
+      .where({ id })
+      .update({ invite_code: newCode, atualizado_em: conn.fn.now() })
+      .returning('*');
+    return row;
+  },
+
   async create(input: CreateClinicInput, conn: Knex = db): Promise<ClinicRow> {
     const [row] = await conn<ClinicRow>('clinics')
       .insert({

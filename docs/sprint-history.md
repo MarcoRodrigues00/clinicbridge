@@ -944,3 +944,52 @@ Sem mudança de comportamento de API, sem mudança de schema, sem backend tocado
 **Verificação:** `pnpm --filter frontend typecheck` ✅, `pnpm --filter frontend build` ✅. Backend **não** rodado (sem mudanças). Validação visual no navegador pendente: criar/editar/desativar profissional em Equipe → seletor da Agenda reflete; secretaria continua vendo o painel só-leitura; criar agendamento com profissional ativo continua funcionando. Sem commit/push.
 
 **Próximo no tema (não nesta sprint):** caso surja necessidade real, opcionalmente acoplar `clinic_professionals.user_id NULL` (membro pode ser profissional) — exige ADR própria. Por enquanto a separação é o estado correto.
+
+
+---
+
+## Sprint 3.26 (regenerar código de convite da clínica)
+
+Direção: Opção C (base administrativa segura). Trilha "equipe" segue: depois de membros (3.25), o dono ganha controle sobre rotação do código de convite. **Backend + frontend, sem migration.**
+
+**Decisões de produto/segurança:**
+- Endpoint owner-only `POST /clinics/invite-code/regenerate`. Substitui `clinics.invite_code` por um novo código gerado por `utils/inviteCode.generateInviteCode` com retry curto (6 tentativas) sobre o índice único (`clinics_invite_code_unique`).
+- **Solicitações pendentes NÃO são canceladas na regen.** Racional registrado em `docs/security-notes.md`: a pendente foi submetida por alguém que já provou posse do código antigo e aguarda decisão manual do dono (que tem **Recusar** na UI). Cancelar em lote sem revisão é destrutivo. Se aparecer use-case de "panic-cancel" acoplado à rotação, abrir sprint própria com confirmação dupla.
+- **Sem cooldown/TTL** dedicado: `patientsRateLimit` (IP-keyed antes do auth) já cobre abuso em massa.
+- **Audit sem PII e sem código:** `clinic.invite_code.regenerated.success` (`recurso='clinic'`, `recurso_id=clinica_id`). Nem audit_logs nem logs do app recebem o invite_code (antigo ou novo).
+
+**Backend (sem migration):**
+- `backend/src/dao/clinicDao.ts`: + `updateInviteCode(id, newCode)` — `UPDATE clinics SET invite_code=… WHERE id=…` + `atualizado_em=now()` + `RETURNING *`. Throws para o service em caso de unique_violation.
+- `backend/src/services/clinicJoinRequestService.ts`: + `regenerateInviteCode(actor, ctx)` — busca a clínica, gera candidato (pulando colisão com o atual), tenta `updateInviteCode`; em caso de `23505` (improvável, índice único), tenta de novo até 6×; loga audit com `auditLogDao.create` (recurso `clinic`, sem code). Reusa `formatInviteCode` na resposta.
+- `backend/src/controllers/clinicJoinRequestController.ts`: + `regenerateInviteCode` (delegação simples; `buildAuthContext`).
+- `backend/src/routes/clinicJoinRequests.ts`: + `POST /clinics/invite-code/regenerate` com `patientsRateLimit + requireAuth + requireClinic + requireRole(CLINIC_ADMIN_ROLES)`.
+
+**Frontend:**
+- `frontend/src/services/api.ts`: + `regenerateClinicInviteCode(token)` (POST sem body; mesmo shape de `InviteCodeResponse`).
+- `frontend/src/components/TeamManagementPanel.tsx`: + `regenerateInviteMutation` com `window.confirm` forte que cita explicitamente que o código antigo deixa de funcionar para NOVAS solicitações e que pendentes/membros NÃO são alterados; botão **Regenerar** ao lado de **Copiar** no bloco do código; após sucesso, exibe o novo código uma vez via `notice` e invalida `['clinic-invite-code']`. Parágrafo `helperText` curto reforça a mesma mensagem.
+
+**Verificação:**
+- `pnpm --filter backend typecheck` ✅, `pnpm --filter backend build` ✅
+- `pnpm --filter frontend typecheck` ✅, `pnpm --filter frontend build` ✅
+- Matriz por API em backend dev `:3001` com contas descartáveis (`t326-…@example.test`): **12/12**.
+  1. Dono lê código atual.
+  2. Dono regenera → novo código diferente.
+  3. GET reflete o novo.
+  4. Novo staff usando código antigo → `404 invalid_invite`.
+  5. Mesmo staff com novo código → `201`.
+  6. Owner-B regenera de forma independente; clínica-A intacta.
+  7. Staff sem clínica → `403 no_clinic_context`.
+  8. Membro não-dono → `403 forbidden_role` (após login renovado).
+  9. Pendente pré-regen continua visível em `/clinic-join-requests/pending`.
+  10. Audit `clinic.invite_code.regenerated.success` (`recurso='clinic'`, `recurso_id`=UUID) presente, sem código.
+
+Dados de teste limpos via SQL transacional ao final.
+
+**Ressalvas/limites:**
+- **Sem rotação automática agendada.** A rotação é sempre iniciada manualmente pelo dono.
+- **Sem histórico de códigos antigos.** Não há coluna/tabela para "códigos prévios"; intencional para não criar superfícies extras de exposição.
+- **Sem invalidação de pendentes.** Documentado acima.
+- **`patientsRateLimit`** continua sendo o único guarda contra spam de regenerações; suficiente para o MVP.
+- Validação **visual** no navegador pendente.
+
+**Próximo no tema (`roadmap-next-phase.md`):** sair voluntariamente da clínica; histórico de ações de equipe visível ao dono; e — em sprint própria com ADR — roles granulares (recepção/financeiro/gestor).

@@ -153,14 +153,23 @@ dados importados. Nada clínico (Opção C / ADR 0001).
   `requireClinic` (1 DB check por request tenant-scoped → 403
   `clinic_membership_revoked` imediato). Sem reativação direta — ex-membro re-entra
   pelo fluxo da 3.24. Validação por API 14/14.
+- **Sprint 3.26 (entregue) — Regenerar invite code.** Owner-only `POST
+  /clinics/invite-code/regenerate` rotaciona `clinics.invite_code` com retry
+  curto sobre o índice único; código antigo para de funcionar para NOVAS
+  solicitações. **Decisão consciente:** pendentes pré-regen **NÃO** são
+  canceladas (a pendente já provou posse do código antigo + aguarda decisão
+  manual do dono; cancelar em lote é destrutivo). Audit
+  `clinic.invite_code.regenerated.success` (`recurso='clinic'`, sem código).
+  Validação por API 12/12.
 - **Próximo no tema — Polimentos da trilha equipe + roles granulares.** Itens
   candidatos, **não implementados** (cada um pode virar sprint própria):
-  - **regenerar invite code** (invalida automaticamente solicitações pendentes
-    relacionadas; auditado).
   - **sair voluntariamente** da clínica (membro inicia o desligamento; mesmas
     guardas que o owner-deactivate).
-  - **histórico de ações de equipe** (entradas/saídas/aprovações/recusas)
-    visível ao dono — read-only, sem PII em logs já garantido.
+  - **histórico de ações de equipe** (entradas/saídas/aprovações/recusas/
+    regenerações) visível ao dono — read-only, sem PII em logs já garantido.
+  - **panic-cancel acoplado à regen** (opcional: regen + recusar todas pendentes
+    em uma operação atômica com confirmação dupla; só se aparecer use-case real
+    — postura atual em `docs/security-notes.md`).
   - **roles granulares** (hoje só existem `dono_clinica` / `secretaria` /
     `admin_sistema`). Candidatas: **recepção**, **financeiro**, **funcionário(a)
     administrativo(a)**, **gestor da clínica**. Hoje a UI generaliza visualmente

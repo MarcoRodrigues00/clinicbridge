@@ -39,6 +39,14 @@ export const clinicJoinRequestController = {
     res.status(200).json(result);
   },
 
+  async regenerateInviteCode(req: Request, res: Response): Promise<void> {
+    const result = await clinicJoinRequestService.regenerateInviteCode(
+      ownerActor(req),
+      buildAuthContext(req),
+    );
+    res.status(200).json(result);
+  },
+
   async create(req: Request, res: Response): Promise<void> {
     const input = parseOrThrow(CreateSchema, req.body);
     const request = await clinicJoinRequestService.requestJoin(userActor(req), input, buildAuthContext(req));

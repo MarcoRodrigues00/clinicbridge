@@ -826,6 +826,16 @@ export const api = {
     return apiFetch<InviteCodeResponse>('/clinics/invite-code', { method: 'GET', token });
   },
 
+  // Owner-only (Sprint 3.26). Rotates the clinic's invite code. The old code
+  // stops working for new join requests as soon as the server commits. Pending
+  // requests already submitted with the old code are intentionally preserved.
+  regenerateClinicInviteCode(token: string): Promise<InviteCodeResponse> {
+    return apiFetch<InviteCodeResponse>('/clinics/invite-code/regenerate', {
+      method: 'POST',
+      token,
+    });
+  },
+
   // Staff (no clinic yet). The optional clinic_name is a confirmation only;
   // mismatch → same generic invalid_invite error.
   createClinicJoinRequest(
