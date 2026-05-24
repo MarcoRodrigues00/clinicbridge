@@ -1145,3 +1145,38 @@ O `ClinicProfessionalsPanel` não tinha `window.confirm` — o botão disparava 
 **Sem alteração de código frontend ou backend.** Apenas registro de validação nos docs.
 
 **Verificação:** nenhum build necessário (docs only). Sem commit/push.
+
+---
+
+## Sprint 3.31 (hardening backend — concorrência + trilha de auditoria)
+
+**Sem migration, sem nova feature, sem mudança de API/permissão, sem frontend.** Corrige três achados não-críticos da super revisão pós-3.28 nas solicitações de entrada da clínica (`clinic_join_requests`).
+
+**Achados tratados:**
+
+1. **`setStatus` pouco scoped → compare-and-set.** `clinicJoinRequestDao.setStatus` passou de `WHERE id` para `WHERE id AND status='pending'`. Como `pending` é o único estado não-terminal, o guard é exaustivo: nenhuma decisão concorrente é silenciosamente sobrescrita. Retorna `undefined` quando nenhuma linha pendente casa.
+
+2. **Race/TOCTOU em `cancelMine`.** Antes: `find` → `setStatus` podia, numa corrida estreita, cancelar uma solicitação que o dono acabara de aprovar (deixando o usuário na clínica com a request "cancelada"). Agora o CAS é a defesa real: se nada casa → **409 `invalid_state`**. `approve` checa o retorno **dentro da transação** e aborta (rollback) antes de `userDao.setClinic`/`cancelOtherPending`; `reject` também checa.
+
+3. **`cancelOtherPending` sem trilha de auditoria.** O cascade-cancel disparado pela aprovação agora grava `decided_by_user_id` (= dono que aprovou) e `decided_at`. Decisão de privacidade: esse campo **nunca** é exposto pela API (`MyJoinRequest`/`PendingJoinRequest` omitem `decided_by_user_id`), então registrar o dono numa request de outra clínica **não** vaza identidade cross-tenant.
+
+**Arquivos alterados:**
+- `backend/src/dao/clinicJoinRequestDao.ts` — `setStatus` (CAS) + `cancelOtherPending` (novo param `decidedByUserId` + grava `decided_at`).
+- `backend/src/services/clinicJoinRequestService.ts` — `cancelMine`/`reject` checam retorno do CAS (409 `invalid_state`); `approve` checa dentro da txn e passa `actor.usuario_id` ao `cancelOtherPending`.
+
+**Sem migration:** colunas `decided_by_user_id`/`decided_at` já existem desde `20260529000000_clinic_team`.
+
+**Sem mudança de contrato de API.** `cancelMine` numa corrida passa a devolver `409 invalid_state` limpo em vez de criar inconsistência — melhora de robustez, não quebra de contrato.
+
+**Decisão de produto preservada:** regenerar código (3.26) continua **não** cancelando pendentes.
+
+**Verificação:** `pnpm --filter backend typecheck` ✅, `pnpm --filter backend build` ✅. Matriz por API **18/18** (`/tmp/sprint-3.31-api-test.mjs`, contas descartáveis com tag aleatório):
+- staff cria pending → cancela própria → cancela de novo (**409 invalid_state**);
+- staff não cancela request de outro (**404 request_not_found**); request do outro intacta;
+- dono aprova → request-to-A `approved` com `decided_by`/`decided_at`; outra pendente do mesmo user (clínica B) vira `cancelled` com `decided_by=dono A` + `decided_at`; usuário entra na clínica A;
+- cancelar request já aprovada **não** sobrescreve (CAS segura — segue `approved`);
+- cross-tenant approve/reject (**404**), alvo segue `pending`;
+- audit `created/cancelled/approved` com `recurso='clinic_join_request'`, sem PII;
+- `decided_by_user_id` **não** aparece em `GET /clinic-join-requests/me`.
+
+Dados de teste removidos ao fim (baseline `clinic_join_requests` de volta a 1 linha). Sem commit/push.

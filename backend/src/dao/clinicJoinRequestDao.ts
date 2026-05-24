@@ -101,7 +101,13 @@ export const clinicJoinRequestDao = {
       ) as unknown as Promise<PendingJoinRequestRow[]>;
   },
 
-  // Sets a final status (cancelled by requester, or approved/rejected by owner).
+  // Compare-and-set: transitions a request from 'pending' to a final status
+  // (cancelled by requester, or approved/rejected by owner). The `status =
+  // 'pending'` guard is part of the UPDATE itself, so a concurrent decision
+  // cannot be silently overwritten (closes the TOCTOU between a caller's
+  // pre-fetch and this write). Returns the updated row, or `undefined` when no
+  // pending row matched the id — the caller must treat that as "already decided".
+  // 'pending' is the only non-terminal status, so guarding on it is exhaustive.
   async setStatus(
     id: string,
     status: 'approved' | 'rejected' | 'cancelled',
@@ -109,7 +115,7 @@ export const clinicJoinRequestDao = {
     conn: Knex = db,
   ): Promise<ClinicJoinRequestRow | undefined> {
     const [row] = await conn<ClinicJoinRequestRow>('clinic_join_requests')
-      .where({ id })
+      .where({ id, status: 'pending' })
       .update({
         status,
         decided_by_user_id: decidedByUserId,
@@ -122,14 +128,25 @@ export const clinicJoinRequestDao = {
 
   // After a user is approved into a clinic, cancel their OTHER pending requests
   // (they can only belong to one clinic). Returns the number cancelled.
+  // `decidedByUserId` is the approving owner — recorded as the decider of this
+  // cascade-cancellation for the audit trail, even for requests to other
+  // clinics (the human action that caused the cancel was that owner's approval).
+  // This column is never exposed via the API (MyJoinRequest/PendingJoinRequest
+  // omit decided_by_user_id), so there is no cross-tenant identity leak.
   async cancelOtherPending(
     userId: string,
     exceptId: string,
+    decidedByUserId: string | null,
     conn: Knex = db,
   ): Promise<number> {
     return conn<ClinicJoinRequestRow>('clinic_join_requests')
       .where({ user_id: userId, status: 'pending' })
       .andWhereNot({ id: exceptId })
-      .update({ status: 'cancelled', updated_at: conn.fn.now() });
+      .update({
+        status: 'cancelled',
+        decided_by_user_id: decidedByUserId,
+        decided_at: conn.fn.now(),
+        updated_at: conn.fn.now(),
+      });
   },
 };
