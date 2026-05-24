@@ -877,23 +877,91 @@ Sem mudança de API/contrato. Cenários (18/18):
 > script usa ~6 contas (12 requests de auth). Reexecuções em sequência podem
 > precisar aguardar a janela ou reiniciar o backend (store em memória no dev).
 
-## Merge seguro de duplicados — plano de testes (planejado, Sprint 3.33/3.34)
+## Merge seguro de duplicados — Sprint 3.33 (backend entregue) + 3.34 (visual)
 
-> **Decidido na Sprint 3.32 (ADR 0007), ainda NÃO implementado.** A matriz
-> completa será escrita na 3.33 (API) e 3.34 (visual). Esboço para referência:
+**Sprint 3.33 entregue:** matriz API descartável em `/tmp/sprint-3.33-merge-test.mjs`
+(18/18 passou). Reproduz: cria 2 clínicas isoladas, faz fluxo owner/staff
+completo, executa todos os casos abaixo, limpa os dados criados pelo cleanup
+SQL (segue abaixo).
 
-- **API (3.33):** merge move N agendamentos secundário→principal; secundário fica
-  `archived` + `merged_into_id`/`merged_at` setados; `fill_blanks` só preenche
-  campos vazios do principal (não sobrescreve); re-merge idempotente (no-op/erro
-  seguro via CAS); principal/secundário não-`active` → erro seguro; **cross-tenant**
-  (principal de A + secundário de B → 404; agendamentos de outra clínica intactos);
-  audit `patient.merge.success` com `recurso_id="<primaryId>|<secId>"` e **sem PII**;
-  CPF nunca bruto.
-- **SQL:** `appointments.patient_id` reassinado; contagem total preservada (nada
-  deletado); `merged_into_id`/`merged_at` nos secundários.
-- **Visual (3.34):** escolher principal, diffs mascarados, editar antes
-  (`PatientEditForm`), `ConfirmDialog`, grupo sai da fila; **Agenda mostra o nome
-  certo após o merge**; arquivado em Pacientes › Arquivados com "merge em X";
-  secretaria não vê/não executa o merge.
-- **Borda:** secundário sem agendamentos; principal e secundário com horário
-  coincidente; restore do arquivado.
+### Como rodar (3.33)
+
+```bash
+# 1) sobe stack local (Postgres + Redis + backend + nginx TLS)
+docker compose up -d
+# 2) garante o build mais recente do backend (após editar código)
+docker compose build backend && docker compose up -d backend
+# 3) roda matriz por API (usa nginx TLS local com cert autoassinado)
+node /tmp/sprint-3.33-merge-test.mjs
+# 4) se atingir rate limit (login/register repetido), libera o redis:
+docker compose exec -T redis redis-cli FLUSHALL
+```
+
+### Matriz API (3.33 — 18/18)
+
+1. happy 1-secundário sem appointments → archived + primary active.
+1b. response tem `cpf_masked`, **sem** `cpf` bruto.
+2. 1-secundário com 2 appointments → reassigned (sec=0, primary recebe os 2).
+3. fill-blanks preenche campos vazios do principal (telefone + convenio).
+4. fill-blanks **nunca** sobrescreve campo já preenchido (e-mail preservado).
+5. ordem = `secondary_ids` como enviado (envia `[pB, pA]` → pB vence).
+6. CPF fill mantém resposta com `***.***.789-01` (sem CPF bruto).
+7. principal em `secondary_ids` → 400 `merge_invalid`.
+8. `secondary_ids` vazio → 400 `merge_invalid`.
+9. duplicados em `secondary_ids` → 400 `merge_invalid`.
+10. > 10 secundários → 400 `merge_invalid`.
+11. cross-tenant principal (clínica B) → 404 `patient_not_found`.
+12. cross-tenant secundário (clínica B) → 404 `patient_not_found`.
+12b. cross-tenant secundário: zero side-effect (paciente B permanece `active`).
+13. secundário já-archived → 404 `patient_not_found`.
+14. secretaria → 403 `forbidden_role`.
+15. sem JWT → 401.
+16. batch 3 secundários com mix appointments/blanks → 3 archived, 3 appts
+    movidos, fill-blanks combina telefone/email/convenio dos 3.
+
+### SQL de validação (3.33)
+
+```bash
+docker compose exec -T postgres psql -U clinicbridge -d clinicbridge -c "
+-- secundários arquivados têm provenance setada
+SELECT count(*) FROM patients WHERE merged_into_id IS NOT NULL AND status <> 'archived';
+SELECT count(*) FROM patients WHERE merged_into_id IS NOT NULL AND merged_at IS NULL;
+-- audit no formato uuid|uuid, sem PII
+SELECT count(*) FROM audit_logs WHERE acao='patient.merge.success'
+  AND recurso_id !~ '^[0-9a-f-]{36}\\|[0-9a-f-]{36}\$';
+"
+```
+
+Esperado: 3 contagens = 0.
+
+### Cleanup descartável após rodar a matriz
+
+```bash
+docker compose exec -T postgres psql -U clinicbridge -d clinicbridge -c "
+BEGIN;
+UPDATE users SET clinica_id = NULL
+  WHERE email LIKE 'owner-33%@test.local' OR email LIKE 'staff-33%@test.local';
+DELETE FROM clinics WHERE nome LIKE 'Clinica 33%';
+DELETE FROM users
+  WHERE email LIKE 'owner-33%@test.local' OR email LIKE 'staff-33%@test.local';
+COMMIT;
+"
+```
+
+Audits permanecem (FK `SET NULL` — append-only correto).
+
+### Visual (3.34, pendente)
+
+- Escolher principal, diffs mascarados, editar antes (`PatientEditForm`),
+  `ConfirmDialog` forte, contagem de agendamentos por registro.
+- **Agenda mostra o nome certo após o merge** (não mais "Paciente abc12345…").
+- Arquivado em Pacientes › Arquivados com "merge em X".
+- Secretaria não vê/não executa o merge.
+
+### Borda
+
+- Secundário sem agendamentos (testado — case 1).
+- Restore do arquivado: hoje desarquiva a linha, mas **não** devolve
+  agendamentos movidos nem reverte fill-blanks (limite documentado no ADR).
+- Horário coincidente principal × secundário após reassign: permitido sem
+  alerta no backend; UI da 3.34 pode avisar.

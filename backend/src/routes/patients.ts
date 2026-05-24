@@ -85,3 +85,17 @@ patientsRouter.patch(
   requireRole(CLINIC_ADMIN_ROLES),
   asyncHandler(patientController.restore),
 );
+
+// Safe duplicate merge B-safe (Sprint 3.33; ADR 0007). Owner-only — same gate
+// as archive/restore (requireRole after requireClinic never bypasses tenant
+// isolation). In a single transaction: fill-blanks the primary, reassign the
+// secondaries' appointments to the primary, and archive each secondary with
+// provenance. No physical delete; no clinical data touched.
+patientsRouter.post(
+  '/patients/:id/merge',
+  patientsRateLimit,
+  requireAuth,
+  requireClinic,
+  requireRole(CLINIC_ADMIN_ROLES),
+  asyncHandler(patientController.merge),
+);

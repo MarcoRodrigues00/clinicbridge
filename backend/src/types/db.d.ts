@@ -125,6 +125,11 @@ export interface PatientRow {
   numero_carteirinha: string | null;
   status: string;
   origem: string;
+  // Provenance of safe duplicate merge B-safe (Sprint 3.33; ADR 0007). When an
+  // archived secondary was merged into a surviving primary, these point at the
+  // primary. Both null on active rows that were never merged.
+  merged_into_id: string | null;
+  merged_at: Date | null;
   criado_em: Date;
   atualizado_em: Date;
 }

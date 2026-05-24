@@ -155,6 +155,60 @@ export const patientDao = {
     return row !== undefined;
   },
 
+  // Safe duplicate merge B-safe (Sprint 3.33; ADR 0007). Non-destructive fill of
+  // ONLY the keys present in `patch` (the service decides which keys are blank
+  // on the primary and selects the first non-null value from a secondary).
+  // Tenant-scoped. Touches atualizado_em. Returns the updated row, or undefined
+  // if the id doesn't belong to the clinic (no cross-tenant write).
+  async applyFillBlanks(
+    id: string,
+    clinica_id: string,
+    patch: Partial<UpdatePatientFields>,
+    conn: Knex = db,
+  ): Promise<PatientRow | undefined> {
+    if (Object.keys(patch).length === 0) {
+      return conn<PatientRow>('patients').where({ id, clinica_id }).first();
+    }
+    const update: Record<string, unknown> = { atualizado_em: conn.fn.now() };
+    if (patch.telefone !== undefined) update.telefone = patch.telefone;
+    if (patch.email !== undefined) update.email = patch.email;
+    if (patch.cpf !== undefined) update.cpf = patch.cpf;
+    if (patch.data_nascimento !== undefined) update.data_nascimento = patch.data_nascimento;
+    if (patch.convenio !== undefined) update.convenio = patch.convenio;
+    if (patch.numero_carteirinha !== undefined) {
+      update.numero_carteirinha = patch.numero_carteirinha;
+    }
+    const [row] = await conn<PatientRow>('patients')
+      .where({ id, clinica_id })
+      .update(update)
+      .returning('*');
+    return row;
+  },
+
+  // Safe duplicate merge B-safe (Sprint 3.33; ADR 0007). Compare-and-set on the
+  // secondary: archives it AND records provenance only if the row is still in
+  // the clinic and currently active. Returns undefined when the CAS misses
+  // (already archived/merged, cross-tenant, or no longer eligible) so the
+  // service can roll back the surrounding transaction.
+  async setMergedInto(
+    id: string,
+    clinica_id: string,
+    primary_id: string,
+    conn: Knex = db,
+  ): Promise<PatientRow | undefined> {
+    const [row] = await conn<PatientRow>('patients')
+      .where({ id, clinica_id, status: 'active' })
+      .whereNull('merged_into_id')
+      .update({
+        status: 'archived',
+        merged_into_id: primary_id,
+        merged_at: conn.fn.now(),
+        atualizado_em: conn.fn.now(),
+      })
+      .returning('*');
+    return row;
+  },
+
   // Fetches patients for the read-only duplicate scan. ALWAYS tenant-scoped.
   // Ordered by criado_em ASC so the earliest (original) record sorts first
   // within each detected cluster. Capped by `limit` so a future large clinic

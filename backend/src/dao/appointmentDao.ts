@@ -79,6 +79,40 @@ export const appointmentDao = {
     return row;
   },
 
+  // Safe duplicate merge B-safe (Sprint 3.33; ADR 0007). Tenant-scoped count of
+  // appointments for a patient — never crosses clinics. Used by the merge
+  // service for telemetry/sanity (the response only exposes the aggregate sum,
+  // never per-patient counts that could become PII).
+  async countByPatientForClinic(
+    patient_id: string,
+    clinica_id: string,
+    conn: Knex = db,
+  ): Promise<number> {
+    const row = await conn<AppointmentRow>('appointments')
+      .where({ clinica_id, patient_id })
+      .count<{ count: string }>({ count: '*' })
+      .first();
+    return row ? Number(row.count) : 0;
+  },
+
+  // Safe duplicate merge B-safe (Sprint 3.33; ADR 0007). Reassigns every
+  // appointment of `from_patient_id` to `to_patient_id` within the same clinic.
+  // Strictly tenant-scoped — appointments of other clinics are never touched
+  // even if the caller mismatches the clinic. Returns the number of rows moved.
+  // Administrative remap; does NOT touch status, times, notes or updated_by
+  // (this is not a clinical edit).
+  async reassignPatientForClinic(
+    from_patient_id: string,
+    to_patient_id: string,
+    clinica_id: string,
+    conn: Knex = db,
+  ): Promise<number> {
+    const moved = await conn<AppointmentRow>('appointments')
+      .where({ clinica_id, patient_id: from_patient_id })
+      .update({ patient_id: to_patient_id, updated_at: conn.fn.now() });
+    return moved;
+  },
+
   // Tenant-scoped reschedule: updates the time window and marks status
   // 'rescheduled'. No physical delete.
   async rescheduleForClinic(
