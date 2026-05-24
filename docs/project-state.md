@@ -7,6 +7,26 @@
 
 ## Última sprint aprovada
 
+**Sprint 3.34** (entregue — backend model + frontend) — **UX do merge seguro de duplicados B-safe**. Consome a API da 3.33. Sem mudança em DAOs/services/migrations/agenda backend/importação/Equipe/Auth/MFA. **Sem** endpoint novo, **sem** seleção campo-a-campo, **sem** undo/snapshot, **sem** delete físico, **sem** lookup do nome do principal.
+
+**Backend (mudança mínima — model público apenas):** `backend/src/models/patient.ts` — `PublicPatient` ganha `merged_into_id: string | null` + `merged_at: string | null`; `toPublicPatient` popula a partir de `row.merged_into_id` / `row.merged_at`. **Não é PII** (UUID + timestamp); habilita o badge "Mesclado em outro registro" no frontend. Sem migration; sem nova rota; sem nova permissão.
+
+**Frontend:**
+- `frontend/src/services/api.ts`: `PublicPatient` ganha as mesmas duas chaves; tipo novo `PatientMergeResponse` (`patient` + `merge: { merged_count, moved_appointments_count, archived_secondary_ids, filled_fields }`); método `api.mergePatients(token, primaryId, secondaryIds)` para `POST /patients/:id/merge`.
+- `frontend/src/components/DuplicatesList.tsx`: **rádio "Manter como principal"** owner-only por registro de cada grupo (sem pré-seleção, estado `primaryByGroup` keyed por `group_key`, limpo a cada reload do scan); selo "Principal" no card escolhido; mensagem dinâmica no rodapé do grupo ("Os outros N registros serão arquivados como duplicados" / "Escolha o paciente principal antes de resolver"); **botão "Resolver duplicado"** desabilitado sem seleção; **`ConfirmDialog` variant `danger`** com copy explícita do comportamento B-safe (mantém o principal, move agendamentos dos duplicados se houver, preenche apenas campos vazios, nunca sobrescreve, arquiva duplicados, nada é apagado, sem desfazer completo); após sucesso: mensagem inline `mergeNotice` (verde, role="status") com contagens da resposta + `onPatientsChanged()` (bump `refreshKey`) + `queryClient.invalidateQueries({queryKey:['appointments']})` + `queryClient.invalidateQueries({queryKey:['patients']})` para sincronizar Agenda/picker; erro de API permanece **dentro** do modal (`error` prop do ConfirmDialog) com `FORBIDDEN_ROLE_MESSAGE` para 403.
+- `frontend/src/components/DuplicatesList.module.css`: `.mergeNotice` (verde, sucesso), `.primaryRadio` + `.primaryRadioLabel` (controle owner-only), `.recordPrimary` (borda ciano no card escolhido), `.primaryTag` (selo "Principal"), `.mergeBar` + `.mergeBarHint` (rodapé tracejado), `.mergeBtn` (cyan-soft).
+- `frontend/src/components/PatientsList.tsx`: badge discreto **"Mesclado em outro registro"** (`.mergedTag`, itálico cinza-claro) quando `p.status === 'archived' && p.merged_into_id`. Sem lookup do principal — copy genérica intencional. Estilo em `PatientsList.module.css`.
+
+**Permissão:** UI esconde rádio + botão para não-owner (`isOwner`); backend continua sendo defesa real (`requireRole(CLINIC_ADMIN_ROLES)` na Sprint 3.33 já protege com 403 `forbidden_role`). Secretaria/funcionário(a) continua podendo editar via PatientEditForm e ver o badge "Mesclado em outro registro" (read-only).
+
+**Contagem de agendamentos por paciente:** **não criada** nesta sprint. Endpoint `GET /appointments` atual aceita `date|professional_id|status` mas **não** `patient_id`. Decisão consciente: copy genérica no modal evita criar endpoint novo apenas para isso. Próxima sprint pode reavaliar.
+
+**Verificação:** `pnpm --filter backend typecheck` ✅, `pnpm --filter backend build` ✅, `pnpm --filter frontend typecheck` ✅, `pnpm --filter frontend build` ✅, `docker compose build backend && up -d backend` ✅. Smoke API (`/tmp/smoke-3.34.mjs`) confirma: (1) `PublicPatient` agora carrega `merged_into_id`/`merged_at` em criação/listagem/merge; (2) `POST /patients/:id/merge` continua devolvendo `{ patient, merge: {...} }`; (3) secundário arquivado lista com `merged_into_id` setado e `merged_at` ISO. Dados de teste removidos (clínica + usuário descartável). Sem commit/push.
+
+**Validação visual pendente** (manual no navegador) — checklist em `docs/testing-checklist.md` (Sprint 3.34): criar 2 pacientes duplicados, ver na aba Pacientes › Possíveis duplicados, escolher principal via rádio, confirmar no modal danger, validar grupo sumir, ver secundário em Arquivados com badge "Mesclado em outro registro", ver Agenda com nome do principal (se havia appointment), testar com secretaria (sem rádio/botão), CPF sempre mascarado.
+
+---
+
 **Sprint 3.33** (entregue) — **backend + migration + API do merge seguro de duplicados (B-safe)**. Implementação do que a Sprint 3.32 decidiu no ADR 0007. **Sem frontend** (3.34); **sem delete físico**; **sem undo/snapshot**; **sem seleção campo-a-campo**; **sem dado clínico**.
 
 **Migration `20260601000000_patients_merged_into`:** aditiva — adiciona `patients.merged_into_id uuid NULL REFERENCES patients(id) ON DELETE SET NULL` + `patients.merged_at timestamptz NULL` + índice parcial `idx_patients_merged_into WHERE merged_into_id IS NOT NULL`. FK `SET NULL` é defensiva (não há delete físico; protege caso uma sprint futura introduza). Sem snapshot/undo. `down` remove índice e colunas.

@@ -616,6 +616,16 @@ export function PatientsList({
                   </span>
                 </div>
 
+                {p.status === 'archived' && p.merged_into_id && (
+                  // Safe-merge B-safe provenance (Sprint 3.34): this archived
+                  // record was the secondary of a merge. We do NOT look up the
+                  // primary's name — it could be PII to surface here and isn't
+                  // needed for the badge's purpose.
+                  <p className={styles.mergedTag} title="Este registro foi resolvido como duplicado.">
+                    Mesclado em outro registro
+                  </p>
+                )}
+
                 <dl className={styles.fields}>
                   <div className={styles.field}>
                     <dt className={styles.fieldLabel}>

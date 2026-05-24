@@ -149,12 +149,18 @@ dados importados. Nada clínico (Opção C / ADR 0001).
   400 `merge_invalid` (validação), 404 `patient_not_found` genérico
   (inexistente/cross-tenant/archived/CAS miss), 403 `forbidden_role`, 401.
   Matriz por API **18/18** (`/tmp/sprint-3.33-merge-test.mjs`).
-- **Sprint 3.34 (próxima) — Frontend/UX + validação visual do merge.**
-  `DuplicatesList`: escolher principal, diffs mascarados, editar antes (reusa
-  `PatientEditForm`), `ConfirmDialog` forte, contagem de agendamentos por
-  registro; expor `merged_into_id` no `PublicPatient` para mostrar "mesclado em
-  X" em arquivados; validação visual (Agenda mostra nome certo após mover;
-  arquivado em Pacientes › Arquivados; secretaria não vê/não executa o merge).
+- **Sprint 3.34 (entregue — backend model + frontend) — UX do merge B-safe.**
+  Backend: `PublicPatient` ganha `merged_into_id`/`merged_at` (não-PII).
+  Frontend: rádio "Manter como principal" owner-only por registro,
+  selo "Principal" no escolhido, botão "Resolver duplicado" no rodapé do
+  grupo, `ConfirmDialog` variant `danger` com copy explícita do comportamento
+  B-safe, mensagem inline de sucesso com contagens, invalidação de cache de
+  `['appointments']` e `['patients']` no TanStack após sucesso, badge "Mesclado
+  em outro registro" em Arquivados (sem lookup do nome do principal). Sem
+  endpoint novo (contagem de appointments por paciente fica para futuro);
+  sem seleção campo-a-campo; sem undo. `backend typecheck`/`build` ✅,
+  `frontend typecheck`/`build` ✅, smoke API confirma shape. Validação visual
+  manual pendente — checklist em `docs/testing-checklist.md`.
 - **Ainda no tema:** **undo/snapshot** completo (exige tabela própria + ADR) e
   **paginação backend** de duplicados quando a base crescer (hoje o corte é
   client-side + cap do scan).
