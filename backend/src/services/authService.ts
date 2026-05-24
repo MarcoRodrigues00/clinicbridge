@@ -13,6 +13,7 @@ import { mfaBackupCodeService } from './mfaBackupCodeService';
 import { passwordService } from './passwordService';
 import { tokenService } from './tokenService';
 import { totpService } from './totpService';
+import { generateInviteCode } from '../utils/inviteCode';
 
 // Captured at the controller boundary and threaded down so audit events can be
 // written without the service touching the HTTP request object directly.
@@ -33,6 +34,18 @@ export interface RegisterInput {
 export interface RegisterResult {
   user: SafeUser;
   clinic: PublicClinic;
+}
+
+// Staff (secretaria) self-registration (Sprint 3.24): creates a user with NO
+// clinic. They then request to join a clinic by its invite code; the owner approves.
+export interface RegisterStaffInput {
+  nome: string;
+  email: string;
+  senha: string;
+  consentimento_lgpd: true;
+}
+export interface RegisterStaffResult {
+  user: SafeUser;
 }
 
 export interface LoginInput {
@@ -99,6 +112,17 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+// Generates an invite code not currently in use. Collisions are astronomically
+// unlikely (31^8); the unique index is the real guard, this just avoids the rare retry.
+async function generateUniqueInviteCode(): Promise<string> {
+  for (let i = 0; i < 6; i++) {
+    const code = generateInviteCode();
+    const existing = await clinicDao.findByInviteCode(code);
+    if (!existing) return code;
+  }
+  throw new HttpError(500, 'internal_error', 'Não foi possível concluir o cadastro.');
+}
+
 // Builds the final session (JWT) for an authenticated user. Used by the non-MFA
 // login path and by verifyMfaLogin after a valid TOTP code.
 function buildSession(user: UserRow): LoginResult {
@@ -161,6 +185,7 @@ export const authService = {
     }
 
     const senha_hash = await passwordService.hash(input.senha);
+    const inviteCode = await generateUniqueInviteCode();
 
     let result: RegisterResult;
     try {
@@ -181,6 +206,7 @@ export const authService = {
             responsavel_id: user.id,
             consentimento_lgpd: input.consentimento_lgpd,
             contrato_aceito_em: new Date(),
+            invite_code: inviteCode,
           },
           trx,
         );
@@ -212,6 +238,39 @@ export const authService = {
     });
 
     return result;
+  },
+
+  // Staff self-registration (Sprint 3.24): no clinic is created. The user is
+  // 'secretaria' with clinica_id=null until a clinic owner approves their join
+  // request — so requireClinic blocks every tenant route in the meantime.
+  async registerStaff(input: RegisterStaffInput, ctx: AuthContext): Promise<RegisterStaffResult> {
+    const email = normalizeEmail(input.email);
+
+    const existing = await userDao.findByEmail(email);
+    if (existing) {
+      throw new HttpError(409, 'email_already_used', 'E-mail já cadastrado.');
+    }
+
+    const senha_hash = await passwordService.hash(input.senha);
+
+    let user: UserRow;
+    try {
+      user = await userDao.create({ nome: input.nome, email, senha_hash, papel: 'secretaria' });
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new HttpError(409, 'email_already_used', 'E-mail já cadastrado.');
+      }
+      throw err;
+    }
+
+    await safeAudit({
+      acao: 'auth.register.staff.success',
+      usuario_id: user.id,
+      clinica_id: null,
+      ctx,
+    });
+
+    return { user: toSafeUser(user) };
   },
 
   async login(input: LoginInput, ctx: AuthContext): Promise<LoginOutcome> {

@@ -129,14 +129,50 @@ dados importados. Nada clínico (Opção C / ADR 0001).
   **sem merge automático** e nada destrutivo sem confirmação. Mover/realocar
   agendamentos entre pacientes exige decisão própria. **Paginação backend** de
   duplicados quando a base crescer (hoje o corte é client-side + cap do scan).
-- **Sprint futura — Gestão de equipe / convite de secretaria.** Hoje `secretaria`
-  só existe alterando o banco via SQL, então o papel **não é testável pelo
-  navegador** (gap conhecido da 3.22). Escopo proposto (exige decisão/ADR própria):
-  secretaria **se cadastra e solicita entrada** na clínica do dono; o **dono
-  aprova/recusa** no sistema; o papel `secretaria` é aplicado **somente após
-  aprovação**; **tudo auditado**; **sem autoentrada** em clínica sem aprovação.
-  Inclui a UI de gestão de usuários/papéis (inexistente hoje) e mitiga o tradeoff
-  de "papel stale" no JWT.
+- **Sprint 3.24 (entregue) — Gestão de equipe / convite de funcionário(a).** Antes
+  desta sprint o papel `secretaria` só existia via SQL e **não era testável pelo
+  navegador** (gap herdado da 3.22). Entregue: cadastro de funcionário(a) sem
+  clínica (`account_type='staff'`); migration `20260529000000_clinic_team`
+  (`clinics.invite_code` único + tabela `clinic_join_requests`); `POST
+  /clinic-join-requests` (código + nome opcional como confirmação + mensagem),
+  `GET /clinic-join-requests/me`, `PATCH .../cancel`; `GET /clinics/invite-code`,
+  `GET /clinic-join-requests/pending`, `POST .../approve|reject` (owner-only via
+  `requireRole`); `approve` é atômico (setStatus + setClinic + cancela outras
+  pendentes). UI: seletor owner/staff no `RegisterPage`, `JoinClinicGate` para
+  usuários sem clínica e `TeamManagementPanel` (aba Equipe) para o dono. Erros do
+  invite são genéricos (`invalid_invite`) para impedir enumeração. **Polimento
+  3.24.1:** copy generalizada de "secretaria" para "funcionário(a)" / "equipe"
+  (frontend only — a role técnica continua sendo `secretaria` no JWT/DB/audits).
+- **Sprint 3.25 (entregue) — Gestão de membros.** Aba Equipe lista membros
+  ativos + ex-membros para o dono e permite **desativar acesso** sem deletar
+  usuário/histórico. Migration leve estende o CHECK de
+  `clinic_join_requests.status` com `'revoked'`; desligar = `users.clinica_id :=
+  NULL` + linha histórica `revoked`. `users.ativo` permanece `true`. Endpoints
+  `GET /clinic-members` e `PATCH /clinic-members/:userId/deactivate` (owner-only,
+  audit `clinic.member.*.success` sem PII). **Stale-JWT fechado** em
+  `requireClinic` (1 DB check por request tenant-scoped → 403
+  `clinic_membership_revoked` imediato). Sem reativação direta — ex-membro re-entra
+  pelo fluxo da 3.24. Validação por API 14/14.
+- **Próximo no tema — Polimentos da trilha equipe + roles granulares.** Itens
+  candidatos, **não implementados** (cada um pode virar sprint própria):
+  - **regenerar invite code** (invalida automaticamente solicitações pendentes
+    relacionadas; auditado).
+  - **sair voluntariamente** da clínica (membro inicia o desligamento; mesmas
+    guardas que o owner-deactivate).
+  - **histórico de ações de equipe** (entradas/saídas/aprovações/recusas)
+    visível ao dono — read-only, sem PII em logs já garantido.
+  - **roles granulares** (hoje só existem `dono_clinica` / `secretaria` /
+    `admin_sistema`). Candidatas: **recepção**, **financeiro**, **funcionário(a)
+    administrativo(a)**, **gestor da clínica**. Hoje a UI generaliza visualmente
+    (3.24.1) como "funcionário(a) com acesso administrativo" porque essas roles
+    **não existem** ainda. Criá-las exige: coluna/tabela de role com semântica
+    de permissões, migração, mapeamento `requested_role`/`papel` na aprovação,
+    UI dedicada para escolher a role no envio/aprovação, e revalidação de
+    `papel` no DB dentro de `requireClinic` (hoje só `clinica_id`/`ativo` são
+    revalidados — ver `docs/security-notes.md`). **Não tentar fazer sem ADR.**
+  - troca de papel pelo dono (admin-of-clinic) com guardrails (não pode rebaixar
+    o último dono; audit). **Troca de dono continua fora de escopo** — exige ADR
+    própria com fluxo de transferência atômica e janelas de aceite.
 
 ## Fase 4 — Operação e UX administrativa
 

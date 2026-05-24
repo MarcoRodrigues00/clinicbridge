@@ -30,8 +30,37 @@ export interface ClinicRow {
   plano: string;
   consentimento_lgpd: boolean;
   contrato_aceito_em: Date | null;
+  // Short opaque code the owner shares so a secretaria can request to join
+  // (Sprint 3.24). Stored normalized (no dash); the API formats it for display.
+  invite_code: string;
   criado_em: Date;
   atualizado_em: Date;
+}
+
+// Clinic join requests (Sprint 3.24). A secretaria (no clinic yet) requests to
+// join a clinic by its invite_code; the owner approves/rejects. requested_role is
+// DB-constrained to 'secretaria' so approval can never grant a privileged role.
+// 'revoked' was added in Sprint 3.25: an owner-initiated removal of a clinic
+// member (recorded as a historical row; users.clinica_id is the source of truth
+// for the current vínculo).
+export type ClinicJoinRequestStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+  | 'revoked';
+
+export interface ClinicJoinRequestRow {
+  id: string;
+  clinic_id: string;
+  user_id: string;
+  requested_role: 'secretaria';
+  status: ClinicJoinRequestStatus;
+  decided_by_user_id: string | null;
+  decided_at: Date | null;
+  message: string | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface AuditLogRow {
@@ -148,5 +177,6 @@ declare module 'knex/types/tables' {
     user_mfa_backup_codes: UserMfaBackupCodeRow;
     clinic_professionals: ClinicProfessionalRow;
     appointments: AppointmentRow;
+    clinic_join_requests: ClinicJoinRequestRow;
   }
 }

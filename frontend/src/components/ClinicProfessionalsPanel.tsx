@@ -115,8 +115,11 @@ export function ClinicProfessionalsPanel(): JSX.Element {
         </button>
       </div>
       <p className={styles.subtitle}>
-        Cadastro administrativo de profissionais. A função/rótulo interno é um
-        campo administrativo opcional e não é dado clínico.
+        Profissionais da agenda — pessoas que aparecem como responsável do
+        agendamento e alimentam o seletor da aba <strong>Agenda</strong>. Podem
+        ou não ter login no sistema (diferente de "Membros da equipe", acima,
+        que são contas com acesso). Função/rótulo é administrativo opcional;
+        não é prontuário nem dado clínico.
       </p>
 
       {isOwner ? (

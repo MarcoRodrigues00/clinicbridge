@@ -5,7 +5,11 @@ import { authService, type AuthContext } from '../services/authService';
 
 // Validation is purely structural here. Normalization (trim/lowercase) lives in the
 // service layer (authService.normalizeEmail) — single source of truth.
+// account_type is optional and defaults to 'owner' (backward compatible with the
+// original register payload). 'staff' (Sprint 3.24) registers a secretaria with no
+// clinic; nome_clinica is only required for 'owner'.
 const RegisterSchema = z.object({
+  account_type: z.enum(['owner', 'staff']).optional(),
   nome: z.string().min(1, 'Nome é obrigatório.').max(120),
   email: z.string().email('E-mail inválido.').max(180),
   senha: z
@@ -14,7 +18,7 @@ const RegisterSchema = z.object({
     .max(200, 'Senha muito longa.')
     .regex(/[A-Za-z]/, 'Senha deve conter pelo menos uma letra.')
     .regex(/\d/, 'Senha deve conter pelo menos um número.'),
-  nome_clinica: z.string().min(1, 'Nome da clínica é obrigatório.').max(160),
+  nome_clinica: z.string().max(160).optional(),
   consentimento_lgpd: z.literal(true, {
     errorMap: () => ({ message: 'Consentimento LGPD é obrigatório.' }),
   }),
@@ -60,7 +64,42 @@ function buildContext(req: Request): AuthContext {
 export const authController = {
   async register(req: Request, res: Response): Promise<void> {
     const input = parseOrThrow(RegisterSchema, req.body);
-    const result = await authService.register(input, buildContext(req));
+
+    // Staff: no clinic created; user joins later via an approved request.
+    if (input.account_type === 'staff') {
+      const result = await authService.registerStaff(
+        {
+          nome: input.nome,
+          email: input.email,
+          senha: input.senha,
+          consentimento_lgpd: true,
+        },
+        buildContext(req),
+      );
+      res.status(201).json({
+        message:
+          'Cadastro realizado. Faça login e solicite entrada na clínica com o código de convite.',
+        user: result.user,
+      });
+      return;
+    }
+
+    // Owner (default): nome_clinica is required.
+    if (!input.nome_clinica || input.nome_clinica.trim().length === 0) {
+      throw new HttpError(400, 'validation_failed', 'Dados inválidos.', {
+        fields: [{ field: 'nome_clinica', message: 'Nome da clínica é obrigatório.' }],
+      });
+    }
+    const result = await authService.register(
+      {
+        nome: input.nome,
+        email: input.email,
+        senha: input.senha,
+        nome_clinica: input.nome_clinica,
+        consentimento_lgpd: true,
+      },
+      buildContext(req),
+    );
     res.status(201).json({
       message: 'Cadastro realizado com sucesso. Faça login para continuar.',
       user: result.user,

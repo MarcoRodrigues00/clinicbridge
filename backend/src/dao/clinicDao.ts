@@ -7,11 +7,19 @@ export interface CreateClinicInput {
   responsavel_id: string;
   consentimento_lgpd: boolean;
   contrato_aceito_em: Date | null;
+  // Normalized invite code (Sprint 3.24). Generated unique by the caller.
+  invite_code: string;
 }
 
 export const clinicDao = {
   async findById(id: string, conn: Knex = db): Promise<ClinicRow | undefined> {
     return conn<ClinicRow>('clinics').where({ id }).first();
+  },
+
+  // Exact-match lookup by normalized invite code. Used only to resolve a code a
+  // user already holds — there is intentionally no name search / listing.
+  async findByInviteCode(code: string, conn: Knex = db): Promise<ClinicRow | undefined> {
+    return conn<ClinicRow>('clinics').where({ invite_code: code }).first();
   },
 
   async create(input: CreateClinicInput, conn: Knex = db): Promise<ClinicRow> {
@@ -22,6 +30,7 @@ export const clinicDao = {
         plano: 'free',
         consentimento_lgpd: input.consentimento_lgpd,
         contrato_aceito_em: input.contrato_aceito_em,
+        invite_code: input.invite_code,
       })
       .returning('*');
     if (!row) {

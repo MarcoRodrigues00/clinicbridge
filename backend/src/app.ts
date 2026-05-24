@@ -11,6 +11,8 @@ import { importSessionsRouter } from './routes/importSessions';
 import { patientsRouter } from './routes/patients';
 import { clinicProfessionalsRouter } from './routes/clinicProfessionals';
 import { appointmentsRouter } from './routes/appointments';
+import { clinicJoinRequestsRouter } from './routes/clinicJoinRequests';
+import { clinicMembersRouter } from './routes/clinicMembers';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -80,6 +82,8 @@ export function createApp(): Express {
   app.use(patientsRouter);
   app.use(clinicProfessionalsRouter);
   app.use(appointmentsRouter);
+  app.use(clinicJoinRequestsRouter);
+  app.use(clinicMembersRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

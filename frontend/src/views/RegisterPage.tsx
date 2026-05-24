@@ -6,6 +6,8 @@ import { AuthAside } from '../components/AuthAside';
 import { api, ApiError } from '../services/api';
 import styles from './Auth.module.css';
 
+type AccountType = 'owner' | 'staff';
+
 interface FieldErrors {
   nome?: string;
   email?: string;
@@ -16,6 +18,7 @@ interface FieldErrors {
 }
 
 function validate(values: {
+  account_type: AccountType;
   nome: string;
   email: string;
   senha: string;
@@ -43,7 +46,8 @@ function validate(values: {
   } else if (values.senha !== values.confirmar_senha) {
     errors.confirmar_senha = 'As senhas não conferem.';
   }
-  if (!values.nome_clinica.trim()) {
+  // Clinic name is only required when the user is creating an owner account.
+  if (values.account_type === 'owner' && !values.nome_clinica.trim()) {
     errors.nome_clinica = 'Informe o nome da clínica.';
   }
   if (!values.consentimento_lgpd) {
@@ -54,6 +58,10 @@ function validate(values: {
 }
 
 export function RegisterPage(): JSX.Element {
+  // Sprint 3.24: account_type splits registration. 'owner' creates a clinic
+  // (existing flow); 'staff' creates a secretaria user with no clinic, who then
+  // requests to join one via an invite code shared by the owner.
+  const [accountType, setAccountType] = useState<AccountType>('owner');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -68,12 +76,14 @@ export function RegisterPage(): JSX.Element {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successKind, setSuccessKind] = useState<AccountType>('owner');
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
     setFormError(null);
 
     const values = {
+      account_type: accountType,
       nome,
       email,
       senha,
@@ -89,13 +99,23 @@ export function RegisterPage(): JSX.Element {
 
     setSubmitting(true);
     try {
-      await api.register({
-        nome: nome.trim(),
-        email: email.trim(),
-        senha,
-        nome_clinica: nomeClinica.trim(),
-        consentimento_lgpd: true,
-      });
+      if (accountType === 'staff') {
+        await api.registerStaff({
+          nome: nome.trim(),
+          email: email.trim(),
+          senha,
+          consentimento_lgpd: true,
+        });
+      } else {
+        await api.register({
+          nome: nome.trim(),
+          email: email.trim(),
+          senha,
+          nome_clinica: nomeClinica.trim(),
+          consentimento_lgpd: true,
+        });
+      }
+      setSuccessKind(accountType);
       setSuccess(true);
     } catch (err) {
       // Backend messages are produced safely; fall back to a generic message.
@@ -120,17 +140,26 @@ export function RegisterPage(): JSX.Element {
         <div className={styles.layout}>
           <div className={styles.card}>
         <span className={styles.eyebrow}>Criar conta</span>
-        <h1 className={styles.title}>Cadastre sua clínica</h1>
+        <h1 className={styles.title}>
+          {accountType === 'staff'
+            ? 'Cadastre-se como funcionário(a) da clínica'
+            : 'Cadastre sua clínica'}
+        </h1>
         <p className={styles.subtitle}>
-          Crie o acesso de administrador da clínica para organizar dados administrativos,
-          pacientes e agenda em um ambiente seguro.
+          {accountType === 'staff'
+            ? 'Crie sua conta de funcionário(a) da clínica. Após o cadastro, peça o código de convite ao(à) dono(a) para solicitar acesso à equipe.'
+            : 'Crie o acesso de administrador da clínica para organizar dados administrativos, pacientes e agenda em um ambiente seguro.'}
         </p>
 
         {success ? (
           <>
             <div className={`${styles.alert} ${styles.alertSuccess}`} role="status">
               <CheckCircle2 size={18} aria-hidden="true" />
-              <span>Cadastro realizado com sucesso. Faça login para continuar.</span>
+              <span>
+                {successKind === 'staff'
+                  ? 'Cadastro realizado. Faça login e use o código de convite da clínica para solicitar entrada na equipe.'
+                  : 'Cadastro realizado com sucesso. Faça login para continuar.'}
+              </span>
             </div>
             <div className={styles.successActions}>
               <Link to="/login" className={styles.successLink}>
@@ -148,6 +177,46 @@ export function RegisterPage(): JSX.Element {
             ) : null}
 
             <form className={styles.form} onSubmit={handleSubmit} noValidate>
+              <fieldset className={styles.field}>
+                <legend className={styles.label}>Tipo de conta</legend>
+                <div className={styles.accountTypeGroup} role="radiogroup" aria-label="Tipo de conta">
+                  <label
+                    className={`${styles.accountTypeOption} ${
+                      accountType === 'owner' ? styles.accountTypeOptionActive : ''
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="account_type"
+                      value="owner"
+                      checked={accountType === 'owner'}
+                      onChange={() => setAccountType('owner')}
+                    />
+                    <span>
+                      <strong>Sou dono(a) ou responsável pela clínica</strong>
+                      <small>Crio a clínica agora e administro o acesso.</small>
+                    </span>
+                  </label>
+                  <label
+                    className={`${styles.accountTypeOption} ${
+                      accountType === 'staff' ? styles.accountTypeOptionActive : ''
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="account_type"
+                      value="staff"
+                      checked={accountType === 'staff'}
+                      onChange={() => setAccountType('staff')}
+                    />
+                    <span>
+                      <strong>Sou funcionário(a) / membro da equipe</strong>
+                      <small>Preciso de um código de convite da clínica para entrar.</small>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="reg-nome">
                   Nome
@@ -272,26 +341,28 @@ export function RegisterPage(): JSX.Element {
                 ) : null}
               </div>
 
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="reg-clinica">
-                  Nome da clínica
-                </label>
-                <input
-                  id="reg-clinica"
-                  className={`${styles.input} ${errors.nome_clinica ? styles.inputError : ''}`}
-                  type="text"
-                  autoComplete="organization"
-                  value={nomeClinica}
-                  onChange={(e) => setNomeClinica(e.target.value)}
-                  aria-invalid={errors.nome_clinica ? true : undefined}
-                  aria-describedby={errors.nome_clinica ? 'reg-clinica-error' : undefined}
-                />
-                {errors.nome_clinica ? (
-                  <span id="reg-clinica-error" className={styles.fieldError}>
-                    {errors.nome_clinica}
-                  </span>
-                ) : null}
-              </div>
+              {accountType === 'owner' ? (
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="reg-clinica">
+                    Nome da clínica
+                  </label>
+                  <input
+                    id="reg-clinica"
+                    className={`${styles.input} ${errors.nome_clinica ? styles.inputError : ''}`}
+                    type="text"
+                    autoComplete="organization"
+                    value={nomeClinica}
+                    onChange={(e) => setNomeClinica(e.target.value)}
+                    aria-invalid={errors.nome_clinica ? true : undefined}
+                    aria-describedby={errors.nome_clinica ? 'reg-clinica-error' : undefined}
+                  />
+                  {errors.nome_clinica ? (
+                    <span id="reg-clinica-error" className={styles.fieldError}>
+                      {errors.nome_clinica}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className={styles.field}>
                 <label
@@ -326,8 +397,10 @@ export function RegisterPage(): JSX.Element {
                     <Loader2 size={16} className="spin" aria-hidden="true" />
                     Cadastrando…
                   </>
+                ) : accountType === 'staff' ? (
+                  'Criar conta de funcionário(a)'
                 ) : (
-                  'Criar conta'
+                  'Criar conta da clínica'
                 )}
               </button>
 

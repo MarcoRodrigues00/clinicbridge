@@ -47,6 +47,32 @@
   sensíveis), `admin_sistema` (papel de sistema, sem `clinica_id` — `requireClinic`
   já o bloqueia das rotas tenant-scoped). **Sem migration, sem tabela de
   permissões** (decisão consciente: nada de RBAC complexo no MVP).
+- **Vocabulário visível ao usuário (3.24.1):** a UI exibe o papel `secretaria`
+  como **"funcionário(a) (acesso administrativo)"** / "membro da equipe". A
+  string `'secretaria'` permanece no JWT, no DB (`users.papel`,
+  `clinic_join_requests.requested_role`) e nos audits — mudar isso exigiria
+  migration/refactor e foi explicitamente adiado. Roles mais granulares
+  (recepção, financeiro, gestor, etc.) NÃO existem no MVP — ficam para sprint
+  futura. Audits e payloads de API continuam usando `'secretaria'`.
+- **Gestão de membros (Sprint 3.25):** `GET /clinic-members` e `PATCH
+  /clinic-members/:userId/deactivate` são gateados por `requireRole(CLINIC_ADMIN_ROLES)`.
+  A desativação **NÃO** apaga o usuário e **NÃO** mexe em `users.ativo`: só
+  remove o vínculo (`users.clinica_id := NULL`) e grava uma linha histórica
+  `status='revoked'` em `clinic_join_requests` (com `decided_by_user_id` do
+  dono). Auditoria: `clinic.member.deactivated.success` (sem PII;
+  `recurso_id`=UUID do membro). Endpoint **recusa**: desligar a si mesmo (400
+  `cannot_deactivate_self`), desligar o `responsavel_id` da clínica (400
+  `cannot_deactivate_owner`), desligar usuário de outra clínica/inexistente/já
+  desligado (**404 genérico** `member_not_found`, sem enumeração).
+- **Stale-JWT fechado em `requireClinic` (Sprint 3.25):** o middleware agora
+  busca `users` por id e exige `ativo=true` e `users.clinica_id ===
+  req.auth.clinica_id`. Mismatch → **403 `clinic_membership_revoked`** (genérico:
+  não revela se a pessoa entrou em outra clínica). Custo: 1 SELECT indexed por
+  request tenant-scoped. Garante que a desativação é **imediatamente efetiva**,
+  sem precisar rotacionar tokens. O campo `papel` ainda **não** é re-validado
+  contra o DB — única transição realista (`dono_clinica → secretaria`) **não**
+  existe nesta sprint; aceitar o risco até roles granulares + UI de gestão de
+  sessão entrarem em sprint futura.
 - `requireRole(allowed)` (`middlewares/requireAuth.ts`) roda **depois** de
   `requireAuth` e `requireClinic` — **nunca** burla autenticação nem tenant.
   `CLINIC_ADMIN_ROLES = ['dono_clinica']`.

@@ -41,6 +41,20 @@ export const userDao = {
       .update({ clinica_id: clinicId, atualizado_em: conn.fn.now() });
   },
 
+  // Sprint 3.25 — remove the user's current clinic membership (vínculo) without
+  // touching `ativo` (the user remains globally allowed to log in and can request
+  // entry into another clinic). Scoped by both userId AND expectedClinicId so a
+  // racing change can't accidentally null a different (newer) clinic membership.
+  async clearClinicIfMember(
+    userId: string,
+    expectedClinicId: string,
+    conn: Knex = db,
+  ): Promise<number> {
+    return conn<UserRow>('users')
+      .where({ id: userId, clinica_id: expectedClinicId })
+      .update({ clinica_id: null, atualizado_em: conn.fn.now() });
+  },
+
   async touchLastLogin(userId: string, conn: Knex = db): Promise<void> {
     await conn<UserRow>('users')
       .where({ id: userId })

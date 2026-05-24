@@ -38,8 +38,8 @@ export function HowItWorks(): JSX.Element {
           <span className="eyebrow">Como funciona</span>
           <h2 className="section-title">Do arquivo antigo à exportação limpa</h2>
           <p className="section-lead">
-            Um fluxo curto que cabe na rotina da secretaria, com revisão humana antes de qualquer
-            exportação.
+            Um fluxo curto que cabe na rotina administrativa da clínica, com revisão humana antes
+            de qualquer exportação.
           </p>
         </motion.div>
 
