@@ -17,7 +17,19 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Em validação/finalização: Sprint 3.30** — **QA / validação visual** do fluxo
+**Em validação/finalização: Sprint 3.31** — **hardening backend** dos achados da
+super revisão pós-3.28 (concorrência + trilha de auditoria nas solicitações de
+entrada). **Sem migration, sem nova feature, sem mudança de API/permissão/frontend.**
+(1) `clinicJoinRequestDao.setStatus` virou **compare-and-set** (`WHERE id AND
+status='pending'`) — impede sobrescrever decisão concorrente; (2) fecha o
+TOCTOU em `cancelMine` (e checa retorno em `approve` dentro da transação, antes
+de `setClinic`, e em `reject`) → **409 `invalid_state`** quando a request deixou
+de ser pendente; (3) `cancelOtherPending` agora grava `decided_by_user_id` +
+`decided_at` no cascade-cancel (campo **não exposto na API**). Colunas já
+existiam (`20260529000000`). `backend typecheck`/`build` OK; matriz por API
+**18/18** (`/tmp/sprint-3.31-api-test.mjs`).
+
+**Sprint 3.30** (entregue) — **QA / validação visual** do fluxo
 completo da aba Equipe. Sem backend, sem API, sem migration, sem permissão, sem
 nova feature. Validação manual no navegador pelo usuário (sprints 3.24–3.28):
 login owner, código de convite, Copiar/Regenerar (ConfirmDialog), solicitações

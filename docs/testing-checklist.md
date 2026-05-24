@@ -853,3 +853,26 @@ Sem mudança de API. Validação puramente visual no navegador:
 9. **Secretaria vê mas não gerencia:**
    - Login como staff aprovado → aba Equipe **não aparece** (UI esconde para não-owner).
    - Aba Agenda: seletor de profissional mostra ativos; criar agendamento funciona normalmente.
+
+## Hardening de join requests — matriz por API (Sprint 3.31)
+
+Pré-requisitos: backend dev `:3001` rodando; Postgres acessível via
+`docker compose exec postgres psql`. Script automatizado com contas descartáveis
+(tag aleatório) em `/tmp/sprint-3.31-api-test.mjs` — verifica colunas via SQL e
+limpa os dados ao fim.
+
+Sem mudança de API/contrato. Cenários (18/18):
+
+1. **Criar pendente:** staff sem clínica `POST /clinic-join-requests` (código válido) → 201, `status=pending`.
+2. **Cancelar própria pendente:** `PATCH /clinic-join-requests/:id/cancel` → 200, `status=cancelled`.
+3. **Cancelar de novo:** mesma rota/ id → **409 `invalid_state`** (CAS não sobrescreve).
+4. **Cancelar de outro usuário:** staff B tenta cancelar request do staff A → **404 `request_not_found`**; request de A segue `pending`.
+5. **Aprovação + cascade com trilha:** staff com pendentes em A e B; dono A aprova a de A → `approved` com `decided_by_user_id`=dono A e `decided_at` setado (SQL); a de B vira `cancelled` com **`decided_by_user_id`=dono A** e `decided_at` setado; `users.clinica_id` do staff = clínica A.
+6. **Cancelar já aprovada:** staff tenta cancelar a request aprovada → **409 `invalid_state`**; SQL confirma que segue `approved`.
+7. **Cross-tenant:** dono B tenta `approve`/`reject` de request da clínica A → **404 `request_not_found`** nas duas; alvo segue `pending`.
+8. **Audit sem PII:** linhas `clinic.join_request.created/cancelled/approved.success` com `recurso='clinic_join_request'`, `recurso_id`=UUID; nenhum nome/e-mail/tag embutido em `acao`.
+9. **Sem leak de decisor:** `GET /clinic-join-requests/me` **não** inclui `decided_by_user_id` no JSON.
+
+> Atenção ao rate limit de auth (`AUTH_RATE_LIMIT_MAX=20`/15min, IP-keyed): o
+> script usa ~6 contas (12 requests de auth). Reexecuções em sequência podem
+> precisar aguardar a janela ou reiniciar o backend (store em memória no dev).

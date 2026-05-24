@@ -7,6 +7,17 @@
 
 ## Última sprint aprovada
 
+**Sprint 3.31** (entregue) — **hardening backend** dos achados da super revisão pós-3.28 (concorrência + trilha de auditoria nas solicitações de entrada). Sem migration, sem nova feature, sem mudança de API/permissão, sem frontend.
+
+Três achados tratados:
+1. **`setStatus` pouco scoped → compare-and-set:** o `UPDATE` em `clinicJoinRequestDao.setStatus` ganhou `WHERE id = ? AND status = 'pending'`. Como `pending` é o único estado não-terminal, o guard é exaustivo e impede sobrescrever uma decisão concorrente.
+2. **Race/TOCTOU em `cancelMine`:** com o CAS, se o dono aprovar entre o pre-fetch e o update, o cancelamento não casa nenhuma linha → **409 `invalid_state`** (antes podia reverter `approved`→`cancelled` deixando o usuário na clínica com request cancelada). `approve` checa o retorno **dentro da transação** (rollback se obsoleta, antes de `setClinic`); `reject` idem.
+3. **`cancelOtherPending` sem trilha:** agora grava `decided_by_user_id` (dono que aprovou) + `decided_at` no cascade-cancel. Campo **não exposto na API** (sem leak cross-tenant).
+
+Arquivos: `backend/src/dao/clinicJoinRequestDao.ts`, `backend/src/services/clinicJoinRequestService.ts`. **Sem migration** (colunas já existem desde `20260529000000`). Verificação: `backend typecheck`/`build` ✅; matriz por API **18/18** (`/tmp/sprint-3.31-api-test.mjs`, contas descartáveis, dados removidos). Sem commit/push.
+
+---
+
 **Sprint 3.30** (entregue) — **QA / validação visual** do fluxo completo da aba Equipe. Sem backend, sem API, sem migration, sem permissão, sem nova feature.
 
 Validação manual no navegador pelo usuário cobrindo sprints 3.24–3.28: login owner, aba Equipe, código de convite, Copiar/Regenerar (ConfirmDialog), solicitações pendentes, Aprovar/Recusar (modal custom), membros ativos/inativos, Desativar acesso (modal danger), profissionais da agenda (criar/editar/desativar), seletor da aba Agenda sincronizado, layout geral. **Nenhum bug bloqueante encontrado. Fluxo aprovado.**

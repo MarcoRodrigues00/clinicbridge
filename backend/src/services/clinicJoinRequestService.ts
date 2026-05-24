@@ -217,8 +217,10 @@ export const clinicJoinRequestService = {
     if (req.status !== 'pending') {
       throw new HttpError(409, 'invalid_state', 'Esta solicitação não está pendente.');
     }
+    // Compare-and-set guards against a race: if the owner approved/decided this
+    // request between our pre-fetch and here, the UPDATE matches no pending row.
     const updated = await clinicJoinRequestDao.setStatus(id, 'cancelled', actor.usuario_id);
-    if (!updated) throw new HttpError(404, 'request_not_found', 'Solicitação não encontrada.');
+    if (!updated) throw new HttpError(409, 'invalid_state', 'Esta solicitação não está mais pendente.');
     await safeAudit('clinic.join_request.cancelled.success', actor.usuario_id, req.clinic_id, req.id, ctx);
     const clinic = await clinicDao.findById(req.clinic_id);
     return toMyJoinRequest({ ...updated, clinic_name: clinic?.nome ?? '' });
@@ -252,11 +254,16 @@ export const clinicJoinRequestService = {
     }
 
     await db.transaction(async (trx) => {
-      await clinicJoinRequestDao.setStatus(id, 'approved', actor.usuario_id, trx);
+      // Compare-and-set inside the txn: if the request is no longer pending
+      // (concurrent approve/cancel/reject), this matches no row and we abort so
+      // setClinic/cancelOtherPending never run on a stale request (rollback).
+      const updated = await clinicJoinRequestDao.setStatus(id, 'approved', actor.usuario_id, trx);
+      if (!updated) throw new HttpError(409, 'invalid_state', 'Esta solicitação não está mais pendente.');
       // papel is already 'secretaria' (set at staff registration); grant the clinic.
       await userDao.setClinic(req.user_id, actor.clinica_id, trx);
-      // Other pending requests of this user can no longer be approved — cancel them.
-      await clinicJoinRequestDao.cancelOtherPending(req.user_id, id, trx);
+      // Other pending requests of this user can no longer be approved — cancel
+      // them, recording this owner as the decider of the cascade.
+      await clinicJoinRequestDao.cancelOtherPending(req.user_id, id, actor.usuario_id, trx);
     });
 
     await safeAudit('clinic.join_request.approved.success', actor.usuario_id, actor.clinica_id, req.id, ctx);
@@ -269,7 +276,9 @@ export const clinicJoinRequestService = {
     if (req.status !== 'pending') {
       throw new HttpError(409, 'invalid_state', 'Esta solicitação não está pendente.');
     }
-    await clinicJoinRequestDao.setStatus(id, 'rejected', actor.usuario_id);
+    // Compare-and-set: abort if the request stopped being pending mid-flight.
+    const updated = await clinicJoinRequestDao.setStatus(id, 'rejected', actor.usuario_id);
+    if (!updated) throw new HttpError(409, 'invalid_state', 'Esta solicitação não está mais pendente.');
     await safeAudit('clinic.join_request.rejected.success', actor.usuario_id, actor.clinica_id, req.id, ctx);
     return { status: 'rejected' };
   },

@@ -79,6 +79,26 @@
   nem antigo nem novo — em audit_logs (não há coluna para isso; e o serviço não
   passa o valor ao DAO de audit). Rate limit: reusa `patientsRateLimit`
   (IP-keyed antes do auth), suficiente para bloquear automação trivial.
+- **Hardening de concorrência/trilha em join requests (Sprint 3.31):**
+  `clinicJoinRequestDao.setStatus` virou **compare-and-set**: o `UPDATE` inclui
+  `WHERE id = ? AND status = 'pending'` (e `'pending'` é o único estado
+  não-terminal, então o guard é exaustivo). Resultado: uma decisão concorrente
+  não pode mais ser silenciosamente sobrescrita. Os três callers checam o retorno
+  — `cancelMine`, `approve` (dentro da transação, antes de `setClinic`) e
+  `reject` — e lançam **409 `invalid_state`** quando nenhuma linha pendente casa.
+  Isso fecha o TOCTOU em que `cancelMine` (find → update) podia cancelar uma
+  solicitação que o dono acabara de aprovar (o usuário ficaria na clínica com a
+  request "cancelada"). `approve` aborta com rollback se a request deixou de ser
+  pendente, então `setClinic`/`cancelOtherPending` nunca rodam sobre estado
+  obsoleto. **Trilha de auditoria:** `cancelOtherPending` (cascade ao aprovar)
+  agora grava `decided_by_user_id` (= dono que aprovou) e `decided_at`, fechando a
+  lacuna em que cancelamentos em cascata não tinham decisor/horário. Esse campo
+  **nunca** é exposto pela API (`MyJoinRequest`/`PendingJoinRequest` omitem
+  `decided_by_user_id`), então registrar o dono de outra clínica numa request
+  cancelada não vaza identidade cross-tenant. **Sem migration** (colunas
+  `decided_by_user_id`/`decided_at` já existem desde `20260529000000`); **sem
+  mudança de contrato de API, permissões ou frontend**. Validação por API
+  **18/18** (script descartável `/tmp/sprint-3.31-api-test.mjs`).
 - **Stale-JWT fechado em `requireClinic` (Sprint 3.25):** o middleware agora
   busca `users` por id e exige `ativo=true` e `users.clinica_id ===
   req.auth.clinica_id`. Mismatch → **403 `clinic_membership_revoked`** (genérico:
