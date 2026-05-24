@@ -9,6 +9,7 @@
 > - **Runbook backup/restore local (scripts em `scripts/`):** `docs/backup-restore-local-runbook.md`
 > - **Checklist de deploy seguro / CORS / env prod:** `docs/deploy-security-checklist.md` (+ ADR `docs/adr/0004-deploy-security-baseline.md`)
 > - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
+> - **Plano de produção mínima segura (AWS preferido; gaps P0/P1/P2; sprints 3.37–3.43; decisões pendentes):** `docs/production-minimum-plan.md`
 > - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
 > - **Merge seguro de duplicados (B-safe; decidido 3.32, backend 3.33, UX 3.34, validado 3.35; administrativo, sem delete físico, sem undo completo):** ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
@@ -18,7 +19,21 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Em validação/finalização: Sprint 3.36** (entregue — QA geral do piloto v0.1,
+**Em validação/finalização: Sprint 3.37** (entregue — planejamento/docs only) —
+**plano de produção mínima segura + decisão de AWS como provedor preferido**.
+Sem backend, sem frontend, sem migration, sem nova feature, sem código, sem infra
+real, sem commit/push.
+Criado `docs/production-minimum-plan.md` com arquitetura AWS mínima (EC2→ECS/Fargate;
+RDS; ElastiCache; EBS→S3; Nginx+Certbot ou ALB+ACM; SSM; CloudWatch; Security Groups),
+gaps P0/P1/P2, 7 decisões pendentes do dono e sequência de sprints 3.38–3.43.
+Domínio `clinicbridge.com.br` registrado no Registro.br (2026-05-24; expira 2027-05-24).
+Subdomínios planejados: `app.`, `api.`, `staging.`. DNS sem configuração para AWS
+ainda — decisão (Registro.br DNS vs Route 53) na Sprint 3.38.
+Docs atualizados: `docs/production-minimum-plan.md` (criado),
+`docs/roadmap-next-phase.md`, `docs/project-state.md`, `docs/sprint-history.md`,
+`CLAUDE.md`.
+
+**Sprint 3.36** (entregue — QA geral do piloto v0.1,
 docs-only) — **checklist consolidado dos 10 fluxos principais + roteiro demo
 atualizado + ressalvas aceitas registradas**. Sem backend, sem frontend, sem
 migration, sem nova feature, sem commit/push.
@@ -292,6 +307,12 @@ fases: `docs/roadmap-next-phase.md`.
 
 ## Próximas prioridades prováveis
 
+- **Produção (trilha infra — Sprint 3.37 entregue):** plano de produção mínima
+  documentado em `docs/production-minimum-plan.md`. **AWS é o provedor preferido.**
+  6 decisões pendentes do dono (compute, banco, storage, TLS, secrets, orçamento).
+  Sequência: **3.38** (TLS real + `NODE_ENV` no Dockerfile) → **3.39** (secrets +
+  env prod) → **3.40** (backup offsite) → **3.41** (storage + banco/Redis prod) →
+  **3.42** (deploy checklist go/no-go) → **3.43** (piloto real).
 - **QA geral (Sprint 3.36 entregue):** checklist consolidado 10 fluxos, nenhum
   BLOCKER. Produto apto para **piloto controlado** (dados sintéticos/anonimizados).
   **Achado corrigido:** `docs/demo-pilot-v0.1-script.md` descrevia duplicados como
@@ -322,8 +343,10 @@ fases: `docs/roadmap-next-phase.md`.
   proxy local/staging implementado (3.9 — `infra/nginx/`, profile `edge`)** +
   **backend containerizado + e2e Nginx→backend→DB/Redis (3.10 — `backend/Dockerfile`)**
   + **TLS local/staging (cert autoassinado) + HTTP→HTTPS (3.11 —
-  `scripts/generate-local-nginx-cert.sh`)**; falta TLS real em produção (cert
-  ACME/gerenciado + domínio + HSTS), WAF e o deploy real (secrets manager).
+  `scripts/generate-local-nginx-cert.sh`)**; **plano de produção com AWS (3.37 —
+  `docs/production-minimum-plan.md`)**; falta TLS real em produção (Sprint 3.38),
+  secrets manager (3.39), backup offsite (3.40), banco/Redis gerenciados (3.41),
+  WAF e o deploy real (3.42).
 - **P2:** limpeza real de arquivos (confirmação/soft-delete/quarentena/auditoria/
   idempotência/lock); paginação de duplicados; export streaming/assíncrono;
   rate limit dedicado em GETs leves se necessário.

@@ -1571,4 +1571,65 @@ visual de auditoria.
 - `docs/sprint-history.md` (este arquivo): entrada Sprint 3.36.
 - `CLAUDE.md`: estado atual = Sprint 3.36 entregue; próximas prioridades.
 
+---
+
+## Sprint 3.37 (planejamento/docs only — entregue 2026-05-24)
+
+**Objetivo:** plano de produção mínima segura. Sem backend, sem frontend, sem
+migration, sem código, sem infra real, sem commit/push.
+
+**Decisão estratégica registrada:** AWS como provedor preferido para hospedagem
+futura. Decisões de sub-opção pendentes (6 itens).
+
+**Arquivo criado:** `docs/production-minimum-plan.md`.
+
+**Arquitetura AWS mínima documentada (direção, não implementação):**
+- Compute: EC2 (t3.small/medium) + Docker Compose inicialmente → ECS/Fargate como evolução.
+- Banco: RDS PostgreSQL (db.t3.micro/small) para produção real; Postgres em Docker só em staging.
+- Redis: ElastiCache (cache.t3.micro) para produção; Redis Docker só em staging.
+- Storage/uploads: EBS persistente como etapa inicial (compatível com código atual) → S3 como evolução (exige refactor + ADR).
+- TLS: Nginx + Certbot (Let's Encrypt) na EC2 inicialmente; Route 53 + ACM + ALB como evolução.
+- Secrets: SSM Parameter Store (SecureString) inicialmente → Secrets Manager ao precisar de rotação automática.
+- Backup: snapshots RDS automáticos + Restic → S3 bucket privado para uploads.
+- Logs: CloudWatch Logs (`awslogs` driver) + alarmes de 5xx/health.
+- Rede: Security Groups fechando portas 5432 (Postgres) e 6379 (Redis) da internet; só 80/443 públicos.
+
+**Gaps P0 documentados:**
+1. `NODE_ENV=development` hardcoded no runtime stage do Dockerfile (linha 29).
+2. TLS real ausente — cert autoassinado local ≠ produção; HSTS desabilitado.
+3. Postgres/Redis sem Security Groups ao expor em EC2 nua.
+4. Secrets em `.env` local sem rotação e sem gestor externo.
+
+**Gaps P1 documentados:**
+- `MFA_ENCRYPTION_KEY` obrigatória em prod (hoje opcional).
+- Storage uploads persistente (bind mount não sobrevive a redeploy).
+- Backup offsite pendente (Restic local validado, destino remoto não).
+- Validação jurídica da política de retenção pendente.
+- HSTS só ativar com cert real e estável.
+
+**Domínio registrado:** `clinicbridge.com.br` — Registro.br, criado 2026-05-24,
+expira 2027-05-24. Subdomínios planejados: `clinicbridge.com.br` (landing),
+`app.clinicbridge.com.br` (frontend), `api.clinicbridge.com.br` (backend),
+`staging.clinicbridge.com.br` (staging). Sem hospedagem/e-mail extras no Registro.br.
+DNS ainda sem configuração para AWS — decisão de roteamento (Registro.br DNS vs
+Route 53) fica para Sprint 3.38.
+
+**Decisões pendentes do dono (7):**
+1. EC2 + Docker Compose vs ECS/Fargate.
+2. RDS/ElastiCache gerenciados vs tudo em EC2 para MVP.
+3. EBS vs S3 para uploads.
+4. DNS: manter no Registro.br (A/CNAME manuais) vs migrar para Route 53 (hosted zone).
+5. TLS: EC2 + Nginx + Certbot vs Route 53 + ACM + ALB.
+6. SSM Parameter Store vs Secrets Manager.
+7. Orçamento mensal aceitável (~$20-25/mês tudo em EC2 Docker vs ~$60-80/mês com RDS+ElastiCache).
+
+**Sequência de sprints recomendada:** 3.38 (TLS real + `NODE_ENV`) → 3.39 (secrets + env prod) → 3.40 (backup offsite) → 3.41 (storage + banco/Redis prod) → 3.42 (deploy checklist go/no-go) → 3.43 (piloto real).
+
+**Docs atualizados:**
+- `docs/production-minimum-plan.md` (criado; atualizado com domínio, subdomínios e decisão DNS pendente).
+- `docs/roadmap-next-phase.md`: seção Sprint 3.37 + tabela de sprints pré-produção adicionadas; seção Sprint 3.36 simplificada (link para plano).
+- `docs/project-state.md`: Sprint 3.37 adicionada + complemento de domínio.
+- `docs/sprint-history.md` (este arquivo): entrada Sprint 3.37 + complemento de domínio.
+- `CLAUDE.md`: estado atual = Sprint 3.37 entregue; ponteiro para plano.
+
 Nenhum build necessário (docs only). Sem commit/push.
