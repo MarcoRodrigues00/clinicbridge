@@ -33,6 +33,17 @@
 - `GET /patients`, `/patients/duplicates`, `/patients/export` nunca retornam CPF bruto — só `cpf_masked` (`***.***.789-01`). `include_cpf_raw=true` no export → 400.
 - As escritas de paciente (`POST /patients`, `PATCH /patients/:id`) aceitam CPF bruto no corpo (gravado para mascarar na leitura) mas a resposta volta **só** `cpf_masked`; o CPF bruto nunca é devolvido. A validação de entrada (`patient_invalid`/400) **nunca ecoa o valor** ofensivo (ex.: "CPF deve ter 11 dígitos", sem o número). Na edição, como o CPF só existe mascarado no cliente, o frontend envia o campo CPF em branco para **manter** o atual (não pré-preenche o mascarado).
 - **Duplicados acionáveis (Sprint 3.23, só frontend):** a tela de duplicados **não** tem endpoint próprio de ação — ela reusa o CRUD de pacientes (`PATCH /patients/:id`, `.../archive`, `.../restore`). Logo herda as mesmas garantias: tenant por `clinica_id`, **404 genérico** cross-tenant, **arquivar/restaurar só dono** (`requireRole`), editar dono+secretaria, CPF só `cpf_masked`, audits `patient.*` sem PII. O `group_key` continua não-reversível (hash dos ids, nunca CPF/e-mail/telefone). O scan (`/patients/duplicates`) inclui registros **arquivados** (sem filtro de status), então a UI exibe o status por registro; nada é apagado fisicamente.
+- **Merge seguro de duplicados (decidido na Sprint 3.32 — ADR 0007 B-safe — implementação 3.33/3.34; ainda NÃO existe no código):** invariantes obrigatórias quando for implementado:
+  - **Owner-only** (`requireRole(CLINIC_ADMIN_ROLES)` após `requireClinic`), igual a arquivar/restaurar. Secretaria **não** executa merge.
+  - **Tenant-scoped total:** principal + secundários no mesmo `clinica_id`; id de outra clínica/inexistente → **404 genérico** `patient_not_found` (sem enumeração). O reassign de agendamentos (`appointments.patient_id`) filtra por `clinica_id` e **nunca** toca outra clínica.
+  - **Transação atômica:** mover agendamentos + fill-blanks + arquivar secundário + setar `merged_into_id`/`merged_at` ocorrem juntos; falha → rollback.
+  - **Sem delete físico:** resolver = arquivar secundário (soft-delete). Principal permanece `active`.
+  - **Fill-blanks não-destrutivo:** só preenche campos **nulos** do principal; **nunca** sobrescreve valor existente. CPF não é escolhido manualmente (operador só vê `cpf_masked`); copia-se o CPF do secundário **apenas** se o principal não tiver — decisão automática e não-destrutiva.
+  - **CPF nunca bruto** no frontend/log/audit; o "diff" da UI usa só `cpf_masked`.
+  - **Audit sem PII:** `patient.merge.success`, **uma linha por par**, `recurso='patient'`, `recurso_id="<primaryId>|<secondaryId>"` (cabe em `varchar(80)`); nunca nome/CPF/e-mail/telefone/valores.
+  - **Idempotência:** CAS no status do secundário (`WHERE id AND clinica_id AND status='active'`); re-merge de já-arquivado → no-op/erro seguro.
+  - **Migration mínima** (aditiva, reversível): `patients.merged_into_id (uuid null FK patients)` + `patients.merged_at`. Registra **para onde** foi, **não** os valores antigos nem os agendamentos movidos → **sem undo completo** nesta fase.
+  - **Fora de escopo:** seleção campo-a-campo, merge automático sem confirmação, undo/snapshot, qualquer dado clínico.
 
 ## audit_logs (schema real)
 

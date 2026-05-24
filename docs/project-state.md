@@ -7,6 +7,14 @@
 
 ## Última sprint aprovada
 
+**Sprint 3.32** (entregue — ADR/docs only) — **decisão do merge seguro de duplicados (B-safe)**. Sem backend, sem migration, sem API, sem frontend, sem commit.
+
+Criado `docs/adr/0007-safe-patient-duplicate-resolution.md`. **Problema:** hoje "Excluir duplicado" só arquiva; como a Agenda lista agendamentos sem filtrar por status do paciente e resolve nomes a partir de `listPatients` (default `status='active'`), arquivar um duplicado com agendamentos deixa esses agendamentos com **nome-fallback** (`"Paciente abc12345…"`). **Decisão (B-safe):** dono escolhe o paciente **principal** → **move agendamentos** dos secundários para o principal (reassign tenant-scoped de `appointments.patient_id`) → **fill-blanks não-destrutivo** (só preenche campos vazios do principal; nunca sobrescreve; correção real continua via `PatientEditForm`) → **arquiva** secundários (soft-delete; **sem delete físico**) → em **transação**, **owner-only**, **audit sem PII** (`patient.merge.success`, `recurso_id="<primaryId>|<secId>"`), **idempotente** (CAS no status), **cross-tenant → 404**. **Migration mínima decidida** (não criada ainda): `patients.merged_into_id` + `patients.merged_at` (proveniência; índice parcial opcional) — **sem** snapshot/undo completo. Endpoint alvo: `POST /patients/:id/merge` com **múltiplos `secondary_ids`** atômicos (degradação para um-por-chamada permitida se a implementação exigir). **NÃO nesta trilha:** seleção campo-a-campo, merge clínico/prontuário/diagnóstico/prescrição/CID/exame/tratamento, delete físico, undo completo/snapshot, merge automático sem confirmação humana. **Divisão:** 3.32 ADR/docs · 3.33 backend+migration+API · 3.34 frontend/UX+validação visual.
+
+Verificação: nenhum build necessário (docs only). Sem commit/push.
+
+---
+
 **Sprint 3.31** (entregue) — **hardening backend** dos achados da super revisão pós-3.28 (concorrência + trilha de auditoria nas solicitações de entrada). Sem migration, sem nova feature, sem mudança de API/permissão, sem frontend.
 
 Três achados tratados:

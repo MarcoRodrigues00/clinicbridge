@@ -10,6 +10,7 @@
 > - **Checklist de deploy seguro / CORS / env prod:** `docs/deploy-security-checklist.md` (+ ADR `docs/adr/0004-deploy-security-baseline.md`)
 > - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
 > - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
+> - **Merge seguro de duplicados (B-safe; decidido na Sprint 3.32, implementação 3.33/3.34; administrativo, sem delete físico, sem undo completo):** ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
 > - **Demo/piloto v0.1 (Sprint 3.20; dados fictícios, não clínico):** `docs/demo-data/README.md` (+ `docs/demo-data/pacientes-demo.csv`), `docs/demo-pilot-v0.1-script.md`, `docs/demo-pilot-v0.1-checklist.md` — seed dev-only de agenda: `backend/scripts/seed-demo-scheduling.ts` (`pnpm --filter backend seed:demo` / `seed:demo:clean`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
@@ -17,7 +18,23 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Em validação/finalização: Sprint 3.31** — **hardening backend** dos achados da
+**Em validação/finalização: Sprint 3.32** — **ADR/docs only**: decisão do **merge
+seguro de duplicados (B-safe)**. Sem backend, sem migration, sem API, sem frontend,
+sem commit. Criado `docs/adr/0007-safe-patient-duplicate-resolution.md`. Decisão:
+dono escolhe paciente principal → **move agendamentos** dos secundários para o
+principal (tenant-scoped) → **fill-blanks não-destrutivo** (só preenche campos
+vazios do principal; nunca sobrescreve) → **arquiva** secundários (soft-delete,
+sem delete físico) → tudo em **transação**, **owner-only**, **audit sem PII**,
+**idempotente**, **cross-tenant 404**. Migration mínima decidida (não criada
+ainda): `patients.merged_into_id` + `merged_at` (proveniência; **sem** snapshot/
+undo completo). Motivação: hoje só arquivar o duplicado deixa agendamentos
+apontando para paciente arquivado → nome-fallback ruim na Agenda. **NÃO** nesta
+trilha: seleção campo-a-campo, merge clínico/prontuário/diagnóstico/prescrição/
+CID/exame/tratamento, delete físico, undo completo/snapshot, merge automático sem
+confirmação humana. Divisão: **3.32** ADR/docs · **3.33** backend+migration+API ·
+**3.34** frontend/UX+validação visual.
+
+**Sprint 3.31** (entregue) — **hardening backend** dos achados da
 super revisão pós-3.28 (concorrência + trilha de auditoria nas solicitações de
 entrada). **Sem migration, sem nova feature, sem mudança de API/permissão/frontend.**
 (1) `clinicJoinRequestDao.setStatus` virou **compare-and-set** (`WHERE id AND
@@ -168,9 +185,10 @@ administrativos sensíveis (Sprint 3.1); `TRUST_PROXY` configurável + rate limi
 com store memory/redis (Sprint 3.2). Detalhe e endpoints: `docs/project-state.md`.
 
 **O que NÃO existe (precisa sprint explícita):** prontuário/dados clínicos;
-**merge de pacientes**; **delete físico** de paciente (arquivar é soft-delete);
-limpeza real de arquivos; signed URL/download; job/cron; gestão de usuários/papéis
-na UI (papel é definido no registro/SQL).
+**merge de pacientes** (decidido na Sprint 3.32 — ADR 0007 B-safe — mas **ainda
+não implementado**; chega na 3.33/3.34); **delete físico** de paciente (arquivar é
+soft-delete); limpeza real de arquivos; signed URL/download; job/cron; gestão de
+usuários/papéis na UI (papel é definido no registro/SQL).
 
 **Migrações (em ordem):** `20260520000000_init` (users/clinics/tokens) ·
 `20260521000000_audit_logs` · `20260522000000_import_files` ·
@@ -203,9 +221,13 @@ fases: `docs/roadmap-next-phase.md`.
 
 - **Produto (trilha pacientes):** **3.23 entregue (frontend)** = duplicados
   acionáveis (editar/arquivar/restaurar por registro reusando o CRUD da 3.22;
-  paginação de grupos no frontend). **Próximo no tema:** **merge seguro** (com
-  confirmação + audit, **sem** merge automático; mover agendamentos exige decisão
-  própria) e **paginação backend** de duplicados se a base crescer.
+  paginação de grupos no frontend). **3.32 entregue (ADR/docs)** = decisão do
+  **merge seguro B-safe** (ADR 0007). **Próximo no tema:** **3.33** implementa o
+  backend do merge (migration `merged_into_id`/`merged_at` + `POST
+  /patients/:id/merge` + reassign de agendamentos + fill-blanks não-destrutivo +
+  arquivar secundário, owner-only, transação, audit sem PII, cross-tenant 404) e
+  **3.34** a UX/validação visual; **paginação backend** de duplicados se a base
+  crescer.
 - **Produto (trilha equipe):** **3.24/3.24.1/3.25 entregues** = solicitação de
   entrada por código de convite, aprovação pelo dono, copy generalizada para
   "funcionário(a)/equipe", **gestão de membros (listar ativos/inativos,
@@ -254,8 +276,11 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
 - **Escopo clínico proibido:** não criar prontuário, diagnóstico, prescrição,
   exames, CID, medicamentos ou dados clínicos sem sprint explícita. CRUD
   administrativo de paciente (criar/editar/arquivar/restaurar) existe (Sprint
-  3.22) e é **somente administrativo**; **merge** e **delete físico** de paciente
-  continuam proibidos sem sprint explícita.
+  3.22) e é **somente administrativo**. **Merge** de paciente foi **decidido**
+  (ADR 0007, B-safe administrativo) mas **ainda não implementado** — quando vier
+  (3.33), é fill-blanks não-destrutivo + mover agendamentos + arquivar secundário,
+  **sem** seleção campo-a-campo, **sem** undo completo e **sem** nada clínico.
+  **Delete físico** de paciente continua proibido.
 - **audit_logs:** colunas reais = `acao/recurso/recurso_id/usuario_id/clinica_id/
   ip/user_agent/request_id/criado_em`. **Não existem** `metadata` nem
   `entidade_tipo`. Append-only no DAO.

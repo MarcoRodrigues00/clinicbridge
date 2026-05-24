@@ -1180,3 +1180,55 @@ O `ClinicProfessionalsPanel` não tinha `window.confirm` — o botão disparava 
 - `decided_by_user_id` **não** aparece em `GET /clinic-join-requests/me`.
 
 Dados de teste removidos ao fim (baseline `clinic_join_requests` de volta a 1 linha). Sem commit/push.
+
+---
+
+## Sprint 3.32 (ADR/docs — decisão do merge seguro de duplicados B-safe)
+
+**Sem backend, sem migration, sem API, sem frontend, sem commit.** Sprint de
+decisão: registrar como o ClinicBridge vai resolver pacientes duplicados com mais
+qualidade do que apenas arquivar.
+
+**Achado que motivou a decisão (Sprint 3.32, análise):** a Agenda
+(`appointmentDao.listByClinic`) lista agendamentos **sem** filtrar por status do
+paciente e resolve nomes a partir de `listPatients` com **`status='active'`
+(default)**. Logo, arquivar um duplicado que tem agendamentos deixa esses
+agendamentos visíveis com **nome-fallback** (`"Paciente abc12345…"`). Só arquivar
+pode **degradar a Agenda** — argumento central a favor de *mover* os agendamentos
+num merge.
+
+**Decisão (ver `docs/adr/0007-safe-patient-duplicate-resolution.md`): merge
+administrativo "B-safe".** Owner-only, em transação:
+1. dono escolhe o paciente **principal**;
+2. **move agendamentos** dos secundários para o principal (reassign tenant-scoped
+   de `appointments.patient_id`);
+3. **fill-blanks não-destrutivo** — só preenche campos vazios do principal; nunca
+   sobrescreve (correção real continua via `PatientEditForm`);
+4. **arquiva** os secundários (soft-delete; **sem delete físico**);
+5. **proveniência** via migration mínima: `patients.merged_into_id` + `merged_at`.
+
+**Regras registradas:** sem delete físico; sem dado clínico; owner-only; transação
+obrigatória; reassign tenant-scoped; audit sem PII (`patient.merge.success`,
+`recurso_id="<primaryId>|<secId>"`); CPF nunca bruto; cross-tenant → 404;
+idempotência via CAS; **sem undo completo** nesta fase.
+
+**Endpoint alvo:** `POST /patients/:id/merge` com **múltiplos `secondary_ids`**
+atômicos (degradação para um-por-chamada permitida se a implementação exigir).
+
+**O que NÃO será feito agora (escopo negativo explícito):** seleção campo-a-campo;
+merge clínico; prontuário; diagnóstico; prescrição; CID; exame; tratamento; delete
+físico; undo completo/snapshot; merge automático sem confirmação humana.
+
+**Consequências:** melhora a Agenda; preserva histórico; reversão completa **ainda
+não existe** (restore desarquiva a linha, mas não devolve agendamentos movidos nem
+campos preenchidos) — undo/snapshot exigirá tabela própria + ADR futura.
+
+**Divisão de sprints:** 3.32 ADR/docs · 3.33 backend+migration+API · 3.34
+frontend/UX+validação visual.
+
+**Docs atualizados:** `docs/adr/0007-safe-patient-duplicate-resolution.md` (novo),
+`CLAUDE.md`, `docs/project-state.md`, `docs/security-notes.md`,
+`docs/sprint-history.md` (esta entrada), `docs/testing-checklist.md` (pointer do
+plano de testes futuro), `docs/roadmap-next-phase.md`.
+
+**Verificação:** nenhum build necessário (docs only). Sem commit/push.
