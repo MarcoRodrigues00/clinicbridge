@@ -17,6 +17,37 @@
 
 ---
 
+## Plano de produção mínima segura — Sprint 3.37 ✅
+
+> Sprint de planejamento/docs entregue em 2026-05-24. Sem código, sem infra real,
+> sem deploy, sem criação de recursos AWS. Plano completo em
+> `docs/production-minimum-plan.md`.
+
+**Provedor preferido:** AWS (decisão aceita em 2026-05-24). Decisões de sub-opção
+ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
+
+**Sequência de sprints pré-produção:**
+| Sprint | Escopo |
+|---|---|
+| **3.38** | TLS real + domínio + HSTS; corrigir `NODE_ENV` no Dockerfile runtime |
+| **3.39** | Secrets + env de prod: SSM Parameter Store, `MFA_ENCRYPTION_KEY`, `FRONTEND_ORIGIN` |
+| **3.40** | Backup offsite: Restic → S3; job agendado; restore drill remoto |
+| **3.41** | Storage persistente (EBS/S3) + banco/Redis de prod (RDS/ElastiCache); Security Groups |
+| **3.42** | Deploy checklist go/no-go: executar `docs/deploy-security-checklist.md` §15/§16 |
+| **3.43** | Piloto real: primeiro usuário com dados sintéticos/anonimizados |
+
+**Riscos P0 documentados:**
+- `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.
+- TLS real ausente (cert autoassinado local ≠ produção).
+- Postgres/Redis expostos sem Security Groups em EC2 nua.
+- Secrets em `.env` local sem rotação.
+
+**Decisões pendentes do dono (6 itens):** compute (EC2 vs ECS/Fargate), banco
+(RDS vs Docker), storage (EBS vs S3), TLS (Certbot vs ACM+ALB), secrets (SSM vs
+Secrets Manager), orçamento mensal. Ver `docs/production-minimum-plan.md` Seção 5.
+
+---
+
 ## QA geral do piloto v0.1 — Sprint 3.36 ✅
 
 > Rodada de QA consolidada entregue em 2026-05-24. 10 fluxos cobertos. Nenhum
@@ -25,14 +56,9 @@
 > anonimizados, desde que os P1 listados abaixo sejam resolvidos antes de qualquer
 > dado real de clínica em produção.
 
-**Próximos passos pós-QA (pré-produção real):**
-1. **TLS real + domínio** — cert ACME/gerenciado + HSTS (não usar cert autoassinado).
-2. **Redis + trust proxy em produção** — já implementado localmente; falta provisionar.
-3. **Secrets manager / env de produção** — `JWT_SECRET`, `DATABASE_URL`, `ENCRYPTION_KEY_HEX` fora do `.env` local.
-4. **Backup/restore offsite** — Restic local validado (Sprint 3.5); falta destino remoto.
-5. **Validação jurídica da política de retenção** — `docs/data-retention-policy.md` criada; falta validação jurídica dos prazos/base legal.
-6. **WAF (Nginx + ModSecurity/OWASP CRS)** — estratégia decidida (ADR 0005); falta implementar detection-only antes de blocking.
-7. **Piloto controlado** — com dados sintéticos ou anonimizados, clínica piloto previamente acordada, sem dados clínicos reais.
+**Próximos passos pós-QA (pré-produção real):** ver Sprint 3.37 acima e
+`docs/production-minimum-plan.md` para o plano completo com arquitetura AWS,
+gaps P0/P1/P2 e sequência de sprints.
 
 ---
 

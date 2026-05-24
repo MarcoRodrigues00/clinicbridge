@@ -7,6 +7,40 @@
 
 ## Última sprint aprovada
 
+**Sprint 3.37** (entregue — planejamento/docs only) — **Plano de produção mínima
+segura com AWS como provedor preferido.** Sem backend, sem frontend, sem migration,
+sem nova feature, sem código, sem infra real, sem commit/push.
+
+Decisão estratégica registrada: **AWS é o provedor preferido** para hospedagem
+futura do ClinicBridge. Decisões de sub-opção ainda pendentes (6 itens — ver
+`docs/production-minimum-plan.md` Seção 5).
+
+Arquivo criado: `docs/production-minimum-plan.md` com 7 seções:
+(1) estado atual da infra local/staging; (2) arquitetura AWS mínima preferida
+(EC2+Docker Compose inicial → ECS/Fargate; RDS PostgreSQL; ElastiCache Redis;
+EBS→S3 para uploads; Nginx+Certbot ou Route 53+ACM+ALB para TLS; SSM Parameter
+Store; CloudWatch Logs; Security Groups fechando Postgres/Redis da internet);
+(3) gaps P0/P1/P2; (4) sequência de sprints 3.37–3.43; (5) decisões pendentes;
+(6) o que não muda; (7) referências.
+
+Decisão de domínio registrada: `clinicbridge.com.br` registrado no Registro.br em
+2026-05-24 (expira 2027-05-24). Subdomínios planejados: `app.`, `api.`,
+`staging.`. DNS ainda sem configuração para AWS — decisão de roteamento
+(Registro.br DNS vs Route 53) fica para Sprint 3.38. Sem hospedagem/e-mail extras
+no Registro.br.
+
+Decisões pendentes agora 7 itens (compute, banco, storage, DNS/roteamento, TLS,
+secrets, orçamento). Ver `docs/production-minimum-plan.md` Seção 5.
+
+Gaps P0 documentados: `NODE_ENV=development` no Dockerfile runtime, TLS real
+ausente, Postgres/Redis sem Security Groups, secrets em `.env` sem rotação.
+
+Docs atualizados: `docs/production-minimum-plan.md` (criado e atualizado com domínio),
+`docs/roadmap-next-phase.md` (seção Sprint 3.37 + tabela de sprints pré-produção),
+`docs/project-state.md` (esta entrada), `docs/sprint-history.md`, `CLAUDE.md`.
+
+---
+
 **Sprint 3.36** (entregue — QA geral do piloto v0.1, docs-only) — Rodada de QA
 consolidada dos fluxos principais do ClinicBridge antes do piloto. Sem backend,
 sem frontend, sem migration, sem nova feature, sem commit/push.
