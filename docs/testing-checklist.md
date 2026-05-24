@@ -768,3 +768,21 @@ Sem mudança de API. Validação puramente visual no navegador:
    - Botões de ação (Aprovar/Recusar/Desativar) ocupam linha inteira.
    - Chip de categoria pode quebrar para a linha de baixo do título com folga.
    - Painel de profissionais segue o mesmo comportamento.
+
+## Modal de confirmação — Sprint 3.28
+
+Sem mudança de API. Validação puramente visual no navegador:
+
+1. **Modal abre** para cada ação sensível:
+   - Regenerar código → modal abre com título "Gerar um novo código de convite?" e botão "Regenerar código".
+   - Aprovar solicitação → modal abre com nome+email do solicitante, botão "Aprovar entrada".
+   - Recusar solicitação → modal abre com nome do solicitante, botão "Recusar solicitação".
+   - Desativar acesso (membro) → modal abre com nome do membro, botão "Desativar acesso" em vermelho.
+   - Desativar profissional → modal abre com nome do profissional, botão "Desativar profissional" em vermelho.
+2. **Cancelar não executa:** clicar "Cancelar" fecha o modal sem disparar nenhuma chamada de API.
+3. **ESC não executa:** pressionar ESC fecha o modal sem disparar nenhuma chamada de API.
+4. **Backdrop click não executa:** clicar fora da caixa do modal fecha sem disparar ação.
+5. **Confirmar executa a ação existente:** mesma mutation de antes, resultado (sucesso/erro) aparece no banner do painel.
+6. **isBusy:** ao confirmar, o botão confirmar mostra spinner e fica desabilitado; o botão cancelar também fica desabilitado; o modal fecha ao término (success ou error).
+7. **Variante danger:** apenas "Desativar acesso" e "Desativar profissional" têm botão confirmar em vermelho-suave. Regenerar/Aprovar/Recusar usam cyan (default).
+8. **Mobile:** em viewport ≤ 480px, os botões do modal empilham full-width (confirmar em cima, cancelar embaixo).

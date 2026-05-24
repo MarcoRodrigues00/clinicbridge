@@ -7,7 +7,17 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.27** (em validação/finalização) — **polimento visual da aba Equipe**.
+**Sprint 3.28** (em validação/finalização) — **modal custom de confirmação** para ações sensíveis da aba Equipe. Frontend only; **sem backend, sem API, sem migration, sem permissão**.
+
+Criados: `ConfirmDialog.tsx` + `ConfirmDialog.module.css` (componente reutilizável, `<dialog>` nativo, variantes `default`/`danger`, `isBusy` com spinner, ESC/backdrop respeitam `onCancel`, focus trap nativo). Migradas todas as 5 ações: Regenerar código, Aprovar, Recusar (TeamManagementPanel — 4 `window.confirm` removidos) + Desativar profissional (ClinicProfessionalsPanel — confirmação adicionada, antes disparava diretamente). Variante `danger` apenas em Desativar acesso e Desativar profissional.
+
+Verificação: `pnpm --filter frontend typecheck` ✅, `pnpm --filter frontend build` ✅. Validação visual no navegador pendente. Sem commit/push.
+
+---
+
+---
+
+## Sprint 3.27 — polimento visual da aba Equipe (referência)
 Frontend only; **sem backend, sem API, sem migration, sem permissão**. Apenas
 copy/CSS/markup ajustados.
 

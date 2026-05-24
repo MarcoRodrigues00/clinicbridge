@@ -4,6 +4,7 @@ import { Stethoscope, Loader2, RefreshCw, Plus, Power, Pencil, Check, X } from '
 import { api, ApiError, type PublicClinicProfessional } from '../services/api';
 import { getToken } from '../services/authStorage';
 import { useAuth } from '../services/AuthProvider';
+import { ConfirmDialog } from './ConfirmDialog';
 import styles from './ClinicProfessionalsPanel.module.css';
 
 // Shared cache key prefix. Invalidating ['clinic-professionals'] refreshes BOTH
@@ -29,6 +30,12 @@ export function ClinicProfessionalsPanel(): JSX.Element {
   const [editLabel, setEditLabel] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Sprint 3.28 — modal de confirmação para desativar profissional
+  const [pendingDeactivate, setPendingDeactivate] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const listQuery = useQuery({
     queryKey: [...PROFESSIONALS_KEY, 'all'],
@@ -72,10 +79,14 @@ export function ClinicProfessionalsPanel(): JSX.Element {
   const deactivateMutation = useMutation({
     mutationFn: (id: string) => api.deactivateClinicProfessional(token as string, id),
     onSuccess: () => {
+      setPendingDeactivate(null);
       setNotice('Profissional desativado.');
       invalidateProfessionals();
     },
-    onError: (err) => setError(errMsg(err, 'Não foi possível desativar.')),
+    onError: (err) => {
+      setPendingDeactivate(null);
+      setError(errMsg(err, 'Não foi possível desativar.'));
+    },
   });
 
   const busyId =
@@ -103,123 +114,142 @@ export function ClinicProfessionalsPanel(): JSX.Element {
   const professionals = listQuery.data ?? [];
 
   return (
-    <section className={styles.panel}>
-      <div className={styles.head}>
-        <h2 className={styles.title}>
-          <Stethoscope size={22} aria-hidden="true" />
-          Profissionais da agenda
-          <span className={styles.categoryChip}>Aparece na agenda</span>
-        </h2>
-        <button type="button" className={styles.secondaryBtn} onClick={() => void listQuery.refetch()}>
-          <RefreshCw size={16} aria-hidden="true" />
-          Atualizar
-        </button>
-      </div>
-      <p className={styles.subtitle}>
-        <strong>Pessoas que aparecem como responsável no agendamento.</strong>{' '}
-        Podem ou não ter login no sistema — diferente de "Membros da equipe",
-        que são contas com acesso. Função/rótulo é administrativo opcional;
-        não é prontuário nem dado clínico.
-      </p>
-
-      {isOwner ? (
-        <form className={styles.createForm} onSubmit={handleCreate}>
-          <input
-            type="text"
-            className={styles.input}
-            placeholder="Nome do profissional"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
-          <input
-            type="text"
-            className={styles.input}
-            placeholder="Função/rótulo interno (opcional)"
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-          />
-          <button type="submit" className={styles.primaryBtn} disabled={createMutation.isPending}>
-            {createMutation.isPending ? <Loader2 size={16} className={styles.spin} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
-            Adicionar
+    <>
+      <section className={styles.panel}>
+        <div className={styles.head}>
+          <h2 className={styles.title}>
+            <Stethoscope size={22} aria-hidden="true" />
+            Profissionais da agenda
+            <span className={styles.categoryChip}>Aparece na agenda</span>
+          </h2>
+          <button type="button" className={styles.secondaryBtn} onClick={() => void listQuery.refetch()}>
+            <RefreshCw size={16} aria-hidden="true" />
+            Atualizar
           </button>
-        </form>
-      ) : (
-        <p className={styles.roleNote}>
-          A gestão de profissionais é feita pelo dono(a) da clínica. Você pode
-          visualizar a lista e usar os profissionais na agenda.
+        </div>
+        <p className={styles.subtitle}>
+          <strong>Pessoas que aparecem como responsável no agendamento.</strong>{' '}
+          Podem ou não ter login no sistema — diferente de "Membros da equipe",
+          que são contas com acesso. Função/rótulo é administrativo opcional;
+          não é prontuário nem dado clínico.
         </p>
-      )}
 
-      {notice && <p className={styles.notice}>{notice}</p>}
-      {(error || listQuery.isError) && (
-        <p className={styles.error}>
-          {error ?? errMsg(listQuery.error, 'Não foi possível carregar os profissionais.')}
-        </p>
-      )}
+        {isOwner ? (
+          <form className={styles.createForm} onSubmit={handleCreate}>
+            <input
+              type="text"
+              className={styles.input}
+              placeholder="Nome do profissional"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <input
+              type="text"
+              className={styles.input}
+              placeholder="Função/rótulo interno (opcional)"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+            />
+            <button type="submit" className={styles.primaryBtn} disabled={createMutation.isPending}>
+              {createMutation.isPending ? <Loader2 size={16} className={styles.spin} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+              Adicionar
+            </button>
+          </form>
+        ) : (
+          <p className={styles.roleNote}>
+            A gestão de profissionais é feita pelo dono(a) da clínica. Você pode
+            visualizar a lista e usar os profissionais na agenda.
+          </p>
+        )}
 
-      {listQuery.isLoading ? (
-        <p className={styles.muted}><Loader2 size={16} className={styles.spin} aria-hidden="true" /> Carregando…</p>
-      ) : professionals.length === 0 ? (
-        <p className={styles.empty}>
-          Nenhum profissional cadastrado. Adicione quem realiza atendimentos —
-          eles aparecem como responsáveis na agenda.
-        </p>
-      ) : (
-        <ul className={styles.list}>
-          {professionals.map((p) => (
-            <li key={p.id} className={styles.card}>
-              {editId === p.id ? (
-                <div className={styles.editRow}>
-                  <input className={styles.input} value={editName} onChange={(e) => setEditName(e.target.value)} />
-                  <input className={styles.input} value={editLabel} onChange={(e) => setEditLabel(e.target.value)} placeholder="Rótulo (opcional)" />
-                  <button
-                    type="button"
-                    className={styles.actionBtn}
-                    disabled={updateMutation.isPending}
-                    onClick={() => {
-                      setNotice(null);
-                      setError(null);
-                      updateMutation.mutate({ id: p.id, name: editName.trim(), specialty_label: editLabel.trim() || null });
-                    }}
-                  >
-                    <Check size={14} aria-hidden="true" /> Salvar
-                  </button>
-                  <button type="button" className={styles.actionBtn} onClick={() => setEditId(null)}>
-                    <X size={14} aria-hidden="true" /> Cancelar
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className={styles.info}>
-                    <span className={styles.name}>{p.name}</span>
-                    {p.specialty_label && <span className={styles.label}>{p.specialty_label}</span>}
-                    {!p.is_active && <span className={styles.inactive}>Inativo</span>}
+        {notice && <p className={styles.notice}>{notice}</p>}
+        {(error || listQuery.isError) && (
+          <p className={styles.error}>
+            {error ?? errMsg(listQuery.error, 'Não foi possível carregar os profissionais.')}
+          </p>
+        )}
+
+        {listQuery.isLoading ? (
+          <p className={styles.muted}><Loader2 size={16} className={styles.spin} aria-hidden="true" /> Carregando…</p>
+        ) : professionals.length === 0 ? (
+          <p className={styles.empty}>
+            Nenhum profissional cadastrado. Adicione quem realiza atendimentos —
+            eles aparecem como responsáveis na agenda.
+          </p>
+        ) : (
+          <ul className={styles.list}>
+            {professionals.map((p) => (
+              <li key={p.id} className={styles.card}>
+                {editId === p.id ? (
+                  <div className={styles.editRow}>
+                    <input className={styles.input} value={editName} onChange={(e) => setEditName(e.target.value)} />
+                    <input className={styles.input} value={editLabel} onChange={(e) => setEditLabel(e.target.value)} placeholder="Rótulo (opcional)" />
+                    <button
+                      type="button"
+                      className={styles.actionBtn}
+                      disabled={updateMutation.isPending}
+                      onClick={() => {
+                        setNotice(null);
+                        setError(null);
+                        updateMutation.mutate({ id: p.id, name: editName.trim(), specialty_label: editLabel.trim() || null });
+                      }}
+                    >
+                      <Check size={14} aria-hidden="true" /> Salvar
+                    </button>
+                    <button type="button" className={styles.actionBtn} onClick={() => setEditId(null)}>
+                      <X size={14} aria-hidden="true" /> Cancelar
+                    </button>
                   </div>
-                  {isOwner && p.is_active && (
-                    <div className={styles.actions}>
-                      <button type="button" className={styles.actionBtn} disabled={busyId === p.id} onClick={() => openEdit(p)}>
-                        <Pencil size={14} aria-hidden="true" /> Editar
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.actionBtn}
-                        disabled={busyId === p.id}
-                        onClick={() => {
-                          setNotice(null);
-                          setError(null);
-                          deactivateMutation.mutate(p.id);
-                        }}
-                      >
-                        <Power size={14} aria-hidden="true" /> Desativar profissional
-                      </button>
+                ) : (
+                  <>
+                    <div className={styles.info}>
+                      <span className={styles.name}>{p.name}</span>
+                      {p.specialty_label && <span className={styles.label}>{p.specialty_label}</span>}
+                      {!p.is_active && <span className={styles.inactive}>Inativo</span>}
                     </div>
-                  )}
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+                    {isOwner && p.is_active && (
+                      <div className={styles.actions}>
+                        <button type="button" className={styles.actionBtn} disabled={busyId === p.id} onClick={() => openEdit(p)}>
+                          <Pencil size={14} aria-hidden="true" /> Editar
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.actionBtn}
+                          disabled={busyId === p.id}
+                          onClick={() => {
+                            setNotice(null);
+                            setError(null);
+                            setPendingDeactivate({ id: p.id, name: p.name });
+                          }}
+                        >
+                          <Power size={14} aria-hidden="true" /> Desativar profissional
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <ConfirmDialog
+        open={pendingDeactivate !== null}
+        title="Desativar profissional da agenda?"
+        description={
+          pendingDeactivate
+            ? `${pendingDeactivate.name} deixará de aparecer como opção nos novos agendamentos. Agendamentos existentes não são alterados.`
+            : ''
+        }
+        confirmLabel="Desativar profissional"
+        variant="danger"
+        isBusy={deactivateMutation.isPending}
+        onConfirm={() => {
+          if (pendingDeactivate) deactivateMutation.mutate(pendingDeactivate.id);
+        }}
+        onCancel={() => setPendingDeactivate(null)}
+      />
+    </>
   );
 }
