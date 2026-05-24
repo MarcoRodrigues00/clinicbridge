@@ -1038,3 +1038,39 @@ Dados de teste limpos via SQL transacional ao final.
 - `window.confirm` nativo segue em uso. Funciona, mas quebra o ar dark do app. Substituir por modal custom é trabalho de sprint própria.
 - Empty state dashed border é idêntico entre os 2 painéis — variar a copy foi suficiente; estilos diferentes só se aparecer demanda visual real.
 - Subtítulo do ClinicProfessionalsPanel ainda tem várias frases; se virar problema na demo, dá pra encurtar mais (não fiz agora pra não perder a regra de segurança "não é prontuário/clínico").
+
+---
+
+## Sprint 3.28 (modal custom de confirmação — frontend only, sem commit)
+
+**Sem backend, sem API, sem migration, sem permissão.** Sprint UX pura: substituir todos os `window.confirm` da aba Equipe por um modal custom coerente com o tema dark/cyber clinic.
+
+**Componente novo:**
+
+- `frontend/src/components/ConfirmDialog.tsx` — componente genérico reutilizável baseado em `<dialog>` nativo (sem biblioteca nova). Props: `open`, `title`, `description`, `confirmLabel`, `cancelLabel`, `variant` (`default | danger`), `isBusy`, `onConfirm`, `onCancel`. Usa `ref.showModal()` / `ref.close()` via `useEffect` para controle React-driven. ESC interceptado via evento `cancel` nativo (`e.preventDefault()` + `onCancel()`); backdrop click detectado via `e.target === dialogRef.current`; ambos bloqueados se `isBusy`. Botão confirmar fica ocupado (spinner) enquanto mutation estiver `isPending`; dialog fecha ao settlement (success ou error) via `setPendingAction(null)` nas callbacks das mutations.
+- `frontend/src/components/ConfirmDialog.module.css` — tema escuro consistente com os painéis. `::backdrop` com blur. Variante `confirmDefault` (cyan, para ações positivas/neutras) e `confirmDanger` (vermelho-suave, borda visível, para destrutivas). Mobile (`@max-width: 480px`): botões empilhados full-width em ordem reversa (confirmar acima, cancelar abaixo — acesso fácil ao "Cancelar" no polegar).
+
+**Ações migradas (todos os `window.confirm` removidos):**
+
+| Painel | Ação | Variant |
+|---|---|---|
+| TeamManagementPanel | Regenerar código de convite | default |
+| TeamManagementPanel | Aprovar entrada | default |
+| TeamManagementPanel | Recusar solicitação | default |
+| TeamManagementPanel | Desativar acesso de membro | danger |
+| ClinicProfessionalsPanel | Desativar profissional da agenda | danger |
+
+O `ClinicProfessionalsPanel` não tinha `window.confirm` — o botão disparava a mutation diretamente. Esta sprint adicionou confirmação também.
+
+**Padrão de estado:**
+- `TeamManagementPanel`: estado `pendingAction: PendingAction | null` (discriminated union `regenerate | approve | reject | deactivate`). `dialogConfig` derivado do tipo. `isBusy` = mutation correspondente `.isPending`. `setPendingAction(null)` em `onSuccess` e `onError` de todas as mutations afetadas.
+- `ClinicProfessionalsPanel`: estado `pendingDeactivate: { id, name } | null`. Mesmo padrão.
+
+**Acessibilidade:** `role="dialog"` (nativo), `aria-modal="true"`, `aria-labelledby` apontando para o `<h2>` do título. Focus trap nativo do `<dialog>`. Foco inicial cai no primeiro elemento focável (botão "Cancelar") — pressing Enter acidentalmente cancela, nunca confirma.
+
+**Verificação:** `pnpm --filter frontend typecheck` ✅, `pnpm --filter frontend build` ✅. Backend **não** rodado. Validação visual no navegador pendente. Sem commit/push.
+
+**Ressalvas / follow-ups futuros:**
+- Polyfill de `<dialog>` não implementado (Safari < 15.4). Não é um requisito declarado do MVP.
+- Um único `id="confirm-dialog-title"` estático é suficiente enquanto só um dialog é aberto por vez. Se no futuro houver múltiplos dialogs simultâneos, usar ID dinâmico (ex.: `useId()`).
+- `ConfirmDialog` está pronto para reuso em outras telas (PatientsList, DuplicatesList, etc.) sem alteração.

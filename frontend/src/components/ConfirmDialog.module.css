@@ -1,0 +1,125 @@
+/* Native <dialog> backdrop — blurred dark overlay */
+.dialog::backdrop {
+  background: rgba(5, 7, 13, 0.78);
+  backdrop-filter: blur(4px);
+}
+
+.dialog {
+  padding: 0;
+  border: 1px solid var(--surface-border-strong);
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(135deg, rgba(20, 30, 52, 0.97), rgba(10, 15, 30, 0.95));
+  box-shadow:
+    0 24px 72px -16px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(34, 211, 238, 0.07);
+  color: var(--text-0);
+  max-width: min(480px, 92vw);
+  width: 100%;
+}
+
+.content {
+  padding: 1.75rem 2rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-0);
+  line-height: 1.35;
+}
+
+.description {
+  font-size: 0.93rem;
+  color: var(--text-1);
+  line-height: 1.65;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.cancelBtn,
+.confirmBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.05rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.cancelBtn {
+  background: var(--surface-strong);
+  color: var(--text-0);
+  border-color: var(--surface-border-strong);
+}
+
+.cancelBtn:hover:not(:disabled) {
+  border-color: var(--cyan);
+}
+
+.cancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Default / positive confirm */
+.confirmDefault {
+  background: var(--cyan);
+  color: #04121a;
+}
+
+.confirmDefault:hover:not(:disabled) {
+  background: var(--cyan-soft);
+}
+
+/* Danger confirm */
+.confirmDanger {
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.42);
+}
+
+.confirmDanger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
+.confirmBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spin {
+  animation: dlgSpin 0.9s linear infinite;
+}
+
+@keyframes dlgSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Mobile: stack buttons full-width in reverse order (confirm on top) */
+@media (max-width: 480px) {
+  .content {
+    padding: 1.4rem 1.25rem;
+  }
+  .actions {
+    flex-direction: column-reverse;
+  }
+  .cancelBtn,
+  .confirmBtn {
+    justify-content: center;
+    width: 100%;
+  }
+}
