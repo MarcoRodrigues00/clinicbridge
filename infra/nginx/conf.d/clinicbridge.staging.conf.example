@@ -1,0 +1,66 @@
+# ClinicBridge — Nginx reverse proxy — STAGING TEMPLATE (Sprint 3.38).
+# Target domain: staging.clinicbridge.com.br
+# TLS: Let's Encrypt / Certbot (real cert — NOT a self-signed cert).
+#
+# HOW TO USE:
+#   1. Issue the cert first (see docs/dns-tls-staging-runbook.md §3).
+#   2. Copy this file to clinicbridge.staging.conf (remove the .example suffix).
+#   3. Mount /etc/letsencrypt in the Nginx container (see §5 of the runbook).
+#   4. Test: docker compose exec nginx nginx -t
+#   5. Reload: docker compose exec nginx nginx -s reload
+#
+# IMPORTANT: this file is NOT loaded by docker-compose as-is (the .example suffix
+# keeps it out of the `include /etc/nginx/conf.d/*.conf` glob). It is a template
+# only. Rename to .conf when deploying to the staging server.
+#
+# Staging uses NODE_ENV=production (same guards as production). The only
+# differences from the production template: server_name, cert paths and the
+# fact that HSTS may be tested here before enabling on production.
+# HSTS is still commented out by default — enable deliberately after confirming
+# stable HTTPS and renewal on this domain.
+
+# --- HTTP (:80) — redirect everything to HTTPS --------------------------------
+server {
+    listen 80;
+    server_name staging.clinicbridge.com.br;
+
+    return 301 https://$host$request_uri;
+}
+
+# --- HTTPS (:443) — terminate TLS and proxy to the backend -------------------
+server {
+    listen 443 ssl;
+    server_name staging.clinicbridge.com.br;
+
+    # Let's Encrypt cert for staging. Mount /etc/letsencrypt read-only:
+    #   volumes:
+    #     - /etc/letsencrypt:/etc/letsencrypt:ro
+    ssl_certificate     /etc/letsencrypt/live/staging.clinicbridge.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/staging.clinicbridge.com.br/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_timeout 10m;
+
+    client_max_body_size 10m;
+
+    proxy_connect_timeout  5s;
+    proxy_send_timeout    60s;
+    proxy_read_timeout    60s;
+
+    # HSTS — disabled by default. Staging is a good place to test HSTS before
+    # enabling on production. Enable only after confirming renewal and redirects.
+    # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    resolver 127.0.0.11 valid=10s ipv6=off;
+
+    location / {
+        set $cb_backend "backend:3001";
+        proxy_pass http://$cb_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection        "";
+    }
+}

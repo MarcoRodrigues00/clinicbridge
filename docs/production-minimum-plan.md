@@ -1,8 +1,8 @@
 # ClinicBridge — Plano de Produção Mínima Segura
 
-> **Sprint 3.37 — Planejamento/docs somente.**
-> Este documento NÃO constitui deploy real, nem configuração de infra, nem criação
-> de recursos AWS. É um plano de referência para as sprints seguintes.
+> **Sprint 3.37** criou este plano. **Sprint 3.38** (2026-05-24) corrigiu
+> `NODE_ENV=production` no Dockerfile e criou templates Nginx de produção/staging
+> + runbook DNS/TLS. DNS e cert reais ficam para quando a EC2 estiver disponível.
 >
 > Provedor preferido: **AWS** (direção aceita em 2026-05-24; decisões de sub-opção
 > ainda pendentes — ver Seção 5). Outras opções (Hetzner, DigitalOcean, Railway)
@@ -28,11 +28,13 @@
 | CORS | ✅ App-level (`FRONTEND_ORIGIN`); Nginx não emite headers CORS |
 | Logs Nginx | ✅ Formato `clinicbridge_safe` (sem Authorization/Cookie/body) |
 | Guards de boot | ✅ Falha se JWT_SECRET é placeholder ou DATABASE_URL é "change-me-locally" |
-| `NODE_ENV` no container | ⚠️ `development` hardcoded no Dockerfile runtime stage (linha 29) |
+| `NODE_ENV` no container | ✅ Corrigido na Sprint 3.38: Dockerfile runtime usa `production`; compose local sobrescreve para `development` |
 | Migrations | ✅ Aplicadas localmente via host; não rodam no container |
 | `./storage/uploads` | ⚠️ Bind mount local — não persiste em redeploy sem estratégia |
 | Backup | ✅ Restic local validado (Sprint 3.5); **offsite pendente** |
 | Domínio | ✅ `clinicbridge.com.br` registrado no Registro.br (2026-05-24; expira 2027-05-24); ⚠️ DNS sem configuração para AWS ainda |
+| Templates Nginx prod/staging | ✅ `infra/nginx/conf.d/clinicbridge.{production,staging}.conf.example` (Sprint 3.38) |
+| Runbook DNS/TLS | ✅ `docs/dns-tls-staging-runbook.md` (Sprint 3.38) — DNS real e cert pendentes |
 | WAF | ❌ Não implementado (estratégia decidida em ADR 0005) |
 | Secrets manager | ❌ Só `.env`; sem rotação, sem gestor externo |
 | Logs centralizados | ❌ Stdout do container e arquivo Nginx; sem agregação |
@@ -177,8 +179,8 @@ público: Nginx (80/443) ou ALB (se adotado).
 
 | Gap | Detalhe | Solução preferida |
 |---|---|---|
-| TLS real + domínio | Cert autoassinado ≠ produção; HSTS desabilitado | EC2 + Nginx + Certbot ou Route 53 + ACM + ALB |
-| `NODE_ENV=development` no container | Linha 29 do Dockerfile hardcoda `development` no runtime | Remover o `ENV NODE_ENV=development` do runtime stage; passar via `environment:` no Compose/ECS |
+| TLS real + domínio | Cert autoassinado ≠ produção; HSTS desabilitado. Templates prontos (Sprint 3.38); falta EC2 + DNS + Certbot real | EC2 + Nginx + Certbot (ver `docs/dns-tls-staging-runbook.md`) |
+| ~~`NODE_ENV=development` no container~~ | ✅ **Corrigido na Sprint 3.38** — Dockerfile runtime agora usa `production`; compose local sobrescreve | — |
 | Postgres/Redis expostos | docker-compose expõe porta 5432 localmente; em EC2 sem SG seria público | Security Group: só acesso interno; EC2 + RDS + ElastiCache com SG dedicados |
 | Secrets fora do `.env` local | `JWT_SECRET`, `DATABASE_URL`, `MFA_ENCRYPTION_KEY` no `.env` manual | SSM Parameter Store → injetar como variáveis de ambiente |
 
@@ -210,7 +212,7 @@ público: Nginx (80/443) ou ALB (se adotado).
 | Sprint | Escopo | Tipo |
 |---|---|---|
 | **3.37** (este doc) | Plano de produção mínima + decisão AWS como preferida | Docs/planejamento |
-| **3.38** | TLS real + DNS: decidir DNS (Registro.br vs Route 53); criar conf Nginx de prod (`api.clinicbridge.com.br`); cert Let's Encrypt/Certbot ou ACM; corrigir `NODE_ENV` no Dockerfile runtime; HSTS | Infra + código (Dockerfile runtime, nginx conf.d) |
+| **3.38** ✅ | ~~TLS real + DNS~~ → Corrigir `NODE_ENV` no Dockerfile runtime ✅; templates Nginx prod/staging ✅; runbook DNS/TLS ✅. DNS e cert reais ficam para quando EC2 estiver disponível | Código (Dockerfile) + docs + templates |
 | **3.39** | Secrets + env de prod: SSM Parameter Store para `JWT_SECRET`/`DATABASE_URL`/`MFA_ENCRYPTION_KEY`; script de bootstrap seguro; checklist de variáveis; `FRONTEND_ORIGIN` de prod | Docs + config + script |
 | **3.40** | Backup offsite: Restic → S3 bucket privado; job agendado (cron/systemd); restore drill remoto | Scripts + docs |
 | **3.41** | Storage persistente + banco/Redis de prod: volume EBS nomeado OU provisionar RDS + ElastiCache (staging first); Security Groups; firewall de porta | Infra + docs |

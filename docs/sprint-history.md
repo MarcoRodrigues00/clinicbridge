@@ -1632,4 +1632,67 @@ Route 53) fica para Sprint 3.38.
 - `docs/sprint-history.md` (este arquivo): entrada Sprint 3.37 + complemento de domínio.
 - `CLAUDE.md`: estado atual = Sprint 3.37 entregue; ponteiro para plano.
 
+---
+
+## Sprint 3.38 (entregue 2026-05-24 — Dockerfile + Nginx templates + runbook DNS/TLS)
+
+**Objetivo:** preparar base de staging/produção para DNS/TLS/Nginx sem deploy real.
+Sem migration, sem feature de produto, sem alterar regra de negócio, sem commit/push.
+
+**Mudança de código (Dockerfile):**
+- `backend/Dockerfile` linha 29: `ENV NODE_ENV=development` → `ENV NODE_ENV=production`.
+- Imagem agora tem default seguro para produção.
+- `docker-compose.yml` local já seta `NODE_ENV: development` explicitamente no
+  serviço `backend` — sem impacto local. Build verificado.
+
+**Arquivos criados:**
+- `infra/nginx/conf.d/clinicbridge.production.conf.example` — template Nginx para
+  `api.clinicbridge.com.br`: HTTP→HTTPS 301, TLS Let's Encrypt
+  (`/etc/letsencrypt/live/api.clinicbridge.com.br/`), `ssl_protocols TLSv1.2 TLSv1.3`,
+  `client_max_body_size 10m`, timeouts, anti-spoof (X-Real-IP/XFF sobrescritos com
+  `$remote_addr`), `X-Forwarded-Proto`, HSTS comentado, resolver Docker interno,
+  CORS no app (Nginx não emite headers CORS). Extensão `.conf.example` = não carregado
+  pelo glob automático.
+- `infra/nginx/conf.d/clinicbridge.staging.conf.example` — idem para
+  `staging.clinicbridge.com.br`.
+- `docs/dns-tls-staging-runbook.md` — runbook operacional completo:
+  (0) convenções/placeholders; (1) pré-requisitos EC2+SG; (2) DNS Registro.br
+  (4 registros A: @, api, app, staging → Elastic IP, TTL 3600); (3) Certbot
+  standalone (parar Nginx, emitir cert, dry-run, renovação automática via hook);
+  (4) ativar conf Nginx (copiar template, montar `/etc/letsencrypt`, nginx -t);
+  (5) testes curl/openssl (redirect 301, HTTPS 200, cert, headers, logs sem PII,
+  NODE_ENV); (6) HSTS go/no-go (quando e como ativar, staging com max-age=300 primeiro);
+  (7) rollback; (8) checklist go/no-go com status de cada P0.
+
+**Validações executadas:**
+- `docker compose --profile edge build backend` ✅ (build limpo, TypeScript compilou).
+- `docker compose --profile edge up -d backend nginx` ✅ (containers subiram).
+- `curl -sk https://localhost:8443/health` → `{"status":"ok",...}` ✅.
+- `curl -sk https://localhost:8443/health/ready` → `{"status":"ready","checks":{"database":"ok"}}` ✅.
+- `docker compose exec backend sh -c 'echo NODE_ENV=$NODE_ENV'` → `development` ✅
+  (compose local sobrescreve corretamente).
+- `curl -si http://localhost:8080/health | head -1` → `HTTP/1.1 301 Moved Permanently` ✅.
+- `docker compose exec nginx nginx -t` → `syntax is ok / test is successful` ✅.
+
+**Pendente (depende de EC2 disponível):**
+- Alocar Elastic IP e associar à EC2.
+- Criar 4 registros A no Registro.br.
+- Instalar Certbot na EC2 e emitir certs reais.
+- Montar `/etc/letsencrypt` no container Nginx de produção.
+- Ativar HSTS após confirmar HTTPS estável e renovação.
+- `FRONTEND_ORIGIN=https://app.clinicbridge.com.br` em produção.
+
+**Docs atualizados:**
+- `backend/Dockerfile`: `NODE_ENV=production` no runtime.
+- `infra/nginx/conf.d/clinicbridge.production.conf.example` (criado).
+- `infra/nginx/conf.d/clinicbridge.staging.conf.example` (criado).
+- `docs/dns-tls-staging-runbook.md` (criado).
+- `docs/production-minimum-plan.md`: tabela de estado atualizada (NODE_ENV ✅,
+  templates ✅, runbook ✅); Sprint 3.38 marcada como entregue; P0 do NODE_ENV riscado.
+- `docs/nginx-local-staging-runbook.md`: ponteiro para novo runbook DNS/TLS.
+- `docs/deploy-security-checklist.md`: §5 com Sprint 3.38 atualizado.
+- `docs/project-state.md`: Sprint 3.38 adicionada.
+- `docs/sprint-history.md` (este arquivo): entrada Sprint 3.38.
+- `CLAUDE.md`: estado atual = Sprint 3.38 entregue.
+
 Nenhum build necessário (docs only). Sem commit/push.

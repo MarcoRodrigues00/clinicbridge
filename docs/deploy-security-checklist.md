@@ -101,8 +101,13 @@ Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passaria no `min(48)`.
   `TRUST_PROXY=1` + `RATE_LIMIT_STORE=redis`; logs sem `Authorization`/`Cookie`/
   corpo. Verificado e2e: health/live/ready 200, readiness 503 com DB parado.
   Runbook: `docs/nginx-local-staging-runbook.md`.
-- **Fora do escopo desta fase:** TLS/certificado real, domínio, ModSecurity/WAF,
-  deploy real (apenas estratégia/ADR + proxy local/staging).
+- **Sprint 3.38 (entregue):** `NODE_ENV=production` no Dockerfile runtime (compose
+  local sobrescreve para `development`); templates Nginx para `api.clinicbridge.com.br`
+  e `staging.clinicbridge.com.br` em `infra/nginx/conf.d/*.conf.example`; runbook
+  DNS/TLS em `docs/dns-tls-staging-runbook.md` (Registro.br → Certbot → validações
+  → go/no-go). DNS real e cert real ficam para quando a EC2 estiver disponível.
+- **Fora do escopo desta fase:** TLS/certificado real, domínio real ativo, ModSecurity/WAF,
+  deploy real (estratégia/ADR + proxy local/staging + templates prontos).
 
 ## 6. Trust proxy
 

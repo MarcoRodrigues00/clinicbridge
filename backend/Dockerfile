@@ -26,7 +26,9 @@ RUN pnpm --filter backend build
 
 # --- Runtime: a FRESH prod-only install (no dev deps) + the compiled dist ---
 FROM node:20-slim AS runtime
-ENV NODE_ENV=development
+# Production is the safe default. Local/staging compose files override this to
+# "development" via the `environment:` block so placeholder guards stay off.
+ENV NODE_ENV=production
 WORKDIR /repo
 RUN corepack enable
 # Prod-only deps. A clean install never links dev deps (typescript/tsx/@types);

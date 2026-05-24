@@ -10,6 +10,7 @@
 > - **Checklist de deploy seguro / CORS / env prod:** `docs/deploy-security-checklist.md` (+ ADR `docs/adr/0004-deploy-security-baseline.md`)
 > - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
 > - **Plano de produção mínima segura (AWS preferido; gaps P0/P1/P2; sprints 3.37–3.43; decisões pendentes):** `docs/production-minimum-plan.md`
+> - **Runbook DNS/TLS/Nginx para staging+produção (Sprint 3.38; Registro.br → Certbot → testes):** `docs/dns-tls-staging-runbook.md` (templates: `infra/nginx/conf.d/clinicbridge.{production,staging}.conf.example`)
 > - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
 > - **Merge seguro de duplicados (B-safe; decidido 3.32, backend 3.33, UX 3.34, validado 3.35; administrativo, sem delete físico, sem undo completo):** ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
@@ -19,7 +20,20 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Em validação/finalização: Sprint 3.37** (entregue — planejamento/docs only) —
+**Em validação/finalização: Sprint 3.38** (entregue) —
+**Dockerfile `NODE_ENV=production` + templates Nginx prod/staging + runbook DNS/TLS**.
+Sem migration, sem feature de produto, sem commit/push.
+`backend/Dockerfile` runtime corrigido (`ENV NODE_ENV=production`; compose local
+sobrescreve para `development`). Criados templates Nginx
+`infra/nginx/conf.d/clinicbridge.{production,staging}.conf.example` (Let's Encrypt,
+TLS, anti-spoof, HSTS comentado) e `docs/dns-tls-staging-runbook.md` (passo a
+passo Registro.br → Certbot → testes → go/no-go). DNS e cert reais pendentes —
+dependem de EC2 disponível. Build + health + redirect validados localmente.
+Docs atualizados: `backend/Dockerfile`, `docs/production-minimum-plan.md`,
+`docs/nginx-local-staging-runbook.md`, `docs/deploy-security-checklist.md`,
+`docs/project-state.md`, `docs/sprint-history.md`, `CLAUDE.md`.
+
+**Sprint 3.37** (entregue — planejamento/docs only) —
 **plano de produção mínima segura + decisão de AWS como provedor preferido**.
 Sem backend, sem frontend, sem migration, sem nova feature, sem código, sem infra
 real, sem commit/push.
@@ -29,9 +43,6 @@ gaps P0/P1/P2, 7 decisões pendentes do dono e sequência de sprints 3.38–3.43
 Domínio `clinicbridge.com.br` registrado no Registro.br (2026-05-24; expira 2027-05-24).
 Subdomínios planejados: `app.`, `api.`, `staging.`. DNS sem configuração para AWS
 ainda — decisão (Registro.br DNS vs Route 53) na Sprint 3.38.
-Docs atualizados: `docs/production-minimum-plan.md` (criado),
-`docs/roadmap-next-phase.md`, `docs/project-state.md`, `docs/sprint-history.md`,
-`CLAUDE.md`.
 
 **Sprint 3.36** (entregue — QA geral do piloto v0.1,
 docs-only) — **checklist consolidado dos 10 fluxos principais + roteiro demo
@@ -307,12 +318,14 @@ fases: `docs/roadmap-next-phase.md`.
 
 ## Próximas prioridades prováveis
 
-- **Produção (trilha infra — Sprint 3.37 entregue):** plano de produção mínima
-  documentado em `docs/production-minimum-plan.md`. **AWS é o provedor preferido.**
-  6 decisões pendentes do dono (compute, banco, storage, TLS, secrets, orçamento).
-  Sequência: **3.38** (TLS real + `NODE_ENV` no Dockerfile) → **3.39** (secrets +
-  env prod) → **3.40** (backup offsite) → **3.41** (storage + banco/Redis prod) →
-  **3.42** (deploy checklist go/no-go) → **3.43** (piloto real).
+- **Produção (trilha infra — Sprint 3.38 entregue):** `NODE_ENV=production` no
+  Dockerfile runtime ✅; templates Nginx `api.clinicbridge.com.br` +
+  `staging.clinicbridge.com.br` em `infra/nginx/conf.d/*.conf.example` ✅; runbook
+  DNS/TLS `docs/dns-tls-staging-runbook.md` ✅. DNS real e cert pendentes —
+  dependem de EC2 disponível. 7 decisões pendentes do dono (ver
+  `docs/production-minimum-plan.md` §5). Sequência: **3.38 ✅** → **3.39**
+  (secrets + env prod) → **3.40** (backup offsite) → **3.41** (storage +
+  banco/Redis prod) → **3.42** (deploy go/no-go) → **3.43** (piloto real).
 - **QA geral (Sprint 3.36 entregue):** checklist consolidado 10 fluxos, nenhum
   BLOCKER. Produto apto para **piloto controlado** (dados sintéticos/anonimizados).
   **Achado corrigido:** `docs/demo-pilot-v0.1-script.md` descrevia duplicados como
