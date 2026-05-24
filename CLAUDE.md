@@ -10,7 +10,7 @@
 > - **Checklist de deploy seguro / CORS / env prod:** `docs/deploy-security-checklist.md` (+ ADR `docs/adr/0004-deploy-security-baseline.md`)
 > - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
 > - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
-> - **Merge seguro de duplicados (B-safe; decidido na Sprint 3.32, implementação 3.33/3.34; administrativo, sem delete físico, sem undo completo):** ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`
+> - **Merge seguro de duplicados (B-safe; decidido 3.32, backend 3.33, UX 3.34, validado 3.35; administrativo, sem delete físico, sem undo completo):** ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
 > - **Demo/piloto v0.1 (Sprint 3.20; dados fictícios, não clínico):** `docs/demo-data/README.md` (+ `docs/demo-data/pacientes-demo.csv`), `docs/demo-pilot-v0.1-script.md`, `docs/demo-pilot-v0.1-checklist.md` — seed dev-only de agenda: `backend/scripts/seed-demo-scheduling.ts` (`pnpm --filter backend seed:demo` / `seed:demo:clean`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
@@ -18,17 +18,25 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Sprint 3.34** (entregue) — **frontend/UX do merge seguro de duplicados
-B-safe** (consome a API da Sprint 3.33; ADR 0007). Sem mudança em
-backend/services/DAOs/migrations/agenda/importação. Backend mudou só no
-**model público** (`PublicPatient` ganha `merged_into_id` + `merged_at`;
-**não é PII** — UUID + timestamp; **nome do principal NÃO** é buscado/exposto).
-**Frontend:** `DuplicatesList` ganha **rádio "Manter como principal"**
-(owner-only, sem pré-seleção) por registro de cada grupo, **botão "Resolver
-duplicado"** no rodapé do grupo (desabilitado sem seleção), **`ConfirmDialog`
-variant `danger`** com copy explícita ("mantém o principal, move agendamentos
-dos duplicados, preenche apenas campos vazios, nunca sobrescreve, arquiva
-duplicados, nada é apagado fisicamente, esta versão ainda não tem desfazer
+**Em validação/finalização: Sprint 3.35** (entregue — docs/QA only) — **registro
+da validação visual da Sprint 3.34 (merge B-safe) + consolidação do checklist**.
+Sem backend, sem frontend, sem migration, sem nova feature, sem commit/push.
+Sprint 3.34 foi validada visualmente pelo usuário em 2026-05-24 ("ficou bem fera").
+Nenhum bug bloqueante. Fluxo de merge B-safe funcional e aprovado para piloto.
+Docs atualizados: `docs/project-state.md`, `docs/sprint-history.md`,
+`docs/testing-checklist.md`, `CLAUDE.md`, `docs/roadmap-next-phase.md`.
+
+**Sprint 3.34** (entregue, **validado visualmente pelo usuário em 2026-05-24**) —
+**frontend/UX do merge seguro de duplicados B-safe** (consome a API da Sprint 3.33;
+ADR 0007). Sem mudança em backend/services/DAOs/migrations/agenda/importação.
+Backend mudou só no **model público** (`PublicPatient` ganha `merged_into_id` +
+`merged_at`; **não é PII** — UUID + timestamp; **nome do principal NÃO** é
+buscado/exposto). **Frontend:** `DuplicatesList` ganha **rádio "Manter como
+principal"** (owner-only, sem pré-seleção) por registro de cada grupo, **botão
+"Resolver duplicado"** no rodapé do grupo (desabilitado sem seleção),
+**`ConfirmDialog` variant `danger`** com copy explícita ("mantém o principal, move
+agendamentos dos duplicados, preenche apenas campos vazios, nunca sobrescreve,
+arquiva duplicados, nada é apagado fisicamente, esta versão ainda não tem desfazer
 completo"). Após sucesso: mensagem inline + invalida `['appointments']` e
 `['patients']` no TanStack Query (Agenda mostra o nome certo na próxima
 visualização). Secretaria/funcionário(a) **não vê** rádio nem botão (UI esconde;
@@ -41,7 +49,7 @@ no cliente como `grupo - principal escolhido`; envio único `POST
 paciente fica para sprint futura — copy genérica nesta versão). `backend
 typecheck`/`build` ✅, `frontend typecheck`/`build` ✅, container backend
 rebuildado. Smoke API confirma shape com `merged_into_id`/`merged_at` em todas
-as respostas de paciente. Validação visual manual no navegador pendente.
+as respostas de paciente.
 
 **Sprint 3.33** (entregue) — **backend + migration + API do merge seguro de
 duplicados (B-safe)** (ADR 0007). Migration `20260601000000_patients_merged_into`
@@ -113,7 +121,7 @@ tratamento de erro redesenhado (dialog fica aberto em `onError`, erro aparece
 inline com `role="alert"`). 5 ações migradas: Regenerar, Aprovar, Recusar,
 Desativar acesso (4 `window.confirm` removidos de TeamManagementPanel) e Desativar
 profissional (confirmação adicionada ao ClinicProfessionalsPanel). `frontend
-typecheck`/`build` OK. Validação visual pendente.
+typecheck`/`build` OK. Validado visualmente na Sprint 3.30.
 
 **Sprint 3.27** — **polimento visual da aba Equipe**
 (frontend only; sem backend/API/migration/permissão). Chips de categoria nos
@@ -270,15 +278,13 @@ fases: `docs/roadmap-next-phase.md`.
 
 ## Próximas prioridades prováveis
 
-- **Produto (trilha pacientes):** **3.23/3.32/3.33/3.34 entregues** = duplicados
-  acionáveis (3.23), decisão B-safe (3.32 ADR), backend+API do merge (3.33) e
-  **UX de merge na tela de duplicados** (3.34: rádio "Manter como principal",
-  botão "Resolver duplicado", `ConfirmDialog` danger, badge "Mesclado em outro
-  registro" em Arquivados, invalidação de cache de Agenda). **Próximo no tema:**
-  **validação visual** manual da 3.34 (script em `docs/testing-checklist.md`);
-  futuro: contagem de agendamentos por paciente na UI do merge (exige endpoint
-  novo); **paginação backend** de duplicados se a base crescer; **undo/snapshot**
-  completo (tabela própria + ADR).
+- **Produto (trilha pacientes):** **3.23/3.32/3.33/3.34/3.35 entregues** =
+  duplicados acionáveis (3.23), decisão B-safe (3.32 ADR), backend+API do merge
+  (3.33), UX de merge (3.34) e **validação visual + docs** (3.35). **Trilha merge
+  B-safe 3.32–3.35 completa e validada.** **Próximo no tema:** contagem de
+  agendamentos por paciente na UI do merge (exige endpoint novo, owner-only,
+  tenant-scoped); **paginação backend** de duplicados se a base crescer;
+  **undo/snapshot** completo (tabela própria + ADR).
 - **Produto (trilha equipe):** **3.24/3.24.1/3.25 entregues** = solicitação de
   entrada por código de convite, aprovação pelo dono, copy generalizada para
   "funcionário(a)/equipe", **gestão de membros (listar ativos/inativos,
