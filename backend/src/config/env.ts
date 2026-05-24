@@ -134,9 +134,9 @@ const EnvSchema = z.object({
     });
   }
 
-  // Production guards (Sprint 3.6). Refuse to boot production with the committed
-  // .env.example placeholders. These only fire when NODE_ENV=production, so dev
-  // and test are unaffected.
+  // Production guards (Sprint 3.6 + 3.39). Refuse to boot production with the
+  // committed .env.example placeholders or insecure defaults. These only fire
+  // when NODE_ENV=production, so dev and test are unaffected.
   if (val.NODE_ENV === 'production') {
     // The JWT_SECRET placeholder is longer than 48 chars, so the min(48) check
     // above does NOT catch it. Without this guard production could run on the
@@ -149,6 +149,7 @@ const EnvSchema = z.object({
           'JWT_SECRET still uses the .env.example placeholder. Set a strong secret in production (openssl rand -hex 32).',
       });
     }
+
     // The local DB password placeholder must never reach production.
     if (/change-me-locally/i.test(val.DATABASE_URL)) {
       ctx.addIssue({
@@ -156,6 +157,44 @@ const EnvSchema = z.object({
         path: ['DATABASE_URL'],
         message:
           'DATABASE_URL still uses the local placeholder password. Use real, secret DB credentials in production.',
+      });
+    }
+
+    // MFA_ENCRYPTION_KEY must be a dedicated secret in production (Sprint 3.39).
+    // Falling back to JWT_SECRET couples two unrelated secrets; if JWT_SECRET
+    // rotates, all stored TOTP secrets are silently invalidated. Min 32 chars
+    // ensures a reasonable entropy floor (openssl rand -hex 32 → 64 chars is
+    // the recommended format). The value is never logged.
+    if (!val.MFA_ENCRYPTION_KEY || val.MFA_ENCRYPTION_KEY.trim().length < 32) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['MFA_ENCRYPTION_KEY'],
+        message:
+          'MFA_ENCRYPTION_KEY is required in production and must be at least 32 characters. ' +
+          'Generate with: openssl rand -hex 32',
+      });
+    }
+
+    // FRONTEND_ORIGIN must not include localhost or non-HTTPS origins in
+    // production (Sprint 3.39). The default is http://localhost:5173 which is
+    // safe for dev but wrong for production. Each origin is checked individually
+    // so a comma-separated list with one bad entry fails cleanly.
+    const badFrontendOrigins = val.FRONTEND_ORIGIN.split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+      .filter(
+        (o) =>
+          o.includes('localhost') ||
+          o.includes('127.0.0.1') ||
+          o.startsWith('http://'),
+      );
+    if (badFrontendOrigins.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['FRONTEND_ORIGIN'],
+        message:
+          'FRONTEND_ORIGIN must contain only HTTPS origins with real domains in production ' +
+          '(no localhost, no 127.0.0.1, no http://). Example: https://app.clinicbridge.com.br',
       });
     }
   }

@@ -255,16 +255,20 @@
 - **Sem promessa de compliance:** prazos/retenção de backups e offsite dependem de
   validação jurídica. Não afirma produção pronta.
 
-## Deploy seguro / CORS / env de produção (Sprint 3.6)
+## Deploy seguro / CORS / env de produção (Sprint 3.6 + 3.39)
 
 - **Documento principal:** `docs/deploy-security-checklist.md`; **decisão:** ADR
   `docs/adr/0004-deploy-security-baseline.md`. Sprint de auditoria + pequenos
   hardenings (**sem** deploy real, AWS, Terraform, CI/CD, domínio ou HTTPS real).
 - **Guardas de produção (`config/env.ts`):** com `NODE_ENV=production`, o boot
-  **falha** se `JWT_SECRET` ainda usa o placeholder do `.env.example`
-  (`replace-with…`/`change-me`) ou se `DATABASE_URL` contém `change-me-locally`.
-  Motivo: o placeholder do `JWT_SECRET` tem >48 chars e passava no `min(48)`. Dev/
-  test não são afetados.
+  **falha** se:
+  - `JWT_SECRET` ainda usa o placeholder (`replace-with…`/`change-me`) — Sprint 3.6.
+    Motivo: o placeholder tem > 48 chars e passaria no `min(48)`.
+  - `DATABASE_URL` contém `change-me-locally` — Sprint 3.6.
+  - `MFA_ENCRYPTION_KEY` ausente ou < 32 chars — Sprint 3.39. Ver seção MFA acima.
+  - `FRONTEND_ORIGIN` inclui `localhost`, `127.0.0.1` ou origem com `http://` —
+    Sprint 3.39. Complementa a rejeição de `*` já existente em `cors.ts`.
+  Dev/test não são afetados. Runbook de env de produção: `docs/secrets-env-production-runbook.md`.
 - **Warning de produção (`app.ts`):** `RATE_LIMIT_STORE=memory` em produção emite
   warning (contadores por instância → limite inútil em multi-instância). Mantido
   fail-fast só para redis sem conexão. Espelha o warning já existente de `TRUST_PROXY`.
@@ -414,8 +418,13 @@
   sem serviço externo/pago.** Backup codes ficam para sprint futura (ressalva).
 - **Secret cifrado em repouso:** AES-256-GCM (`config/mfaCrypto.ts`), chave
   derivada via HKDF-SHA256 do `JWT_SECRET` por padrão, ou de `MFA_ENCRYPTION_KEY`
-  (opcional) quando setado. **Ressalva P1:** em produção usar uma chave dedicada/
-  KMS; trocar `JWT_SECRET` (quando a chave não é dedicada) invalida os secrets MFA.
+  quando setada. **Sprint 3.39:** `MFA_ENCRYPTION_KEY` tornou-se **obrigatória em
+  produção** (guard de boot em `config/env.ts`; boot falha se ausente ou < 32 chars
+  com `NODE_ENV=production`). Em dev/test o fallback para `JWT_SECRET` continua
+  funcionando (sem guard). **Aviso:** trocar `MFA_ENCRYPTION_KEY` (ou `JWT_SECRET`
+  quando a chave não é dedicada) invalida todos os secrets TOTP armazenados —
+  todos os usuários com MFA ativo precisarão se re-inscrever. Planejar rotação em
+  ADR dedicada. Runbook de geração/armazenamento: `docs/secrets-env-production-runbook.md`.
 - **Secret nunca vaza:** só é retornado durante o setup (`/auth/mfa/setup`, para o
   QR/chave manual); `status` e demais respostas **nunca** retornam o secret; nunca
   é logado (verificado: log de boot/fluxo sem o secret).
