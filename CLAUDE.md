@@ -17,7 +17,21 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Em validação/finalização: Sprint 3.26** — **regenerar código de convite da
+**Em validação/finalização: Sprint 3.27** — **polimento visual da aba Equipe**
+(frontend only; sem backend/API/migration/permissão). Chips de categoria nos
+títulos ("Acesso ao sistema" no `TeamManagementPanel`; "Aparece na agenda" no
+`ClinicProfessionalsPanel`) deixam óbvia a diferença entre membros com login e
+profissionais da agenda. Código de convite ganhou peso visual (mono 1.15rem +
+letter-spacing maior); botão **Regenerar** virou variante `ghostBtn` (transparente,
+só borda) para parecer secundário sem virar danger; **Recusar** deixou de ser
+danger (mais coerente — recusar pedido não é destrutivo); **Desativar acesso**
+continua sendo o único `dangerBtn` na lista de membros; cards inativos ganharam
+`border-left` cinza-azulado frio (escaneáveis sem virar alerta); empty states e
+mensagens de `window.confirm` reescritos em tom mais humano e administrativo;
+mobile `@max-width:480px` empilha botões full-width nos dois painéis. Sem
+mudança de comportamento; só copy/CSS/markup. `frontend typecheck`/`build` OK.
+
+**Sprint 3.26** — **regenerar código de convite da
 clínica** (backend + frontend, **sem migration**). Owner-only `POST
 /clinics/invite-code/regenerate` rotaciona `clinics.invite_code` com retry curto
 sobre o índice único. **Não cancela solicitações pendentes** (decisão registrada

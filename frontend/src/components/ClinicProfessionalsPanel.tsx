@@ -107,7 +107,8 @@ export function ClinicProfessionalsPanel(): JSX.Element {
       <div className={styles.head}>
         <h2 className={styles.title}>
           <Stethoscope size={22} aria-hidden="true" />
-          Profissionais da clínica
+          Profissionais da agenda
+          <span className={styles.categoryChip}>Aparece na agenda</span>
         </h2>
         <button type="button" className={styles.secondaryBtn} onClick={() => void listQuery.refetch()}>
           <RefreshCw size={16} aria-hidden="true" />
@@ -115,10 +116,9 @@ export function ClinicProfessionalsPanel(): JSX.Element {
         </button>
       </div>
       <p className={styles.subtitle}>
-        Profissionais da agenda — pessoas que aparecem como responsável do
-        agendamento e alimentam o seletor da aba <strong>Agenda</strong>. Podem
-        ou não ter login no sistema (diferente de "Membros da equipe", acima,
-        que são contas com acesso). Função/rótulo é administrativo opcional;
+        <strong>Pessoas que aparecem como responsável no agendamento.</strong>{' '}
+        Podem ou não ter login no sistema — diferente de "Membros da equipe",
+        que são contas com acesso. Função/rótulo é administrativo opcional;
         não é prontuário nem dado clínico.
       </p>
 
@@ -160,7 +160,10 @@ export function ClinicProfessionalsPanel(): JSX.Element {
       {listQuery.isLoading ? (
         <p className={styles.muted}><Loader2 size={16} className={styles.spin} aria-hidden="true" /> Carregando…</p>
       ) : professionals.length === 0 ? (
-        <p className={styles.empty}>Nenhum profissional cadastrado.</p>
+        <p className={styles.empty}>
+          Nenhum profissional cadastrado. Adicione quem realiza atendimentos —
+          eles aparecem como responsáveis na agenda.
+        </p>
       ) : (
         <ul className={styles.list}>
           {professionals.map((p) => (
@@ -207,7 +210,7 @@ export function ClinicProfessionalsPanel(): JSX.Element {
                           deactivateMutation.mutate(p.id);
                         }}
                       >
-                        <Power size={14} aria-hidden="true" /> Desativar
+                        <Power size={14} aria-hidden="true" /> Desativar profissional
                       </button>
                     </div>
                   )}
