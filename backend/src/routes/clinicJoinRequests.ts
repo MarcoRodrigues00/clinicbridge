@@ -24,6 +24,20 @@ clinicJoinRequestsRouter.get(
   asyncHandler(clinicJoinRequestController.inviteCode),
 );
 
+// --- Owner: rotate own clinic's invite code (Sprint 3.26) ------------------
+// Old code stops working for new join requests as soon as the UPDATE commits.
+// Pending requests created with the old code are intentionally preserved (see
+// docs/security-notes.md). No reactivation/cool-down — abuse is bounded by the
+// IP-keyed rate limit that runs before auth.
+clinicJoinRequestsRouter.post(
+  '/clinics/invite-code/regenerate',
+  patientsRateLimit,
+  requireAuth,
+  requireClinic,
+  requireRole(CLINIC_ADMIN_ROLES),
+  asyncHandler(clinicJoinRequestController.regenerateInviteCode),
+);
+
 // --- Requester (secretaria without a clinic): requireAuth only -------------
 clinicJoinRequestsRouter.post(
   '/clinic-join-requests',

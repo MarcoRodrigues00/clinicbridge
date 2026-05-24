@@ -17,7 +17,20 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Em validação/finalização: Sprint 3.25 + 3.25.1** — **gestão de membros da
+**Em validação/finalização: Sprint 3.26** — **regenerar código de convite da
+clínica** (backend + frontend, **sem migration**). Owner-only `POST
+/clinics/invite-code/regenerate` rotaciona `clinics.invite_code` com retry curto
+sobre o índice único. **Não cancela solicitações pendentes** (decisão registrada
+em `docs/security-notes.md`): a pendente foi criada por alguém que já provou
+posse do código antigo e aguarda decisão manual do dono — recusar em lote sem
+revisão seria destrutivo. Audit `clinic.invite_code.regenerated.success` com
+`recurso='clinic'`, `recurso_id=clinica_id`, **sem** invite code (nem antigo nem
+novo). Frontend: botão "Regenerar" ao lado de "Copiar" no `TeamManagementPanel`,
+com `window.confirm` explicando que (a) o código antigo deixa de funcionar para
+NOVAS solicitações, (b) pendentes e membros atuais NÃO são afetados; mensagem de
+sucesso mostra o novo código uma vez. Validação por API **12/12**.
+
+**Sprint 3.25 + 3.25.1** — **gestão de membros da
 equipe** (3.25, backend + frontend) + **reorganização Agenda↔Equipe** (3.25.1,
 frontend only). Aba **Equipe** agora tem 3 seções, na ordem: (1) Código de convite
 + Solicitações pendentes, (2) Membros da equipe (acesso ao sistema, 3.25), (3)
@@ -218,7 +231,8 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
   /patients/:id/archive`** e **`PATCH /patients/:id/restore`** (Sprint 3.22), **e
   `GET /clinics/invite-code`, `GET /clinic-join-requests/pending`, `POST
   /clinic-join-requests/:id/approve|reject` (Sprint 3.24)**, **e `GET
-  /clinic-members` + `PATCH /clinic-members/:userId/deactivate` (Sprint 3.25)**.
+  /clinic-members` + `PATCH /clinic-members/:userId/deactivate` (Sprint 3.25)**,
+  **e `POST /clinics/invite-code/regenerate` (Sprint 3.26)**.
   `secretaria`
   (operator) faz upload/preview/validate/create-session/dry-run, leitura de
   pacientes/duplicados, **criar/editar paciente** (`POST /patients`, `PATCH

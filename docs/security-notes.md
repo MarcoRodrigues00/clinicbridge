@@ -64,6 +64,21 @@
   `cannot_deactivate_self`), desligar o `responsavel_id` da clínica (400
   `cannot_deactivate_owner`), desligar usuário de outra clínica/inexistente/já
   desligado (**404 genérico** `member_not_found`, sem enumeração).
+- **Regeneração de código de convite (Sprint 3.26):** `POST
+  /clinics/invite-code/regenerate` é owner-only (`requireRole(CLINIC_ADMIN_ROLES)`).
+  Substitui `clinics.invite_code` por um novo código único (reusa
+  `generateInviteCode`; defesa real é o índice único). O código antigo deixa de
+  funcionar para **novas** solicitações imediatamente. **Decisão consciente:
+  solicitações pendentes pré-regen NÃO são canceladas.** Racional: a pendente foi
+  submetida por alguém que já provou posse do código antigo e aguarda decisão
+  humana do dono (que pode usar **Recusar** caso o motivo da rotação tenha sido
+  "código vazou"). Cancelar em lote sem revisão é destrutivo. Se uma futura
+  postura exigir "panic-cancel" acoplado à regen, abrir sprint dedicada com
+  confirmação dupla na UI. Audit `clinic.invite_code.regenerated.success`
+  (`recurso='clinic'`, `recurso_id=clinica_id`) **nunca** persiste o código —
+  nem antigo nem novo — em audit_logs (não há coluna para isso; e o serviço não
+  passa o valor ao DAO de audit). Rate limit: reusa `patientsRateLimit`
+  (IP-keyed antes do auth), suficiente para bloquear automação trivial.
 - **Stale-JWT fechado em `requireClinic` (Sprint 3.25):** o middleware agora
   busca `users` por id e exige `ativo=true` e `users.clinica_id ===
   req.auth.clinica_id`. Mismatch → **403 `clinic_membership_revoked`** (genérico:

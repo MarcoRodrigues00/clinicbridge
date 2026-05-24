@@ -7,7 +7,44 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.25** (em validação/finalização) — **gestão de membros da equipe**
+**Sprint 3.26** (em validação/finalização) — **regenerar código de convite da
+clínica**. Backend + frontend, **sem migration**.
+
+Owner-only `POST /clinics/invite-code/regenerate` rotaciona `clinics.invite_code`
+para um novo código único (reusa `generateInviteCode` em `utils/inviteCode.ts`;
+retry curto de 6 tentativas; índice único `clinics_invite_code_unique` é a
+defesa real). Resposta: `{ invite_code (XXXX-XXXX), clinic_name }` — mesmo shape
+do `GET`. Cross-tenant não existe (rota não recebe `clinic_id` no path; o owner
+só rotaciona a própria clínica, e `requireClinic` re-valida `users.clinica_id`
+contra o DB — Sprint 3.25). Audit `clinic.invite_code.regenerated.success` com
+`recurso='clinic'`, `recurso_id=clinica_id`, **sem** invite_code (nem antigo nem
+novo).
+
+**Decisão de produto/segurança (registrada em `docs/security-notes.md`):**
+solicitações pendentes criadas com o código antigo **NÃO são canceladas** na
+regen. A pendente prova posse anterior do código e aguarda decisão manual do
+dono (que tem **Recusar** na UI). Cancelar em lote esconderia solicitações
+legítimas; se um futuro use-case exigir "panic-cancel" associado à rotação,
+abrir sprint própria com confirmação dupla.
+
+**Frontend:** `TeamManagementPanel` ganhou botão **Regenerar** ao lado de
+**Copiar** no bloco do código. `window.confirm` cobre as 3 frases obrigatórias:
+"código antigo deixará de funcionar para NOVAS solicitações", "solicitações
+pendentes e membros atuais NÃO são alterados", "compartilhe o novo código
+apenas com funcionários autorizados". Após sucesso, `notice` exibe o novo
+código uma vez e a cache key `['clinic-invite-code']` é invalidada.
+
+**Verificação:** backend + frontend `typecheck`/`build` OK; matriz por API
+**12/12** (códigos antigos rejeitados com `404 invalid_invite`; código novo
+aceito; pendente pré-regen preservada; membro não-dono → `403 forbidden_role`;
+staff sem clínica → `403 no_clinic_context`; audit row presente com
+`recurso='clinic'` sem código). Sem migration; sem mudança em schema.
+
+---
+
+## Sprint anterior (3.25 + 3.25.1)
+
+**Sprint 3.25** — **gestão de membros da equipe**
 (backend + frontend). Continuação direta da trilha "equipe" iniciada em 3.24. Dá
 ao dono visibilidade dos membros (ativos + ex-membros) e a ação de **desativar
 acesso** de funcionários(as), sem deletar usuário, sem apagar audit/histórico, e

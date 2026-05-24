@@ -692,3 +692,48 @@ Validação visual no navegador (sem mudança de API):
    - A agenda continua aceitando `professional_id` opcional na criação de agendamento.
 5. **Copy diferencia conceitos:**
    - Subtítulo do painel reforça: alimenta o seletor da Agenda, profissional **pode ou não** ter login, não é dado clínico.
+
+## Regenerar código de convite (Sprint 3.26)
+
+Pré-requisitos: backend dev `:3001` rodando.
+
+Smoke por API (contas descartáveis com tag aleatório; matriz automatizada em `/tmp/sprint-3.26-api-test.mjs`).
+
+Cenários obrigatórios:
+
+1. **Dono lê código atual:** `GET /clinics/invite-code` → 200, `{ invite_code, clinic_name }`.
+2. **Dono regenera:** `POST /clinics/invite-code/regenerate` → 200; novo `invite_code` **diferente** do anterior; `clinic_name` igual.
+3. **GET reflete:** `GET /clinics/invite-code` casa com o valor retornado pelo `POST`.
+4. **Código antigo rejeitado:** `POST /clinic-join-requests` com o invite_code antigo → 404 `invalid_invite`.
+5. **Código novo aceito:** mesma rota com o novo → 201.
+6. **Owner-B regenera independentemente:** clínica A não é afetada (cross-tenant não existe via path).
+7. **Permissões:**
+   - Staff sem clínica → 403 `no_clinic_context`.
+   - Membro não-dono (após aprovação) → 403 `forbidden_role`.
+8. **Pendente preservada:** uma `clinic-join-request` `status='pending'` criada antes da regen continua visível em `GET /clinic-join-requests/pending`.
+9. **Audit:**
+   ```sql
+   SELECT acao, recurso, recurso_id IS NOT NULL AS has_recurso_id, usuario_id IS NOT NULL AS has_uid, clinica_id IS NOT NULL AS has_cid
+   FROM audit_logs WHERE acao = 'clinic.invite_code.regenerated.success' ORDER BY criado_em DESC LIMIT 5;
+   ```
+   Esperado: `recurso='clinic'`, `recurso_id` UUID da clínica, `usuario_id`/`clinica_id` preenchidos. **Nenhuma** coluna carrega o invite_code (não existe).
+
+Limpeza:
+
+```sql
+BEGIN;
+DELETE FROM audit_logs WHERE usuario_id IN (SELECT id FROM users WHERE email LIKE 't326-%<TAG>@example.test');
+DELETE FROM clinic_join_requests WHERE user_id IN (SELECT id FROM users WHERE email LIKE 't326-%<TAG>@example.test');
+UPDATE users SET clinica_id = NULL WHERE email LIKE 't326-%<TAG>@example.test';
+DELETE FROM clinics WHERE responsavel_id IN (SELECT id FROM users WHERE email LIKE 't326-%<TAG>@example.test');
+DELETE FROM users WHERE email LIKE 't326-%<TAG>@example.test';
+COMMIT;
+```
+
+Validação **visual** no navegador (pendente automatizar):
+- Aba **Equipe** mostra "Código de convite" com **dois** botões: **Copiar** e **Regenerar**.
+- Botão Regenerar aparece **apenas para o dono** (UI esconde para secretaria; backend é a defesa real).
+- Clicar **Regenerar** abre `window.confirm` que cita: "código antigo deixará de funcionar para NOVAS solicitações", "pendentes e membros atuais NÃO são alterados", "compartilhe apenas com funcionários autorizados".
+- Após confirmar, o novo código aparece em destaque no campo de código + mensagem de sucesso (`notice`) mostra o novo código uma vez.
+- **Copiar** continua funcionando com o novo código.
+- Após regenerar, qualquer aba aberta com `JoinClinicGate` que use o código antigo recebe `invalid_invite` ao tentar submeter (a aba do dono não é afetada — ele lê o atualizado).

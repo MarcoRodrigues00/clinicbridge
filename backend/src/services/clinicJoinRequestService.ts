@@ -11,7 +11,7 @@ import {
   type MyJoinRequest,
   type PendingJoinRequest,
 } from '../models/clinicJoinRequest';
-import { formatInviteCode, normalizeInviteCode } from '../utils/inviteCode';
+import { formatInviteCode, generateInviteCode, normalizeInviteCode } from '../utils/inviteCode';
 import type { AuthContext } from './authService';
 
 // The actor identity threaded from the controller (never the req object).
@@ -88,6 +88,69 @@ export const clinicJoinRequestService = {
     const clinic = await clinicDao.findById(actor.clinica_id);
     if (!clinic) throw new HttpError(403, 'forbidden', 'Acesso negado.');
     return { invite_code: formatInviteCode(clinic.invite_code), clinic_name: clinic.nome };
+  },
+
+  // Sprint 3.26 — rotates the owner's clinic invite code. The previous code
+  // stops working for NEW join requests as soon as the UPDATE commits. Pending
+  // requests created with the old code are intentionally NOT cancelled — they
+  // were submitted by users who already held the old code and now await the
+  // owner's manual approval/rejection (see docs/security-notes.md for the
+  // rationale). Approved members and removed members are unaffected.
+  async regenerateInviteCode(
+    actor: ClinicOwnerActor,
+    ctx: AuthContext,
+  ): Promise<{ invite_code: string; clinic_name: string }> {
+    const clinic = await clinicDao.findById(actor.clinica_id);
+    if (!clinic) throw new HttpError(403, 'forbidden', 'Acesso negado.');
+
+    // Collisions over 31^8 are astronomically rare; the unique index is the
+    // real guard. We retry a handful of times before surfacing a generic 500.
+    let updated: typeof clinic | undefined;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const candidate = generateInviteCode();
+      // Skip the rare same-as-current draw so a regenerate always produces a
+      // different code (the spec for the UI promise "código antigo deixará de
+      // funcionar").
+      if (candidate === clinic.invite_code) continue;
+      try {
+        const row = await clinicDao.updateInviteCode(actor.clinica_id, candidate);
+        if (row) {
+          updated = row;
+          break;
+        }
+      } catch (err) {
+        // pg unique_violation → try another code (extremely unlikely)
+        if (typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505') {
+          continue;
+        }
+        throw err;
+      }
+    }
+    if (!updated) {
+      throw new HttpError(500, 'internal_error', 'Não foi possível regenerar o código. Tente novamente.');
+    }
+
+    // Audit deliberately omits both the old and the new code — only the clinic
+    // UUID is recorded so the trail proves "owner rotated the invite" without
+    // ever persisting a reusable secret in audit_logs. Resource is `clinic`
+    // (not `clinic_join_request`) because the subject of the action is the
+    // clinic itself.
+    try {
+      await auditLogDao.create({
+        acao: 'clinic.invite_code.regenerated.success',
+        usuario_id: actor.usuario_id,
+        clinica_id: actor.clinica_id,
+        recurso: 'clinic',
+        recurso_id: actor.clinica_id,
+        ip: ctx.ip,
+        user_agent: ctx.user_agent,
+        request_id: ctx.request_id,
+      });
+    } catch (err) {
+      logger.error({ err, audit_write_failed: true }, 'audit log write failed');
+    }
+
+    return { invite_code: formatInviteCode(updated.invite_code), clinic_name: updated.nome };
   },
 
   // A secretaria (no clinic yet) requests to join a clinic by its invite code.

@@ -7,6 +7,7 @@ import {
   Check,
   Loader2,
   RefreshCw,
+  RotateCw,
   UserCheck,
   UserX,
   UserMinus,
@@ -120,6 +121,21 @@ export function TeamManagementPanel(): JSX.Element | null {
     onError: (err) => setError(errMsg(err, 'Não foi possível desativar o acesso.')),
   });
 
+  // Sprint 3.26 — rotate the clinic's invite code. The previous code stops
+  // working for new join requests as soon as the mutation succeeds; pending
+  // requests submitted with the old code are intentionally preserved.
+  const regenerateInviteMutation = useMutation({
+    mutationFn: () => api.regenerateClinicInviteCode(token as string),
+    onSuccess: (data) => {
+      setNotice(
+        `Novo código gerado: ${data.invite_code}. O código antigo não funciona mais para novas solicitações.`,
+      );
+      setError(null);
+      void queryClient.invalidateQueries({ queryKey: ['clinic-invite-code'] });
+    },
+    onError: (err) => setError(errMsg(err, 'Não foi possível regenerar o código.')),
+  });
+
   if (!isOwner) return null;
 
   async function copyCode(): Promise<void> {
@@ -191,12 +207,34 @@ export function TeamManagementPanel(): JSX.Element | null {
               )}
               {copied ? 'Copiado' : 'Copiar'}
             </button>
+            <button
+              type="button"
+              className={styles.copyBtn}
+              disabled={regenerateInviteMutation.isPending}
+              onClick={() => {
+                const ok = window.confirm(
+                  'Regenerar o código de convite da clínica?\n\nO código antigo deixará de funcionar para NOVAS solicitações. Compartilhe o novo código apenas com funcionários(as) autorizados(as).\n\nSolicitações pendentes e membros atuais NÃO são afetados.',
+                );
+                if (ok) regenerateInviteMutation.mutate();
+              }}
+            >
+              {regenerateInviteMutation.isPending ? (
+                <Loader2 size={14} className={styles.spin} aria-hidden="true" />
+              ) : (
+                <RotateCw size={14} aria-hidden="true" />
+              )}
+              Regenerar
+            </button>
             <span className={styles.clinicName}>
               {inviteCodeQuery.data.clinic_name}
             </span>
           </>
         ) : null}
       </div>
+      <p className={styles.helperText}>
+        Ao regenerar, o código antigo deixará de funcionar para novas solicitações.
+        Solicitações pendentes e membros atuais não são alterados.
+      </p>
 
       {notice ? <div className={styles.notice}>{notice}</div> : null}
       {error ? <div className={styles.error}>{error}</div> : null}
