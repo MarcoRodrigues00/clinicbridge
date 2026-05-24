@@ -17,19 +17,23 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Em validação/finalização: Sprint 3.28** — **modal custom de confirmação** para
-ações sensíveis da aba Equipe (frontend only; sem backend/API/migration/permissão).
-Criados `ConfirmDialog.tsx` + `ConfirmDialog.module.css`: componente reutilizável
-baseado em `<dialog>` nativo, sem biblioteca nova. Props: `open`, `title`,
-`description`, `confirmLabel`, `cancelLabel`, `variant` (`default|danger`),
-`isBusy`, `onConfirm`, `onCancel`. ESC/backdrop fecham sem executar; `isBusy`
-desabilita botões e exibe spinner enquanto a mutation está pending; dialog fecha
-ao settlement. Migradas 5 ações: **Regenerar código**, **Aprovar**, **Recusar**,
-**Desativar acesso** (TeamManagementPanel — 4 `window.confirm` removidos) e
-**Desativar profissional** (ClinicProfessionalsPanel — confirmação adicionada,
-antes disparava diretamente). Variante `danger` apenas nas ações destrutivas;
-default/cyan para as demais. `frontend typecheck`/`build` OK. Validação visual
-pendente.
+**Em validação/finalização: Sprint 3.29** — **docs/QA** sprint. Sem backend, sem
+API, sem migration, sem permissão, sem nova feature. Docs atualizados para
+refletir Sprint 3.28 (modal custom) e os nits pós-revisão. Checklist visual
+integrado do fluxo Equipe adicionado em `docs/testing-checklist.md`. Demo script
+e checklist piloto expandidos com bloco de demo da aba Equipe.
+
+**Sprint 3.28** (entregue, nits pós-revisão aplicados) — **modal custom de
+confirmação** para ações sensíveis da aba Equipe (frontend only; sem
+backend/API/migration/permissão). `ConfirmDialog.tsx` + `ConfirmDialog.module.css`
+reutilizável: `<dialog>` nativo, variantes `default|danger`, `isBusy` com spinner,
+ESC/backdrop respeitam `onCancel`. Nits: `useId()` para IDs únicos entre os dois
+dialogs montados simultaneamente, `.secondaryBtn:disabled` adicionado ao CSS,
+tratamento de erro redesenhado (dialog fica aberto em `onError`, erro aparece
+inline com `role="alert"`). 5 ações migradas: Regenerar, Aprovar, Recusar,
+Desativar acesso (4 `window.confirm` removidos de TeamManagementPanel) e Desativar
+profissional (confirmação adicionada ao ClinicProfessionalsPanel). `frontend
+typecheck`/`build` OK. Validação visual pendente.
 
 **Sprint 3.27** — **polimento visual da aba Equipe**
 (frontend only; sem backend/API/migration/permissão). Chips de categoria nos

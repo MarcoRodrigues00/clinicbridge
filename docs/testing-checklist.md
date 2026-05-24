@@ -670,7 +670,7 @@ Validação **visual** no navegador (pendente automatizar):
 - Aba **Equipe** mostra "Membros da equipe" abaixo de "Solicitações pendentes".
 - Membros ativos por padrão; checkbox "Mostrar inativos" alterna.
 - Badge "Dono(a)" no `is_owner`; botão "Desativar acesso" ausente para o dono e para o usuário logado.
-- `window.confirm` da desativação cita: "não apaga usuário", "não apaga histórico", "pessoa pode pedir entrada de novo".
+- Botão "Desativar acesso" abre **modal de confirmação custom** (sprint 3.28) com nome do membro; confirmar executa a desativação; cancelar/ESC/backdrop fecha sem ação.
 - Polling 30s atualiza a lista após uma ação.
 
 ## Reorganização Agenda↔Equipe (Sprint 3.25.1)
@@ -733,7 +733,7 @@ COMMIT;
 Validação **visual** no navegador (pendente automatizar):
 - Aba **Equipe** mostra "Código de convite" com **dois** botões: **Copiar** e **Regenerar**.
 - Botão Regenerar aparece **apenas para o dono** (UI esconde para secretaria; backend é a defesa real).
-- Clicar **Regenerar** abre `window.confirm` que cita: "código antigo deixará de funcionar para NOVAS solicitações", "pendentes e membros atuais NÃO são alterados", "compartilhe apenas com funcionários autorizados".
+- Clicar **Regenerar** abre **modal de confirmação custom** (sprint 3.28) com título "Gerar um novo código de convite?" e descrição que cita: "código antigo deixará de funcionar para NOVAS solicitações", "pendentes e membros atuais NÃO são alterados", "compartilhe apenas com funcionários autorizados".
 - Após confirmar, o novo código aparece em destaque no campo de código + mensagem de sucesso (`notice`) mostra o novo código uma vez.
 - **Copiar** continua funcionando com o novo código.
 - Após regenerar, qualquer aba aberta com `JoinClinicGate` que use o código antigo recebe `invalid_invite` ao tentar submeter (a aba do dono não é afetada — ele lê o atualizado).
@@ -750,10 +750,10 @@ Sem mudança de API. Validação puramente visual no navegador:
    - Aparece em mono, fundo cyan suave, levemente maior que antes (1.15rem, letter-spacing 0.08em).
    - Botão **Copiar** mantém o peso visual (solid surface).
    - Botão **Regenerar** está claramente menos atrativo (variante ghost — transparente, só borda).
-3. **Avisos (`window.confirm`):**
-   - Regenerar: "Gerar um novo código de convite? O código atual deixa de aceitar NOVAS solicitações. Membros atuais e pedidos pendentes continuam intactos."
-   - Desativar acesso: "Remover o acesso de {nome}? O histórico e os dados continuam preservados. A pessoa pode pedir entrada de novo com o código de convite."
-   - Recusar solicitação: tom neutro ("A pessoa pode pedir de novo com o mesmo código.").
+3. **Modais de confirmação custom (sprint 3.28 — substituem os `window.confirm` anteriores):**
+   - Regenerar: modal abre, título "Gerar um novo código de convite?", descrição cita que o código atual deixa de aceitar NOVAS solicitações e que membros/pedidos pendentes continuam intactos.
+   - Desativar acesso: modal abre, título com nome do membro, descrição cita preservação de histórico e dados.
+   - Recusar solicitação: modal abre, tom neutro, "A pessoa pode pedir de novo com o mesmo código."
 4. **Hierarquia de risco:**
    - "Recusar" virou neutro (não-danger). É correto: não é destrutivo.
    - "Desativar acesso" (membro) é o único `dangerBtn` no card de membro — coerente com a gravidade real.
@@ -782,7 +782,70 @@ Sem mudança de API. Validação puramente visual no navegador:
 2. **Cancelar não executa:** clicar "Cancelar" fecha o modal sem disparar nenhuma chamada de API.
 3. **ESC não executa:** pressionar ESC fecha o modal sem disparar nenhuma chamada de API.
 4. **Backdrop click não executa:** clicar fora da caixa do modal fecha sem disparar ação.
-5. **Confirmar executa a ação existente:** mesma mutation de antes, resultado (sucesso/erro) aparece no banner do painel.
-6. **isBusy:** ao confirmar, o botão confirmar mostra spinner e fica desabilitado; o botão cancelar também fica desabilitado; o modal fecha ao término (success ou error).
+5. **Confirmar executa a ação existente:** mesma mutation de antes. Em sucesso: modal fecha, mensagem verde aparece no banner do painel. Em erro: **modal permanece aberto** com a mensagem de erro exibida dentro do modal (com `role="alert"`); o usuário pode tentar de novo ou clicar Cancelar.
+6. **isBusy:** ao confirmar, o botão confirmar mostra spinner e fica desabilitado; o botão cancelar também fica desabilitado; ambos desbloqueiam ao término (success ou error).
 7. **Variante danger:** apenas "Desativar acesso" e "Desativar profissional" têm botão confirmar em vermelho-suave. Regenerar/Aprovar/Recusar usam cyan (default).
 8. **Mobile:** em viewport ≤ 480px, os botões do modal empilham full-width (confirmar em cima, cancelar embaixo).
+9. **Erro inline (pós-3.28 nit):** ao testar uma falha (ex.: desativar com backend offline) o modal **não fecha** — o erro aparece em painel vermelho dentro do modal com `role="alert"`. Clicar Cancelar limpa o erro e fecha o modal.
+10. **IDs únicos (pós-3.28 nit):** dois dialogs podem estar montados ao mesmo tempo (TeamManagementPanel + ClinicProfessionalsPanel); inspecionar o DOM confirma que cada `<dialog>` tem `aria-labelledby` com IDs distintos (gerados por `useId()`).
+
+## Fluxo completo da aba Equipe — checklist visual integrado (Sprint 3.29)
+
+> Roteiro de validação ponta a ponta do fluxo Equipe, com contas descartáveis.
+> Cobre sprints 3.24–3.28 num único passe. Exige backend `:3001` rodando.
+
+### Pré-condições
+
+- Owner cadastrado com clínica (conta A).
+- Staff cadastrado **sem** clínica (conta B, `account_type: staff` no cadastro).
+- Ambas as contas com login acessível no navegador (pode usar duas abas/janelas em modo normal/privado).
+
+### Passos e verificações
+
+1. **Código de convite (owner):**
+   - Login como owner → aba **Equipe** → bloco "Código de convite" visível.
+   - Código em fonte mono, maior; botão **Copiar** (solid) e **Regenerar** (ghost/transparente) lado a lado.
+   - Copiar → copia para a área de transferência sem abrir modal.
+
+2. **Solicitação de entrada (staff):**
+   - Login como staff → tela `JoinClinicGate` (antes do `/app`).
+   - Inserir o código copiado + nome da clínica (confirmatório) → submeter.
+   - Mensagem de "pendente" aparece; botão **Cancelar** disponível.
+
+3. **Aprovar solicitação (owner):**
+   - Owner → aba **Equipe** → seção "Solicitações pendentes" mostra a solicitação do staff (nome/e-mail/mensagem).
+   - Clicar **Aprovar** → **modal abre** com nome+e-mail, botão "Aprovar entrada" (cyan).
+   - Confirmar → modal fecha, solicitação some da lista, `notice` aparece.
+   - Staff (outra aba) → recarregar → acessa `/app` normalmente.
+
+4. **Membros da equipe:**
+   - Seção "Membros da equipe" lista owner + staff aprovado.
+   - Owner tem badge "Dono(a)"; staff aparece como "Funcionário(a) (acesso administrativo)".
+   - Botão "Desativar acesso" **ausente** no card do owner e no card do próprio usuário logado.
+
+5. **Desativar acesso (owner):**
+   - Clicar "Desativar acesso" no card do staff → **modal danger abre** com nome do membro.
+   - Cancelar → modal fecha, membro continua ativo.
+   - Confirmar → modal fecha, `notice` aparece; membro some da lista ativa.
+   - Ativar "Mostrar inativos" → membro aparece com `border-left` cinza-azulado e badge "Inativo(a)".
+
+6. **Regenerar código (owner):**
+   - Clicar **Regenerar** → **modal default abre** com título "Gerar um novo código de convite?".
+   - Confirmar → código no bloco muda; `notice` mostra o novo código uma vez.
+   - Código antigo usado no `JoinClinicGate` → erro `invalid_invite`.
+
+7. **Recusar solicitação (owner):**
+   - Staff (nova conta) envia solicitação com o novo código.
+   - Owner → Recusar → **modal default abre** (botão "Recusar solicitação", não-danger/cyan).
+   - Confirmar → modal fecha, solicitação some.
+
+8. **Profissionais da agenda (owner):**
+   - Seção "Profissionais da agenda" na aba Equipe (abaixo de Membros).
+   - Criar → nome + rótulo opcional → aparece na lista.
+   - Editar (inline) → salvar → atualiza.
+   - Desativar → **modal danger** → confirmar → profissional some da lista ativa.
+   - Trocar para aba **Agenda** → seletor de profissional no novo agendamento **não** exibe o profissional desativado (cache `['clinic-professionals']` invalidada).
+
+9. **Secretaria vê mas não gerencia:**
+   - Login como staff aprovado → aba Equipe **não aparece** (UI esconde para não-owner).
+   - Aba Agenda: seletor de profissional mostra ativos; criar agendamento funciona normalmente.

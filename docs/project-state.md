@@ -7,9 +7,20 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.28** (em validação/finalização) — **modal custom de confirmação** para ações sensíveis da aba Equipe. Frontend only; **sem backend, sem API, sem migration, sem permissão**.
+**Sprint 3.29** (em validação/finalização) — **docs/QA** sprint. Sem backend, sem API, sem migration, sem permissão, sem nova feature. Docs atualizados para refletir Sprint 3.28 (modal custom) e as correções pós-revisão (nits). Checklist visual integrado do fluxo Equipe adicionado em `docs/testing-checklist.md`. Demo script e checklist piloto expandidos com bloco de demo da aba Equipe. `sprint-history.md` com Sprint 3.29.
+
+Verificação: nenhum comando de build necessário (docs only). Sem commit/push.
+
+---
+
+**Sprint 3.28** (entregue, nits aplicados pós-revisão) — **modal custom de confirmação** para ações sensíveis da aba Equipe. Frontend only; **sem backend, sem API, sem migration, sem permissão**.
 
 Criados: `ConfirmDialog.tsx` + `ConfirmDialog.module.css` (componente reutilizável, `<dialog>` nativo, variantes `default`/`danger`, `isBusy` com spinner, ESC/backdrop respeitam `onCancel`, focus trap nativo). Migradas todas as 5 ações: Regenerar código, Aprovar, Recusar (TeamManagementPanel — 4 `window.confirm` removidos) + Desativar profissional (ClinicProfessionalsPanel — confirmação adicionada, antes disparava diretamente). Variante `danger` apenas em Desativar acesso e Desativar profissional.
+
+**Pós-3.28 nits (revisão frontend/UX — aplicados antes do commit):**
+- `.secondaryBtn:disabled` adicionado em `TeamManagementPanel.module.css` (estava ausente do bloco de disabled).
+- `id` estático `"confirm-dialog-title"` substituído por `useId()` em `ConfirmDialog.tsx` — evita colisão de DOM quando dois dialogs estão montados simultaneamente.
+- Tratamento de erro redesenhado: mutations **não** fecham o modal em `onError`; erro aparece **dentro** do modal com `role="alert"`; `openConfirm()` limpa notices/erros stale; `closeConfirm()` limpa o erro ao cancelar. Dialog fecha apenas em `onSuccess`.
 
 Verificação: `pnpm --filter frontend typecheck` ✅, `pnpm --filter frontend build` ✅. Validação visual no navegador pendente. Sem commit/push.
 
@@ -29,7 +40,7 @@ Mudanças visíveis ao usuário:
 - **Código de convite** ganhou peso (mono 1.15rem, letter-spacing 0.08em); vira
   o foco natural do bloco em demo/piloto.
 - **Regenerar** virou `ghostBtn` (transparente, só borda) — claramente secundário
-  a "Copiar" sem parecer danger. Texto do `window.confirm` reduzido.
+  a "Copiar" sem parecer danger. Texto do confirm (3.27) reduzido; 3.28 migrou para modal custom.
 - **Recusar** (solicitação pendente) virou `secondaryBtn` (neutro) — recusar não
   é destrutivo. **Desativar acesso** (membro) segue sendo o único `dangerBtn` da
   lista de membros, mantendo o sinal correto.
@@ -85,10 +96,11 @@ legítimas; se um futuro use-case exigir "panic-cancel" associado à rotação,
 abrir sprint própria com confirmação dupla.
 
 **Frontend:** `TeamManagementPanel` ganhou botão **Regenerar** ao lado de
-**Copiar** no bloco do código. `window.confirm` cobre as 3 frases obrigatórias:
-"código antigo deixará de funcionar para NOVAS solicitações", "solicitações
-pendentes e membros atuais NÃO são alterados", "compartilhe o novo código
-apenas com funcionários autorizados". Após sucesso, `notice` exibe o novo
+**Copiar** no bloco do código. Modal de confirmação custom (sprint 3.28) cobre as
+3 frases obrigatórias: "código antigo deixará de funcionar para NOVAS
+solicitações", "solicitações pendentes e membros atuais NÃO são alterados",
+"compartilhe o novo código apenas com funcionários autorizados". Após sucesso,
+`notice` exibe o novo
 código uma vez e a cache key `['clinic-invite-code']` é invalidada.
 
 **Verificação:** backend + frontend `typecheck`/`build` OK; matriz por API
@@ -146,10 +158,10 @@ nome/email/papel.
 **Frontend:** `TeamManagementPanel` ganhou seção **"Membros da equipe"** com
 toggle "Mostrar inativos", badge `Ativo(a)|Inativo(a)`, badge "Dono(a)" no
 `is_owner`, papel exibido como "Funcionário(a) (acesso administrativo)" e botão
-**Desativar acesso** (com `window.confirm` que explica: não apaga usuário, não
-apaga histórico, pessoa pode pedir entrada de novo com o código). UI esconde o
-botão para o próprio dono e para o `is_owner`; backend continua sendo a defesa
-real. Polling leve (30s).
+**Desativar acesso** (modal de confirmação custom danger — sprint 3.28 — que
+deixa claro: não apaga usuário, não apaga histórico, pessoa pode pedir entrada
+de novo com o código). UI esconde o botão para o próprio dono e para o
+`is_owner`; backend continua sendo a defesa real. Polling leve (30s).
 
 **Verificação:** migration aplicada (`migrate:latest` batch 11); backend +
 frontend `typecheck`/`build` OK; matriz por API **14/14** (contas descartáveis;
@@ -224,8 +236,8 @@ Frontend:
 - `TeamManagementPanel` (novo, + módulo CSS): aba **Equipe** no Dashboard, **só
   para `dono_clinica`** (UI esconde + backend gateia). Mostra o **código de convite**
   com **Copiar**, nome da clínica e **solicitações pendentes** (nome/e-mail/mensagem/
-  data) com **Aprovar/Recusar** (cada ação tem `window.confirm` explícito; aprovar
-  dá acesso administrativo). Polling 20s.
+  data) com **Aprovar/Recusar** (cada ação abre modal de confirmação custom —
+  sprint 3.28; aprovar dá acesso administrativo). Polling 20s.
 - `api.ts` adicionou tipos `RegisterStaffPayload/Response`, `MyJoinRequest`,
   `PendingJoinRequest`, `InviteCodeResponse`, `JoinRequestStatus`; métodos
   `registerStaff`, `getClinicInviteCode`, `createClinicJoinRequest`,
@@ -250,8 +262,8 @@ para não amarrar o produto a uma profissão específica. Mudanças visíveis:
 `RegisterPage` (subtítulo, opção "Sou funcionário(a) / membro da equipe", botão
 "Criar conta de funcionário(a)", mensagem de sucesso), `JoinClinicGate`
 (placeholder da mensagem), `TeamManagementPanel` (subtítulo, label do papel
-exibido como "funcionário(a) (acesso administrativo)", `window.confirm` na
-aprovação), `Dashboard` (`ROLE_LABELS.secretaria → 'Funcionário(a) (acesso
+exibido como "funcionário(a) (acesso administrativo)", modal de confirmação
+custom na aprovação — sprint 3.28), `Dashboard` (`ROLE_LABELS.secretaria → 'Funcionário(a) (acesso
 administrativo)'`, subtitle da aba Equipe), `HowItWorks` (landing). **Backend
 não foi tocado**: a role técnica continua sendo `secretaria` no JWT, no DB e nas
 ações de audit (`auth.register.staff.success`, `clinic.join_request.*`). Decisão
