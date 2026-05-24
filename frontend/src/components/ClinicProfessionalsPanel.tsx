@@ -80,11 +80,12 @@ export function ClinicProfessionalsPanel(): JSX.Element {
     mutationFn: (id: string) => api.deactivateClinicProfessional(token as string, id),
     onSuccess: () => {
       setPendingDeactivate(null);
+      setError(null);
       setNotice('Profissional desativado.');
       invalidateProfessionals();
     },
     onError: (err) => {
-      setPendingDeactivate(null);
+      // Keep the dialog open so the error is shown in context (see ConfirmDialog).
       setError(errMsg(err, 'Não foi possível desativar.'));
     },
   });
@@ -245,10 +246,14 @@ export function ClinicProfessionalsPanel(): JSX.Element {
         confirmLabel="Desativar profissional"
         variant="danger"
         isBusy={deactivateMutation.isPending}
+        error={pendingDeactivate !== null ? error : null}
         onConfirm={() => {
           if (pendingDeactivate) deactivateMutation.mutate(pendingDeactivate.id);
         }}
-        onCancel={() => setPendingDeactivate(null)}
+        onCancel={() => {
+          setPendingDeactivate(null);
+          setError(null);
+        }}
       />
     </>
   );

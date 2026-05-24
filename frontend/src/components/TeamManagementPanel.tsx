@@ -97,7 +97,7 @@ export function TeamManagementPanel(): JSX.Element | null {
       void queryClient.invalidateQueries({ queryKey: ['clinic-join-requests', 'pending'] });
     },
     onError: (err) => {
-      setPendingAction(null);
+      // Keep the dialog open so the error is shown in context (see ConfirmDialog).
       setError(errMsg(err, 'Não foi possível aprovar a solicitação.'));
     },
   });
@@ -111,7 +111,6 @@ export function TeamManagementPanel(): JSX.Element | null {
       void queryClient.invalidateQueries({ queryKey: ['clinic-join-requests', 'pending'] });
     },
     onError: (err) => {
-      setPendingAction(null);
       setError(errMsg(err, 'Não foi possível recusar a solicitação.'));
     },
   });
@@ -138,7 +137,6 @@ export function TeamManagementPanel(): JSX.Element | null {
       void queryClient.invalidateQueries({ queryKey: ['clinic-members'] });
     },
     onError: (err) => {
-      setPendingAction(null);
       setError(errMsg(err, 'Não foi possível desativar o acesso.'));
     },
   });
@@ -157,7 +155,6 @@ export function TeamManagementPanel(): JSX.Element | null {
       void queryClient.invalidateQueries({ queryKey: ['clinic-invite-code'] });
     },
     onError: (err) => {
-      setPendingAction(null);
       setError(errMsg(err, 'Não foi possível regenerar o código.'));
     },
   });
@@ -174,6 +171,19 @@ export function TeamManagementPanel(): JSX.Element | null {
     } catch {
       // Clipboard may be unavailable on insecure contexts — silently ignore.
     }
+  }
+
+  // Opening a confirmation clears any stale banner so the panel never shows a
+  // leftover success notice next to a fresh error.
+  function openConfirm(action: PendingAction): void {
+    setNotice(null);
+    setError(null);
+    setPendingAction(action);
+  }
+
+  function closeConfirm(): void {
+    setPendingAction(null);
+    setError(null);
   }
 
   function handleDialogConfirm(): void {
@@ -312,7 +322,7 @@ export function TeamManagementPanel(): JSX.Element | null {
                 type="button"
                 className={styles.ghostBtn}
                 disabled={regenerateInviteMutation.isPending}
-                onClick={() => setPendingAction({ type: 'regenerate' })}
+                onClick={() => openConfirm({ type: 'regenerate' })}
               >
                 {regenerateInviteMutation.isPending ? (
                   <Loader2 size={14} className={styles.spin} aria-hidden="true" />
@@ -367,7 +377,7 @@ export function TeamManagementPanel(): JSX.Element | null {
                     type="button"
                     className={styles.primaryBtn}
                     onClick={() =>
-                      setPendingAction({
+                      openConfirm({
                         type: 'approve',
                         id: req.id,
                         name: req.applicant_name,
@@ -387,7 +397,7 @@ export function TeamManagementPanel(): JSX.Element | null {
                     type="button"
                     className={styles.secondaryBtn}
                     onClick={() =>
-                      setPendingAction({
+                      openConfirm({
                         type: 'reject',
                         id: req.id,
                         name: req.applicant_name,
@@ -493,7 +503,7 @@ export function TeamManagementPanel(): JSX.Element | null {
                             type="button"
                             className={styles.dangerBtn}
                             onClick={() =>
-                              setPendingAction({
+                              openConfirm({
                                 type: 'deactivate',
                                 userId: m.user_id,
                                 name: m.nome,
@@ -526,8 +536,9 @@ export function TeamManagementPanel(): JSX.Element | null {
         confirmLabel={dialogConfig?.confirmLabel}
         variant={dialogConfig?.variant}
         isBusy={dialogIsBusy}
+        error={pendingAction !== null ? error : null}
         onConfirm={handleDialogConfirm}
-        onCancel={() => setPendingAction(null)}
+        onCancel={closeConfirm}
       />
     </>
   );
