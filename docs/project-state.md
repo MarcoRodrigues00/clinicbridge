@@ -7,6 +7,25 @@
 
 ## Última sprint aprovada
 
+**Sprint 3.36** (entregue — QA geral do piloto v0.1, docs-only) — Rodada de QA
+consolidada dos fluxos principais do ClinicBridge antes do piloto. Sem backend,
+sem frontend, sem migration, sem nova feature, sem commit/push.
+
+10 fluxos cobertos: Auth, Equipe, Pacientes, Duplicados+Merge B-safe, Importação,
+Agenda, Exportação, Retenção dry-run, Layout/demo, Segurança geral. Classificação
+de achados: BLOCKER / BUG PEQUENO / POLISH / ACEITÁVEL MVP / FUTURO.
+Nenhum BLOCKER identificado neste QA documental. Ressalvas aceitas documentadas
+em `docs/testing-checklist.md` (seção "QA geral do piloto v0.1 — Sprint 3.36").
+
+Docs atualizados: `docs/demo-pilot-v0.1-script.md` (step 3 atualizado de
+"duplicados read-only" para "merge B-safe acionável"; perguntas de validação
+expandidas), `docs/demo-pilot-v0.1-checklist.md` (seções Equipe e merge B-safe
+expandidas; perguntas atualizadas), `docs/testing-checklist.md` (nova seção
+"QA geral do piloto v0.1"), `docs/roadmap-next-phase.md` (próximos passos
+pós-QA), `docs/sprint-history.md`, `CLAUDE.md`.
+
+---
+
 **Sprint 3.35** (entregue — docs/QA only) — **Validação visual da Sprint 3.34 + consolidação do checklist do merge B-safe**. Sem backend, sem frontend, sem migration, sem nova feature, sem commit/push.
 
 A Sprint 3.34 (UX do merge seguro) foi validada visualmente pelo usuário em 2026-05-24 ("ficou bem fera"). Nenhum bug bloqueante encontrado. Fluxo de merge B-safe considerado funcional e validado para piloto. Itens validados (conforme checklist em `docs/testing-checklist.md`): rádio "Manter como principal" (owner-only), selo "Principal", botão "Resolver duplicado" (habilitado só com seleção), `ConfirmDialog` variant danger com copy B-safe, mensagem verde inline com contagens, grupo some após merge, secundário aparece em Arquivados com badge "Mesclado em outro registro", Agenda atualiza nome para o principal, secretaria não vê rádio/botão, CPF sempre mascarado. Sem regressão nos outros fluxos.

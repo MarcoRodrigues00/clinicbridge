@@ -1515,3 +1515,60 @@ Sem commit/push.
 - `docs/roadmap-next-phase.md`: Sprint 3.34 marcada como validada visualmente; Sprint 3.35 adicionada; trilha merge 3.32–3.35 fechada.
 
 Nenhum build necessário (docs only). Sem commit/push.
+
+
+---
+
+## Sprint 3.36 (QA geral do piloto v0.1 — docs-only)
+
+**Sem backend, sem API, sem migration, sem permissão, sem nova feature.** Sprint de
+QA geral: consolidar os fluxos principais do ClinicBridge num checklist completo de
+piloto v0.1, identificar blockers/bugs/ressalvas e atualizar o roteiro e checklist
+de demo para refletir o estado atual (Equipe + merge B-safe entregues e validados).
+
+**Motivação:** com as trilhas Equipe (3.24–3.31), Pacientes/Duplicados (3.22–3.23) e
+Merge B-safe (3.32–3.35) completas e validadas individualmente, era necessária uma
+rodada de QA geral para confirmar ausência de regressão cross-fluxo e preparar o
+produto para piloto com clínica real.
+
+**Achado documental: `docs/demo-pilot-v0.1-script.md` estava com conteúdo stale.**
+O passo 3 descrevia duplicados como "detecção informativa (read-only)" — o que era
+correto até a Sprint 3.23, mas o merge B-safe (3.33/3.34) tornou a tela acionável.
+Corrigido nesta sprint.
+
+**Fluxos cobertos no QA (10):**
+1. Autenticação e segurança de conta (auth, MFA, backup codes, logout)
+2. Equipe (invite → aprovar → membros → desativar → profissionais → cache)
+3. Pacientes administrativos (CRUD, filtros, CPF mascarado, cross-tenant)
+4. Duplicados e merge B-safe (rádio, ConfirmDialog, grupo some, badge, fill-blanks)
+5. Importação (upload → preview → dry-run → mark-ready → import → recibo)
+6. Agenda administrativa (criar, status, remarcar, lembrete manual, aviso anti-clínico)
+7. Exportação (CSV/XLSX, sem CPF bruto, erros seguros)
+8. Retenção dry-run (painel owner, não apaga, sem dados internos)
+9. Layout/demo/mobile (landing, abas, 390px, footer, copy administrativa)
+10. Segurança geral (401, 403, cross-tenant, audit sem PII, rate-limit, sem clínico)
+
+**Classificação de achados:** BLOCKER / BUG PEQUENO / POLISH / ACEITÁVEL MVP / FUTURO.
+**Nenhum BLOCKER identificado** neste QA documental.
+
+**Ressalvas aceitas (ACEITÁVEL MVP):** sem undo completo no merge; sem contagem de
+agendamentos no modal; badge sem nome do principal; papel JWT stale até expirar
+(exceto desativação, imediata); sem TLS real; sem limpeza real de arquivos; sem
+paginação backend de duplicados; sem roles granulares; sem WhatsApp API; sem histórico
+visual de auditoria.
+
+**Docs atualizados:**
+- `docs/demo-pilot-v0.1-script.md`: passo 3 corrigido (merge B-safe, não read-only);
+  perguntas de validação expandidas (Equipe + merge).
+- `docs/demo-pilot-v0.1-checklist.md`: seção "Equipe" expandida (fluxo completo com
+  modais, cache, desativação); seção "Pacientes/duplicados/merge B-safe" com
+  checklist do merge; perguntas atualizadas.
+- `docs/testing-checklist.md`: nova seção "QA geral do piloto v0.1 — Sprint 3.36"
+  com 10 blocos + tabela de ressalvas aceitas.
+- `docs/roadmap-next-phase.md`: nova seção "QA geral do piloto v0.1 — Sprint 3.36 ✅"
+  com 7 próximos passos pré-produção.
+- `docs/project-state.md`: Sprint 3.36 adicionada.
+- `docs/sprint-history.md` (este arquivo): entrada Sprint 3.36.
+- `CLAUDE.md`: estado atual = Sprint 3.36 entregue; próximas prioridades.
+
+Nenhum build necessário (docs only). Sem commit/push.

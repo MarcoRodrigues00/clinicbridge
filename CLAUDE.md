@@ -18,7 +18,21 @@
 
 ## Estado atual (resumido — atualizado 2026-05-24)
 
-**Em validação/finalização: Sprint 3.35** (entregue — docs/QA only) — **registro
+**Em validação/finalização: Sprint 3.36** (entregue — QA geral do piloto v0.1,
+docs-only) — **checklist consolidado dos 10 fluxos principais + roteiro demo
+atualizado + ressalvas aceitas registradas**. Sem backend, sem frontend, sem
+migration, sem nova feature, sem commit/push.
+Nenhum BLOCKER identificado. Produto apto para piloto controlado com dados
+sintéticos ou anonimizados (P1 de produção real: TLS, secrets, backup offsite,
+validação jurídica de retenção, WAF). Achado documental corrigido:
+`docs/demo-pilot-v0.1-script.md` descrevia duplicados como "read-only" (stale
+desde 3.34) — corrigido para refletir merge B-safe acionável.
+Docs atualizados: `docs/demo-pilot-v0.1-script.md`,
+`docs/demo-pilot-v0.1-checklist.md`, `docs/testing-checklist.md`,
+`docs/project-state.md`, `docs/sprint-history.md`, `CLAUDE.md`,
+`docs/roadmap-next-phase.md`.
+
+**Sprint 3.35** (entregue — docs/QA only) — **registro
 da validação visual da Sprint 3.34 (merge B-safe) + consolidação do checklist**.
 Sem backend, sem frontend, sem migration, sem nova feature, sem commit/push.
 Sprint 3.34 foi validada visualmente pelo usuário em 2026-05-24 ("ficou bem fera").
@@ -278,6 +292,11 @@ fases: `docs/roadmap-next-phase.md`.
 
 ## Próximas prioridades prováveis
 
+- **QA geral (Sprint 3.36 entregue):** checklist consolidado 10 fluxos, nenhum
+  BLOCKER. Produto apto para **piloto controlado** (dados sintéticos/anonimizados).
+  **Achado corrigido:** `docs/demo-pilot-v0.1-script.md` descrevia duplicados como
+  "read-only" (stale desde 3.34) — corrigido. Ressalvas aceitas documentadas em
+  `docs/testing-checklist.md`.
 - **Produto (trilha pacientes):** **3.23/3.32/3.33/3.34/3.35 entregues** =
   duplicados acionáveis (3.23), decisão B-safe (3.32 ADR), backend+API do merge
   (3.33), UX de merge (3.34) e **validação visual + docs** (3.35). **Trilha merge
@@ -285,15 +304,11 @@ fases: `docs/roadmap-next-phase.md`.
   agendamentos por paciente na UI do merge (exige endpoint novo, owner-only,
   tenant-scoped); **paginação backend** de duplicados se a base crescer;
   **undo/snapshot** completo (tabela própria + ADR).
-- **Produto (trilha equipe):** **3.24/3.24.1/3.25 entregues** = solicitação de
-  entrada por código de convite, aprovação pelo dono, copy generalizada para
-  "funcionário(a)/equipe", **gestão de membros (listar ativos/inativos,
-  desativar acesso)** com fechamento do gap de stale JWT via DB check em
-  `requireClinic`. **Próximo no tema:** **regenerar invite code** (invalidando
-  pendentes opcionalmente), **sair voluntariamente** da clínica, e — quando
-  necessário — **roles granulares** (recepção, financeiro, gestor) com ADR
-  própria. Troca de dono **continua fora de escopo**. Detalhe:
-  `docs/roadmap-next-phase.md`.
+- **Produto (trilha equipe):** **3.24–3.31 entregues** = invite, aprovação, copy
+  generalizada, membros, desativar acesso, regenerar código, polimento visual,
+  modal custom, hardening concorrência. **Próximo no tema:** **sair
+  voluntariamente** da clínica, roles granulares (ADR própria). Troca de dono
+  fora de escopo. Detalhe: `docs/roadmap-next-phase.md`.
 - **P1 (antes de produção):** ~~trust proxy~~ + ~~Redis/shared store p/ rate
   limit~~ (feitos na Sprint 3.2; falta só provisionar Redis/proxy reais e setar
   `TRUST_PROXY`/`REDIS_URL` em prod); ~~requireRole/dono-admin~~ (Sprint 3.1);
