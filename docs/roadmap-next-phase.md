@@ -9,14 +9,18 @@
 > pré-requisito.
 >
 > **Sprint 4.1 entregue** (2026-05-25, docs/ADR-only) — ADR 0009 +
-> `docs/clinical-architecture-and-permissions.md`. Fase 4.1 ✅; bloqueia 4.2
-> até a ADR 0010 abrir.
+> `docs/clinical-architecture-and-permissions.md`. Fase 4.1 ✅.
+>
+> **Sprint 4.2A entregue** (2026-05-25, docs/ADR-only) — ADR 0010
+> (`docs/adr/0010-clinical-encounters-medical-record-v0.md`) +
+> `docs/clinical-encounters-v0-scope.md`. Fecha o escopo do Prontuário
+> v0.1 e autoriza a Sprint 4.2B (implementação backend, sem ADR nova).
 >
 > A trilha AWS real (Sprint 3.41B em diante) continua **pausada
-> estrategicamente** — gate de retomada **atualizado pela ADR 0009 §10**:
-> agora exige **ADR 0010 (prontuário v0.1) aceita** + reavaliação
-> RDS/EBS/KMS + região `sa-east-1` preferida por LGPD. Runbook permanece
-> válido.
+> estrategicamente**. Gate da ADR 0009 §10 (ADR 0010 aceita +
+> reavaliação) atendido na 4.2A — porém a **execução real** da AWS
+> permanece pausada porque 4.2B pode rodar inteiramente em local/staging
+> local. Runbook permanece válido.
 >
 > Este roadmap é **sugestão de sequência**, não compromisso de datas. Nada
 > aqui autoriza código clínico — ver `docs/product-clinic-os-roadmap.md` para
@@ -54,6 +58,8 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **3.43** ⏸️ | Piloto real — pausado (depende de 3.42) |
 | **4.0** ✅ | Expansão para Clinic OS modular (ADR 0008 + roadmap próprio em `docs/product-clinic-os-roadmap.md`) |
 | **4.1** ✅ | Arquitetura clínica + roles granulares + audit de leitura + LGPD clínica (ADR 0009 + `docs/clinical-architecture-and-permissions.md`). Bloqueia 4.2 até ADR 0010 abrir |
+| **4.2A** ✅ | ADR 0010 — escopo do Prontuário/Atendimento v0.1 (4 tabelas, 5 endpoints, roles em tabela paralela, audit de leitura paralelo, cifra de coluna fora). Operacional: `docs/clinical-encounters-v0-scope.md`. Autoriza 4.2B |
+| **4.2B** ⏳ | Implementação backend do Prontuário v0.1 (migration + DAOs + middleware `requireClinicalRole` + services + endpoints + logger + smoke tests). Sem ADR nova |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.

@@ -7,7 +7,128 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.1** (entregue — docs/ADR-only) — **arquitetura clínica mínima,
+**Sprint 4.2A** (entregue — docs/ADR-only) — **escopo do módulo
+Prontuário/Atendimento clínico v0.1.** ADR 0010
+(`docs/adr/0010-clinical-encounters-medical-record-v0.md`) + operacional
+`docs/clinical-encounters-v0-scope.md`.
+
+**Resumo de decisões da ADR 0010 (12 compromissos):**
+1. Escopo conservador: atendimento + notas textuais versionadas ligadas a
+   paciente administrativo. Sem CID, prescrição, exames, anexos, IA,
+   ICP-Brasil.
+2. **4 tabelas novas conceituais** (sem migration nesta sprint):
+   `clinical_encounters` (identidade estável do atendimento),
+   `clinical_encounter_notes` (notas append-only com `revises_note_id`),
+   `clinical_read_audit` (paralela ao `audit_logs`, com `paciente_id`
+   pseudonimizado), `user_clinical_roles` (append-only com revogação;
+   roles `profissional_clinico` e `gestor_clinica`; mantém `users.papel`
+   retrocompatível).
+3. **5 campos textuais clínicos** permitidos no v0.1: `chief_complaint`
+   (≤ 2000), `anamnesis` (≤ 8000), `evolution` (≤ 8000), `plan` (≤ 4000),
+   `internal_note` (≤ 2000). `internal_note` visível **apenas** ao
+   autor/dono/gestor (redacted no DAO para outros).
+4. **Prefixo `clinical_` em `public`** (sem schema PostgreSQL separado por
+   agora). Justificativa: simplicidade de migrations/FKs/grants.
+5. **Notas append-only com retificação por revisão.** Sem `UPDATE`
+   destrutivo em conteúdo de nota; edição = nova linha apontando para a
+   anterior com `rectification_reason_code` obrigatório.
+6. **Encounter `status` two-state:** `active` | `canceled` (one-way; sem
+   restore). Cancel exige `cancel_reason_code` + opcional `cancel_reason_text`
+   ≤ 200 chars sem PII (jamais em audit).
+7. **Audit de leitura em tabela paralela `clinical_read_audit`** (não
+   estende `audit_logs`). Eventos: `clinical.encounter.read`/`.list`,
+   `clinical.timeline.list`. **Postura de falha por ambiente** (config
+   `CLINICAL_READ_AUDIT_STRICT` na 4.2B — vide ADR 0010 §8.2.1):
+   **best-effort** apenas em local/dev/staging com **dados sintéticos**
+   (falha loga `error`, leitura segue); **fail-closed obrigatório em
+   produção** com dado clínico real — guard de boot força `true` em
+   `NODE_ENV=production` (espelha padrão da Sprint 3.39); falha em
+   strict mode → 500 `clinical_read_audit_unavailable` + conteúdo
+   clínico **nunca** sai no body. Smoke test de fail-closed obrigatório
+   na 4.2B.
+8. **Visibilidade default — "profissional só vê os próprios"** (ADR 0009
+   §4.3 confirmada). Cláusula `WHERE attending_user_id = self` no DAO.
+   Dono/gestor leem qualquer atendimento da clínica com audit; **não
+   editam nem cancelam alheio** no v0.1 (responsabilidade médico-legal
+   preserva o autor).
+9. **Funcionario_administrativo + financeiro NÃO acessam endpoints
+   clínicos** no v0.1 (403 em todos). Sem timeline reduzida. Usam agenda
+   administrativa existente.
+10. **`admin_sistema` bloqueado** por `requireClinic` (sem exceção;
+    break-glass continua fora — ADR 0009 §4.6).
+11. **Cifra a nível de coluna NÃO entra no v0.1.** Confia em RDS
+    encryption at rest + TLS in transit + controles de aplicação
+    (`requireAuth`/`requireClinic`/`requireClinicalRole` + tenant filter)
+    + audit de leitura + logger redigindo campos clínicos. **Decisão
+    revisável** antes de dado clínico real em produção (KMS CMK dedicada
+    + sprint dedicada se jurídico/anexos clínicos exigirem).
+12. **Merge B-safe (ADR 0007) é gate de criação:** encounter não pode ser
+    criado para paciente com `merged_into_id IS NOT NULL` ou
+    `status='archived'` → 404 genérico. Histórico clínico do secundário
+    **não se mistura** com o do principal (default ADR 0009 §8 risco #7
+    confirmado). Mover encounters no merge exige ADR de extensão da 0007.
+
+**5 endpoints clínicos + 2 administrativos (conceituais):**
+- `POST /clinical/encounters` (profissional autor)
+- `GET /clinical/encounters` (lista; profissional vê só os próprios)
+- `GET /clinical/encounters/:id` (detalhe + notas; `internal_note` redacted
+  conforme role)
+- `PATCH /clinical/encounters/:id/cancel` (autor próprio)
+- `POST /clinical/encounters/:id/notes` (autor próprio; com ou sem
+  `revises_note_id`)
+- `GET /patients/:id/clinical-timeline` (profissional vê só os próprios
+  desse paciente; dono/gestor veem todos)
+- `POST /clinical/roles/grant` + `POST /clinical/roles/revoke` (owner-only)
+
+**Audit de escrita** estende `audit_logs` existente (sem migration):
+`clinical.encounter.created.success`, `.canceled.success`,
+`.note.created.success`, `.note.rectified.success`,
+`clinical.role.granted.success`, `.revoked.success`. **Sem PII** em
+nenhum.
+
+**Logger** será estendido na 4.2B para redigir
+`chief_complaint|anamnesis|evolution|plan|internal_note|
+cancel_reason_text|rectification_reason_text`; body de `/clinical/*`
+jamais logado integral.
+
+**Plano Sprint 4.2B (próximo passo, sem ADR nova):** migration única
+aditiva (4 tabelas + índices + CHECK constraints + unique parcial em
+roles ativos) → tipos em `db.d.ts` → 4 DAOs → middleware
+`requireClinicalRole` → 4 services → controllers + rotas → atualização
+do logger → smoke tests por API (cross-tenant, profissional-vê-só-os-próprios,
+dono lê + audit, funcionario/financeiro/admin_sistema → 403,
+`internal_note` redacted, paciente arquivado/mesclado → 404, cancel/
+retificação preservam autoria, audit sem PII, logger sem conteúdo
+clínico) → SQL checks → limpeza de dados de teste → docs (CLAUDE.md,
+project-state, sprint-history, security-notes, testing-checklist).
+
+**Trilha AWS continua pausada estrategicamente.** Esta ADR registra
+impactos concretos do v0.1: RDS class (volume textual + audit de leitura
+em ~75 mil linhas/ano para 10 prof × 30 pac/dia × 250 dias — `db.t3.micro`
+provavelmente segura para 5-10 clínicas); EBS/S3 sem mudança (anexos fora
+do v0.1); KMS sem CMK dedicada agora (decisão revisável); CloudWatch
+exige validar redação em staging; backup Restic cobre as 4 tabelas novas;
+região `sa-east-1` preferida por LGPD. **Decisão consciente:** 4.2B
+pode ser implementada e validada inteiramente em local + staging local
+(Docker compose) sem AWS — retomada da trilha continua evento separado.
+
+**Princípios invariantes mantidos sem exceção:** tenant isolation, CPF
+mascarado, audit append-only, sem PII em logs, sem delete físico,
+migration aditiva. **Invariantes próprias do módulo clínico
+adicionadas:** sem `UPDATE` em conteúdo de nota (append-only com
+`revises_note_id`); sem `DELETE` físico em nenhuma das 4 tabelas; sem
+mistura de histórico clínico em merge B-safe; audit de leitura para todo
+acesso a conteúdo clínico; logger redige campos clínicos; cifra a nível
+de coluna revisável.
+
+**O que NÃO é entregue nesta sprint (registrado):** nenhuma migration,
+nenhum schema clínico no banco, nenhuma role nova no banco, nenhum audit
+de leitura técnico, nenhum endpoint clínico, nenhum middleware
+`requireClinicalRole` implementado, nenhuma alteração em
+backend/frontend, nenhum recurso AWS, nenhuma promessa de conformidade
+LGPD/CFM/ICP-Brasil/TISS.
+
+**Sprint anterior: 4.1** (entregue — docs/ADR-only) — **arquitetura clínica mínima,
 roles granulares conceituais, audit de leitura e LGPD clínica.** ADR 0009
 (`docs/adr/0009-clinical-architecture-roles-read-audit.md`) define princípios
 invariantes do domínio clínico, modelo conceitual de roles

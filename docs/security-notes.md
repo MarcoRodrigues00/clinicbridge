@@ -558,17 +558,29 @@
 
 > Direção atual: **ADR 0008** (Clinic OS modular) +
 > **ADR 0009** (arquitetura clínica + roles granulares + audit de leitura +
-> LGPD clínica — Sprint 4.1, docs/ADR-only). Detalhe operacional consolidado
-> em `docs/clinical-architecture-and-permissions.md` (matriz de permissões,
-> catálogo de audit de leitura, gates para 4.2). ADR 0001 (Opção C)
-> parcialmente superseded — base administrativa segura continua sendo
-> pré-requisito.
+> LGPD clínica — Sprint 4.1, docs/ADR-only) +
+> **ADR 0010** (escopo do Prontuário/Atendimento clínico v0.1 — Sprint
+> 4.2A, docs/ADR-only). Detalhe operacional consolidado em
+> `docs/clinical-architecture-and-permissions.md` (matriz de permissões
+> geral) e `docs/clinical-encounters-v0-scope.md` (módulo do Prontuário
+> v0.1 — 4 tabelas conceituais, 5 endpoints, roles em tabela paralela,
+> audit de leitura paralelo, cifra de coluna fora do v0.1). ADR 0001
+> (Opção C) parcialmente superseded — base administrativa segura
+> continua sendo pré-requisito.
+>
+> **ADR 0010 autoriza** a Sprint 4.2B (implementação backend do Prontuário
+> v0.1) — sem ADR nova. **Nada além do escopo da ADR 0010** entra na
+> 4.2B (CID estruturado, prescrição, exames, anexos, ICP-Brasil,
+> telemedicina, IA clínica, TISS, edição/cancel de encounter alheio,
+> restore, importação clínica, export clínico continuam **fora** sem
+> ADR nova).
 >
 > A lista abaixo segue válida como **resumo histórico**; os gates vigentes
-> são os 9 critérios da ADR 0009 §9 + 13 cumulativos das ADRs 0001/0008.
+> são os 9 critérios da ADR 0009 §9 + 13 cumulativos das ADRs 0001/0008
+> (todos satisfeitos pela ADR 0010 para o módulo do Prontuário v0.1).
 > É preparação/requisito, **não** afirmação de conformidade completa com
-> LGPD/HIPAA/CFM/ICP-Brasil. Nada aqui autoriza implementar prontuário/
-> prescrição agora — isso exige **ADR de módulo (0010+) aprovada**.
+> LGPD/HIPAA/CFM/ICP-Brasil. Validação jurídica externa **obrigatória**
+> antes de qualquer dado clínico real em produção.
 
 - **`requireRole` obrigatório** — papéis/permissões implementados e testados antes
   de expor qualquer dado clínico.

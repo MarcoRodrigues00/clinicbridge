@@ -19,12 +19,16 @@
 
 - **Fase 3 administrativa:** funcional, base segura, sem dado clínico.
   Backup local + offsite (docs/scripts). Plano e runbook AWS prontos.
-- **Fase 4.0 ✅** (decisão Clinic OS, ADR 0008) e **Fase 4.1 ✅**
+- **Fase 4.0 ✅** (decisão Clinic OS, ADR 0008), **Fase 4.1 ✅**
   (arquitetura clínica conceitual, ADR 0009 + `docs/clinical-architecture-and-permissions.md`)
-  entregues — só docs/ADR.
-- **Trilha AWS real:** **pausada estrategicamente** (ADR 0008 §6). Gate de
-  retomada **atualizado pela ADR 0009 §10**: ADR 0010 aceita + reavaliação
-  RDS/EBS/KMS + região `sa-east-1` preferida.
+  e **Fase 4.2A ✅** (escopo do Prontuário v0.1, ADR 0010 +
+  `docs/clinical-encounters-v0-scope.md`) entregues — só docs/ADR. **Fase
+  4.2B** (implementação backend do Prontuário v0.1) é o próximo passo
+  natural; **sem ADR nova** — implementa exatamente o decidido na 4.2A.
+- **Trilha AWS real:** **pausada estrategicamente** (ADR 0008 §6 + ADR 0009
+  §10). Gate de retomada ADR 0010 aceita ✅; reavaliação RDS/EBS/KMS + região
+  `sa-east-1` registrada em ADR 0010 §16; **4.2B pode ser inteiramente
+  local/staging local** — retomada continua evento separado.
 - **Pré-requisito vivo:** governança da Fase 3 (`requireRole`, rate limit Redis,
   trust proxy, backup/restore validado, deploy seguro, CORS/env prod) — itens
   conforme `docs/roadmap-next-phase.md`.
@@ -37,7 +41,8 @@
 |---|---|---|---|---|
 | **4.0** | Direção/ADR | ✅ Sprint 4.0 | ADR 0008 | Decisão estratégica registrada |
 | **4.1** | Arquitetura/habilitador | ✅ Sprint 4.1 | ADR 0009 + `docs/clinical-architecture-and-permissions.md` | Roles granulares conceituais, separação banco, audit de leitura, threat model, LGPD clínica, gates para 4.2 |
-| **4.2** | Clínico — atendimento | Pendente | ADR 0010 (futura) | Prontuário/atendimento v0.1 |
+| **4.2A** | Clínico — escopo ADR | ✅ Sprint 4.2A | ADR 0010 + `docs/clinical-encounters-v0-scope.md` | Escopo do Prontuário/Atendimento v0.1 (4 tabelas conceituais, 5 endpoints, roles em tabela paralela, audit de leitura paralelo, cifra de coluna fora) |
+| **4.2B** | Clínico — implementação | Pendente | sem ADR nova | Backend Prontuário v0.1 (migration + DAOs + middleware `requireClinicalRole` + services + endpoints + logger + smoke tests) |
 | **4.3** | Clínico — documentos | Pendente | ADR 0011 (futura) | Documentos médicos/receitas v0.1 (sem ICP-Brasil) |
 | **4.4** | Operacional — financeiro | Pendente | ADR 0012 (futura) | Financeiro v0.1 (contas a pagar/receber, fluxo de caixa) |
 | **4.5** | Operacional — relatórios | Pendente | ADR 0013 (futura) | Relatórios gerenciais v0.1 (alto valor percebido) |
@@ -153,35 +158,81 @@ coluna vs. schema).
 ## Fase 4.2 — Prontuário eletrônico / atendimento v0.1
 
 **Natureza:** **clínico** (primeiro módulo de dado clínico real).
+**Subdivisão entregue:** 4.2A (ADR — entregue) + 4.2B (implementação —
+pendente).
 
 **Objetivo:** registrar **encontros/atendimentos** ligados a paciente +
-profissional + agenda, com notas clínicas versionadas e visualização segura.
+profissional, com notas clínicas versionadas (append-only), visualização
+segura por role e audit de leitura obrigatório.
+
+### Fase 4.2A ✅ — ADR + escopo (Sprint 4.2A)
+
+Entregue em 2026-05-25, docs/ADR-only. Fonte autoritativa do escopo:
+**ADR 0010** (`docs/adr/0010-clinical-encounters-medical-record-v0.md`)
++ operacional `docs/clinical-encounters-v0-scope.md`.
+
+**Decisões fechadas** (resumo — detalhe na ADR 0010):
+- **4 tabelas conceituais:** `clinical_encounters`,
+  `clinical_encounter_notes` (append-only com `revises_note_id`),
+  `clinical_read_audit` (paralela ao `audit_logs`, com `paciente_id`
+  pseudonimizado), `user_clinical_roles` (append-only com revogação).
+- **5 campos textuais clínicos no v0.1:** `chief_complaint` (≤ 2000),
+  `anamnesis` (≤ 8000), `evolution` (≤ 8000), `plan` (≤ 4000),
+  `internal_note` (≤ 2000). `internal_note` redacted para não-autor.
+- **Prefixo `clinical_` em `public`** (sem schema PostgreSQL separado).
+- **Status do encounter:** `active` | `canceled` (one-way; sem restore).
+- **Permissões:** profissional cria/edita só os próprios; dono/gestor
+  leem qualquer com audit, **não editam alheio**;
+  funcionario/financeiro/admin_sistema → 403 em todo endpoint clínico.
+- **`internal_note` apenas autor/dono/gestor.**
+- **Merge B-safe:** criar encounter exige paciente ativo + não-mesclado;
+  histórico clínico do secundário **não se mistura**.
+- **Cifra a nível de coluna FORA do v0.1** — decisão revisável (RDS
+  encryption at rest + TLS + controles de aplicação + audit + logger
+  redigindo cobrem o v0.1).
+- **5 endpoints clínicos + 2 administrativos** (grant/revoke role).
+- **Audit de escrita** estende `audit_logs` (sem migration);
+  **audit de leitura** em tabela paralela com **postura de falha por
+  ambiente** (`CLINICAL_READ_AUDIT_STRICT` — ADR 0010 §8.2.1):
+  best-effort apenas em dev/staging com dados sintéticos; **fail-closed
+  obrigatório em produção** (guard de boot força em `NODE_ENV=production`;
+  falha → 500 `clinical_read_audit_unavailable`, sem conteúdo clínico
+  no body). Smoke test obrigatório na 4.2B.
+
+**Fora do v0.1 (registrado):** CID estruturado, prescrição estruturada,
+exames (pedido/resultado), anexos clínicos, assinatura digital,
+ICP-Brasil, telemedicina, IA clínica, medicamentos controlados, TISS,
+portal do paciente, edição/cancel de encounter alheio, restore de
+encounter, importação CSV/XLSX clínica, export clínico,
+funcionario/financeiro lendo conteúdo clínico.
+
+### Fase 4.2B — implementação backend (pendente, sem ADR nova)
+
+**Não exige ADR nova** — implementa exatamente o decidido na 4.2A. Plano
+detalhado: ADR 0010 §15 + `docs/clinical-encounters-v0-scope.md` §8
+(checklist 4.2B).
 
 **Entregáveis esperados (em ordem):**
-1. **ADR 0010** — escopo do prontuário v0.1:
-   - Entidades: `clinical_encounters`, `clinical_notes` (versionadas — não
-     editar destrutivamente; cada edição = nova versão com `previous_version_id`),
-     anexos? (provavelmente fora do v0.1).
-   - **Campos do v0.1:** queixa principal, evolução, conduta (texto livre).
-     **Fora do v0.1:** diagnóstico estruturado (CID), prescrição estruturada,
-     resultados de exames (todos para sprints próprias).
-   - Permissões: só **profissional de saúde** cria/edita; **dono** vê tudo da
-     clínica; **secretaria/funcionário(a) admin** **não** vê conteúdo
-     (vê só metadados: paciente, profissional, data).
-   - Audit obrigatório de leitura.
-   - Telas: visualização cronológica por paciente; edição inline com versionamento.
-2. **Implementação backend** (sprint própria pós-ADR): migration, DAO, service,
-   controller, rotas, middlewares.
-3. **Implementação frontend** (sprint própria): tela de prontuário do paciente
-   ligada à Agenda.
+1. Migration única aditiva (4 tabelas + índices + CHECK + unique parcial).
+2. Tipos em `db.d.ts`.
+3. DAOs (`userClinicalRoleDao`, `clinicalEncounterDao`,
+   `clinicalEncounterNoteDao`, `clinicalReadAuditDao`).
+4. Middleware `requireClinicalRole`.
+5. Services + controllers + rotas (5 clínicos + 2 administrativos).
+6. Logger estendido (redigir campos clínicos + razões; body de
+   `/clinical/*` jamais integral).
+7. Smoke tests via curl (matriz de role × operação × tenant).
+8. SQL checks + limpeza de dados de teste.
+9. Documentação compacta (CLAUDE.md, project-state, sprint-history,
+   security-notes — nova seção "Prontuário clínico v0.1", testing-checklist).
 
-**Gates para iniciar 4.3:**
-- 4.2 entregue em staging, com dados sintéticos.
+**Gates para iniciar 4.3 (após 4.2B):**
+- 4.2B entregue em staging local, com dados sintéticos.
 - Audit de leitura validado (queries que listam evolução geram evento).
 - Cross-tenant testes 100%.
-
-**Não no v0.1 (registrado):** CID estruturado, exames com resultados
-estruturados, prescrição com força legal, telemedicina, integração com CFM.
+- `internal_note` redacted validado.
+- Logger sem conteúdo clínico (grep nos logs).
+- Audit sem PII (grep no DB).
 
 **Posicionamento — IA clínica assistiva:** sugestão automatizada de
 evolução/resumo, alertas de interação medicamentosa, transcrição de

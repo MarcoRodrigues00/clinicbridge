@@ -2234,3 +2234,139 @@ ADR/docs-only; nenhum recurso AWS criado; nenhum código de produto alterado;
 nenhuma migration; nenhuma tabela clínica criada; nenhum secret versionado;
 nenhuma role nova no banco; nenhum audit de leitura técnico; invariantes de
 segurança intactas.
+
+---
+
+## Sprint 4.2A (ADR 0010 — Prontuário/Atendimento clínico v0.1, escopo do módulo)
+
+**Objetivo:** entregar o escopo fim-a-fim do primeiro módulo clínico do
+Clinic OS (Prontuário/Atendimento v0.1) **em ADR + doc operacional**,
+fechando todas as decisões pendentes da ADR 0009 §10 (schema clínico,
+implementação de roles, schema do audit de leitura, cifra, política de
+visibilidade, política de edição). **Sem migration, sem schema, sem
+endpoint, sem AWS.** Autoriza a Sprint 4.2B a implementar **exatamente**
+o escopo decidido — sem desvios.
+
+**Arquivos criados:**
+- `docs/adr/0010-clinical-encounters-medical-record-v0.md` — 19 seções:
+  contexto e gates ADR 0009 consumidos; decisão (12 compromissos);
+  escopo v0.1 (atendimento + notas textuais versionadas + timeline +
+  retificação/cancelamento + roles); fora-de-escopo extensa (CID, prescrição,
+  exames, anexos, ICP-Brasil, telemedicina, IA, TISS, SNGPC, portal do
+  paciente, edição/cancel alheio, restore, importação clínica); modelo
+  conceitual das 4 tabelas com colunas, FKs (`patient_id`/`attending_user_id`
+  com `ON DELETE RESTRICT` para histórico médico-legal), CHECK constraints,
+  índices nomeados, unique parcial em roles ativos; permissões fim-a-fim
+  (matriz operação × role); audit de escrita (`audit_logs` existente,
+  sem migration) + audit de leitura (`clinical_read_audit` paralela, com
+  `paciente_id` pseudonimizado conforme ADR 0009 §6.2); versionamento
+  (notas append-only, cancelamento one-way, sem delete físico); impacto
+  do merge B-safe (paciente mesclado bloqueia criação; sem mistura
+  automática de histórico; sem mover encounters no v0.1); 5 endpoints
+  clínicos + 2 administrativos conceituais com middleware + audit
+  esperado; validações e regras de negócio (cheat-sheet); decisão de
+  cifra (a nível de coluna **fora do v0.1** — revisável); vocabulário;
+  plano 4.2B sequenciado (12 passos); riscos (10 vetores); fora-de-escopo
+  recap; notas finais.
+- `docs/clinical-encounters-v0-scope.md` — operacional companheiro com
+  resumo executivo, campos do v0.1 consolidados, matriz de permissões
+  resumida, catálogo de audit (escrita + leitura) compacto, endpoints
+  cheat-sheet, fluxo de versionamento/retificação visual, impacto do
+  merge B-safe em tabela, checklist Sprint 4.2B (10 sub-checklists:
+  migration, tipos/DAOs, middleware, services, controllers/rotas, logger,
+  testes via curl, SQL checks, limpeza, documentação), decisão de cifra
+  consciente, itens fora do v0.1 compactos.
+
+**Arquivos atualizados (compactos):**
+- `CLAUDE.md` — pointer para ADR 0010 + doc operacional; sprint atual →
+  4.2A; fases Clinic OS com 4.2A ✅; trilha Clinic OS atualizada (4.2A ✅
+  → 4.2B implementação backend pendente); "Escopo clínico proibido"
+  reescrito para deixar explícito o que a ADR 0010 autoriza dentro do
+  v0.1 e o que continua proibido sem ADR nova.
+- `docs/project-state.md` — "Última sprint aprovada" → 4.2A com resumo
+  dos 12 compromissos, endpoints, audit, plano 4.2B e invariantes
+  próprias do módulo clínico; 4.1 promovida a "Sprint anterior".
+- `docs/sprint-history.md` — esta entrada.
+- `docs/product-clinic-os-roadmap.md` — Fase 4.2 marcada como "ADR
+  aceita; 4.2B implementação pendente" (subdivisão 4.2A/4.2B).
+- `docs/security-notes.md` — pointer mínimo (sem reescrever seção atual
+  de "Futura expansão clínica"; ADR 0010 reforça invariantes adicionando
+  específicas do módulo).
+
+**Decisões técnicas fechadas nesta ADR (todas pendentes da ADR 0009):**
+1. **Schema:** prefixo `clinical_` no schema `public` (sem schema
+   PostgreSQL separado por agora). Justificativa: simplicidade de
+   migrations/FKs/grants.
+2. **Roles clínicas técnicas:** tabela paralela `user_clinical_roles`
+   append-only (mantém `users.papel` intocado). Aceitam `dono_clinica`
+   direto via `users.papel`; `profissional_clinico` e `gestor_clinica`
+   via tabela. `financeiro` documentado mas implementado na 4.4.
+3. **Audit de leitura:** tabela paralela `clinical_read_audit` (não
+   estende `audit_logs`). Volume + retenção + transparência LGPD
+   distintos. **Postura de falha controlada por
+   `CLINICAL_READ_AUDIT_STRICT`** (ADR 0010 §8.2.1): **best-effort**
+   apenas em local/dev/staging com **dados sintéticos**; **fail-closed
+   obrigatório em produção** com dado clínico real — guard de boot em
+   `config/env.ts` força `true` quando `NODE_ENV=production`; falha em
+   strict mode → 500 `clinical_read_audit_unavailable` + conteúdo
+   clínico **nunca** sai no body. Smoke test de fail-closed obrigatório
+   na 4.2B.
+4. **Cifra a nível de coluna:** NÃO no v0.1. Decisão revisável antes de
+   produção real (gates: jurídico + anexos clínicos).
+5. **Visibilidade default:** "profissional só vê os próprios" (cláusula
+   `WHERE attending_user_id = self` no DAO). Dono/gestor veem com audit;
+   NÃO editam alheio (responsabilidade médico-legal).
+6. **Edição de prontuário alheio por dono/gestor:** FORA do v0.1.
+7. **Cancelamento de encounter alheio:** FORA do v0.1.
+8. **Restore de encounter cancelado:** FORA do v0.1.
+9. **Status do encounter:** `active` | `canceled` (two-state one-way).
+10. **Cancelamento exige `cancel_reason_code` estruturado** + opcional
+    `cancel_reason_text` ≤ 200 chars sem PII (nunca em audit).
+11. **Retificação preserva autoria** (apenas autor original retifica).
+12. **Funcionario/financeiro/admin_sistema** → 403 em todos os endpoints
+    clínicos (sem "timeline reduzida" no v0.1).
+
+**Impacto na trilha AWS:**
+- Trilha continua **⏸️ pausada estrategicamente** (ADR 0008 §6 + ADR 0009
+  §10).
+- Gate de retomada da ADR 0009 §10 (ADR 0010 aceita + reavaliação) →
+  **ADR 0010 aceita ✅** nesta sprint; reavaliação concreta registrada
+  na ADR 0010 §16: RDS class (~75 mil notas/ano para 10 prof × 30 pac/dia
+  × 250 dias, `db.t3.micro` provavelmente segura), EBS/S3 sem mudança
+  (anexos fora), KMS sem CMK nova, CloudWatch validar redação em
+  staging, backup Restic cobre as 4 tabelas, região `sa-east-1`
+  preferida. **4.2B pode ser inteiramente local/staging local** —
+  retomada da trilha AWS continua sendo evento separado.
+
+**Riscos registrados (não bloqueantes desta sprint):**
+- Volume de `clinical_read_audit` (mitigado por índices; particionamento
+  futuro).
+- Falha de audit de leitura silenciosa — mitigada por
+  `CLINICAL_READ_AUDIT_STRICT` (best-effort apenas em dev/staging com
+  dados sintéticos; **fail-closed obrigatório em produção** via guard
+  de boot quando `NODE_ENV=production`; falha → 500
+  `clinical_read_audit_unavailable` sem conteúdo clínico no body).
+- Profissional malicioso (detecção retrospectiva via audit).
+- Mistura de histórico em merge B-safe (vedada por design).
+- Cifra ausente em backup furtado (RDS encryption at rest + cifra
+  Restic; revisão antes de produção).
+- Logger leakar conteúdo (redação na 4.2B + smoke test).
+- Faturamento futuro (4.6) querer cruzar valor com diagnóstico (ADR
+  0014 deve filtrar campos clínicos no SQL).
+
+**O que NÃO muda (invariantes em vigor — não tocados):**
+- Backend/frontend/migrations/schema/API — sem alteração.
+- `docs/security-notes.md` invariantes — mantidas; ADR 0010 **adiciona**
+  invariantes próprias (sem UPDATE em conteúdo de nota; sem delete
+  físico em nenhuma das 4 tabelas; sem mistura de histórico clínico em
+  merge B-safe; audit de leitura obrigatório; logger redige clínicos;
+  cifra a nível de coluna revisável).
+- Tenant isolation, CPF mascarado, audit append-only, sem PII em logs,
+  sem delete físico — permanecem.
+- Vocabulário do produto da Sprint 3.24.1 — sem mudança.
+
+ADR/docs-only; nenhum recurso AWS criado; nenhum código de produto
+alterado; nenhuma migration; nenhuma tabela clínica criada; nenhum
+secret versionado; nenhuma role nova no banco; nenhum audit de leitura
+técnico; nenhum endpoint clínico implementado; invariantes de segurança
+intactas.
