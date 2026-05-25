@@ -556,11 +556,19 @@
 
 ## Futura expansão clínica — requisitos mínimos antes de codar
 
-> Direção definida no ADR `docs/adr/0001-product-direction-option-c.md` (Opção C).
-> Esta seção lista **requisitos mínimos** que precisam estar satisfeitos **antes**
-> de qualquer código clínico. É preparação/requisito, **não** afirmação de
-> conformidade completa com LGPD/HIPAA/CFM/ICP-Brasil. Nada aqui autoriza
-> implementar prontuário/prescrição agora — isso exige ADR(s) futura(s).
+> Direção atual: **ADR 0008** (Clinic OS modular) +
+> **ADR 0009** (arquitetura clínica + roles granulares + audit de leitura +
+> LGPD clínica — Sprint 4.1, docs/ADR-only). Detalhe operacional consolidado
+> em `docs/clinical-architecture-and-permissions.md` (matriz de permissões,
+> catálogo de audit de leitura, gates para 4.2). ADR 0001 (Opção C)
+> parcialmente superseded — base administrativa segura continua sendo
+> pré-requisito.
+>
+> A lista abaixo segue válida como **resumo histórico**; os gates vigentes
+> são os 9 critérios da ADR 0009 §9 + 13 cumulativos das ADRs 0001/0008.
+> É preparação/requisito, **não** afirmação de conformidade completa com
+> LGPD/HIPAA/CFM/ICP-Brasil. Nada aqui autoriza implementar prontuário/
+> prescrição agora — isso exige **ADR de módulo (0010+) aprovada**.
 
 - **`requireRole` obrigatório** — papéis/permissões implementados e testados antes
   de expor qualquer dado clínico.

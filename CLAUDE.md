@@ -18,6 +18,7 @@
 > - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
 > - **Merge seguro de duplicados (B-safe; decidido 3.32, backend 3.33, UX 3.34, validado 3.35; administrativo, sem delete físico, sem undo completo):** ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`
 > - **Expansão para Clinic OS modular (Sprint 4.0; sem telemedicina; migração como diferencial; ADR própria por módulo; trilha AWS pausada estrategicamente):** ADR `docs/adr/0008-clinicbridge-clinic-os-expansion.md` + roadmap `docs/product-clinic-os-roadmap.md`
+> - **Arquitetura clínica + roles granulares + audit de leitura + LGPD clínica (Sprint 4.1, docs/ADR-only; bloqueia 4.2+; gate de retomada AWS atualizado):** ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` + operacional `docs/clinical-architecture-and-permissions.md`
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
 > - **Demo/piloto v0.1 (Sprint 3.20; dados fictícios, não clínico):** `docs/demo-data/README.md` (+ `docs/demo-data/pacientes-demo.csv`), `docs/demo-pilot-v0.1-script.md`, `docs/demo-pilot-v0.1-checklist.md` — seed dev-only de agenda: `backend/scripts/seed-demo-scheduling.ts` (`pnpm --filter backend seed:demo` / `seed:demo:clean`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
@@ -25,21 +26,29 @@
 
 ## Estado atual (resumido — atualizado 2026-05-25)
 
-**Sprint atual: 4.0** (entregue — docs/ADR-only) — **expansão estratégica do
-ClinicBridge para Clinic OS modular** (compete com sistemas completos de gestão
-clínica; sem telemedicina; migração como diferencial permanente). ADR 0008 e
-roadmap Clinic OS (`docs/product-clinic-os-roadmap.md`) criados.
-ADR 0001 (Opção C) parcialmente superseded — base administrativa segura continua
-sendo pré-requisito; cada módulo clínico exige ADR própria.
-**Trilha AWS real pausada estrategicamente** (não cancelada) — runbook 3.41B
-permanece válido; retomada após Fase 4.1 (arquitetura clínica) aprovada.
-Sem código, sem migration, sem AWS, sem alteração de invariantes.
+**Sprint atual: 4.1** (entregue — docs/ADR-only) — **arquitetura clínica
+mínima, roles granulares conceituais, audit de leitura e LGPD clínica.**
+ADR 0009 (`docs/adr/0009-clinical-architecture-roles-read-audit.md`) +
+operacional `docs/clinical-architecture-and-permissions.md` (matriz de
+permissões, catálogo de audit de leitura, versionamento, threat model,
+gates para 4.2). **Bloqueia Fase 4.2** (prontuário/atendimento v0.1) até a
+matriz/audit/roles serem revisados e a ADR 0010 abrir o módulo. Mantém ADR
+0008 §4 invariantes. **Trilha AWS continua pausada estrategicamente** — gate
+de retomada agora é **ADR 0010 aceita + reavaliação RDS/EBS/KMS** registrada
+na ADR 0009 §10. Sem código, sem migration, sem AWS, sem alteração das
+invariantes vigentes.
 
-**Fases Clinic OS planejadas:** 4.0 ✅ decisão → 4.1 arquitetura clínica + roles
-granulares → 4.2 prontuário/atendimento → 4.3 documentos médicos/receitas
-(sem ICP-Brasil) → 4.4 financeiro → 4.5 relatórios gerenciais → 4.6 convênios/
-faturamento básico (TISS/TUSS real fora) → 4.7 estoque básico (medicamentos
-controlados/ANVISA fora). Cada fase exige ADR própria. Detalhe:
+**Sprint anterior: 4.0** (entregue — docs/ADR-only) — expansão estratégica
+para Clinic OS modular (ADR 0008 + roadmap `docs/product-clinic-os-roadmap.md`).
+ADR 0001 (Opção C) parcialmente superseded — base administrativa segura
+continua sendo pré-requisito.
+
+**Fases Clinic OS planejadas:** 4.0 ✅ decisão → **4.1 ✅** arquitetura clínica
++ roles granulares + audit de leitura (ADR 0009) → 4.2 prontuário/atendimento
+(ADR 0010, pendente) → 4.3 documentos médicos/receitas (sem ICP-Brasil) →
+4.4 financeiro → 4.5 relatórios gerenciais → 4.6 convênios/faturamento básico
+(TISS/TUSS real fora) → 4.7 estoque básico (medicamentos controlados/ANVISA
+fora). Cada fase exige ADR própria. Detalhe:
 `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **Este MVP NÃO está pronto para produção** — ver P1 em
@@ -86,37 +95,45 @@ Reconfirme via `docs/testing-checklist.md`.
 
 ## Direção estratégica (atualizada 2026-05-25)
 
-**Decisão atual: Clinic OS modular** (ADR 0008, Sprint 4.0). O ClinicBridge
-evolui de "ponte de migração administrativa" para **sistema modular de gestão
-clínica**, mantendo migração como diferencial permanente. **Sem telemedicina**
-no escopo. Cada módulo clínico (prontuário, documentos, financeiro,
-relatórios, convênios, estoque) exige **ADR própria** antes de qualquer código.
+**Decisão atual: Clinic OS modular** (ADR 0008, Sprint 4.0) + **arquitetura
+clínica e roles definidas conceitualmente** (ADR 0009, Sprint 4.1). O
+ClinicBridge evolui de "ponte de migração administrativa" para **sistema
+modular de gestão clínica**, mantendo migração como diferencial permanente.
+**Sem telemedicina** no escopo. Cada módulo clínico (prontuário, documentos,
+financeiro, relatórios, convênios, estoque) exige **ADR própria** antes de
+qualquer código.
 
 **Continua válido (não substituído):** base administrativa segura primeiro
 (ADR 0001 Opção C — pré-requisito para Fase 4.1+); critérios de gating clínico
-do ADR 0001 + ADR 0008. **Não codar prontuário/prescrição/dados clínicos sem
-ADR de Fase 4.x dedicada.**
+do ADR 0001 + ADR 0008 + gates adicionais da ADR 0009 §9. **Não codar
+prontuário/prescrição/dados clínicos sem ADR de módulo (0010+) aprovada.**
 
-Detalhe e princípios invariantes: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`.
-Sequência de fases administrativas: `docs/roadmap-next-phase.md`.
-Sequência de fases Clinic OS: `docs/product-clinic-os-roadmap.md`.
+Detalhe e princípios invariantes: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`,
+`docs/adr/0009-clinical-architecture-roles-read-audit.md`,
+`docs/clinical-architecture-and-permissions.md` (matriz de permissões
+conceitual e audit de leitura). Sequência de fases administrativas:
+`docs/roadmap-next-phase.md`. Sequência de fases Clinic OS:
+`docs/product-clinic-os-roadmap.md`.
 
 ## Próximas prioridades
 
-- **Trilha Clinic OS (Fase 4):** **4.0 ✅** ADR de expansão → **4.1** arquitetura
-  clínica + roles granulares + audit de leitura (ADR 0009; **bloqueia 4.2+**) →
-  **4.2** prontuário/atendimento v0.1 → **4.3** documentos médicos/receitas v0.1
-  (sem ICP-Brasil) → **4.4** financeiro v0.1 → **4.5** relatórios gerenciais v0.1
-  → **4.6** convênios/faturamento básico v0.1 (TISS/TUSS real fora) → **4.7**
-  estoque básico v0.1 (medicamentos controlados/ANVISA fora). **Fases futuras
-  (sem número):** IA clínica assistiva (depois de 4.2 madura), assinatura digital
-  ICP-Brasil (depois de 4.3 madura), TISS/TUSS real (depois de 4.6), SNGPC/ANVISA
-  (depois de 4.7). Cada fase = ADR própria. Detalhe:
+- **Trilha Clinic OS (Fase 4):** **4.0 ✅** ADR de expansão → **4.1 ✅** ADR 0009
+  + matriz de permissões + audit de leitura + threat model clínico (**bloqueia
+  4.2+** até a ADR 0010 abrir) → **4.2** prontuário/atendimento v0.1 (ADR 0010
+  pendente; antes de qualquer migration clínica) → **4.3** documentos médicos/
+  receitas v0.1 (sem ICP-Brasil) → **4.4** financeiro v0.1 → **4.5** relatórios
+  gerenciais v0.1 → **4.6** convênios/faturamento básico v0.1 (TISS/TUSS real
+  fora) → **4.7** estoque básico v0.1 (medicamentos controlados/ANVISA fora).
+  **Fases futuras (sem número):** IA clínica assistiva (depois de 4.2 madura),
+  assinatura digital ICP-Brasil (depois de 4.3 madura), TISS/TUSS real (depois
+  de 4.6), SNGPC/ANVISA (depois de 4.7). Cada fase = ADR própria. Detalhe:
   `docs/product-clinic-os-roadmap.md`.
 - **Trilha AWS (pausada estrategicamente):** **3.41A ✅** plano operacional →
   **3.41B-0 ✅** runbook executável → **3.41B** execução real ⏸️ → **3.42** go/no-go ⏸️
-  → **3.43** piloto ⏸️. Gate de retomada: ADR 0009 (Fase 4.1) aceita +
-  reavaliação de dimensionamento RDS/EBS/KMS para dados clínicos.
+  → **3.43** piloto ⏸️. Gate de retomada atualizado pela ADR 0009 §10:
+  **ADR 0010 (prontuário v0.1) aceita** + reavaliação de dimensionamento
+  RDS/EBS/KMS para dados clínicos + decisão sobre KMS CMK dedicada para cifra
+  clínica (se aplicável) + região `sa-east-1` preferida por LGPD.
 - **P1 pendentes antes de prod:** bucket S3 + IAM + agendamento + alertas do backup offsite
   (3.40 entregou scripts/docs; falta provisionar); banco/Redis gerenciados (3.41); WAF;
   deploy real (3.42); provisionar Redis/proxy reais (`TRUST_PROXY`/`REDIS_URL` em prod);
@@ -147,9 +164,13 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
   (`include_cpf_raw=true` → 400). Issues/mensagens/audits/logs nunca contêm
   CPF/telefone/e-mail/nome. Nunca expor `nome_original`/`nome_interno`/path/
   sha256/conteúdo de arquivo.
-- **Escopo clínico proibido sem ADR de Fase 4.x:** não criar prontuário,
-  diagnóstico, prescrição, exames, CID, medicamentos, documentos médicos
-  ou qualquer dado clínico **sem ADR de Fase 4.x dedicada** (ADR 0008 §4.1).
+- **Escopo clínico proibido sem ADR de módulo (0010+) aprovada:** não criar
+  prontuário, diagnóstico, prescrição, exames, CID, medicamentos, documentos
+  médicos ou qualquer dado clínico **sem ADR de módulo** (ADR 0008 §4.1 +
+  ADR 0009 §9 — gates). A ADR 0009 (Sprint 4.1) **decide arquitetura
+  conceitual** (roles, audit de leitura, separação banco, threat model,
+  LGPD clínica) mas **não autoriza código**; cada módulo (4.2 prontuário,
+  4.3 documentos, etc.) abre ADR própria (0010+).
   CRUD
   administrativo de paciente (criar/editar/arquivar/restaurar) existe (Sprint
   3.22) e é **somente administrativo**. **Merge** de paciente está implementado
@@ -209,8 +230,12 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
   "membro da equipe" / "funcionário(a) com acesso administrativo". A role técnica
   do backend permanece `secretaria` (JWT, DB, `requested_role`, audit acoes) —
   **não trocar** sem migration/refactor. Evitar termos visíveis como "secretaria"
-  / "sua secretária" / "cadastro de secretaria". Outras roles (recepção,
-  financeiro, gestor) ficam para sprint futura — não criar agora.
+  / "sua secretária" / "cadastro de secretaria". Roles granulares novas
+  (`gestor_clinica`, `profissional_clinico`, `financeiro`, `funcionario_administrativo`
+  como sucessor técnico de `secretaria`) estão **conceituadas** na ADR 0009 §4
+  + matriz em `docs/clinical-architecture-and-permissions.md` §2, mas
+  **não implementadas** — implementação técnica fica para ADR 0010 / sprint
+  dedicada antes da Fase 4.2. Não criar agora.
 
 ## Project identity
 

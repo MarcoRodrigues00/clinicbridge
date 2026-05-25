@@ -8,8 +8,15 @@
 > superseded pelo ADR 0008 — base administrativa segura continua sendo
 > pré-requisito.
 >
-> A trilha AWS real (Sprint 3.41B em diante) está **pausada estrategicamente**
-> até a Fase 4.1 (arquitetura clínica) fechar — runbook permanece válido.
+> **Sprint 4.1 entregue** (2026-05-25, docs/ADR-only) — ADR 0009 +
+> `docs/clinical-architecture-and-permissions.md`. Fase 4.1 ✅; bloqueia 4.2
+> até a ADR 0010 abrir.
+>
+> A trilha AWS real (Sprint 3.41B em diante) continua **pausada
+> estrategicamente** — gate de retomada **atualizado pela ADR 0009 §10**:
+> agora exige **ADR 0010 (prontuário v0.1) aceita** + reavaliação
+> RDS/EBS/KMS + região `sa-east-1` preferida por LGPD. Runbook permanece
+> válido.
 >
 > Este roadmap é **sugestão de sequência**, não compromisso de datas. Nada
 > aqui autoriza código clínico — ver `docs/product-clinic-os-roadmap.md` para
@@ -42,10 +49,11 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **3.40** ✅ | Backup offsite Restic + S3: scripts (`*-offsite-restic.sh`), runbook (`docs/backup-offsite-runbook.md`), IAM mínimo, retenção `forget` documentada (não auto-executada), restore drill em banco separado. Bucket S3 real, IAM role real, SSM real e agendamento ficam para 3.41 (depende de conta AWS) |
 | **3.41A** ✅ | Decisão operacional AWS (docs-only): recomendação EC2+Compose, 7 decisões do dono, checklist de execução em `docs/aws-infra-sprint-3.41-plan.md` |
 | **3.41B-0** ✅ | Runbook executável (docs-only): passo a passo Console+CLI, billing, S3, IAM, SSM, SG, RDS, EC2+EBS, DNS, Certbot, smoke tests, drill. Ver `docs/aws-provisioning-runbook-3.41B.md` |
-| **3.41B** ⏸️ | Executar o runbook — **pausado estrategicamente** (ADR 0008 §6). Retomar após ADR 0009 (Fase 4.1) aceita + reavaliação de dimensionamento RDS/EBS/KMS |
+| **3.41B** ⏸️ | Executar o runbook — **pausado estrategicamente** (ADR 0008 §6 + ADR 0009 §10). Retomar após ADR 0010 (prontuário v0.1) aceita + reavaliação RDS/EBS/KMS + região `sa-east-1` |
 | **3.42** ⏸️ | Deploy checklist go/no-go — pausado (depende de 3.41B) |
 | **3.43** ⏸️ | Piloto real — pausado (depende de 3.42) |
 | **4.0** ✅ | Expansão para Clinic OS modular (ADR 0008 + roadmap próprio em `docs/product-clinic-os-roadmap.md`) |
+| **4.1** ✅ | Arquitetura clínica + roles granulares + audit de leitura + LGPD clínica (ADR 0009 + `docs/clinical-architecture-and-permissions.md`). Bloqueia 4.2 até ADR 0010 abrir |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.
@@ -291,29 +299,41 @@ Objetivo: melhorar operação do dia a dia sobre o que já existe.
   (evolução do dry-run atual; ainda administrativo);
 - melhor organização do Dashboard.
 
-## Fase 5 — Preparação clínica (ainda SEM prontuário, SEM código clínico)
+## Fase 5 — Preparação clínica (entregue como Fase 4.1 do Clinic OS)
 
-Objetivo: planejar o domínio clínico. Entregáveis são **documentos**, não código.
+> **Status atualizado 2026-05-25:** a "Fase 5" deste roadmap administrativo
+> antigo foi **entregue como Fase 4.1 do Clinic OS** (Sprint 4.1, ADR 0009 +
+> `docs/clinical-architecture-and-permissions.md`). Mantida aqui por
+> rastreabilidade histórica. Para o roadmap clínico vivo (Fases 4.0–4.7),
+> ver `docs/product-clinic-os-roadmap.md`.
 
-- domain design clínico (entidades, fronteiras, linguagem ubíqua);
-- matriz de risco;
-- modelo de permissões (papéis, escopos, herança);
-- estratégia de audit/versionamento clínico;
-- separação clara administrativo vs. clínico (domínio e banco);
-- threat model específico do domínio clínico;
-- LGPD/termos específicos (base legal, consentimento, retenção).
+Itens originalmente planejados (todos cobertos pela ADR 0009):
 
-> Saída esperada da Fase 5: uma ADR clínica que satisfaça os "Critérios para
-> abrir uma fase clínica" do ADR 0001. Sem ela, a Fase 6 não começa.
+- domain design clínico (entidades, fronteiras, linguagem ubíqua) → ADR 0009
+  §5 + `docs/clinical-architecture-and-permissions.md` §1.
+- matriz de risco / threat model → ADR 0009 §8 (10 vetores).
+- modelo de permissões (papéis, escopos) → ADR 0009 §4 + matriz em
+  `docs/clinical-architecture-and-permissions.md` §2.
+- estratégia de audit de leitura → ADR 0009 §6 + catálogo §3 do operacional.
+- estratégia de versionamento clínico → ADR 0009 §3.5 + §4 do operacional.
+- separação administrativo vs. clínico → ADR 0009 §5.
+- threat model específico → ADR 0009 §8 + checklist §6 do operacional.
+- LGPD/termos específicos → ADR 0009 §7. Validação jurídica externa
+  **pendente** — não promete conformidade.
 
-## Fase 6 — Clinical Core experimental (somente após aprovação/ADR futura)
+## Fase 6 — Clinical Core experimental (renumerado como Fase 4.2 do Clinic OS)
+
+> **Status atualizado 2026-05-25:** equivalente à **Fase 4.2** do roadmap
+> Clinic OS (`docs/product-clinic-os-roadmap.md`). Exige ADR 0010 aceita;
+> bloqueada pelos gates da ADR 0009 §9.
 
 Objetivo (condicional): primeiro núcleo clínico mínimo e seguro.
 
 - encounters / atendimentos;
 - notas clínicas versionadas;
 - visualização segura;
-- auditoria de acesso (leitura e escrita);
+- auditoria de acesso (leitura e escrita) — schema conceitual já definido
+  na ADR 0009 §6;
 - **sem** prescrição inicialmente;
 - **sem** medicamentos/CID inicialmente, salvo nova decisão registrada.
 

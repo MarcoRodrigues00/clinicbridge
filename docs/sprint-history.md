@@ -2118,3 +2118,119 @@ de retorno clínico (trilha pausada).
 Docs/ADR-only; nenhum recurso AWS criado; nenhum código de produto alterado;
 nenhuma migration; nenhuma tabela clínica criada; nenhum secret versionado;
 invariantes de segurança intactas.
+
+---
+
+## Sprint 4.1 (arquitetura clínica + roles + audit de leitura + LGPD clínica — ADR/docs-only)
+
+**Objetivo:** entregar a arquitetura conceitual mínima exigida pela ADR 0008
+§4–§8 para destravar a Fase 4.2 (prontuário/atendimento v0.1). Sem código,
+sem migration, sem schema clínico, sem AWS.
+
+**Direção registrada:** ADR 0009 — princípios invariantes do domínio clínico,
+modelo conceitual de roles, separação administrativo vs. clínico, eventos
+conceituais de audit de leitura, versionamento clínico, LGPD clínica, threat
+model com 10 vetores específicos, gates obrigatórios para 4.2, impacto na
+trilha AWS pausada. **Não autoriza código** — cada módulo clínico continua
+exigindo ADR própria (0010+).
+
+**Arquivos criados:**
+- `docs/adr/0009-clinical-architecture-roles-read-audit.md` — 14 seções:
+  contexto; decisão (10 compromissos arquiteturais/documentais);
+  princípios invariantes clínicos (10 regras estendendo ADR 0008 §4);
+  roles granulares conceituais (6 roles: `dono_clinica`, `gestor_clinica`,
+  `profissional_clinico`, `funcionario_administrativo` sucessor de
+  `secretaria`, `financeiro`, `admin_sistema`) + política break-glass para
+  `admin_sistema`; separação administrativo vs. clínico (modelo conceitual,
+  categorias de dado clínico, regras técnicas mínimas); audit de leitura
+  clínica (eventos, campos, performance/retenção, transparência ao titular);
+  LGPD clínica (9 princípios operacionais — art. 11, minimização, base
+  legal, etc.); threat model (10 vetores com mitigação base); gates para
+  abrir 4.2 (9 critérios cumulativos com ADR 0001/0008); impacto AWS
+  (RDS/EBS/S3/KMS/CloudWatch/região); vocabulário e migração de papéis;
+  fora de escopo; por que esta ADR é só conceitual.
+- `docs/clinical-architecture-and-permissions.md` — 10 seções:
+  visão consolidada dos domínios (administrativo entregue vs. clínico
+  planejado); **matriz de permissões conceitual** com 22 linhas por
+  domínio × 6 roles (cadastro, agenda, equipe, prontuário, documentos,
+  financeiro, relatórios, convênios, estoque, importação, exportação,
+  auditoria, configuração); catálogo conceitual de eventos de audit (de
+  escrita administrativa atual + audit de leitura clínica futuro com
+  `clinical.<entidade>.read|list|export`); estratégia de versionamento
+  (notas, documentos, prescrição, atendimento, anexos); checklist LGPD
+  por módulo; threat model como checklist por ADR de módulo; **gates
+  para 4.2** como checklist; convenções de nomenclatura sugeridas
+  (prefixo `clinical_`, schema PostgreSQL dedicado, tabela paralela
+  `clinical_read_audit`, cifra a nível de coluna com `pgcrypto` + KMS CMK).
+
+**Arquivos atualizados (compactos):**
+- `CLAUDE.md` — pointer para ADR 0009 + doc operacional; sprint atual → 4.1;
+  fases Clinic OS com 4.1 ✅; "Direção estratégica" referencia ADR 0009;
+  "Próximas prioridades" trilha Clinic OS atualizada (4.1 ✅ → 4.2 ADR 0010
+  pendente); trilha AWS gate atualizado para "ADR 0010 aceita" + reavaliação
+  RDS/EBS/KMS + região `sa-east-1`; "Escopo clínico proibido" referencia
+  ADR 0009 §9 (gates); "Vocabulário de produto" referencia roles novas
+  conceituadas mas não implementadas.
+- `docs/project-state.md` — "Última sprint aprovada" → 4.1; 4.0 promovida
+  a "Sprint anterior".
+- `docs/sprint-history.md` — esta entrada.
+- `docs/product-clinic-os-roadmap.md` — Fase 4.1 marcada ✅; gate de 4.2
+  consolidado.
+- `docs/roadmap-next-phase.md` — tabela e cabeçalho atualizados com 4.1 ✅
+  e gate de retomada AWS apontando para ADR 0010.
+
+**Decisões de design registradas (ADR 0009):**
+1. **ADR 0009 é deliberadamente só conceitual** — implementação técnica de
+   roles/audit/schema fica para a ADR 0010 (início da Fase 4.2). Evita
+   over-engineering antecipado (princípio ADR 0008 §4.11).
+2. **`admin_sistema` não acessa dado clínico por padrão** — mantém invariante
+   atual; acesso excepcional ("break-glass") exige ADR futura própria com
+   justificativa textual + audit reforçado + notificação ao dono + janela
+   curta.
+3. **Audit de leitura ganha `paciente_id`** — **identificador interno
+   pseudonimizado** (UUID), necessário para rastreabilidade, audit de
+   leitura e transparência LGPD ao titular sobre quem acessou seu
+   prontuário. Tratado como dado pessoal dentro do sistema, com acesso
+   restrito por role, jamais exposto em logs de aplicação fora da tabela
+   de audit, em URL pública ou em mensagem de erro. Nunca acompanhado de
+   nome, CPF, telefone, e-mail ou conteúdo clínico bruto no mesmo
+   registro. Detalhe: ADR 0009 §6.2.
+4. **Histórico clínico em merge B-safe não se mistura** — quando dado
+   clínico existir, ADR 0007 será estendida ou nova ADR decidirá; default
+   sugerido = manter histórico do secundário separado com `merged_into_id`,
+   nunca misturar.
+5. **Cifra a nível de coluna vs. cifra de schema** — decisão fica para
+   ADR 0010 considerando dimensionamento RDS/KMS.
+6. **Vocabulário do produto inalterado** — `secretaria` continua sendo o
+   nome técnico no DB/JWT/audits até migration dedicada (ADR 0010 decide
+   quando renomear para `funcionario_administrativo`).
+
+**Impacto na trilha AWS:**
+- Trilha continua **⏸️ pausada estrategicamente** (ADR 0008 §6 reforçada).
+- Gate de retomada **atualizado**: deixa de ser "ADR 0009 aceita" e passa a
+  ser **"ADR 0010 (prontuário v0.1) aceita"** + reavaliação registrada em
+  ADR 0009 §10: RDS (volume textual + audit de leitura), EBS/S3 (anexos
+  clínicos com signed URL), KMS CMK dedicada se ADR 0010 escolher cifra a
+  nível de coluna, região `sa-east-1` preferida por LGPD.
+
+**Riscos registrados (não bloqueantes desta sprint):**
+- Risco arquitetural de over-engineering — mitigado por manter 4.1 só
+  conceitual.
+- Risco de implementação prematura de roles antes da Fase 4.2 abrir —
+  vedado pela própria ADR 0009 (§4 e §13).
+- LGPD art. 11 ainda exige validação jurídica externa (registrado em
+  ADR 0009 §7 e na ADR 0008 §5).
+- Riscos do `admin_sistema` break-glass adiados para ADR futura própria.
+
+**O que NÃO muda (invariantes em vigor — não tocados):**
+- Backend/frontend/migrations/schema/API — sem alteração.
+- `docs/security-notes.md` — invariantes mantidas; "Escopo clínico proibido"
+  continua válido, agora referenciado também via ADR 0009 §9 gates.
+- Tenant isolation, CPF mascarado, audit append-only, sem PII em logs, sem
+  delete físico — permanecem.
+- Vocabulário do produto da Sprint 3.24.1 — sem mudança.
+
+ADR/docs-only; nenhum recurso AWS criado; nenhum código de produto alterado;
+nenhuma migration; nenhuma tabela clínica criada; nenhum secret versionado;
+nenhuma role nova no banco; nenhum audit de leitura técnico; invariantes de
+segurança intactas.

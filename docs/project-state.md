@@ -7,20 +7,65 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.0** (entregue — docs/ADR-only) — **expansão estratégica para Clinic OS
-modular.** ADR 0008 (`docs/adr/0008-clinicbridge-clinic-os-expansion.md`) registra
-oficialmente a evolução: ClinicBridge deixa de ser apenas ponte de migração e
+**Sprint 4.1** (entregue — docs/ADR-only) — **arquitetura clínica mínima,
+roles granulares conceituais, audit de leitura e LGPD clínica.** ADR 0009
+(`docs/adr/0009-clinical-architecture-roles-read-audit.md`) define princípios
+invariantes do domínio clínico, modelo conceitual de roles
+(`dono_clinica`, `gestor_clinica`, `profissional_clinico`,
+`funcionario_administrativo` sucessor de `secretaria`, `financeiro`,
+`admin_sistema` sem dado clínico por padrão), separação administrativo vs.
+clínico, eventos conceituais de audit de leitura
+(`clinical.<entidade>.read|list|export` + `paciente_id` para transparência
+LGPD ao titular), estratégia de versionamento clínico (sem delete físico,
+edição via nova versão, cancelamento ≠ delete), princípios LGPD clínica
+(art. 11 — dados sensíveis), threat model com 10 vetores específicos,
+política "break-glass" para `admin_sistema` (não implementada — ADR futura),
+e gates obrigatórios para abrir a Sprint 4.2 (ADR 0010 prontuário v0.1).
+
+Documento operacional companheiro:
+`docs/clinical-architecture-and-permissions.md` — matriz de permissões
+conceitual por domínio (cadastro, agenda, equipe, prontuário, documentos,
+financeiro, relatórios, convênios, estoque, importação/exportação,
+auditoria), catálogo de eventos de audit de leitura, estratégia de
+versionamento, checklist LGPD por módulo, threat model por ADR de módulo,
+checklist de gates para 4.2, convenções sugeridas de nomenclatura (prefixo
+`clinical_`, schema PostgreSQL dedicado, tabela `clinical_read_audit`
+paralela).
+
+**Bloqueia Fase 4.2** (prontuário/atendimento v0.1) até a ADR 0010 abrir
+(que precisa cumprir os 9 gates listados na ADR 0009 §9 + checklist em
+`docs/clinical-architecture-and-permissions.md` §7).
+
+**Trilha AWS continua pausada estrategicamente** (ADR 0008 §6). Gate de
+retomada atualizado pela ADR 0009 §10: **ADR 0010 aceita** + reavaliação de
+dimensionamento RDS (volume textual de prontuário + audit de leitura
+clínica), EBS/S3 (anexos clínicos futuros — signed URL obrigatório), KMS
+(CMK dedicada se ADR 0010 escolher cifra a nível de coluna; hoje
+`MFA_ENCRYPTION_KEY` ainda pode usar fallback de `JWT_SECRET`), região
+`sa-east-1` preferida por LGPD (transferência internacional).
+
+**Princípios invariantes mantidos sem exceção:** tenant isolation,
+CPF mascarado, audit append-only, sem PII em logs, sem delete físico,
+migration aditiva, escopo clínico proibido sem ADR de módulo aprovada.
+Vocabulário de produto da Sprint 3.24.1 mantido (UI fala em "funcionário(a)",
+backend continua com `secretaria` até migration dedicada — ver ADR 0009 §11).
+
+**O que NÃO é entregue nesta sprint (registrado):** nenhum schema/migration
+clínico, nenhuma role nova no banco, nenhum audit de leitura técnico,
+nenhum endpoint clínico, nenhuma alteração em backend/frontend, nenhum
+recurso AWS, nenhuma promessa de conformidade LGPD/CFM/ICP-Brasil/TISS
+(continua exigindo validação jurídica externa).
+
+**Sprint anterior: 4.0** (entregue — docs/ADR-only) — **expansão estratégica
+para Clinic OS modular.** ADR 0008 (`docs/adr/0008-clinicbridge-clinic-os-expansion.md`)
+registra a evolução: ClinicBridge deixa de ser apenas ponte de migração e
 passa a sistema modular de gestão clínica, **sem telemedicina**, com migração
 permanecendo como diferencial. Roadmap Clinic OS criado
 (`docs/product-clinic-os-roadmap.md`) com fases 4.0–4.7 + fases futuras sem
-número (IA clínica assistiva, ICP-Brasil, TISS/TUSS real, SNGPC/ANVISA), cada uma exigindo
-ADR própria. ADR 0001 (Opção C) **parcialmente superseded** — base administrativa
-continua sendo pré-requisito; critérios de gating clínico mantidos. **Trilha AWS
-real pausada estrategicamente** (não cancelada) — gate de retomada é a aprovação
-da ADR de Fase 4.1 (arquitetura clínica + roles granulares + audit de leitura).
-Princípios invariantes: tenant isolation, CPF mascarado, audit append-only, sem
-PII em logs, sem delete físico, migration aditiva. Sem código, sem migration,
-sem AWS, sem alteração das invariantes vigentes.
+número (IA clínica assistiva, ICP-Brasil, TISS/TUSS real, SNGPC/ANVISA), cada
+uma exigindo ADR própria. ADR 0001 (Opção C) **parcialmente superseded** —
+base administrativa continua sendo pré-requisito; critérios de gating clínico
+mantidos.
 
 **Sprint anterior: 3.41B-0** (entregue — docs-only) — **runbook executável de provisionamento
 AWS real.** Checklist passo a passo com caminho Console AWS e caminho CLI; billing
