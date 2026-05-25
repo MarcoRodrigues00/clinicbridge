@@ -19,8 +19,12 @@
 
 - **Fase 3 administrativa:** funcional, base segura, sem dado clínico.
   Backup local + offsite (docs/scripts). Plano e runbook AWS prontos.
-- **Trilha AWS real:** **pausada estrategicamente** (ADR 0008 §6). Retomada
-  vinculada à conclusão da Fase 4.1.
+- **Fase 4.0 ✅** (decisão Clinic OS, ADR 0008) e **Fase 4.1 ✅**
+  (arquitetura clínica conceitual, ADR 0009 + `docs/clinical-architecture-and-permissions.md`)
+  entregues — só docs/ADR.
+- **Trilha AWS real:** **pausada estrategicamente** (ADR 0008 §6). Gate de
+  retomada **atualizado pela ADR 0009 §10**: ADR 0010 aceita + reavaliação
+  RDS/EBS/KMS + região `sa-east-1` preferida.
 - **Pré-requisito vivo:** governança da Fase 3 (`requireRole`, rate limit Redis,
   trust proxy, backup/restore validado, deploy seguro, CORS/env prod) — itens
   conforme `docs/roadmap-next-phase.md`.
@@ -32,7 +36,7 @@
 | Fase | Natureza | Status | ADR | Entregável principal |
 |---|---|---|---|---|
 | **4.0** | Direção/ADR | ✅ Sprint 4.0 | ADR 0008 | Decisão estratégica registrada |
-| **4.1** | Arquitetura/habilitador | Pendente | ADR 0009 (futura) | Modelo de dados clínicos, roles granulares, audit de leitura |
+| **4.1** | Arquitetura/habilitador | ✅ Sprint 4.1 | ADR 0009 + `docs/clinical-architecture-and-permissions.md` | Roles granulares conceituais, separação banco, audit de leitura, threat model, LGPD clínica, gates para 4.2 |
 | **4.2** | Clínico — atendimento | Pendente | ADR 0010 (futura) | Prontuário/atendimento v0.1 |
 | **4.3** | Clínico — documentos | Pendente | ADR 0011 (futura) | Documentos médicos/receitas v0.1 (sem ICP-Brasil) |
 | **4.4** | Operacional — financeiro | Pendente | ADR 0012 (futura) | Financeiro v0.1 (contas a pagar/receber, fluxo de caixa) |
@@ -73,55 +77,76 @@
 
 ---
 
-## Fase 4.1 — Arquitetura de dados clínicos + permissões
+## Fase 4.1 — Arquitetura de dados clínicos + permissões ✅
+
+**Status:** ✅ entregue na Sprint 4.1 (2026-05-25, docs/ADR-only).
 
 **Natureza:** **habilitador**. Sem ela, nenhuma Fase 4.2+ pode começar.
 
-**Objetivo:** desenhar (em docs/ADR) o modelo de dados, permissões e auditoria
-necessários para suportar dados clínicos com segurança, sem ainda implementar
-nada.
+**O que foi entregue:**
+- ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` — 14 seções
+  cobrindo: princípios invariantes clínicos (10 regras), modelo conceitual
+  de roles (6 roles), separação administrativo vs. clínico (modelo
+  conceitual + regras técnicas mínimas), audit de leitura clínica (eventos
+  conceituais `clinical.<entidade>.read|list|export` + `paciente_id` para
+  transparência LGPD ao titular), versionamento clínico (sem delete físico;
+  edição → nova versão; cancelamento ≠ delete), LGPD clínica (9 princípios
+  operacionais — art. 11), threat model com 10 vetores específicos,
+  política conceitual "break-glass" para `admin_sistema` (não implementada),
+  gates obrigatórios para abrir 4.2 (9 critérios), impacto na trilha AWS
+  pausada.
+- Doc operacional `docs/clinical-architecture-and-permissions.md` —
+  matriz de permissões conceitual por domínio × role, catálogo conceitual
+  de eventos de audit, checklist LGPD por módulo, threat model como
+  checklist por ADR de módulo, gates para 4.2 como checklist, convenções
+  de nomenclatura sugeridas.
+- ADR 0001 (Opção C) — gates clínicos continuam **válidos** e reusados
+  pela 4.2+ (cumulativo com ADR 0008 §8 e ADR 0009 §9).
 
-**Entregáveis esperados:**
-1. **ADR 0009** — arquitetura clínica:
-   - Modelo de dados clínicos (entidades, tabelas, FKs, separação administrativo
-     vs. clínico — schemas separados? prefixo de tabela? schema PostgreSQL
-     dedicado?).
-   - Cifra em repouso para campos clínicos sensíveis (decisão: campo-a-campo
-     com KMS dedicada vs. cifra inteira do schema vs. cifra a nível de coluna
-     com `pgcrypto`). Trade-offs documentados.
-   - Modelo de **roles granulares**: candidatas hoje listadas em
-     `docs/roadmap-next-phase.md` ("Trilha equipe — Polimentos") — recepção,
-     financeiro, gestor da clínica, **profissional de saúde** (novo), **leitor
-     clínico** (novo). Mapeamento `requested_role` → role efetiva pela aprovação
-     do owner. Revalidação de `papel` no `requireClinic` (hoje só `clinica_id`
-     é revalidado).
-   - Schema de **audit de leitura clínica**: extensão de `audit_logs` ou
-     tabela paralela? Performance vs. completude. Eventos mínimos:
-     `clinical.<entidade>.read`, `clinical.<entidade>.list`,
-     `clinical.<entidade>.export`.
-   - **Política LGPD clínica** específica (base legal art. 11; consentimento
-     vs. tutela da saúde; retenção mínima por tipo de dado; export/exclusão).
-     Validação jurídica externa **pendente** — não promete compliance.
-   - **Threat model** do domínio clínico (STRIDE; ataques entre membros da
-     mesma clínica; vazamento por endpoint mal filtrado).
-   - **Estratégia de migração** de dados clínicos (importar prontuário de
-     sistemas antigos): pipeline CSV/XLSX já existente é base, mas dado
-     clínico exige validações próprias (sem normalizar texto livre; preservar
-     versão original; consentimento de migração).
-2. Sem código, sem migration, sem tabela.
+**Decisões consciente registradas na ADR 0009:**
+- 4.1 é deliberadamente **só conceitual** — implementação técnica de roles,
+  audit de leitura, schema clínico fica para a ADR 0010 (início da 4.2)
+  para evitar over-engineering antecipado (princípio ADR 0008 §4.11).
+- `admin_sistema` **não acessa dado clínico** por padrão. Break-glass
+  exige ADR futura própria.
+- Vocabulário do produto inalterado: nome técnico `secretaria` continua
+  no DB/JWT/audits até migration dedicada (ADR 0010 decide).
+- Histórico clínico em merge B-safe (ADR 0007) **não se mistura** quando
+  dado clínico existir — default sugerido é histórico separado com
+  `merged_into_id`. Decisão final na ADR 0010.
 
-**Gates para iniciar 4.2 (atendimento):**
-- ADR 0009 aceita.
-- 13 critérios (ADR 0001 §"Critérios para abrir uma fase clínica" + ADR 0008
-  §8) atendidos no plano.
-- Trilha AWS reavaliada à luz de cifra/KMS/RDS dimensionamento.
-- Validação jurídica externa **iniciada** (não exige conclusão para começar
-  4.2 com dados sintéticos, mas exige conclusão para dado real).
+**Gates para iniciar 4.2 (atendimento) — agora consolidados em ADR 0009 §9
+e checklist `docs/clinical-architecture-and-permissions.md` §7:**
+- ADR 0009 aceita ✅.
+- Matriz de permissões revisada pelo dono.
+- Catálogo de audit de leitura revisado.
+- Princípios de versionamento revisados.
+- Princípios LGPD clínica declarados ✅ (validação jurídica externa precisa
+  iniciar em paralelo).
+- Threat model consultado pela ADR 0010.
+- Decisão sobre roles documentada ✅ (implementação técnica na ADR 0010).
+- Impacto no backup/AWS revisado ✅.
+- Escopo do prontuário v0.1 definido em alto nível (entregue pela ADR 0010
+  ao abrir).
+- Sem regressão nas invariantes administrativas (`docs/security-notes.md`).
+- Trilha AWS reavaliada (não retomada — só reavaliada).
+- Validação jurídica externa iniciada (não exige conclusão para 4.2 com
+  dados sintéticos; exige para dado real).
 
-**Não no escopo de 4.1:**
-- Criar tabelas. Criar migrations. Criar endpoints clínicos.
-- Implementar roles granulares (4.1 desenha; implementação em sprint própria
-  no início da 4.2).
+**O que NÃO foi entregue (intencional e registrado):**
+- Nenhum schema/migration clínico.
+- Nenhuma role nova no banco (`papel` continua `dono_clinica`/`secretaria`/
+  `admin_sistema`).
+- Nenhum audit de leitura técnico (só schema conceitual).
+- Nenhum endpoint, controller, service ou DAO clínico.
+- Nenhuma alteração em backend/frontend.
+- Nenhum recurso AWS, nenhum secret.
+- Nenhuma promessa de conformidade LGPD/CFM/ICP-Brasil/TISS.
+
+**Próximo passo:** abrir ADR 0010 (prontuário v0.1) cumprindo os gates §9
+acima. Essa ADR trará as decisões técnicas (schema PostgreSQL vs. prefixo,
+implementação de roles, schema do audit de leitura, cifra a nível de
+coluna vs. schema).
 
 ---
 
@@ -372,12 +397,15 @@ no v0.1.**
 |---|---|
 | 3.41A — plano operacional AWS | ✅ entregue (docs-only) |
 | 3.41B-0 — runbook executável | ✅ entregue (docs-only) |
-| **3.41B** — execução real | ⏸️ **pausado estrategicamente** (ADR 0008 §6) |
+| **3.41B** — execução real | ⏸️ **pausado estrategicamente** (ADR 0008 §6 + ADR 0009 §10) |
 | 3.42 — deploy checklist go/no-go | ⏸️ pausado (depende de 3.41B) |
 | 3.43 — piloto real | ⏸️ pausado (depende de 3.42) |
 
-Gate para retomar: **ADR 0009 (Fase 4.1) aceita** + reavaliação de
-dimensionamento RDS/EBS/KMS à luz dos dados clínicos.
+Gate para retomar (**atualizado pela ADR 0009 §10**):
+**ADR 0010 (prontuário v0.1) aceita** + reavaliação de dimensionamento
+RDS (volume textual + audit de leitura), EBS/S3 (anexos clínicos futuros
+com signed URL), KMS CMK dedicada (se ADR 0010 escolher cifra a nível de
+coluna), região `sa-east-1` preferida por LGPD.
 
 ---
 
