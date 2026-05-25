@@ -33,7 +33,8 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **3.39** ✅ | Secrets + env de prod: SSM Parameter Store, `MFA_ENCRYPTION_KEY`, `FRONTEND_ORIGIN` |
 | **3.40** ✅ | Backup offsite Restic + S3: scripts (`*-offsite-restic.sh`), runbook (`docs/backup-offsite-runbook.md`), IAM mínimo, retenção `forget` documentada (não auto-executada), restore drill em banco separado. Bucket S3 real, IAM role real, SSM real e agendamento ficam para 3.41 (depende de conta AWS) |
 | **3.41A** ✅ | Decisão operacional AWS (docs-only): recomendação EC2+Compose, 7 decisões do dono, checklist de execução em `docs/aws-infra-sprint-3.41-plan.md` |
-| **3.41B** | Provisionar infra AWS real: bucket S3 + IAM + SSM + EC2 + RDS + Security Groups + DNS (Registro.br) + TLS (Certbot) + smoke tests + backup drill |
+| **3.41B-0** ✅ | Runbook executável (docs-only): passo a passo Console+CLI, billing, S3, IAM, SSM, SG, RDS, EC2+EBS, DNS, Certbot, smoke tests, drill. Ver `docs/aws-provisioning-runbook-3.41B.md` |
+| **3.41B** | Executar o runbook: provisionar infra AWS real, smoke tests, backup drill aprovado (gate go/no-go) |
 | **3.42** | Deploy checklist go/no-go: executar `docs/deploy-security-checklist.md` §15/§16 |
 | **3.43** | Piloto real: primeiro usuário com dados sintéticos/anonimizados |
 

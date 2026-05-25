@@ -225,7 +225,8 @@ público: Nginx (80/443) ou ALB (se adotado).
 | **3.39** ✅ | Guards de boot para `MFA_ENCRYPTION_KEY` (obrigatória em prod) e `FRONTEND_ORIGIN` (sem localhost/http em prod); runbook de secrets/env de produção com caminhos SSM, geração de secrets e caveats de rotação | Config + docs |
 | **3.40** ✅ | ~~Backup offsite: Restic → S3 bucket privado; job agendado~~ → Scripts (`{check,backup,restore}-*-offsite-restic.sh`) + runbook (`docs/backup-offsite-runbook.md`) + IAM mínimo documentado + restore drill em banco separado. Bucket real, IAM real, SSM real e agendamento ficam para 3.41 (depende de conta AWS) | Scripts + docs |
 | **3.41A** ✅ | Decisão operacional AWS — docs-only: recomendação EC2+Compose, 7 decisões do dono, checklist de execução 3.41B em `docs/aws-infra-sprint-3.41-plan.md` | Docs/planejamento |
-| **3.41B** | Provisionar infra AWS real: bucket S3 + IAM + SSM + EC2 + RDS/ElastiCache + Security Groups + DNS + TLS + backup drill (seguir `docs/aws-infra-sprint-3.41-plan.md`) | Infra |
+| **3.41B-0** ✅ | Runbook executável de provisionamento real — docs-only: passo a passo Console+CLI, billing alarm, S3, IAM, SSM, SG, RDS, EC2+EBS, DNS, Certbot, smoke tests, drill. Ver `docs/aws-provisioning-runbook-3.41B.md` | Docs/runbook |
+| **3.41B** | Executar o runbook: provisionar infra AWS real, realizar smoke tests, aprovar drill de backup — gate para 3.42 | Infra (execução real) |
 | **3.42** | Deploy checklist go/no-go: executar `docs/deploy-security-checklist.md` §15/§16; smoke tests em staging; confirmar todos P0/P1 resolvidos | QA/checklist |
 | **3.43** | Piloto real: primeiro usuário com dados sintéticos ou anonimizados; monitorar CloudWatch, audit logs, health check; coletar feedback | Operacional |
 
