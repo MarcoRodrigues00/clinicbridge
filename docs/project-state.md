@@ -7,6 +7,80 @@
 
 ## Última sprint aprovada
 
+**Sprint 3.40** (entregue — backup offsite Restic + S3, docs/scripts only) — **scripts
+de backup/restore offsite com hard guards de segurança + runbook operacional com IAM
+mínimo e retenção documentada.** Sem migration, sem backend/frontend, sem AWS real,
+sem commit/push.
+
+**Arquivos criados:**
+- `scripts/check-backup-offsite-env.sh` — pré-flight; checa `restic`, docker, Postgres,
+  `RESTIC_PASSWORD`/`RESTIC_REPOSITORY`, AWS creds (env ou IAM role default chain),
+  `.gitignore`. `--probe` opcional tenta `restic snapshots`. Nunca imprime secrets.
+- `scripts/backup-offsite-restic.sh` — `pg_dump -Fc` + `storage/uploads` → snapshot
+  Restic remoto (S3-compatible). Hard guard: aborta se `RESTIC_REPOSITORY` não começar
+  com `s3:`. Suporta `--help` e `--dry-run` (gera dump mas não envia). Tags
+  `clinicbridge`/`offsite`/`ts:<TS>`. Nunca imprime senha/credenciais.
+- `scripts/restore-offsite-restic.sh` — restore drill em banco SEPARADO
+  (`clinicbridge_restore_offsite_test`). Dois hard guards: aborta se `RESTORE_DB ==
+  POSTGRES_DB` e se `RESTIC_REPOSITORY` não começar com `s3:`. Compara counts de
+  `patients`/`import_files`/`import_sessions` lado a lado.
+- `docs/backup-offsite-runbook.md` — 11 seções (status, pré-requisitos, IAM mínimo com
+  JSON policy de exemplo, secrets via SSM, fluxo, variáveis, procedimentos, política
+  de retenção `forget+prune` **documentada não auto-executada**, agendamento futuro,
+  segurança, troubleshooting, checklist).
+
+**Mudanças em arquivos existentes:**
+- `.env.example` — bloco Sprint 3.40 documentando `RESTIC_REPOSITORY` (s3:), `AWS_*`,
+  `RESTIC_CACHE_DIR`, `RESTORE_DB` offsite default. Mensagem clara de que valores reais
+  vêm do SSM/IAM role, nunca do `.env`.
+- `CLAUDE.md` — pointer Sprint 3.40 + entrada na lista de docs.
+- `docs/backup-restore-strategy.md` — estado atual atualizado (offsite scripts ✅,
+  bucket real pendente).
+- `docs/security-notes.md` — seção backup atualizada com hard guards e runbook offsite.
+- `docs/secrets-env-production-runbook.md` — referência cruzada ao runbook offsite e
+  ao IAM mínimo do bucket de backup.
+- `docs/production-minimum-plan.md` — Sprint 3.40 marcada ✅; §2.7 atualizado.
+- `docs/deploy-security-checklist.md` — §11 atualizado.
+- `docs/testing-checklist.md` — novo bloco "Backup offsite (Sprint 3.40)" com smoke
+  tests seguros (sem AWS).
+- `docs/sprint-history.md` — entrada Sprint 3.40.
+- `docs/roadmap-next-phase.md` — Sprint 3.40 marcada ✅.
+
+**Decisões de design registradas:**
+1. **Hard guard `s3:`** em ambos backup e restore — protege contra rodar offsite por
+   engano contra um repo local.
+2. **Hard guard `RESTORE_DB != POSTGRES_DB`** — protege o banco principal (espelha o
+   script local da Sprint 3.5).
+3. **`RESTORE_DB` default `clinicbridge_restore_offsite_test`** — nome distinto do
+   drill local (`clinicbridge_restore_test`) permite ambos coexistirem.
+4. **Retenção `forget --prune` documentada, NÃO auto-executada** — limpeza destrutiva
+   exige restore drill recente + revisão jurídica (ADR 0002).
+5. **AWS creds aceitas via env OU IAM role** — preferência por IAM role em EC2/ECS;
+   scripts não exigem env vars AWS, deixam o Restic usar o default credential chain.
+6. **Sem mudança no script local existente** — `backup-local-restic.sh` continua
+   bloqueando offsite; ambos fluxos são paralelos e independentes.
+
+**Validações executadas (sem AWS real):**
+- `bash -n scripts/{check,backup,restore}-*-offsite-restic.sh` — sintaxe ok.
+- `--help` em cada script retorna 0 e imprime ajuda sem executar nada.
+- Backup com `RESTIC_REPOSITORY` ausente → exit 1 com mensagem clara.
+- Backup com `RESTIC_REPOSITORY=backups/foo` (local) → exit 1 `[ABORTAR]`.
+- Restore com `RESTORE_DB=POSTGRES_DB` → exit 1 `[ABORTAR]`.
+- `git status` — nenhum dump/repo/segredo staged; só docs/scripts/.env.example.
+- `git check-ignore` confirma proteção para `backups/work/*`, `backups/restore-offsite-work/*`.
+
+**Pendente (depende de provisionamento AWS, Sprint 3.41+):**
+- Bucket S3 real (`clinicbridge-backups-staging` e `-prod`) com versionamento, SSE,
+  block public access.
+- IAM role/instance profile com a policy mínima documentada (§2.3 do runbook).
+- `RESTIC_PASSWORD` gravada no SSM (`/clinicbridge/<env>/restic_password`).
+- Execução real de `check --probe` → `backup` → `restore` drill em staging — **gate
+  go/no-go** para produção.
+- Agendamento (systemd-timer ou ECS scheduled task) — sprint futura.
+- Alertas de falha (CloudWatch) — sprint futura.
+
+---
+
 **Sprint 3.39** (entregue — guards de boot + runbook de secrets) —
 **secrets e env de produção: `MFA_ENCRYPTION_KEY` obrigatória em prod; `FRONTEND_ORIGIN`
 sem localhost/http em prod.** Sem migration, sem feature de produto, sem commit/push.

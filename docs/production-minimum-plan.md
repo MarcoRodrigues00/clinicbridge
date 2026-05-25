@@ -148,8 +148,10 @@ credenciais RDS). `RESTIC_PASSWORD` **nunca** em `.env` — shell-only ou SSM.
 | **Restic → S3 bucket offsite** | Uploads (`./storage/uploads` ou EBS); complementa RDS |
 | **S3 Object Versioning** | Se uploads estiverem em S3, versionamento é backup nativo |
 
-Restic local já está validado (Sprint 3.5). Sprint 3.40 implementa destino offsite
-(S3 ou Backblaze B2 via rclone).
+Restic local já está validado (Sprint 3.5). **Sprint 3.40 entregou os scripts
+de backup/restore offsite + runbook + IAM mínimo documentado** (`docs/backup-offsite-runbook.md`,
+`scripts/{check,backup,restore}-*-offsite-restic.sh`). Bucket S3 real, IAM role real,
+SSM real e agendamento ficam para esta sprint (3.41) — depende da decisão de provedor.
 
 ### 2.8 Logs
 
@@ -218,7 +220,7 @@ público: Nginx (80/443) ou ALB (se adotado).
 | **3.37** (este doc) | Plano de produção mínima + decisão AWS como preferida | Docs/planejamento |
 | **3.38** ✅ | ~~TLS real + DNS~~ → Corrigir `NODE_ENV` no Dockerfile runtime ✅; templates Nginx prod/staging ✅; runbook DNS/TLS ✅. DNS e cert reais ficam para quando EC2 estiver disponível | Código (Dockerfile) + docs + templates |
 | **3.39** ✅ | Guards de boot para `MFA_ENCRYPTION_KEY` (obrigatória em prod) e `FRONTEND_ORIGIN` (sem localhost/http em prod); runbook de secrets/env de produção com caminhos SSM, geração de secrets e caveats de rotação | Config + docs |
-| **3.40** | Backup offsite: Restic → S3 bucket privado; job agendado (cron/systemd); restore drill remoto | Scripts + docs |
+| **3.40** ✅ | ~~Backup offsite: Restic → S3 bucket privado; job agendado~~ → Scripts (`{check,backup,restore}-*-offsite-restic.sh`) + runbook (`docs/backup-offsite-runbook.md`) + IAM mínimo documentado + restore drill em banco separado. Bucket real, IAM real, SSM real e agendamento ficam para 3.41 (depende de conta AWS) | Scripts + docs |
 | **3.41** | Storage persistente + banco/Redis de prod: volume EBS nomeado OU provisionar RDS + ElastiCache (staging first); Security Groups; firewall de porta | Infra + docs |
 | **3.42** | Deploy checklist go/no-go: executar `docs/deploy-security-checklist.md` §15/§16; smoke tests em staging; confirmar todos P0/P1 resolvidos | QA/checklist |
 | **3.43** | Piloto real: primeiro usuário com dados sintéticos ou anonimizados; monitorar CloudWatch, audit logs, health check; coletar feedback | Operacional |

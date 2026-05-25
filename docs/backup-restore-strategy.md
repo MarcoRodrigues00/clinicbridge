@@ -23,10 +23,19 @@
   do ambiente de produção. Não é procedimento operacional validado.
 - **Escopo:** proteger os dados administrativos e artefatos do pipeline
   (PostgreSQL + storage de uploads) com backup cifrado e restore testável.
-- **Estado atual:** backup/restore **local/dev implementado** com Restic na Sprint
-  3.5 (scripts em `scripts/`, runbook em `docs/backup-restore-local-runbook.md`);
-  restore drill validado em banco separado. **Offsite/produção continuam
-  pendentes.** A decisão da ferramenta (Restic) está no ADR 0003.
+- **Estado atual:**
+  - **Local/dev (Sprint 3.5):** implementado com Restic — scripts em `scripts/`,
+    runbook em `docs/backup-restore-local-runbook.md`; restore drill validado em
+    banco separado (`clinicbridge_restore_test`).
+  - **Offsite (Sprint 3.40, scripts/docs only):** scripts
+    `scripts/{check,backup,restore}-*-offsite-restic.sh` + runbook
+    `docs/backup-offsite-runbook.md` com IAM mínimo, retenção `forget` documentada
+    (NÃO auto-executada) e restore drill remoto em `clinicbridge_restore_offsite_test`.
+    **Bucket S3 real, IAM role real, SSM real e agendamento continuam pendentes**
+    (Sprint 3.41+).
+  - **Produção:** sem deploy real até o checklist mínimo
+    (`docs/production-minimum-plan.md`).
+  - A decisão da ferramenta (Restic) está no ADR 0003.
 - **Motivação:** backup/restore é P1 (antes de produção) e é **pré-requisito** da
   limpeza real de arquivos (critério #10 do ADR 0002).
 
@@ -152,8 +161,11 @@ para um cenário enterprise futuro.
   reprovisionados).
 - **O primeiro ciclo backup→restore foi feito inteiramente em local/dev na Sprint
   3.5**, com restore drill comprovado (counts batendo, banco principal intacto) —
-  ver `docs/backup-restore-local-runbook.md`. **O offsite só entra depois desse
-  ciclo validado** (próxima etapa, ainda pendente).
+  ver `docs/backup-restore-local-runbook.md`.
+- **Sprint 3.40** entregou os scripts e o runbook do **drill offsite**, com banco
+  separado (`clinicbridge_restore_offsite_test`) — ver
+  `docs/backup-offsite-runbook.md`. O drill offsite real (executando contra um
+  bucket S3 provisionado) é **gate go/no-go** para produção e ainda está pendente.
 
 ## 11. Responsabilidades
 

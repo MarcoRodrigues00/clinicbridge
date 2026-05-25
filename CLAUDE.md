@@ -7,6 +7,7 @@
 > - **Política de retenção e governança de dados:** `docs/data-retention-policy.md` (+ ADR `docs/adr/0002-data-retention-governance.md`)
 > - **Estratégia de backup/restore (Restic-first):** `docs/backup-restore-strategy.md` (+ ADR `docs/adr/0003-backup-restore-strategy.md`)
 > - **Runbook backup/restore local (scripts em `scripts/`):** `docs/backup-restore-local-runbook.md`
+> - **Runbook backup OFFSITE Restic + S3 (Sprint 3.40; scripts `*-offsite-restic.sh`; IAM mínimo; retenção documentada; restore drill remoto):** `docs/backup-offsite-runbook.md`
 > - **Checklist de deploy seguro / CORS / env prod:** `docs/deploy-security-checklist.md` (+ ADR `docs/adr/0004-deploy-security-baseline.md`)
 > - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
 > - **Plano de produção mínima segura (AWS preferido; gaps P0/P1/P2; sprints 3.37–3.43; decisões pendentes):** `docs/production-minimum-plan.md`
@@ -19,13 +20,16 @@
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
 > - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
 
-## Estado atual (resumido — atualizado 2026-05-24)
+## Estado atual (resumido — atualizado 2026-05-25)
 
-**Sprint atual: 3.39** (entregue) — guards de boot `MFA_ENCRYPTION_KEY` + `FRONTEND_ORIGIN` em
-`backend/src/config/env.ts` (bloco `NODE_ENV=production`); `.env.example` atualizado;
-`docs/secrets-env-production-runbook.md` criado. `typecheck`/`build` ✅.
-DNS real, cert real e SSM reais pendentes — dependem de EC2 disponível.
-Estado detalhado por sprint: `docs/project-state.md` + `docs/sprint-history.md`.
+**Sprint atual: 3.40** (entregue — docs/scripts only) — backup **offsite** Restic + S3:
+scripts `scripts/{check,backup,restore}-*-offsite-restic.sh` (hard guard `s3:`, hard guard
+`RESTORE_DB != POSTGRES_DB`, `--help`/`--dry-run`, sem secrets em logs); runbook
+`docs/backup-offsite-runbook.md` com IAM mínimo, retenção `forget` documentada (NÃO
+auto-executada) e restore drill em `clinicbridge_restore_offsite_test`; `.env.example`
+documenta `RESTIC_REPOSITORY` (s3:), `AWS_*`, `RESTIC_CACHE_DIR`. Sem migration,
+sem backend/frontend, sem AWS real, sem commit. Bucket S3/IAM/SSM reais pendentes
+(Sprint 3.41+). Estado detalhado: `docs/project-state.md` + `docs/sprint-history.md`.
 
 **Fase:** Fase 3 (produção/governança). **Este MVP NÃO está pronto para produção** — ver P1 em
 `docs/security-notes.md`. Nunca descrever como "pronto para produção".
@@ -49,7 +53,8 @@ retenção dry-run (backend + painel); responsividade mobile; trilha Equipe comp
 invite, aprovação, copy "funcionário(a)", membros, desativar acesso, regenerar código,
 ConfirmDialog, hardening concorrência); Agenda administrativa (3.14–3.15); Nginx reverse proxy
 local/staging + TLS autoassinado (3.9–3.11); Dockerfile `NODE_ENV=production` runtime (3.38);
-guards de boot env.ts (3.39). Detalhe e endpoints: `docs/project-state.md`.
+guards de boot env.ts (3.39); scripts + runbook de backup offsite Restic→S3 (3.40, sem
+bucket real). Detalhe e endpoints: `docs/project-state.md`.
 
 **O que NÃO existe (precisa sprint explícita):** prontuário/dados clínicos; delete físico de
 paciente; undo completo do merge (sem snapshot de campos antigos nem de appointments movidos);
@@ -79,13 +84,15 @@ fases: `docs/roadmap-next-phase.md`.
 
 ## Próximas prioridades
 
-- **Infra/produção (sequência):** **3.40** backup offsite (Restic→S3; job agendado; restore
-  drill remoto) → **3.41** storage persistente + banco/Redis gerenciados (RDS/ElastiCache;
-  Security Groups) → **3.42** deploy checklist go/no-go (`docs/deploy-security-checklist.md`
-  §15/§16) → **3.43** piloto real (dados sintéticos/anonimizados). 7 decisões do dono
-  pendentes (compute, banco, storage, TLS, secrets, orçamento): `docs/production-minimum-plan.md` §5.
-- **P1 pendentes antes de prod:** backup offsite real (3.40); banco/Redis gerenciados (3.41);
-  WAF; deploy real (3.42); provisionar Redis/proxy reais (`TRUST_PROXY`/`REDIS_URL` em prod);
+- **Infra/produção (sequência):** **3.40 ✅** backup offsite scripts + runbook + IAM mínimo
+  (bucket S3/IAM/SSM reais ainda pendentes) → **3.41** storage persistente + banco/Redis
+  gerenciados (RDS/ElastiCache; Security Groups) → **3.42** deploy checklist go/no-go
+  (`docs/deploy-security-checklist.md` §15/§16) → **3.43** piloto real (dados sintéticos/
+  anonimizados). 7 decisões do dono pendentes (compute, banco, storage, TLS, secrets,
+  orçamento): `docs/production-minimum-plan.md` §5.
+- **P1 pendentes antes de prod:** bucket S3 + IAM + agendamento + alertas do backup offsite
+  (3.40 entregou scripts/docs; falta provisionar); banco/Redis gerenciados (3.41); WAF;
+  deploy real (3.42); provisionar Redis/proxy reais (`TRUST_PROXY`/`REDIS_URL` em prod);
   validação jurídica de retenção (ADR 0002).
 - **Trilha pacientes (próximo):** contagem de agendamentos por paciente na UI do merge
   (endpoint owner-only, tenant-scoped); paginação backend de duplicados; undo/snapshot
