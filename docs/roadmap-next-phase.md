@@ -32,7 +32,8 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **3.38** ✅ | TLS real + domínio + HSTS; corrigir `NODE_ENV` no Dockerfile runtime |
 | **3.39** ✅ | Secrets + env de prod: SSM Parameter Store, `MFA_ENCRYPTION_KEY`, `FRONTEND_ORIGIN` |
 | **3.40** ✅ | Backup offsite Restic + S3: scripts (`*-offsite-restic.sh`), runbook (`docs/backup-offsite-runbook.md`), IAM mínimo, retenção `forget` documentada (não auto-executada), restore drill em banco separado. Bucket S3 real, IAM role real, SSM real e agendamento ficam para 3.41 (depende de conta AWS) |
-| **3.41** | Storage persistente (EBS/S3) + banco/Redis de prod (RDS/ElastiCache); Security Groups; provisionar bucket de backup + IAM role + SSM real |
+| **3.41A** ✅ | Decisão operacional AWS (docs-only): recomendação EC2+Compose, 7 decisões do dono, checklist de execução em `docs/aws-infra-sprint-3.41-plan.md` |
+| **3.41B** | Provisionar infra AWS real: bucket S3 + IAM + SSM + EC2 + RDS + Security Groups + DNS (Registro.br) + TLS (Certbot) + smoke tests + backup drill |
 | **3.42** | Deploy checklist go/no-go: executar `docs/deploy-security-checklist.md` §15/§16 |
 | **3.43** | Piloto real: primeiro usuário com dados sintéticos/anonimizados |
 

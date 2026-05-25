@@ -7,7 +7,13 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.40** (entregue — backup offsite Restic + S3, docs/scripts only) — **scripts
+**Sprint 3.41A** (entregue — docs-only) — **decisão operacional da infraestrutura AWS
+mínima segura.** Recomendação EC2+Docker Compose como primeira etapa; 7 decisões
+pendentes do dono documentadas; checklist de execução 3.41B em 6 fases; estimativa
+de custo; tabela de riscos. Plano completo: `docs/aws-infra-sprint-3.41-plan.md`.
+Docs-only; nenhum recurso AWS real criado; nenhum código de produto alterado; nenhum secret versionado.
+
+**Sprint anterior: 3.40** (entregue — backup offsite Restic + S3, docs/scripts only) — **scripts
 de backup/restore offsite com hard guards de segurança + runbook operacional com IAM
 mínimo e retenção documentada.** Sem migration, sem backend/frontend, sem AWS real,
 sem commit/push.
