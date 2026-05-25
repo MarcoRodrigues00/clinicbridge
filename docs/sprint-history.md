@@ -1982,3 +1982,51 @@ para um piloto de clínica única com tráfego baixo.
 | D7 | Storage de uploads | EBS 20 GB adicional (compatível sem refactor) |
 
 Docs-only; nenhum recurso AWS real criado; nenhum código de produto alterado; nenhum secret versionado.
+
+---
+
+## Sprint 3.41B-0 (runbook executável de provisionamento AWS — docs-only)
+
+**Objetivo:** transformar o plano da Sprint 3.41A em checklist operacional executável
+para o provisionamento real, com caminhos Console AWS e AWS CLI, billing seguro e gate
+de backup/drill antes do piloto real.
+
+**Decisões assumidas:** região `sa-east-1`; EC2 t3.small + Docker Compose; RDS db.t3.micro
+para produção (Postgres container para staging); EBS 20 GB; DNS Registro.br;
+TLS Certbot; SSM Parameter Store; S3 privado para backup.
+
+**Arquivo criado:**
+- `docs/aws-provisioning-runbook-3.41B.md` — 16 seções:
+  - §0 decisões assumidas; Console vs CLI; nomes de recursos; checklist de controle
+    de custos (billing alarm, evitar NAT/ALB/Multi-AZ, Elastic IP não solto).
+  - §1 conta root + MFA; usuário IAM operador `clinicbridge-operator` + MFA.
+  - §2 buckets S3 `clinicbridge-backups-staging`/`-prod` (block public access,
+    versioning, SSE-S3, bucket policy DenyInsecureTransport).
+  - §3 IAM role `clinicbridge-ec2-role` (policy Restic mínima + SSMManagedInstanceCore).
+  - §4 SSM Parameter Store — 7 parâmetros staging SecureString
+    (JWT_SECRET, MFA_ENCRYPTION_KEY, DATABASE_URL, REDIS_URL, FRONTEND_ORIGIN,
+    RESTIC_PASSWORD, RESTIC_REPOSITORY); bloco prod a repetir antes do piloto.
+  - §5 VPC default; Security Groups (EC2: 80/443 público, 22 IP fixo; RDS: 5432
+    interno; Redis: 6379 interno); nota sobre SSM Session Manager sem SSH.
+  - §6 RDS PostgreSQL db.t3.micro (Single-AZ, no-public, backup 7 dias, snapshot
+    antes de migrate).
+  - §7 Redis — opção A container (sem custo) ou opção B ElastiCache cache.t3.micro.
+  - §8 EC2 t3.small + Elastic IP + EBS 20 GB + setup inicial (Docker, Compose,
+    Restic, Node 20, AWS CLI, injeção SSM, migrations, subir serviços).
+  - §9 DNS Registro.br — registros A (raiz/api/app/staging → Elastic IP).
+  - §10 TLS Certbot — standalone, staging primeiro, dry-run, HSTS só após estável.
+  - §11 smoke tests (9 checks: redirect, liveness, readiness, TLS, NODE_ENV,
+    login, rate limit, headers, logs Nginx).
+  - §12 backup offsite drill (gate go/no-go) + agendamento systemd-timer.
+  - §13 controle de custos — parar EC2, snapshot RDS, liberar Elastic IP, revisão mensal.
+  - §14 rollback de emergência.
+  - §15 checklist go/no-go com 17 itens antes de aceitar tráfego real.
+
+**Arquivos atualizados:**
+- `CLAUDE.md` — sprint atual → 3.41B-0; pointer para runbook adicionado.
+- `docs/production-minimum-plan.md` — 3.41B-0 ✅ + slot 3.41B (execução real).
+- `docs/roadmap-next-phase.md` — tabela atualizada.
+- `docs/project-state.md` — "Última sprint aprovada" atualizado.
+- `docs/sprint-history.md` — esta entrada.
+
+Docs-only; nenhum recurso AWS real criado; nenhum código de produto alterado; nenhum secret versionado.

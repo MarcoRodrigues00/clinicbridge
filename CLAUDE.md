@@ -12,6 +12,7 @@
 > - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
 > - **Plano de produção mínima segura (AWS preferido; gaps P0/P1/P2; sprints 3.37–3.43; decisões pendentes):** `docs/production-minimum-plan.md`
 > - **Plano operacional de infra AWS Sprint 3.41B (EC2+Compose; 7 decisões; checklist 6 fases; custo ~$47-56/mês seguro):** `docs/aws-infra-sprint-3.41-plan.md`
+> - **Runbook de provisionamento AWS real Sprint 3.41B (passo a passo; Console+CLI; billing; SG; RDS; EC2; EBS; SSM; Certbot; smoke tests; drill):** `docs/aws-provisioning-runbook-3.41B.md`
 > - **Runbook DNS/TLS/Nginx para staging+produção (Sprint 3.38; Registro.br → Certbot → testes):** `docs/dns-tls-staging-runbook.md` (templates: `infra/nginx/conf.d/clinicbridge.{production,staging}.conf.example`)
 > - **Runbook de secrets/env de produção (Sprint 3.39; geração de secrets, SSM, injeção, rotação):** `docs/secrets-env-production-runbook.md`
 > - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
@@ -23,13 +24,13 @@
 
 ## Estado atual (resumido — atualizado 2026-05-25)
 
-**Sprint atual: 3.41A** (entregue — docs-only) — decisão operacional AWS mínima segura:
-recomendação **EC2 + Docker Compose** como primeira etapa (ECS/Fargate pós-piloto);
-7 decisões do dono documentadas; checklist de execução Sprint 3.41B em 6 fases;
-estimativa de custo (~$20-25/mês econômico; ~$47-56/mês seguro); tabela de riscos.
-Plano completo: `docs/aws-infra-sprint-3.41-plan.md`. Sem recurso AWS real, sem migration,
-sem backend/frontend. Próximo: Sprint 3.41B (provisionar infra real, bloqueia
-as 7 decisões do dono). Estado detalhado: `docs/project-state.md` + `docs/sprint-history.md`.
+**Sprint atual: 3.41B-0** (entregue — docs-only) — runbook executável de
+provisionamento AWS real: checklist passo a passo com caminhos Console+CLI; billing
+alarm; S3 privado; IAM mínimo; SSM; Security Groups; RDS; EC2+EBS; DNS Registro.br;
+Certbot; smoke tests; backup drill (gate go/no-go); rollback seguro.
+Runbook: `docs/aws-provisioning-runbook-3.41B.md`. Decisões assumidas (região
+`sa-east-1`, EC2+Compose, RDS, EBS, Certbot). Nenhum recurso AWS criado.
+Estado detalhado: `docs/project-state.md` + `docs/sprint-history.md`.
 
 **Fase:** Fase 3 (produção/governança). **Este MVP NÃO está pronto para produção** — ver P1 em
 `docs/security-notes.md`. Nunca descrever como "pronto para produção".
