@@ -7,7 +7,22 @@
 
 ## Última sprint aprovada
 
-**Sprint 3.41B-0** (entregue — docs-only) — **runbook executável de provisionamento
+**Sprint 4.0** (entregue — docs/ADR-only) — **expansão estratégica para Clinic OS
+modular.** ADR 0008 (`docs/adr/0008-clinicbridge-clinic-os-expansion.md`) registra
+oficialmente a evolução: ClinicBridge deixa de ser apenas ponte de migração e
+passa a sistema modular de gestão clínica, **sem telemedicina**, com migração
+permanecendo como diferencial. Roadmap Clinic OS criado
+(`docs/product-clinic-os-roadmap.md`) com fases 4.0–4.7 + fases futuras sem
+número (IA clínica assistiva, ICP-Brasil, TISS/TUSS real, SNGPC/ANVISA), cada uma exigindo
+ADR própria. ADR 0001 (Opção C) **parcialmente superseded** — base administrativa
+continua sendo pré-requisito; critérios de gating clínico mantidos. **Trilha AWS
+real pausada estrategicamente** (não cancelada) — gate de retomada é a aprovação
+da ADR de Fase 4.1 (arquitetura clínica + roles granulares + audit de leitura).
+Princípios invariantes: tenant isolation, CPF mascarado, audit append-only, sem
+PII em logs, sem delete físico, migration aditiva. Sem código, sem migration,
+sem AWS, sem alteração das invariantes vigentes.
+
+**Sprint anterior: 3.41B-0** (entregue — docs-only) — **runbook executável de provisionamento
 AWS real.** Checklist passo a passo com caminho Console AWS e caminho CLI; billing
 alarm; bucket S3 privado+versionado+SSE; IAM instance profile; SSM Parameter Store
 (17 parâmetros staging+prod); Security Groups (EC2/RDS/Redis); RDS db.t3.micro;

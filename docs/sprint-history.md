@@ -2030,3 +2030,91 @@ TLS Certbot; SSM Parameter Store; S3 privado para backup.
 - `docs/sprint-history.md` — esta entrada.
 
 Docs-only; nenhum recurso AWS real criado; nenhum código de produto alterado; nenhum secret versionado.
+
+---
+
+## Sprint 4.0 (expansão para Clinic OS modular — ADR/docs-only)
+
+**Objetivo:** registrar oficialmente a mudança estratégica do produto. O
+ClinicBridge deixa de ser apenas uma ponte de migração administrativa e passa
+a ser desenvolvido como **Clinic OS modular** (sistema completo de gestão de
+clínicas), competindo com sistemas como Feegow, **sem telemedicina**, com
+migração permanecendo como diferencial. Cada módulo clínico exige ADR própria.
+
+**Direção registrada:** ADR 0008 supersedes parcialmente o ADR 0001 (Opção C).
+A base administrativa segura continua sendo pré-requisito; critérios de gating
+clínico do ADR 0001 são mantidos e estendidos pelo ADR 0008 (4 critérios
+adicionais: roles granulares, audit de leitura, separação banco
+administrativo/clínico, estratégia de migração clínica).
+
+**Arquivos criados:**
+- `docs/adr/0008-clinicbridge-clinic-os-expansion.md` — 10 seções:
+  contexto; decisão (9 condições, incl. sem telemedicina, sem cópia de UI
+  de concorrentes); módulos no roadmap (8 itens); princípios invariantes
+  (10 regras); riscos (10 itens com mitigação); impacto na trilha AWS
+  (pausada estrategicamente, gate de retomada); o que não muda; critérios
+  para abrir cada Fase 4.x (13 critérios — 9 do ADR 0001 + 4 novos);
+  fora de escopo.
+- `docs/product-clinic-os-roadmap.md` — roadmap completo por fase:
+  - 4.0 ✅ decisão/ADR (esta sprint);
+  - 4.1 arquitetura clínica + roles granulares + audit de leitura (ADR 0009);
+  - 4.2 prontuário/atendimento v0.1 (ADR 0010);
+  - 4.3 documentos médicos/receitas v0.1 (ADR 0011) — sem ICP-Brasil;
+  - 4.4 financeiro v0.1 (ADR 0012);
+  - 4.5 **relatórios gerenciais v0.1** (ADR 0013) — promovido para antes
+    de convênios/estoque pelo alto valor percebido; sem dashboards/cron no v0.1;
+  - 4.6 **convênios/faturamento básico v0.1** (ADR 0014) — TISS/TUSS real fora;
+  - 4.7 **estoque básico v0.1** (ADR 0015) — medicamentos controlados/ANVISA fora.
+  - Fases futuras sem número: IA clínica assistiva (depois de 4.2 madura),
+    assinatura digital ICP-Brasil + prescrição válida (depois de 4.3 madura),
+    TISS/TUSS real (depois de 4.6), SNGPC/ANVISA (depois de 4.7).
+  Cada fase com entregáveis, gates, escopo, fora-de-escopo, princípios
+  transversais e riscos consolidados.
+
+**Arquivos atualizados (compactos):**
+- `CLAUDE.md` — sprint atual → 4.0; "Direção estratégica" reescrita para
+  refletir Clinic OS; "Project identity" atualizado (sem perder o que existe
+  hoje); "Próximas prioridades" reorganizado em trilha Clinic OS + trilha AWS
+  (pausada); "Escopo clínico proibido" referencia ADR de Fase 4.x; ponteiro
+  para ADR 0008 + roadmap adicionado; "Communication style" reescrito.
+- `docs/project-state.md` — "Última sprint aprovada" → 4.0; estado anterior
+  preservado.
+- `docs/sprint-history.md` — esta entrada.
+- `docs/roadmap-next-phase.md` — cabeçalho atualizado com referência ao ADR
+  0008 e ao roadmap Clinic OS; trilha AWS 3.41B/3.42/3.43 marcada como
+  ⏸️ pausado estrategicamente.
+
+**O que NÃO muda (invariantes em vigor — não tocados):**
+- `docs/security-notes.md`: "Escopo clínico proibido" continua válido. Sai
+  com ADR de Fase 4.x, não com esta sprint.
+- Tenant isolation por `clinica_id`, CPF mascarado, audit append-only, sem
+  PII em logs, sem delete físico — todas permanecem.
+- Backend/frontend/migrations/schema/API — sem alteração.
+- Runbook AWS (`docs/aws-provisioning-runbook-3.41B.md`) — permanece válido,
+  só a **execução** está pausada.
+
+**Impacto na trilha AWS:**
+- 3.41B (execução real) → **⏸️ pausado estrategicamente** (não cancelado).
+- 3.42 (go/no-go), 3.43 (piloto real) → ⏸️ dependentes.
+- Gate de retomada: ADR 0009 (Fase 4.1) aceita + reavaliação de
+  dimensionamento (RDS storage/backup window, EBS, KMS dedicada para
+  campos clínicos cifrados).
+- Justificativa: dimensionamento e modelo de cifra podem mudar à luz dos
+  dados clínicos; provisionar antes da Fase 4.1 gera retrabalho/custo.
+
+**Riscos registrados (não bloqueantes desta sprint):** LGPD art. 11 (dados
+sensíveis de saúde — validação jurídica externa será necessária); acesso
+indevido entre membros da mesma clínica (roles granulares + audit de leitura
+ficam na Fase 4.1); documentos médicos com força legal (Fase 4.3 limita-se
+a documento administrativo gerado); prescrição válida ICP-Brasil (fora do
+escopo, mantém critérios do ADR 0001 §7); TISS/TUSS real (fora do v0.1 da
+Fase 4.6); medicamentos controlados SNGPC/ANVISA (fora do v0.1 da Fase 4.7);
+IA clínica assistiva (fase futura sem número, depois da Fase 4.2 madura);
+assinatura digital ICP-Brasil + prescrição válida (fase futura sem número,
+depois da Fase 4.3 madura); over-engineering da
+arquitetura clínica (Fase 4.1 entrega o mínimo para 4.2); custo AWS antes
+de retorno clínico (trilha pausada).
+
+Docs/ADR-only; nenhum recurso AWS criado; nenhum código de produto alterado;
+nenhuma migration; nenhuma tabela clínica criada; nenhum secret versionado;
+invariantes de segurança intactas.
