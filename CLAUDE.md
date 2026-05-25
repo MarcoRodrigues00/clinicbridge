@@ -27,7 +27,31 @@
 
 ## Estado atual (resumido — atualizado 2026-05-25)
 
-**Sprint atual: 4.2A** (entregue — docs/ADR-only) — **escopo do módulo
+**Sprint atual: 4.2B-1** (entregue) — **base técnica do Prontuário v0.1:
+migration + tipos + env guard.** Migration aditiva
+`20260602000000_clinical_encounters_v0.ts` cria as 4 tabelas decididas na
+ADR 0010 (`clinical_encounters`, `clinical_encounter_notes`,
+`clinical_read_audit`, `user_clinical_roles`) com FKs conservadoras
+(`patient_id`/`attending_user_id`/`encounter_id`/`author_user_id` →
+`RESTRICT` para histórico médico-legal; `clinica_id` → `CASCADE`;
+`usuario_id`/`clinica_id` em `clinical_read_audit` → `SET NULL` espelhando
+`audit_logs`), 13 CHECK constraints (status/cancel triplet/reason
+allowlists/length caps/has-content/rectification consistency/role
+allowlist), 14 índices nomeados (incluindo unique parcial em roles
+ativas e partial index para LGPD-art.18 transparency). **Tipos em
+`backend/src/types/db.d.ts`** atualizados com 4 interfaces + 4 type
+aliases + registro em `Tables`. **Env var `CLINICAL_READ_AUDIT_STRICT`**
+em `backend/src/config/env.ts` com guard de produção (boot falha em
+`NODE_ENV=production` se ausente/false; default `false` em dev/test —
+mesmo padrão da Sprint 3.39 `MFA_ENCRYPTION_KEY`). `.env.example`
+documenta a postura. Smoke test do guard validou 9/9 cenários.
+
+**O que NÃO existe nesta sprint (intencional):** nenhum endpoint clínico,
+nenhum DAO, nenhum service, nenhum controller, nenhum middleware
+`requireClinicalRole`, nenhuma role implementada no banco (`user_clinical_roles`
+e `clinical_read_audit` começam vazias), nenhuma UI, nenhum recurso AWS.
+
+**Sprint anterior: 4.2A** (entregue — docs/ADR-only) — **escopo do módulo
 Prontuário/Atendimento clínico v0.1.** ADR 0010
 (`docs/adr/0010-clinical-encounters-medical-record-v0.md`) + operacional
 `docs/clinical-encounters-v0-scope.md`. Define: 5 campos textuais clínicos
@@ -109,7 +133,7 @@ job/cron; gestão de usuários/papéis na UI.
 `20260523_import_sessions` · `20260524_patients` · `20260525_import_sessions_summary` ·
 `20260526_scheduling` · `20260527_user_mfa` · `20260528_user_mfa_backup_codes` ·
 `20260529_clinic_team` · `20260530_clinic_join_requests_revoked` ·
-`20260601_patients_merged_into`.
+`20260601_patients_merged_into` · `20260602_clinical_encounters_v0`.
 
 **Invariantes locais (sanity-check):** patients=6 (base, sem demo), import_files=24,
 import_sessions=7. Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac,
@@ -142,10 +166,11 @@ conceitual e audit de leitura). Sequência de fases administrativas:
 
 - **Trilha Clinic OS (Fase 4):** **4.0 ✅** ADR de expansão → **4.1 ✅** ADR 0009
   + matriz de permissões + audit de leitura + threat model clínico → **4.2A ✅**
-  ADR 0010 escopo Prontuário v0.1 (4 tabelas, 5 endpoints, roles em tabela
-  paralela, cifra de coluna fora do v0.1) → **4.2B** implementação backend
-  (próximo passo — migrations, DAOs, services, middleware `requireClinicalRole`,
-  audit de leitura técnico, smoke tests) → **4.3** documentos médicos/receitas
+  ADR 0010 escopo Prontuário v0.1 → **4.2B-1 ✅** base técnica (migration +
+  tipos + env guard `CLINICAL_READ_AUDIT_STRICT`; sem endpoints) → **4.2B-2**
+  (próximo passo — DAOs, middleware `requireClinicalRole`, services,
+  controllers, rotas, logger estendido, audit de leitura técnico, smoke
+  tests) → **4.3** documentos médicos/receitas
   v0.1 (sem ICP-Brasil) → **4.4** financeiro v0.1 → **4.5** relatórios
   gerenciais v0.1 → **4.6** convênios/faturamento básico v0.1 (TISS/TUSS real
   fora) → **4.7** estoque básico v0.1 (medicamentos controlados/ANVISA fora).

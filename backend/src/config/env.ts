@@ -125,6 +125,38 @@ const EnvSchema = z.object({
   // the key is derived from JWT_SECRET (works in dev). In production, set a
   // dedicated value (P1). Never logged.
   MFA_ENCRYPTION_KEY: z.string().optional(),
+
+  // Clinical read audit posture (Sprint 4.2B-1, ADR 0010 §8.2.1). Controls
+  // whether failure to persist a row in `clinical_read_audit` BLOCKS the
+  // clinical content response.
+  //   - false (default in dev/test): best-effort — failure is logged at
+  //     `error` level and the read continues. Acceptable ONLY with synthetic
+  //     data because the compensating control for missing column-level
+  //     encryption is the audit itself (ADR 0010 §13).
+  //   - true: fail-closed — failure aborts the response with 500
+  //     `clinical_read_audit_unavailable`; clinical content NEVER leaves the
+  //     server without an audit row.
+  // Accepted raw values (case- and whitespace-insensitive): 'true', '1',
+  // 'false', '0', or unset (treated as false). Any other value FAILS env
+  // validation in ALL environments — no silent fallback. The production
+  // guard in superRefine additionally requires the raw value to be exactly
+  // 'true' or '1'.
+  CLINICAL_READ_AUDIT_STRICT: z
+    .string()
+    .optional()
+    .transform((raw, ctx): boolean => {
+      if (raw === undefined) return false;
+      const v = raw.trim().toLowerCase();
+      if (v === '' || v === 'false' || v === '0') return false;
+      if (v === 'true' || v === '1') return true;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "CLINICAL_READ_AUDIT_STRICT must be 'true', '1', 'false', '0', or unset. " +
+          'Received an unsupported value; refusing to start to avoid an unsafe default.',
+      });
+      return z.NEVER;
+    }),
 }).superRefine((val, ctx) => {
   if (val.RATE_LIMIT_STORE === 'redis' && !val.REDIS_URL) {
     ctx.addIssue({
@@ -195,6 +227,28 @@ const EnvSchema = z.object({
         message:
           'FRONTEND_ORIGIN must contain only HTTPS origins with real domains in production ' +
           '(no localhost, no 127.0.0.1, no http://). Example: https://app.clinicbridge.com.br',
+      });
+    }
+
+    // CLINICAL_READ_AUDIT_STRICT must be exactly 'true' in production
+    // (Sprint 4.2B-1, ADR 0010 §8.2.1). The clinical read audit is the
+    // PRIMARY COMPENSATING CONTROL for the absence of column-level
+    // encryption (ADR 0010 §13). Best-effort mode is acceptable ONLY in
+    // dev/staging with synthetic data; with real clinical data, missing
+    // an audit row means losing LGPD-art.18 traceability and retrospective
+    // detection of improper access. We re-read process.env here because the
+    // transform above already collapsed 'false'/unset to the same boolean —
+    // we need to distinguish "explicitly true" from "missing/false" to fail
+    // fast at boot. Aligns with the Sprint 3.39 guard pattern.
+    const rawClinicalStrict = (process.env.CLINICAL_READ_AUDIT_STRICT ?? '').trim().toLowerCase();
+    if (rawClinicalStrict !== 'true' && rawClinicalStrict !== '1') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['CLINICAL_READ_AUDIT_STRICT'],
+        message:
+          'CLINICAL_READ_AUDIT_STRICT must be set to "true" in production (ADR 0010 §8.2.1). ' +
+          'Clinical content reads must be fail-closed when audit persistence fails; ' +
+          'best-effort mode is acceptable only in dev/staging with synthetic data.',
       });
     }
   }

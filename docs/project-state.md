@@ -7,7 +7,138 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.2A** (entregue — docs/ADR-only) — **escopo do módulo
+**Sprint 4.2B-1** (entregue) — **base técnica do Prontuário v0.1:
+migration aditiva + tipos + env guard.** Primeira sprint a tocar
+código clínico de verdade. **Sem endpoints, sem DAOs, sem services,
+sem controllers, sem UI, sem AWS.** Implementa exatamente o que a
+ADR 0010 §5 + §15 (passos 1–2) e §8.2.1 (env var) decidiram.
+
+**Arquivos criados:**
+- `backend/migrations/20260602000000_clinical_encounters_v0.ts` —
+  migration única aditiva (batch 13) com as 4 tabelas decididas na
+  ADR 0010 §5:
+  - **`clinical_encounters`** — identidade do atendimento. FKs:
+    `clinica_id` CASCADE; `patient_id`, `attending_user_id` RESTRICT
+    (preserva histórico médico-legal — patients/users nunca são
+    deletados fisicamente; RESTRICT é defesa em profundidade);
+    `professional_id`, `appointment_id`, `canceled_by_user_id` SET NULL.
+    Colunas: `started_at`, `ended_at`, `status` (default `active`),
+    `canceled_at`, `cancel_reason_code`, `cancel_reason_text` (≤ 200
+    chars sem PII, jamais em audit), `created_at`, `updated_at`. 5 CHECK
+    constraints: status allowlist (`active`|`canceled`), time order
+    (`ended_at >= started_at`), cancel triplet consistency (status,
+    canceled_at, canceled_by, reason_code coerentes), reason_code
+    allowlist (`duplicated`|`wrong_patient`|`data_error`|`other`),
+    `cancel_reason_text` length cap. 4 índices (3 não-parciais + 1
+    partial em `appointment_id`).
+  - **`clinical_encounter_notes`** — notas append-only com cadeia de
+    retificação. `clinica_id` denormalizado para filtro de tenant
+    direto sem join. FKs: `clinica_id` CASCADE; `encounter_id`,
+    `author_user_id` RESTRICT; `revises_note_id` SET NULL. 5 campos
+    textuais clínicos (`chief_complaint` ≤ 2000, `anamnesis` ≤ 8000,
+    `evolution` ≤ 8000, `plan` ≤ 4000, `internal_note` ≤ 2000) +
+    `rectification_reason_code`. 4 CHECK constraints: has-content
+    (pelo menos um campo), length caps por coluna via `char_length`,
+    rectification consistency (`revises_note_id` ⇔ `reason_code`),
+    reason_code allowlist (`typo`|`clinical_correction`|`add_info`|`other`).
+    3 índices (2 não-parciais + 1 partial em `revises_note_id`).
+  - **`clinical_read_audit`** — paralelo a `audit_logs` (Sprint 1.5):
+    `criado_em` (português, mesmo padrão), `usuario_id`/`clinica_id`
+    com `SET NULL` (preserva evidência). Campos extras vs.
+    `audit_logs`: `papel_at_read` (snapshot anti-stale do papel
+    efetivo no momento da leitura), `paciente_id` (uuid pseudonimizado
+    — sem FK, dado pessoal sob LGPD com acesso restrito por design,
+    chave para LGPD-art.18 transparência ao titular). 2 CHECK
+    constraints: `acao LIKE 'clinical.%'` (namespace forçado), recurso
+    allowlist (`encounter`|`note`|`timeline`|`document`|`report`|`attachment`).
+    3 índices (2 não-parciais + 1 partial em `paciente_id`). Append-only
+    no DAO (4.2B-2 garante).
+  - **`user_clinical_roles`** — append-only com revogação por
+    `revoked_at`. FKs: `user_id`, `clinica_id` CASCADE; `granted_by`,
+    `revoked_by` SET NULL. Não toca `users.papel` — backward-compatible
+    total. 2 CHECK constraints: role allowlist (`profissional_clinico`|
+    `gestor_clinica` — `financeiro` reservado para Sprint 4.4), revocation
+    consistency (`revoked_at IS NULL ⇒ revoked_by_user_id IS NULL`).
+    2 índices (1 plain + 1 **UNIQUE PARCIAL** sobre `(user_id, clinica_id,
+    role) WHERE revoked_at IS NULL` — garante uma concessão ativa por
+    par + histórico preservado em linhas revogadas).
+  - **Total:** 13 CHECK constraints, 15 índices (não-PK), 0 dados clínicos
+    inseridos. Migration testada com `up`/`down` roundtrip; reaplicada
+    limpa.
+
+**Arquivos alterados:**
+- `backend/src/types/db.d.ts` — 4 interfaces novas
+  (`ClinicalEncounterRow`, `ClinicalEncounterNoteRow`,
+  `ClinicalReadAuditRow`, `UserClinicalRoleRow`) + 4 type aliases
+  (`ClinicalEncounterStatus`, `ClinicalEncounterCancelReasonCode`,
+  `ClinicalNoteRectificationReasonCode`, `UserClinicalRoleName`) +
+  registro das 4 tabelas em `declare module 'knex/types/tables'`.
+  Comentários inline reforçam: pseudonimização de `paciente_id`,
+  redação obrigatória de `internal_note` para não-autor, append-only.
+- `backend/src/config/env.ts` — nova env var `CLINICAL_READ_AUDIT_STRICT`
+  com transform que aceita `true`/`1`/`false`/`0`/unset; default `false`
+  em dev/test (best-effort). **Guard de produção no `superRefine`:**
+  quando `NODE_ENV=production`, o `process.env.CLINICAL_READ_AUDIT_STRICT`
+  bruto deve ser exatamente `'true'` ou `'1'` (case/whitespace insensitive);
+  qualquer outro valor (incluindo ausência) faz o boot **falhar** com
+  mensagem clara apontando ADR 0010 §8.2.1. Mesmo padrão da Sprint 3.39
+  (`MFA_ENCRYPTION_KEY`, `FRONTEND_ORIGIN`). Smoke test rodou 9
+  cenários (dev/test/prod × variações de var) — 9/9 PASS.
+- `.env.example` — bloco novo "Clinical read audit posture (Sprint
+  4.2B-1, ADR 0010 §8.2.1)" comentando a postura por ambiente; linha
+  `# CLINICAL_READ_AUDIT_STRICT=false` (comentada para deixar default
+  dev). Sem secret novo; sem valor real.
+
+**Verificação executada:**
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter backend migrate:latest` ✅ (batch 13)
+- `pnpm --filter backend migrate:rollback` + reaplicar — limpo
+- SQL checks pós-migration: 4 tabelas novas todas com COUNT=0;
+  invariantes locais preservadas (patients=26, import_files=25,
+  import_sessions=8, users=17, audit_logs=1373 — não tocados pela
+  migration). **Observação:** os números atuais diferem dos
+  "invariantes locais (sanity-check)" no CLAUDE.md (patients=6,
+  import_files=24, import_sessions=7) porque o banco local
+  acumulou dados de teste/seed de sprints anteriores. **Não é
+  problema desta sprint** — a invariante validada aqui é "migration
+  aditiva não toca dados existentes", e isso foi confirmado.
+- 13 CHECK constraints listados via `pg_constraint`; 15 índices
+  não-PK listados via `pg_indexes`. 4 testes negativos provaram:
+  status fora do allowlist, role fora do allowlist, nota sem
+  conteúdo, `clinical.*` acao sem namespace — todos REJEITADOS.
+- `grep -r clinical backend/src/routes /controllers /services /dao`:
+  só comentários antigos administrativos — **nenhum endpoint,
+  DAO, service ou controller clínico criado**.
+
+**O que NÃO é entregue nesta sprint (registrado):** nenhum endpoint
+clínico (`/clinical/*` continua 404), nenhum DAO clínico, nenhum
+service clínico, nenhum controller clínico, nenhum middleware
+`requireClinicalRole`, nenhum logger estendido, nenhuma role atribuída
+a usuário real, nenhuma inserção em `clinical_encounters`/
+`clinical_encounter_notes`/`clinical_read_audit`/`user_clinical_roles`
+(todas começam vazias), nenhuma UI, nenhum recurso AWS, nenhum
+secret novo. A ADR 0010 §15 passos 3–12 (DAOs, middleware, services,
+controllers, rotas, logger, smoke tests) vão para a **Sprint 4.2B-2**.
+
+**Riscos / ressalvas:**
+- Sprint 4.2B-2 precisa implementar tanto o caminho strict quanto o
+  best-effort do `clinicalReadAuditService` antes de qualquer endpoint
+  clínico responder com conteúdo. Hoje a env var existe e tem guard,
+  mas nenhum service consome — é flag inerte até a 4.2B-2.
+- O comentário no `.env.example` referencia "staging com dados sintéticos
+  pode rodar com false ou true para drill da postura prod" — quando a
+  4.2B-2 entregar staging, o drill com `true` é o teste-chave do
+  fail-closed (smoke test obrigatório §15 da ADR 0010).
+- Counts locais (`patients=26`, etc.) divergem dos invariantes
+  documentados em `CLAUDE.md` (6, 24, 7) — apenas estado acumulado de
+  testes, não regressão. Atualizar o sanity-check quando convier; não
+  bloqueia esta sprint.
+- Nenhuma role clínica concedida a nenhum usuário real. Em staging/dev,
+  a 4.2B-2 vai precisar de uma forma de conceder (endpoint owner-only
+  ou seed dev-only) antes de testar endpoints clínicos.
+
+**Sprint anterior: 4.2A** (entregue — docs/ADR-only) — **escopo do módulo
 Prontuário/Atendimento clínico v0.1.** ADR 0010
 (`docs/adr/0010-clinical-encounters-medical-record-v0.md`) + operacional
 `docs/clinical-encounters-v0-scope.md`.

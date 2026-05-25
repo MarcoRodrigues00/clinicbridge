@@ -171,6 +171,117 @@ export interface AppointmentRow {
   updated_at: Date;
 }
 
+// Clinical Prontuário/Atendimento v0.1 — Sprint 4.2B-1 (ADR 0010 + ADR 0009).
+// FIRST clinical data in the project. Every read of content is gated by
+// `requireClinicalRole` and audited by `clinical_read_audit`. No physical
+// delete in any of the four tables (enforced at the DAO layer).
+
+export type ClinicalEncounterStatus = 'active' | 'canceled';
+export type ClinicalEncounterCancelReasonCode =
+  | 'duplicated'
+  | 'wrong_patient'
+  | 'data_error'
+  | 'other';
+
+export interface ClinicalEncounterRow {
+  id: string;
+  clinica_id: string;
+  patient_id: string;
+  attending_user_id: string;
+  professional_id: string | null;
+  appointment_id: string | null;
+  started_at: Date;
+  ended_at: Date | null;
+  status: ClinicalEncounterStatus;
+  canceled_at: Date | null;
+  canceled_by_user_id: string | null;
+  cancel_reason_code: ClinicalEncounterCancelReasonCode | null;
+  // Free-text reason capped at 200 chars by DB CHECK. NEVER logged. NEVER
+  // written to audit_logs (no column for it there).
+  cancel_reason_text: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type ClinicalNoteRectificationReasonCode =
+  | 'typo'
+  | 'clinical_correction'
+  | 'add_info'
+  | 'other';
+
+export interface ClinicalEncounterNoteRow {
+  id: string;
+  // Denormalized for direct tenant filtering without joining encounters.
+  clinica_id: string;
+  encounter_id: string;
+  author_user_id: string;
+  // The 5 textual clinical fields (all OPTIONAL individually; at least one
+  // is required — enforced by DB CHECK + service). Length caps mirror ADR
+  // 0010 §3.2: chief_complaint ≤ 2000, anamnesis ≤ 8000, evolution ≤ 8000,
+  // plan ≤ 4000, internal_note ≤ 2000.
+  chief_complaint: string | null;
+  anamnesis: string | null;
+  evolution: string | null;
+  plan: string | null;
+  // internal_note: visible ONLY to the note's author + dono_clinica + gestor_clinica.
+  // The DAO/service must redact this field for any other reader. Other roles
+  // (funcionario_administrativo / financeiro / admin_sistema) cannot reach
+  // clinical endpoints at all (403 at the middleware), but defense in depth
+  // requires the field to be droppable at the DAO layer too.
+  internal_note: string | null;
+  // Rectification chain: a new note that supersedes an older one points to
+  // it here and must carry a reason code. Original notes are NEVER updated.
+  revises_note_id: string | null;
+  rectification_reason_code: ClinicalNoteRectificationReasonCode | null;
+  created_at: Date;
+}
+
+export interface ClinicalReadAuditRow {
+  id: string;
+  // Mirrors audit_logs: SET NULL on user/clinic delete to preserve evidence.
+  clinica_id: string | null;
+  usuario_id: string | null;
+  // Snapshot of the EFFECTIVE role at the moment of the read. Anti-stale:
+  // if the role is revoked later, the historical row preserves the role
+  // that was in force when the read happened.
+  papel_at_read: string;
+  // Convention: every action MUST start with 'clinical.' (DB CHECK enforces).
+  // Examples: 'clinical.encounter.read', 'clinical.encounter.list',
+  // 'clinical.timeline.list' (ADR 0010 §8.2).
+  acao: string;
+  recurso: 'encounter' | 'note' | 'timeline' | 'document' | 'report' | 'attachment';
+  recurso_id: string | null;
+  // paciente_id is an INTERNAL PSEUDONYMIZED IDENTIFIER (UUID) — personal
+  // data under LGPD. Required for LGPD-art.18 transparency to the data
+  // subject (who read my chart?). NEVER logged outside this table; NEVER
+  // paired with PII (no name/CPF/phone/email/clinical content in this row).
+  paciente_id: string | null;
+  request_id: string | null;
+  ip: string | null;
+  user_agent: string | null;
+  // Mirrors audit_logs column name (Portuguese) rather than created_at.
+  criado_em: Date;
+}
+
+// New clinical roles live in their own table (parallel to users.papel) so the
+// legacy 'dono_clinica' / 'secretaria' / 'admin_sistema' enum and the JWT/auth
+// pipeline keep working unchanged. financeiro is reserved for Sprint 4.4 and
+// is NOT in the DB CHECK allowlist yet.
+export type UserClinicalRoleName = 'profissional_clinico' | 'gestor_clinica';
+
+export interface UserClinicalRoleRow {
+  id: string;
+  user_id: string;
+  clinica_id: string;
+  role: UserClinicalRoleName;
+  granted_by_user_id: string | null;
+  granted_at: Date;
+  // revoked_at IS NULL = active grant. Active uniqueness is enforced by a
+  // partial unique index on (user_id, clinica_id, role) WHERE revoked_at IS NULL.
+  revoked_at: Date | null;
+  revoked_by_user_id: string | null;
+}
+
 declare module 'knex/types/tables' {
   interface Tables {
     users: UserRow;
@@ -183,5 +294,9 @@ declare module 'knex/types/tables' {
     clinic_professionals: ClinicProfessionalRow;
     appointments: AppointmentRow;
     clinic_join_requests: ClinicJoinRequestRow;
+    clinical_encounters: ClinicalEncounterRow;
+    clinical_encounter_notes: ClinicalEncounterNoteRow;
+    clinical_read_audit: ClinicalReadAuditRow;
+    user_clinical_roles: UserClinicalRoleRow;
   }
 }

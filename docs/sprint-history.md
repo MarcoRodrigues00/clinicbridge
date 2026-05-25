@@ -2370,3 +2370,162 @@ alterado; nenhuma migration; nenhuma tabela clínica criada; nenhum
 secret versionado; nenhuma role nova no banco; nenhum audit de leitura
 técnico; nenhum endpoint clínico implementado; invariantes de segurança
 intactas.
+
+---
+
+## Sprint 4.2B-1 (base técnica do Prontuário v0.1 — migration + tipos + env guard)
+
+**Objetivo:** implementar a fundação técnica decidida na ADR 0010 §5 + §8.2.1
+sem ainda criar endpoints clínicos. Primeira sprint a tocar **código clínico**
+de verdade (migration aditiva + tipos + env guard). Autoriza a Sprint 4.2B-2
+(DAOs, middleware, services, controllers, rotas) a consumir o schema e a env
+var sem refactor.
+
+**Arquivos criados:**
+- `backend/migrations/20260602000000_clinical_encounters_v0.ts` — migration
+  única aditiva (batch 13) com as 4 tabelas decididas na ADR 0010 §5:
+  - `clinical_encounters` — identidade do atendimento (FKs:
+    `clinica_id` CASCADE; `patient_id`, `attending_user_id` RESTRICT
+    para histórico médico-legal; `professional_id`, `appointment_id`,
+    `canceled_by_user_id` SET NULL). 5 CHECK constraints (status
+    allowlist, time order, cancel triplet consistency, reason_code
+    allowlist, `cancel_reason_text` length cap ≤ 200). 4 índices
+    (3 plain + 1 partial em `appointment_id`).
+  - `clinical_encounter_notes` — notas append-only com cadeia de
+    retificação. `clinica_id` denormalizado. FKs: `clinica_id`
+    CASCADE; `encounter_id`, `author_user_id` RESTRICT;
+    `revises_note_id` SET NULL. 5 campos textuais (`chief_complaint`,
+    `anamnesis`, `evolution`, `plan`, `internal_note`) com length caps
+    via `char_length`. 4 CHECK constraints (has-content, length caps,
+    rectification consistency, reason_code allowlist). 3 índices
+    (2 plain + 1 partial em `revises_note_id`).
+  - `clinical_read_audit` — paralelo a `audit_logs` (Sprint 1.5).
+    `criado_em` (português, mesmo padrão), `usuario_id`/`clinica_id`
+    com `SET NULL` (preserva evidência). Extras: `papel_at_read`
+    (snapshot anti-stale), `paciente_id` uuid pseudonimizado sem FK
+    (LGPD-art.18 transparency ao titular). 2 CHECK constraints
+    (`acao LIKE 'clinical.%'`, recurso allowlist). 3 índices
+    (2 plain + 1 partial em `paciente_id`).
+  - `user_clinical_roles` — append-only com `revoked_at`. FKs:
+    `user_id`, `clinica_id` CASCADE; `granted_by`/`revoked_by` SET NULL.
+    Não toca `users.papel`. 2 CHECK constraints (role allowlist
+    `profissional_clinico|gestor_clinica` — `financeiro` reservado
+    para 4.4; revocation consistency). 1 unique parcial sobre
+    `(user_id, clinica_id, role) WHERE revoked_at IS NULL` (garante
+    uma concessão ativa por par, histórico preservado).
+  - Total: **13 CHECK constraints, 15 índices não-PK**.
+  - Convenção de FK ON DELETE explicada em comentários no topo do arquivo:
+    CASCADE para tenant, RESTRICT para histórico médico-legal, SET NULL
+    para vínculos opcionais ou para preservar evidência (espelhando
+    `audit_logs`).
+
+**Arquivos alterados:**
+- `backend/src/types/db.d.ts` — 4 interfaces (`ClinicalEncounterRow`,
+  `ClinicalEncounterNoteRow`, `ClinicalReadAuditRow`,
+  `UserClinicalRoleRow`) + 4 type aliases
+  (`ClinicalEncounterStatus`, `ClinicalEncounterCancelReasonCode`,
+  `ClinicalNoteRectificationReasonCode`, `UserClinicalRoleName`) +
+  registro em `declare module 'knex/types/tables'`. Comentários
+  reforçam pseudonimização de `paciente_id`, obrigação de redact
+  `internal_note` para não-autor, append-only.
+- `backend/src/config/env.ts` — nova env var `CLINICAL_READ_AUDIT_STRICT`
+  com transform (aceita `true`/`1`/`false`/`0`/unset) e guard de
+  produção no `superRefine`: quando `NODE_ENV=production`, o raw
+  `process.env.CLINICAL_READ_AUDIT_STRICT` deve ser exatamente
+  `'true'`/`'1'` (após `trim().toLowerCase()`); qualquer outro valor
+  (incluindo ausência) faz o boot **falhar** com mensagem citando
+  ADR 0010 §8.2.1. Mesmo padrão da Sprint 3.39 (`MFA_ENCRYPTION_KEY`,
+  `FRONTEND_ORIGIN`).
+- `.env.example` — bloco novo "Clinical read audit posture (Sprint
+  4.2B-1, ADR 0010 §8.2.1)" explicando postura por ambiente com
+  exemplos de valores; linha de exemplo comentada
+  (`# CLINICAL_READ_AUDIT_STRICT=false`). Sem secret novo.
+- `CLAUDE.md` — sprint atual → 4.2B-1; lista de migrations atualizada
+  com `20260602_clinical_encounters_v0`; trilha Clinic OS reorganizada
+  (4.2B-1 ✅ → 4.2B-2 pendente).
+- `docs/project-state.md` — "Última sprint aprovada" → 4.2B-1 com
+  detalhe das FKs/constraints/índices, env guard, verificações
+  executadas, riscos/ressalvas. 4.2A promovida a "Sprint anterior".
+- `docs/sprint-history.md` — esta entrada.
+
+**Decisões técnicas (todas as 6 pendentes da ADR 0010 implementadas):**
+1. **Prefixo `clinical_` em `public`** (sem schema PostgreSQL
+   separado). Justificativa: simplicidade de migrations/FKs/grants —
+   reaproveita o padrão atual sem custo extra.
+2. **FK `ON DELETE RESTRICT`** em `patient_id`, `attending_user_id`,
+   `encounter_id`, `author_user_id` — defesa em profundidade médico-legal
+   (delete físico já é proibido por invariante; RESTRICT bloqueia no
+   schema também).
+3. **`clinical_read_audit` espelha `audit_logs`** (Sprint 1.5):
+   `criado_em` (português), FKs com `SET NULL` para preservar evidência.
+   Decisão coerente com o propósito de "evidência forense" da tabela.
+4. **`paciente_id` sem FK** — espelha `audit_logs.recurso_id` (também
+   sem FK). Pacientes não são deletados fisicamente; FK adicionaria
+   custo de manutenção sem ganho prático.
+5. **`user_clinical_roles` em vez de `users.papel` extra** —
+   append-only com revogação, multi-role natural, unique parcial em
+   roles ativas. Backward-compatible total com auth/JWT/audit
+   existentes.
+6. **`CLINICAL_READ_AUDIT_STRICT` lido bruto no `superRefine`** —
+   o transform de `z.string().optional()` já colapsa "false" e ausente
+   para o mesmo boolean, mas o guard de produção precisa distinguir
+   "explicitamente true" de "missing/false" para falhar fast. Solução:
+   ler `process.env.CLINICAL_READ_AUDIT_STRICT` direto dentro do
+   `superRefine` e comparar contra `'true'`/`'1'` após
+   `trim().toLowerCase()`. Mesmo padrão usado em outros guards de prod
+   no projeto.
+
+**Verificação executada:**
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter backend migrate:latest` ✅ (batch 13)
+- `pnpm --filter backend migrate:rollback` + reaplicar — limpo
+- SQL checks: 4 tabelas com COUNT=0; `pg_constraint` lista 13 CHECK
+  constraints com nomes esperados; `pg_indexes` lista 15 índices
+  não-PK com nomes esperados (incluindo unique parcial); invariantes
+  locais de patients/import_files/import_sessions/users/audit_logs
+  preservadas pela migration aditiva.
+- 4 testes negativos de CHECK: status fora do allowlist, role fora do
+  allowlist, nota sem nenhum campo, `acao` sem prefixo `clinical.` —
+  todos REJEITADOS com mensagem correta.
+- Smoke test do env guard em 9 cenários (dev/test/prod × variantes da
+  env var): **9/9 PASS**.
+- `grep -r clinical` em `backend/src/{routes,controllers,services,dao}`:
+  só comentários antigos administrativos. **Nenhum endpoint, DAO,
+  service ou controller clínico criado** (esperado).
+
+**Impacto na trilha AWS:** trilha continua **⏸️ pausada estrategicamente**.
+Esta sprint **não** muda o gate de retomada. O dimensionamento RDS
+registrado na ADR 0010 §16 continua válido (4 tabelas adicionadas, ainda
+todas vazias). KMS sem mudança. Backup Restic vai cobrir as novas tabelas
+automaticamente quando rodar.
+
+**Riscos / ressalvas:**
+- `CLINICAL_READ_AUDIT_STRICT` existe mas é **flag inerte** até a 4.2B-2
+  implementar `clinicalReadAuditService`. Em prod o boot exige `true`,
+  mas hoje nenhum service consome — comportamento real só aparece
+  quando endpoints clínicos forem implementados.
+- `user_clinical_roles` começa vazia: 4.2B-2 precisa de endpoint
+  owner-only (ADR 0010 §11.7) ou seed dev-only para conceder antes de
+  testar endpoints clínicos.
+- Counts locais (patients=26, import_files=25, import_sessions=8)
+  divergem dos "invariantes locais (sanity-check)" do `CLAUDE.md`
+  (6, 24, 7) — estado acumulado de testes anteriores, não regressão
+  da migration. Atualizar quando convier; fora do escopo desta sprint.
+- 4.2B-2 deve preservar a invariante "logger redige campos clínicos"
+  (ADR 0010 §8.4 + §15 passo 7) — a migration cria as colunas mas o
+  service da 4.2B-2 é quem nunca pode permitir esses campos no log.
+
+**O que NÃO muda (invariantes em vigor — não tocados):**
+- `users.papel` continua aceitando apenas
+  `dono_clinica|secretaria|admin_sistema`.
+- `audit_logs` sem alteração de schema; continua append-only.
+- `patients`, `appointments`, `clinic_professionals`, `clinic_join_requests`,
+  `users`, `clinics` — sem alteração de schema, dados preservados.
+- Vocabulário do produto da Sprint 3.24.1 — sem mudança.
+- Tenant isolation por `clinica_id`, CPF mascarado, audit append-only,
+  sem PII em logs, sem delete físico, migration aditiva — todas mantidas.
+
+Primeira sprint com código clínico, mas ainda sem qualquer endpoint
+clínico exposto. Sem dado clínico inserido. Sem AWS real. Sem secret
+versionado. Sem commit automático.
