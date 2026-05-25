@@ -1940,3 +1940,45 @@ Bloco novo após o bloco Sprint 3.5 (linha 163):
 6. Agendar (sprint futura): systemd-timer / ECS scheduled task + alerta.
 
 Sem commit/push.
+
+---
+
+## Sprint 3.41A (decisão operacional AWS — docs-only)
+
+**Objetivo:** definir o plano concreto e seguro para provisionar a infraestrutura
+inicial do ClinicBridge na AWS, sem criar recursos reais.
+
+**Recomendação principal:** EC2 (t3.small) + Docker Compose como primeira etapa.
+ECS/Fargate é a evolução natural, mas o overhead operacional não se justifica
+para um piloto de clínica única com tráfego baixo.
+
+**Arquivos criados:**
+- `docs/aws-infra-sprint-3.41-plan.md` — plano operacional completo com:
+  - Topologia recomendada (EC2 + Nginx + RDS + ElastiCache + EBS + S3 + SSM).
+  - Tabela de trade-offs EC2+Compose vs ECS/Fargate.
+  - 7 decisões pendentes do dono (região, orçamento, banco, Redis, DNS, TLS, storage).
+  - Checklist de execução em 6 fases (fundação, rede/SG, dados, EC2, DNS/TLS, validação).
+  - Estimativa de custo orientativa (~$20-25/mês econômico; ~$47-56/mês seguro).
+  - Sequência simplificada por dias (D+0 → D+4).
+  - Tabela de riscos e mitigações.
+
+**Arquivos atualizados:**
+- `docs/production-minimum-plan.md` — cabeçalho com referência ao plano 3.41A;
+  tabela de sprints atualizada (3.41A ✅ + 3.41B).
+- `docs/roadmap-next-phase.md` — tabela de sprints atualizada (3.41A ✅ + 3.41B).
+- `docs/sprint-history.md` — esta entrada.
+- `CLAUDE.md` — sprint atual atualizado para 3.41A.
+
+**Decisões do dono (7 itens — bloqueia 3.41B):**
+
+| # | Decisão | Recomendação |
+|---|---|---|
+| D1 | Região AWS | `sa-east-1` (São Paulo) — LGPD + latência BR |
+| D2 | Orçamento mensal | ~$47-56/mês (seguro) vs ~$20-25/mês (econômico) |
+| D3 | Banco de produção | RDS `db.t3.micro` (backups automáticos; P1 antes de dado real) |
+| D4 | Redis | ElastiCache `cache.t3.micro` ou Redis container (staging first) |
+| D5 | DNS | Manter Registro.br (registros A/CNAME manuais) |
+| D6 | TLS | EC2 + Nginx + Certbot (templates prontos) |
+| D7 | Storage de uploads | EBS 20 GB adicional (compatível sem refactor) |
+
+Docs-only; nenhum recurso AWS real criado; nenhum código de produto alterado; nenhum secret versionado.

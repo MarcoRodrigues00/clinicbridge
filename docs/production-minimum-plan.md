@@ -5,6 +5,9 @@
 > + runbook DNS/TLS. **Sprint 3.39** (2026-05-24) adicionou guards de boot para
 > `MFA_ENCRYPTION_KEY` e `FRONTEND_ORIGIN` em produção + criou este runbook de
 > secrets. DNS e cert reais ficam para quando a EC2 estiver disponível.
+> **Sprint 3.41A** (2026-05-25) adicionou plano operacional detalhado para
+> provisionar a infra AWS mínima: recomendação EC2+Compose, 7 decisões do dono,
+> checklist 6 fases, estimativa de custo. Ver `docs/aws-infra-sprint-3.41-plan.md`.
 >
 > Provedor preferido: **AWS** (direção aceita em 2026-05-24; decisões de sub-opção
 > ainda pendentes — ver Seção 5). Outras opções (Hetzner, DigitalOcean, Railway)
@@ -221,7 +224,8 @@ público: Nginx (80/443) ou ALB (se adotado).
 | **3.38** ✅ | ~~TLS real + DNS~~ → Corrigir `NODE_ENV` no Dockerfile runtime ✅; templates Nginx prod/staging ✅; runbook DNS/TLS ✅. DNS e cert reais ficam para quando EC2 estiver disponível | Código (Dockerfile) + docs + templates |
 | **3.39** ✅ | Guards de boot para `MFA_ENCRYPTION_KEY` (obrigatória em prod) e `FRONTEND_ORIGIN` (sem localhost/http em prod); runbook de secrets/env de produção com caminhos SSM, geração de secrets e caveats de rotação | Config + docs |
 | **3.40** ✅ | ~~Backup offsite: Restic → S3 bucket privado; job agendado~~ → Scripts (`{check,backup,restore}-*-offsite-restic.sh`) + runbook (`docs/backup-offsite-runbook.md`) + IAM mínimo documentado + restore drill em banco separado. Bucket real, IAM real, SSM real e agendamento ficam para 3.41 (depende de conta AWS) | Scripts + docs |
-| **3.41** | Storage persistente + banco/Redis de prod: volume EBS nomeado OU provisionar RDS + ElastiCache (staging first); Security Groups; firewall de porta | Infra + docs |
+| **3.41A** ✅ | Decisão operacional AWS — docs-only: recomendação EC2+Compose, 7 decisões do dono, checklist de execução 3.41B em `docs/aws-infra-sprint-3.41-plan.md` | Docs/planejamento |
+| **3.41B** | Provisionar infra AWS real: bucket S3 + IAM + SSM + EC2 + RDS/ElastiCache + Security Groups + DNS + TLS + backup drill (seguir `docs/aws-infra-sprint-3.41-plan.md`) | Infra |
 | **3.42** | Deploy checklist go/no-go: executar `docs/deploy-security-checklist.md` §15/§16; smoke tests em staging; confirmar todos P0/P1 resolvidos | QA/checklist |
 | **3.43** | Piloto real: primeiro usuário com dados sintéticos ou anonimizados; monitorar CloudWatch, audit logs, health check; coletar feedback | Operacional |
 

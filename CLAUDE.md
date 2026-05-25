@@ -11,6 +11,7 @@
 > - **Checklist de deploy seguro / CORS / env prod:** `docs/deploy-security-checklist.md` (+ ADR `docs/adr/0004-deploy-security-baseline.md`)
 > - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
 > - **Plano de produção mínima segura (AWS preferido; gaps P0/P1/P2; sprints 3.37–3.43; decisões pendentes):** `docs/production-minimum-plan.md`
+> - **Plano operacional de infra AWS Sprint 3.41B (EC2+Compose; 7 decisões; checklist 6 fases; custo ~$47-56/mês seguro):** `docs/aws-infra-sprint-3.41-plan.md`
 > - **Runbook DNS/TLS/Nginx para staging+produção (Sprint 3.38; Registro.br → Certbot → testes):** `docs/dns-tls-staging-runbook.md` (templates: `infra/nginx/conf.d/clinicbridge.{production,staging}.conf.example`)
 > - **Runbook de secrets/env de produção (Sprint 3.39; geração de secrets, SSM, injeção, rotação):** `docs/secrets-env-production-runbook.md`
 > - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
@@ -22,14 +23,13 @@
 
 ## Estado atual (resumido — atualizado 2026-05-25)
 
-**Sprint atual: 3.40** (entregue — docs/scripts only) — backup **offsite** Restic + S3:
-scripts `scripts/{check,backup,restore}-*-offsite-restic.sh` (hard guard `s3:`, hard guard
-`RESTORE_DB != POSTGRES_DB`, `--help`/`--dry-run`, sem secrets em logs); runbook
-`docs/backup-offsite-runbook.md` com IAM mínimo, retenção `forget` documentada (NÃO
-auto-executada) e restore drill em `clinicbridge_restore_offsite_test`; `.env.example`
-documenta `RESTIC_REPOSITORY` (s3:), `AWS_*`, `RESTIC_CACHE_DIR`. Sem migration,
-sem backend/frontend, sem AWS real, sem commit. Bucket S3/IAM/SSM reais pendentes
-(Sprint 3.41+). Estado detalhado: `docs/project-state.md` + `docs/sprint-history.md`.
+**Sprint atual: 3.41A** (entregue — docs-only) — decisão operacional AWS mínima segura:
+recomendação **EC2 + Docker Compose** como primeira etapa (ECS/Fargate pós-piloto);
+7 decisões do dono documentadas; checklist de execução Sprint 3.41B em 6 fases;
+estimativa de custo (~$20-25/mês econômico; ~$47-56/mês seguro); tabela de riscos.
+Plano completo: `docs/aws-infra-sprint-3.41-plan.md`. Sem recurso AWS real, sem migration,
+sem backend/frontend. Próximo: Sprint 3.41B (provisionar infra real, bloqueia
+as 7 decisões do dono). Estado detalhado: `docs/project-state.md` + `docs/sprint-history.md`.
 
 **Fase:** Fase 3 (produção/governança). **Este MVP NÃO está pronto para produção** — ver P1 em
 `docs/security-notes.md`. Nunca descrever como "pronto para produção".
