@@ -19,6 +19,7 @@
 > - **Merge seguro de duplicados (B-safe; decidido 3.32, backend 3.33, UX 3.34, validado 3.35; administrativo, sem delete físico, sem undo completo):** ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`
 > - **Expansão para Clinic OS modular (Sprint 4.0; sem telemedicina; migração como diferencial; ADR própria por módulo; trilha AWS pausada estrategicamente):** ADR `docs/adr/0008-clinicbridge-clinic-os-expansion.md` + roadmap `docs/product-clinic-os-roadmap.md`
 > - **Arquitetura clínica + roles granulares + audit de leitura + LGPD clínica (Sprint 4.1, docs/ADR-only; bloqueia 4.2+; gate de retomada AWS atualizado):** ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` + operacional `docs/clinical-architecture-and-permissions.md`
+> - **Prontuário/Atendimento clínico v0.1 — escopo do módulo (Sprint 4.2A, docs/ADR-only; autoriza Sprint 4.2B; sem migration/endpoint ainda; cifra a nível de coluna fora do v0.1 — decisão revisável):** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` + operacional `docs/clinical-encounters-v0-scope.md`
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
 > - **Demo/piloto v0.1 (Sprint 3.20; dados fictícios, não clínico):** `docs/demo-data/README.md` (+ `docs/demo-data/pacientes-demo.csv`), `docs/demo-pilot-v0.1-script.md`, `docs/demo-pilot-v0.1-checklist.md` — seed dev-only de agenda: `backend/scripts/seed-demo-scheduling.ts` (`pnpm --filter backend seed:demo` / `seed:demo:clean`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
@@ -26,30 +27,52 @@
 
 ## Estado atual (resumido — atualizado 2026-05-25)
 
-**Sprint atual: 4.1** (entregue — docs/ADR-only) — **arquitetura clínica
-mínima, roles granulares conceituais, audit de leitura e LGPD clínica.**
-ADR 0009 (`docs/adr/0009-clinical-architecture-roles-read-audit.md`) +
-operacional `docs/clinical-architecture-and-permissions.md` (matriz de
-permissões, catálogo de audit de leitura, versionamento, threat model,
-gates para 4.2). **Bloqueia Fase 4.2** (prontuário/atendimento v0.1) até a
-matriz/audit/roles serem revisados e a ADR 0010 abrir o módulo. Mantém ADR
-0008 §4 invariantes. **Trilha AWS continua pausada estrategicamente** — gate
-de retomada agora é **ADR 0010 aceita + reavaliação RDS/EBS/KMS** registrada
-na ADR 0009 §10. Sem código, sem migration, sem AWS, sem alteração das
-invariantes vigentes.
+**Sprint atual: 4.2A** (entregue — docs/ADR-only) — **escopo do módulo
+Prontuário/Atendimento clínico v0.1.** ADR 0010
+(`docs/adr/0010-clinical-encounters-medical-record-v0.md`) + operacional
+`docs/clinical-encounters-v0-scope.md`. Define: 5 campos textuais clínicos
+(`chief_complaint`/`anamnesis`/`evolution`/`plan`/`internal_note`); 4
+tabelas novas conceituais (`clinical_encounters`,
+`clinical_encounter_notes`, `clinical_read_audit`, `user_clinical_roles`);
+status `active|canceled` (one-way; sem restore no v0.1); notas append-only
+com retificação por `revises_note_id`; **profissional só vê os próprios**
+atendimentos; dono/gestor leem qualquer com audit mas **não editam alheio**;
+funcionario/financeiro/admin_sistema → 403 em todo endpoint clínico;
+`internal_note` redacted para não-autor; criar encounter exige paciente
+ativo + não-mesclado (ADR 0007 — sem mistura automática de histórico clínico);
+**cifra a nível de coluna FORA do v0.1** (decisão revisável — confia em
+RDS encryption at rest + TLS + controles de aplicação + audit de leitura
++ logger redigindo campos clínicos). 5 endpoints clínicos + 2
+administrativos (grant/revoke role). Roles novas em tabela paralela
+`user_clinical_roles` append-only (mantém `users.papel` retrocompatível).
+Audit de leitura em tabela paralela `clinical_read_audit` com `paciente_id`
+pseudonimizado; **postura de falha** controlada por
+`CLINICAL_READ_AUDIT_STRICT` — best-effort apenas em dev/staging com
+dados sintéticos; **fail-closed obrigatório em produção** (guard de boot
+em `config/env.ts` força `true` quando `NODE_ENV=production`; falha →
+500 `clinical_read_audit_unavailable` + conteúdo clínico **nunca** sai
+no body); smoke test de fail-closed obrigatório na 4.2B.
+**Autoriza Sprint 4.2B** a implementar exatamente este
+escopo — sem desvios. Sem código, sem migration, sem AWS.
+
+**Sprint anterior: 4.1** (entregue — docs/ADR-only) — arquitetura clínica
+conceitual + roles granulares + audit de leitura + LGPD clínica (ADR 0009
++ `docs/clinical-architecture-and-permissions.md`). **Sprint 4.1.1** —
+correção LGPD/segurança no `paciente_id` (identificador interno
+pseudonimizado, dado pessoal com acesso restrito).
 
 **Sprint anterior: 4.0** (entregue — docs/ADR-only) — expansão estratégica
-para Clinic OS modular (ADR 0008 + roadmap `docs/product-clinic-os-roadmap.md`).
-ADR 0001 (Opção C) parcialmente superseded — base administrativa segura
-continua sendo pré-requisito.
+para Clinic OS modular (ADR 0008). ADR 0001 (Opção C) parcialmente
+superseded — base administrativa segura continua sendo pré-requisito.
 
-**Fases Clinic OS planejadas:** 4.0 ✅ decisão → **4.1 ✅** arquitetura clínica
-+ roles granulares + audit de leitura (ADR 0009) → 4.2 prontuário/atendimento
-(ADR 0010, pendente) → 4.3 documentos médicos/receitas (sem ICP-Brasil) →
-4.4 financeiro → 4.5 relatórios gerenciais → 4.6 convênios/faturamento básico
+**Fases Clinic OS planejadas:** 4.0 ✅ decisão → **4.1 ✅** arquitetura
+clínica + roles granulares + audit de leitura (ADR 0009) → **4.2A ✅** ADR
+0010 escopo do Prontuário v0.1 → **4.2B** implementação backend (pendente;
+sem ADR nova) → 4.3 documentos médicos/receitas (sem ICP-Brasil) → 4.4
+financeiro → 4.5 relatórios gerenciais → 4.6 convênios/faturamento básico
 (TISS/TUSS real fora) → 4.7 estoque básico (medicamentos controlados/ANVISA
-fora). Cada fase exige ADR própria. Detalhe:
-`docs/product-clinic-os-roadmap.md`.
+fora). Cada **fase nova** exige ADR própria; 4.2B implementa o que a 4.2A
+decidiu. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **Este MVP NÃO está pronto para produção** — ver P1 em
 `docs/security-notes.md`. Nunca descrever como "pronto para produção".
@@ -118,15 +141,18 @@ conceitual e audit de leitura). Sequência de fases administrativas:
 ## Próximas prioridades
 
 - **Trilha Clinic OS (Fase 4):** **4.0 ✅** ADR de expansão → **4.1 ✅** ADR 0009
-  + matriz de permissões + audit de leitura + threat model clínico (**bloqueia
-  4.2+** até a ADR 0010 abrir) → **4.2** prontuário/atendimento v0.1 (ADR 0010
-  pendente; antes de qualquer migration clínica) → **4.3** documentos médicos/
-  receitas v0.1 (sem ICP-Brasil) → **4.4** financeiro v0.1 → **4.5** relatórios
+  + matriz de permissões + audit de leitura + threat model clínico → **4.2A ✅**
+  ADR 0010 escopo Prontuário v0.1 (4 tabelas, 5 endpoints, roles em tabela
+  paralela, cifra de coluna fora do v0.1) → **4.2B** implementação backend
+  (próximo passo — migrations, DAOs, services, middleware `requireClinicalRole`,
+  audit de leitura técnico, smoke tests) → **4.3** documentos médicos/receitas
+  v0.1 (sem ICP-Brasil) → **4.4** financeiro v0.1 → **4.5** relatórios
   gerenciais v0.1 → **4.6** convênios/faturamento básico v0.1 (TISS/TUSS real
   fora) → **4.7** estoque básico v0.1 (medicamentos controlados/ANVISA fora).
   **Fases futuras (sem número):** IA clínica assistiva (depois de 4.2 madura),
   assinatura digital ICP-Brasil (depois de 4.3 madura), TISS/TUSS real (depois
-  de 4.6), SNGPC/ANVISA (depois de 4.7). Cada fase = ADR própria. Detalhe:
+  de 4.6), SNGPC/ANVISA (depois de 4.7). Cada **fase nova** = ADR própria;
+  4.2B implementa o decidido na 4.2A. Detalhe:
   `docs/product-clinic-os-roadmap.md`.
 - **Trilha AWS (pausada estrategicamente):** **3.41A ✅** plano operacional →
   **3.41B-0 ✅** runbook executável → **3.41B** execução real ⏸️ → **3.42** go/no-go ⏸️
@@ -164,13 +190,21 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
   (`include_cpf_raw=true` → 400). Issues/mensagens/audits/logs nunca contêm
   CPF/telefone/e-mail/nome. Nunca expor `nome_original`/`nome_interno`/path/
   sha256/conteúdo de arquivo.
-- **Escopo clínico proibido sem ADR de módulo (0010+) aprovada:** não criar
-  prontuário, diagnóstico, prescrição, exames, CID, medicamentos, documentos
-  médicos ou qualquer dado clínico **sem ADR de módulo** (ADR 0008 §4.1 +
-  ADR 0009 §9 — gates). A ADR 0009 (Sprint 4.1) **decide arquitetura
-  conceitual** (roles, audit de leitura, separação banco, threat model,
-  LGPD clínica) mas **não autoriza código**; cada módulo (4.2 prontuário,
-  4.3 documentos, etc.) abre ADR própria (0010+).
+- **Escopo clínico autorizado pela ADR 0010 (Sprint 4.2A) — só Prontuário
+  v0.1 e só na Sprint 4.2B:** 4 tabelas (`clinical_encounters`,
+  `clinical_encounter_notes`, `clinical_read_audit`, `user_clinical_roles`);
+  5 campos textuais clínicos (`chief_complaint`, `anamnesis`, `evolution`,
+  `plan`, `internal_note`); status `active|canceled` (sem restore); notas
+  append-only com retificação por `revises_note_id`; **sem** delete físico;
+  **sem** mistura de histórico em merge B-safe; **profissional só vê os
+  próprios** (cláusula no DAO); dono/gestor leem com audit, não editam
+  alheio; funcionario/financeiro/admin_sistema → 403 em todo endpoint
+  clínico; `internal_note` redacted para não-autor; criar encounter exige
+  paciente ativo + não-mesclado. **Tudo fora desse escopo continua
+  proibido** sem ADR de módulo nova (CID estruturado, prescrição, exames,
+  anexos, ICP-Brasil, telemedicina, IA clínica, TISS, medicamentos
+  controlados). ADR 0009 (4.1) decide arquitetura conceitual; ADR 0010
+  (4.2A) decide o módulo; cada **fase nova** (4.3+) abre ADR própria.
   CRUD
   administrativo de paciente (criar/editar/arquivar/restaurar) existe (Sprint
   3.22) e é **somente administrativo**. **Merge** de paciente está implementado
