@@ -613,6 +613,102 @@ Esperado:
 > Segurança: `RESTIC_PASSWORD` nunca em arquivo/docs; `backups/` e o repo Restic
 > (cifrado, com PII) são git-ignored; sem AWS/S3/offsite nesta fase.
 
+## Backup OFFSITE Restic + S3 (Sprint 3.40) — sem AWS real
+
+Pré: `restic` instalado, Docker/Postgres de pé. **NÃO exportar credenciais AWS
+reais** ao rodar estes smoke tests; eles validam apenas os hard guards e a
+falha-segura. Detalhe: `docs/backup-offsite-runbook.md`.
+
+### A. Ajuda e sintaxe (sem efeitos colaterais)
+
+```bash
+bash -n scripts/check-backup-offsite-env.sh
+bash -n scripts/backup-offsite-restic.sh
+bash -n scripts/restore-offsite-restic.sh
+# Esperado: nenhum erro de sintaxe, exit 0.
+
+./scripts/check-backup-offsite-env.sh --help
+./scripts/backup-offsite-restic.sh --help
+./scripts/restore-offsite-restic.sh --help
+# Esperado: imprime ajuda, exit 0, nenhuma alteração no FS / DB / rede.
+```
+
+### B. Falha segura quando env obrigatória está ausente
+
+```bash
+unset RESTIC_PASSWORD RESTIC_REPOSITORY
+./scripts/backup-offsite-restic.sh
+# Esperado: exit 1, mensagem 'RESTIC_PASSWORD não definida...'.
+# Nenhum dump gerado.
+
+unset RESTIC_PASSWORD
+RESTIC_REPOSITORY=s3:s3.amazonaws.com/fake-bucket ./scripts/backup-offsite-restic.sh
+# Esperado: exit 1 antes de tocar em qualquer recurso remoto.
+```
+
+### C. Hard guard: RESTIC_REPOSITORY local (deve ABORTAR)
+
+```bash
+RESTIC_PASSWORD=x RESTIC_REPOSITORY=backups/foo ./scripts/backup-offsite-restic.sh
+# Esperado: exit 1, '[ABORTAR] RESTIC_REPOSITORY parece ser caminho LOCAL'.
+RESTIC_PASSWORD=x RESTIC_REPOSITORY=./backups/foo ./scripts/restore-offsite-restic.sh
+# Esperado: exit 1, mesmo motivo. Banco principal intocado.
+```
+
+### D. Hard guard: RESTORE_DB == POSTGRES_DB (deve ABORTAR)
+
+```bash
+RESTIC_PASSWORD=x RESTIC_REPOSITORY=s3:dummy/bucket RESTORE_DB=clinicbridge \
+  ./scripts/restore-offsite-restic.sh
+# Esperado: exit 1, '[ABORTAR] RESTORE_DB ... é igual ao banco principal'.
+# Banco principal (clinicbridge) NUNCA é acessado.
+```
+
+### E. Pré-flight check sem AWS
+
+```bash
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_DEFAULT_REGION
+export RESTIC_PASSWORD='dev-only-check-me'
+export RESTIC_REPOSITORY='s3:s3.amazonaws.com/example-bucket'
+./scripts/check-backup-offsite-env.sh
+# Esperado: pass em RESTIC_PASSWORD/REPOSITORY (valores ocultos);
+# warn (não fail) sobre AWS creds ausentes (IAM role / default chain é ok).
+# Conclui com 'Ambiente pronto para backup offsite (rede ainda não foi validada...)'.
+# Valor de RESTIC_REPOSITORY NUNCA é exibido.
+```
+
+### F. `--dry-run` do backup (gera dump, NÃO envia)
+
+> Requer Postgres de pé. Útil quando há credenciais AWS mas você não quer ainda
+> escrever no bucket. Aqui, sem credenciais, ele falha no `init`/`backup` — mas
+> em `--dry-run` ele para antes:
+
+```bash
+export RESTIC_PASSWORD='dev-only-dry'
+export RESTIC_REPOSITORY='s3:s3.amazonaws.com/example-bucket'
+docker compose up -d postgres
+./scripts/backup-offsite-restic.sh --dry-run
+# Esperado: gera dump em backups/work/clinicbridge-offsite-<TS>.dump,
+# imprime '[info] dry-run: pularia restic backup ... (valor não exibido)',
+# imprime alvos. Nenhuma chamada de rede a S3.
+```
+
+### G. `.gitignore` cobre artefatos offsite
+
+```bash
+git check-ignore -q backups/work/clinicbridge-offsite-20260525-120000.dump && echo OK
+git check-ignore -q backups/restore-offsite-work/latest/whatever && echo OK
+git check-ignore -q .env.production && echo OK
+# Esperado: três OK; nenhum exit code != 0.
+
+git status --short
+# Esperado: nenhum dump, repo Restic, arquivo .env ou credencial em staging.
+```
+
+> Segurança: scripts nunca imprimem `RESTIC_PASSWORD`, `RESTIC_REPOSITORY` (valor)
+> ou `AWS_*`; `backups/work/` e `backups/restore-offsite-work/` são git-ignored;
+> sem bucket real, sem rede, sem AWS — tudo verificável localmente.
+
 ## Responsividade mobile (Sprint 2.26)
 
 Testar `/app` no DevTools em 360, 390, 414 (iPhone XR), 430 e 768px e desktop:

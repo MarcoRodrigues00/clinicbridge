@@ -116,6 +116,8 @@ openssl rand -base64 32
 # NUNCA colocar no .env nem em arquivo commitado.
 # Guardar no SSM Parameter Store como SecureString (ver §3).
 # Perder esta senha = backup irrecuperável.
+# Procedimento operacional do backup offsite (Sprint 3.40):
+#   docs/backup-offsite-runbook.md (scripts: scripts/*-offsite-restic.sh)
 ```
 
 ### DATABASE_URL / credenciais Postgres
@@ -195,6 +197,14 @@ A role IAM da EC2 (instance profile) deve ter **apenas**:
 
 Para produção, substituir `staging` por `prod` e limitar a role a um path separado.
 Nenhuma permissão de escrita na role da EC2 (escrita fica na role do operador local).
+
+> **IAM mínimo do bucket de backup (separado!):** a role/instance profile que
+> executa o backup offsite tem uma policy diferente, com acesso só ao bucket
+> S3 de backup. Mínimo: `s3:ListBucket` + `s3:GetBucketLocation` no bucket;
+> `s3:GetObject` + `s3:PutObject` + `s3:DeleteObject` nos objetos. **NUNCA**
+> usar `s3:*` ou credenciais root. Detalhe + JSON pronto em
+> `docs/backup-offsite-runbook.md` §2.3. Separar das credenciais do backend
+> (princípio do mínimo privilégio entre serviços).
 
 ---
 

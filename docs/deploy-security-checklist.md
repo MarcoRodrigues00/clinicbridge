@@ -176,10 +176,19 @@ Motivo do guard de `JWT_SECRET`: o placeholder tem > 48 chars e passaria no `min
 ## 11. Backup / restore
 
 - Estratégia: **Restic-first** (ADR 0003). Backup/restore **local** implementado +
-  restore drill validado (Sprint 3.5) — `scripts/` + runbook.
-- **Pendente para produção:** destino **offsite**, gestão de chave do repo,
-  agendamento, monitoramento/alerta e validação de ponta a ponta.
-- Backups contêm PII → cifrados em repouso; nunca versionados.
+  restore drill validado (Sprint 3.5) — `scripts/` + `docs/backup-restore-local-runbook.md`.
+- **Sprint 3.40 entregou (docs/scripts only):** scripts offsite
+  `scripts/{check,backup,restore}-*-offsite-restic.sh` com hard guards (`s3:`
+  obrigatório no `RESTIC_REPOSITORY`; `RESTORE_DB != POSTGRES_DB`); runbook
+  `docs/backup-offsite-runbook.md` com IAM mínimo (JSON), secrets via SSM,
+  retenção `forget --prune` documentada (NÃO auto-executada) e restore drill
+  remoto em banco separado (`clinicbridge_restore_offsite_test`).
+- **Pendente para produção (Sprint 3.41+):** bucket S3 real privado/versionado/
+  cifrado, IAM role/instance profile com a policy mínima documentada, gravar
+  `RESTIC_PASSWORD` no SSM, agendamento (systemd-timer ou ECS scheduled task),
+  alerta de falha (CloudWatch), execução real do restore drill como **gate
+  go/no-go**.
+- Backups contêm PII → cifrados em repouso (Restic + SSE-S3); nunca versionados.
 
 ## 12. Logs e auditoria
 

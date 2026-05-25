@@ -228,32 +228,60 @@
   ser revisado juridicamente antes de produção**; não afirma conformidade
   completa com LGPD/HIPAA/CFM. O produto **não** está pronto para produção.
 
-## Backup e restore (estratégia 3.4 + implementação local 3.5)
+## Backup e restore (estratégia 3.4 + local 3.5 + offsite 3.40)
 
 - **Estratégia/decisão:** `docs/backup-restore-strategy.md` + ADR
   `docs/adr/0003-backup-restore-strategy.md` (**Restic-first**; Bacula como opção
-  futura enterprise). **Runbook operacional local:** `docs/backup-restore-local-runbook.md`.
-- **Estado atual (Sprint 3.5):** backup/restore **local/dev implementado** com
-  Restic — scripts em `scripts/` (`check-backup-env.sh`, `backup-local-restic.sh`,
-  `restore-local-restic.sh`). **Restore drill validado**: restore em banco
-  **separado** (`clinicbridge_restore_test`), counts batendo com o principal
-  (patients/import_files/import_sessions) e banco principal **intacto**.
-  **Offsite/produção continuam pendentes** (sem AWS/S3/Backblaze/MinIO).
+  futura enterprise). **Runbook local:** `docs/backup-restore-local-runbook.md`.
+  **Runbook offsite (Sprint 3.40):** `docs/backup-offsite-runbook.md`.
+- **Estado atual:**
+  - **Local/dev (Sprint 3.5):** implementado com Restic — scripts em `scripts/`
+    (`check-backup-env.sh`, `backup-local-restic.sh`, `restore-local-restic.sh`).
+    **Restore drill validado**: counts batendo em `clinicbridge_restore_test`,
+    principal intacto.
+  - **Offsite (Sprint 3.40, docs/scripts only):** scripts
+    `scripts/{check,backup,restore}-*-offsite-restic.sh` com hard guards de
+    segurança (ver abaixo) + runbook com IAM mínimo. **Bucket S3 real, IAM role
+    real e SSM real continuam pendentes** (depende da decisão de provedor —
+    `docs/production-minimum-plan.md` §5).
 - **O que é protegido:** PostgreSQL (PII) via `pg_dump -Fc` + storage de uploads
   (se existir). **Redis** é efêmero (não entra). **Segredos** (`.env`/`JWT_SECRET`/
-  `RESTIC_PASSWORD`) tratados à parte — **nunca** em arquivo versionado nem no
-  backup em texto puro.
-- **Segurança dos scripts:** `bash`+`set -euo pipefail`; sem senha/secret
-  hardcoded; `RESTIC_PASSWORD` só vem do ambiente (nunca impressa); restore
-  **aborta** se `RESTORE_DB == POSTGRES_DB` (protege o principal). `backups/` e o
-  repositório Restic são git-ignored (repo cifrado contém PII + chave).
-- **Chave do repo Restic:** perda da senha = backup **irrecuperável** — gestão de
-  chave em produção é processo próprio (pendente).
+  `RESTIC_PASSWORD`/AWS creds) tratados à parte — **nunca** em arquivo versionado,
+  nunca no backup em texto puro, nunca em logs.
+- **Hard guards dos scripts (defesa em profundidade):**
+  1. `bash`+`set -euo pipefail` em todos os scripts.
+  2. **Local + offsite:** `RESTORE_DB == POSTGRES_DB` → abort (protege o principal).
+     `RESTORE_DB` default distinto entre local (`clinicbridge_restore_test`) e
+     offsite (`clinicbridge_restore_offsite_test`) permite coexistência.
+  3. **Offsite:** `RESTIC_REPOSITORY` deve começar com `s3:` (caminhos locais
+     `/foo`/`./foo`/`backups/foo` → abort com mensagem direcionando ao script
+     local). Impede redirecionamento acidental do fluxo offsite para repo local.
+  4. **Offsite:** `RESTIC_PASSWORD` obrigatória; mensagem aponta para SSM
+     (`/clinicbridge/<env>/restic_password`).
+  5. **Offsite:** se uma de `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` estiver
+     definida mas a outra não, falha-rápido (pré-flight). Recomendação é usar IAM
+     role/instance profile (nenhuma env var) em EC2/ECS.
+  6. Nenhum script imprime senhas, credenciais ou o valor de `RESTIC_REPOSITORY`
+     em logs.
+- **`.gitignore` cobre:** `backups/`, `backup/`, `restic-repo/`, `.restic/`,
+  `*.dump`, `*.pgdump`, `*.sql*`, `*.backup`, `*.bak`, `*.tar*`, `*.restic`, `.env`,
+  `.env.*`. Sprint 3.40 confirmou que `backups/work/*` (dump scratch) e
+  `backups/restore-offsite-work/*` (restore drill output) já são ignorados pelos
+  padrões existentes.
+- **Chave do repo Restic:** perda = backup **irrecuperável**. Em produção, a
+  senha vive no SSM Parameter Store; rotação exige re-cifra do repo e restore
+  drill antes/depois (`docs/secrets-env-production-runbook.md` §5).
+- **Retenção `forget --prune`:** comandos documentados em
+  `docs/backup-offsite-runbook.md` §6 (7d/4s/6m/2y como recomendação inicial),
+  **NÃO** auto-executados. Limpeza destrutiva exige validação jurídica (ADR 0002)
+  + restore drill recente.
+- **Agendamento + alertas:** ainda não implementados — sprint futura. O backup
+  offsite é executado manualmente pelo operador até lá.
 - **Liga ao ADR 0002:** a limpeza real de arquivos só é destravada após
   backup/restore validado de ponta a ponta (critério #10) — local validado;
-  produção/offsite ainda faltam.
-- **Sem promessa de compliance:** prazos/retenção de backups e offsite dependem de
-  validação jurídica. Não afirma produção pronta.
+  offsite validado por scripts mas sem bucket real ainda.
+- **Sem promessa de compliance:** prazos/retenção de backups e transferência
+  offsite dependem de validação jurídica. Não afirma produção pronta.
 
 ## Deploy seguro / CORS / env de produção (Sprint 3.6 + 3.39)
 
