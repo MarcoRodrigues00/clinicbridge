@@ -17,6 +17,7 @@
 > - **Runbook de secrets/env de produção (Sprint 3.39; geração de secrets, SSM, injeção, rotação):** `docs/secrets-env-production-runbook.md`
 > - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
 > - **Merge seguro de duplicados (B-safe; decidido 3.32, backend 3.33, UX 3.34, validado 3.35; administrativo, sem delete físico, sem undo completo):** ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`
+> - **Expansão para Clinic OS modular (Sprint 4.0; sem telemedicina; migração como diferencial; ADR própria por módulo; trilha AWS pausada estrategicamente):** ADR `docs/adr/0008-clinicbridge-clinic-os-expansion.md` + roadmap `docs/product-clinic-os-roadmap.md`
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
 > - **Demo/piloto v0.1 (Sprint 3.20; dados fictícios, não clínico):** `docs/demo-data/README.md` (+ `docs/demo-data/pacientes-demo.csv`), `docs/demo-pilot-v0.1-script.md`, `docs/demo-pilot-v0.1-checklist.md` — seed dev-only de agenda: `backend/scripts/seed-demo-scheduling.ts` (`pnpm --filter backend seed:demo` / `seed:demo:clean`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
@@ -24,13 +25,22 @@
 
 ## Estado atual (resumido — atualizado 2026-05-25)
 
-**Sprint atual: 3.41B-0** (entregue — docs-only) — runbook executável de
-provisionamento AWS real: checklist passo a passo com caminhos Console+CLI; billing
-alarm; S3 privado; IAM mínimo; SSM; Security Groups; RDS; EC2+EBS; DNS Registro.br;
-Certbot; smoke tests; backup drill (gate go/no-go); rollback seguro.
-Runbook: `docs/aws-provisioning-runbook-3.41B.md`. Decisões assumidas (região
-`sa-east-1`, EC2+Compose, RDS, EBS, Certbot). Nenhum recurso AWS criado.
-Estado detalhado: `docs/project-state.md` + `docs/sprint-history.md`.
+**Sprint atual: 4.0** (entregue — docs/ADR-only) — **expansão estratégica do
+ClinicBridge para Clinic OS modular** (compete com sistemas completos de gestão
+clínica; sem telemedicina; migração como diferencial permanente). ADR 0008 e
+roadmap Clinic OS (`docs/product-clinic-os-roadmap.md`) criados.
+ADR 0001 (Opção C) parcialmente superseded — base administrativa segura continua
+sendo pré-requisito; cada módulo clínico exige ADR própria.
+**Trilha AWS real pausada estrategicamente** (não cancelada) — runbook 3.41B
+permanece válido; retomada após Fase 4.1 (arquitetura clínica) aprovada.
+Sem código, sem migration, sem AWS, sem alteração de invariantes.
+
+**Fases Clinic OS planejadas:** 4.0 ✅ decisão → 4.1 arquitetura clínica + roles
+granulares → 4.2 prontuário/atendimento → 4.3 documentos médicos/receitas
+(sem ICP-Brasil) → 4.4 financeiro → 4.5 relatórios gerenciais → 4.6 convênios/
+faturamento básico (TISS/TUSS real fora) → 4.7 estoque básico (medicamentos
+controlados/ANVISA fora). Cada fase exige ADR própria. Detalhe:
+`docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **Este MVP NÃO está pronto para produção** — ver P1 em
 `docs/security-notes.md`. Nunca descrever como "pronto para produção".
@@ -74,23 +84,39 @@ import_sessions=7. Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac
 +7 agend, `origem='seed_demo'`); reverter com `seed:demo:clean`.
 Reconfirme via `docs/testing-checklist.md`.
 
-## Direção estratégica (aceita 2026-05-22)
+## Direção estratégica (atualizada 2026-05-25)
 
-**Decisão estratégica aceita: Opção C** (híbrido inteligente) — **base
-administrativa segura primeiro**, com a arquitetura mantida preparada para
-**expansão clínica futura** (planejada, não implementada agora). **Não codar
-prontuário/prescrição/dados clínicos sem ADR futura** dedicada. Detalhe e
-critérios de gating: `docs/adr/0001-product-direction-option-c.md`. Sequência de
-fases: `docs/roadmap-next-phase.md`.
+**Decisão atual: Clinic OS modular** (ADR 0008, Sprint 4.0). O ClinicBridge
+evolui de "ponte de migração administrativa" para **sistema modular de gestão
+clínica**, mantendo migração como diferencial permanente. **Sem telemedicina**
+no escopo. Cada módulo clínico (prontuário, documentos, financeiro,
+relatórios, convênios, estoque) exige **ADR própria** antes de qualquer código.
+
+**Continua válido (não substituído):** base administrativa segura primeiro
+(ADR 0001 Opção C — pré-requisito para Fase 4.1+); critérios de gating clínico
+do ADR 0001 + ADR 0008. **Não codar prontuário/prescrição/dados clínicos sem
+ADR de Fase 4.x dedicada.**
+
+Detalhe e princípios invariantes: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`.
+Sequência de fases administrativas: `docs/roadmap-next-phase.md`.
+Sequência de fases Clinic OS: `docs/product-clinic-os-roadmap.md`.
 
 ## Próximas prioridades
 
-- **Infra/produção (sequência):** **3.40 ✅** backup offsite scripts + runbook + IAM mínimo
-  (bucket S3/IAM/SSM reais ainda pendentes) → **3.41** storage persistente + banco/Redis
-  gerenciados (RDS/ElastiCache; Security Groups) → **3.42** deploy checklist go/no-go
-  (`docs/deploy-security-checklist.md` §15/§16) → **3.43** piloto real (dados sintéticos/
-  anonimizados). 7 decisões do dono pendentes (compute, banco, storage, TLS, secrets,
-  orçamento): `docs/production-minimum-plan.md` §5.
+- **Trilha Clinic OS (Fase 4):** **4.0 ✅** ADR de expansão → **4.1** arquitetura
+  clínica + roles granulares + audit de leitura (ADR 0009; **bloqueia 4.2+**) →
+  **4.2** prontuário/atendimento v0.1 → **4.3** documentos médicos/receitas v0.1
+  (sem ICP-Brasil) → **4.4** financeiro v0.1 → **4.5** relatórios gerenciais v0.1
+  → **4.6** convênios/faturamento básico v0.1 (TISS/TUSS real fora) → **4.7**
+  estoque básico v0.1 (medicamentos controlados/ANVISA fora). **Fases futuras
+  (sem número):** IA clínica assistiva (depois de 4.2 madura), assinatura digital
+  ICP-Brasil (depois de 4.3 madura), TISS/TUSS real (depois de 4.6), SNGPC/ANVISA
+  (depois de 4.7). Cada fase = ADR própria. Detalhe:
+  `docs/product-clinic-os-roadmap.md`.
+- **Trilha AWS (pausada estrategicamente):** **3.41A ✅** plano operacional →
+  **3.41B-0 ✅** runbook executável → **3.41B** execução real ⏸️ → **3.42** go/no-go ⏸️
+  → **3.43** piloto ⏸️. Gate de retomada: ADR 0009 (Fase 4.1) aceita +
+  reavaliação de dimensionamento RDS/EBS/KMS para dados clínicos.
 - **P1 pendentes antes de prod:** bucket S3 + IAM + agendamento + alertas do backup offsite
   (3.40 entregou scripts/docs; falta provisionar); banco/Redis gerenciados (3.41); WAF;
   deploy real (3.42); provisionar Redis/proxy reais (`TRUST_PROXY`/`REDIS_URL` em prod);
@@ -121,8 +147,10 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
   (`include_cpf_raw=true` → 400). Issues/mensagens/audits/logs nunca contêm
   CPF/telefone/e-mail/nome. Nunca expor `nome_original`/`nome_interno`/path/
   sha256/conteúdo de arquivo.
-- **Escopo clínico proibido:** não criar prontuário, diagnóstico, prescrição,
-  exames, CID, medicamentos ou dados clínicos sem sprint explícita. CRUD
+- **Escopo clínico proibido sem ADR de Fase 4.x:** não criar prontuário,
+  diagnóstico, prescrição, exames, CID, medicamentos, documentos médicos
+  ou qualquer dado clínico **sem ADR de Fase 4.x dedicada** (ADR 0008 §4.1).
+  CRUD
   administrativo de paciente (criar/editar/arquivar/restaurar) existe (Sprint
   3.22) e é **somente administrativo**. **Merge** de paciente está implementado
   no backend (Sprint 3.33; ADR 0007 B-safe administrativo): fill-blanks
@@ -186,17 +214,27 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
 
 ## Project identity
 
-ClinicBridge é um SaaS / Micro SaaS para ajudar clínicas pequenas e profissionais
-de saúde a migrar **dados administrativos** de sistemas antigos para exports
-limpos, organizados e revisáveis. **NÃO é um sistema de prontuário.**
+ClinicBridge é um SaaS de **gestão de clínicas com migração inteligente** —
+em evolução de uma base administrativa segura para um **Clinic OS modular**
+(ADR 0008). Hoje o produto entregue é administrativo; módulos clínicos estão
+no roadmap, cada um exigindo ADR própria antes de qualquer código.
 
-O MVP foca em: dados administrativos do paciente; contatos; agendamento;
-convênio; import CSV/XLSX; mapeamento de colunas; validação; detecção de
-duplicados; revisão; export limpo; audit logs.
+**O que está entregue hoje (Fase 3 administrativa):** dados administrativos
+do paciente; contatos; agendamento; convênio; import CSV/XLSX; mapeamento de
+colunas; validação; detecção de duplicados; merge B-safe administrativo;
+export limpo; equipe; MFA; audit logs. **NÃO é um sistema de prontuário ainda.**
 
-O MVP evita: prontuário completo; diagnóstico; prescrições; resultados de exames;
-telemedicina; assinaturas médicas; faturamento com integração de convênios; app
-mobile. Se uma tarefa tentar expandir para essas áreas, **pare e peça confirmação.**
+**O que vem no roadmap (Clinic OS, com ADR própria por módulo):** prontuário/
+atendimento (Fase 4.2); documentos médicos/receitas (4.3); financeiro (4.4);
+relatórios gerenciais (4.5); convênios/faturamento básico (4.6); estoque
+básico (4.7). Fases futuras sem número: IA clínica assistiva, ICP-Brasil,
+TISS/TUSS real, SNGPC/ANVISA.
+
+**O que continua fora do escopo:** telemedicina (vídeo/áudio síncrono);
+prescrição eletrônica com força legal (ICP-Brasil); TISS real; medicamentos
+controlados (SNGPC/ANVISA); app mobile nativo; cópia de UI/textos de
+concorrentes (Feegow ou outros). Se uma tarefa tentar entrar nessas áreas
+sem ADR, **pare e peça confirmação.**
 
 ## Source of truth
 
@@ -327,8 +365,10 @@ resumir mudanças; sugerir mensagem.
 
 Direto e prático. Prefira: implementado / ainda não / risco / próximo passo /
 bloqueado porque. Evite linguagem inflada (revolucionário, disruptivo, plataforma
-definitiva, solução completa de saúde). Descreva o ClinicBridge como: focado;
-seguro por design; com escopo; migração de dados administrativos; MVP prático.
+definitiva, solução completa de saúde, compliance total com LGPD/CFM). Descreva
+o ClinicBridge como: sistema de gestão de clínicas com migração inteligente,
+em evolução modular para Clinic OS (ADR 0008); base administrativa segura
+hoje; módulos clínicos no roadmap por ADR; sem telemedicina.
 
 ## Token and subagent usage policy
 

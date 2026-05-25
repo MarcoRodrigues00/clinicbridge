@@ -1,11 +1,19 @@
 # ClinicBridge — Roadmap da Próxima Fase
 
-> Direção definida no ADR `docs/adr/0001-product-direction-option-c.md`
-> (Opção C — base administrativa segura primeiro, expansão clínica futura
-> planejada, não implementada). Este roadmap é **sugestão de sequência**, não um
-> compromisso de datas. Nada aqui autoriza código clínico: as Fases 5–7 são de
-> planejamento e exigem ADR(s) futura(s) dedicada(s) antes de qualquer
-> implementação.
+> **Atualizado 2026-05-25:** ADR 0008 (Sprint 4.0) expande o produto para
+> **Clinic OS modular**. Este roadmap continua sendo a fonte das **fases
+> administrativas** (Fase 3 — produção/governança, Fase 4 administrativa de
+> operação/UX). Para as **fases clínicas/operacionais 4.0–4.6** do Clinic OS
+> ver `docs/product-clinic-os-roadmap.md`. ADR 0001 (Opção C) parcialmente
+> superseded pelo ADR 0008 — base administrativa segura continua sendo
+> pré-requisito.
+>
+> A trilha AWS real (Sprint 3.41B em diante) está **pausada estrategicamente**
+> até a Fase 4.1 (arquitetura clínica) fechar — runbook permanece válido.
+>
+> Este roadmap é **sugestão de sequência**, não compromisso de datas. Nada
+> aqui autoriza código clínico — ver `docs/product-clinic-os-roadmap.md` para
+> as ADRs por módulo.
 
 ## Princípios
 
@@ -34,9 +42,10 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **3.40** ✅ | Backup offsite Restic + S3: scripts (`*-offsite-restic.sh`), runbook (`docs/backup-offsite-runbook.md`), IAM mínimo, retenção `forget` documentada (não auto-executada), restore drill em banco separado. Bucket S3 real, IAM role real, SSM real e agendamento ficam para 3.41 (depende de conta AWS) |
 | **3.41A** ✅ | Decisão operacional AWS (docs-only): recomendação EC2+Compose, 7 decisões do dono, checklist de execução em `docs/aws-infra-sprint-3.41-plan.md` |
 | **3.41B-0** ✅ | Runbook executável (docs-only): passo a passo Console+CLI, billing, S3, IAM, SSM, SG, RDS, EC2+EBS, DNS, Certbot, smoke tests, drill. Ver `docs/aws-provisioning-runbook-3.41B.md` |
-| **3.41B** | Executar o runbook: provisionar infra AWS real, smoke tests, backup drill aprovado (gate go/no-go) |
-| **3.42** | Deploy checklist go/no-go: executar `docs/deploy-security-checklist.md` §15/§16 |
-| **3.43** | Piloto real: primeiro usuário com dados sintéticos/anonimizados |
+| **3.41B** ⏸️ | Executar o runbook — **pausado estrategicamente** (ADR 0008 §6). Retomar após ADR 0009 (Fase 4.1) aceita + reavaliação de dimensionamento RDS/EBS/KMS |
+| **3.42** ⏸️ | Deploy checklist go/no-go — pausado (depende de 3.41B) |
+| **3.43** ⏸️ | Piloto real — pausado (depende de 3.42) |
+| **4.0** ✅ | Expansão para Clinic OS modular (ADR 0008 + roadmap próprio em `docs/product-clinic-os-roadmap.md`) |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.
