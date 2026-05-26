@@ -585,7 +585,9 @@
 - **`requireRole` obrigatório** — papéis/permissões implementados e testados antes
   de expor qualquer dado clínico.
 - **Audit de acesso/leitura** — auditar não só escrita, mas também quem leu o quê
-  (acesso a dado clínico é evento auditável).
+  (acesso a dado clínico é evento auditável). ✅ implementado via `clinical_read_audit`
+  (Sprint 4.2B-2) + endpoint LGPD-art.18 `GET /clinical/read-audit` owner-only
+  (Sprint 4.2E; metadados; sem conteúdo clínico; sem ip/user_agent no payload).
 - **Versionamento de notas** — notas clínicas versionadas (histórico imutável,
   sem perda de versões anteriores).
 - **Separação administrativa vs. clínica** — fronteira explícita em domínio e

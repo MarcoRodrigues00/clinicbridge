@@ -27,42 +27,50 @@
 
 ## Estado atual (resumido — atualizado 2026-05-26)
 
-**Sprint atual: 4.2D** (entregue) — **Hardening/QA clínico final do Prontuário v0.1.**
+**Sprint atual: 4.2E** (entregue) — **Endpoint LGPD-art.18 de auditoria de leitura clínica.**
+`GET /clinical/read-audit` owner-only; lista metadados de acesso ao prontuário sem conteúdo
+clínico; frontend `ClinicalReadAuditPanel` na aba Segurança; sem migrations, sem env vars.
+
+**Componentes entregues:**
+- **DAO:** `clinicalReadAuditDao.list()` — tenant-scoped, LEFT JOIN patients/users para
+  nomes de exibição; `ip`/`user_agent` excluídos do shape público; filtros:
+  `patient_id`, `user_id`, `acao`, `date_from`, `date_to`, `limit`, `offset`.
+- **Service:** `clinicalReadAuditListService` — valida e parse todos os filtros; limites
+  `limit∈[1,100]`, `offset≤10000`; allowlist de `acao`; UUID regex; range de datas;
+  emite audit administrativo `clinical_read_audit.list.success` (best-effort).
+- **Controller:** `clinicalReadAuditController.list` — thin controller, chama service.
+- **Rota:** `GET /clinical/read-audit` — pipeline `patientsRateLimit → requireAuth →
+  requireClinic → requireRole(CLINIC_ADMIN_ROLES)`; só `dono_clinica`.
+- **Frontend:** `ClinicalReadAuditPanel` (owner-only via `user?.papel === 'dono_clinica'`;
+  filtros tipo/data com botão "Buscar"; exibe nome/email do accessor + nome do paciente +
+  papel + data; sem IP/user_agent/conteúdo clínico).
+
+**Smoke tests executados — 10/10 PASS** (usando usuários smoke persistentes `*@clinicbridge.local`):
+1. sem token → 401 ✅
+2. `smoke.owner` (dono_clinica) → 200, `{ audits: [] }` ✅
+3. 9 campos ausentes (7 clínicos + `ip` + `user_agent`) ✅
+4. `smoke.secretaria` → 403 `forbidden_role` ✅
+5. `smoke.profissional` (+ grant `profissional_clinico`) → 403 `forbidden_role` ✅
+6. `smoke.gestor` (+ grant `gestor_clinica`) → 403 `forbidden_role` ✅
+7. `smoke.admin` (`admin_sistema`, sem clinic) → 403 `no_clinic_context` ✅
+8. `?acao=invalid.value` → 400 `clinical_read_audit_filter_invalid` ✅
+9. `?patient_id=not-a-uuid` → 400 `clinical_read_audit_filter_invalid` ✅
+10. `?date_from=nao-e-data` → 400 `clinical_read_audit_filter_invalid` ✅
+
+**Verificação:** `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
+`pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ ·
+`git diff --check` rc=0.
+
+**Sprint anterior: 4.2D** (entregue) — **Hardening/QA clínico final do Prontuário v0.1.**
 QA de segurança, logs, audit e dados sintéticos antes de avançar para Fase 4.3.
-**Sem código novo, sem migrations, sem env vars, sem AWS, sem dado clínico real.**
+Sem código novo, sem migrations. Validações: logger redaction (7 campos), read audit
+(3 categorias), permissões, frontend sem dados clínicos, dados sintéticos limpos.
 
-**Validações confirmadas (análise estática + inspeção de DB):**
-- **Logger redaction:** 4 camadas em `logger.ts` cobrem os 7 campos clínicos
-  (`chief_complaint`, `anamnesis`, `evolution`, `plan`, `internal_note`,
-  `cancel_reason_text`, `rectification_reason_text`) e `paciente_id`.
-  Nenhum controller/service loga payload clínico diretamente (grep confirmado).
-- **Clinical read audit:** 3 categorias corretas (`clinical.encounter.read`
-  com `paciente_id`, `clinical.encounter.list` sem, `clinical.timeline.list`
-  com). Strict mode (`CLINICAL_READ_AUDIT_STRICT`) aborta antes de serializar
-  conteúdo clínico se audit falhar. `audit_logs` administrativos nunca recebem
-  conteúdo clínico.
-- **Permissões:** `dono_clinica` lê sem grant explícito; precisa de grant
-  `profissional_clinico` para escrever. `gestor_clinica` lê somente. `secretaria`
-  e `admin_sistema` bloqueados via `requireClinicalRole` (403 `forbidden_role`).
-  profA não vê encounters de profB (DAO self-filter `attending_user_id_self`).
-  `internal_note` redactado via helper único `applyInternalNoteRedaction`.
-- **Frontend:** sem `console.log`, sem `localStorage`/`sessionStorage` com dado
-  clínico (JWT em `localStorage` é o padrão do MVP); sem `dangerouslySetInnerHTML`;
-  sem dado clínico em URL/query string. `internal_note null` → oculto. `staleTime: 0`.
-- **Dados sintéticos:** 2 encounters + 3 notes de QA deletados do dev DB (SQL
-  direto, autorizados por serem dados sintéticos de dev). 14 `clinical_read_audit`
-  rows preservados (sem conteúdo clínico — só metadados de auditoria). 1 grant
-  `user_clinical_roles` preservado (permissão funcional).
-
-**Verificação:** `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend
-build` ✅ · `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
-`git diff --check` rc=0 · `git status --short` limpo.
-
-**Sprint anterior: 4.2C** (entregue) — **Frontend do Prontuário v0.1.**
+**Sprint 4.2C** (entregue) — **Frontend do Prontuário v0.1.**
 `ClinicalPatientPane` (drawer, máquina de estados timeline→detail→new-encounter→new-note),
 `ClinicalRolesPanel` (owner-only grants), botão "Prontuário" no `PatientsList`.
 
-**Sprint anterior: 4.2B-3** (entregue) — **controllers + rotas clínicas +
+**Sprint 4.2B-3** (entregue) — **controllers + rotas clínicas +
 logger redaction + smoke tests do Prontuário v0.1.** Rotas registradas em
 `app.ts` com pipeline
 `rateLimit → requireAuth → requireClinic → (requireClinicalRole | requireRole)`:
@@ -95,8 +103,9 @@ para Clinic OS modular (ADR 0008).
 **4.2A ✅** ADR 0010 → **4.2B-1 ✅** base técnica → **4.2B-2 ✅** camada
 interna → **4.2B-3 ✅** controllers + rotas + smoke 76/76 PASS → **4.2C ✅**
 frontend (drawer, roles panel, botão Prontuário) → **4.2D ✅** QA/hardening
-(logs, audit, permissões, dados sintéticos, docs) → **4.2B-4** (opcional —
-endpoint LGPD-art.18 de auditoria de leitura) → **4.3** documentos
+(logs, audit, permissões, dados sintéticos, docs) → **4.2E ✅** endpoint
+LGPD-art.18 `GET /clinical/read-audit` (owner-only; metadados de acesso;
+frontend `ClinicalReadAuditPanel`; smoke 8/8 PASS) → **4.3** documentos
 médicos/receitas (sem ICP-Brasil) → **4.4** financeiro → **4.5** relatórios
 gerenciais → **4.6** convênios/faturamento básico (TISS/TUSS real fora) →
 **4.7** estoque básico (medicamentos controlados/ANVISA fora). Cada **fase
@@ -144,6 +153,11 @@ import_sessions=7. Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac
 +7 agend, `origem='seed_demo'`); reverter com `seed:demo:clean`.
 Reconfirme via `docs/testing-checklist.md`.
 
+**Usuários smoke persistentes (dev local — Sprint 4.2E):** 5 usuários `*@clinicbridge.local`
+na "Clinica Smoke Dev" para smoke tests de permissão; senha `SmokeDevOnly!23` (dev-only, fake).
+`smoke.profissional` + `smoke.gestor` têm grants clínicos. Não apagar entre sprints.
+Detalhes + script de recriação: `docs/testing-checklist.md` §"Usuários smoke persistentes".
+
 ## Direção estratégica (atualizada 2026-05-25)
 
 **Decisão atual: Clinic OS modular** (ADR 0008, Sprint 4.0) + **arquitetura
@@ -177,10 +191,9 @@ conceitual e audit de leitura). Sequência de fases administrativas:
   → **4.2C ✅** frontend (drawer `ClinicalPatientPane`, painel `ClinicalRolesPanel`,
   botão Prontuário em PatientsList; typecheck/build ✅) → **4.2D ✅** QA/hardening
   (logs validados, audit validado, permissões validadas, dados sintéticos limpos,
-  docs atualizados; zero mudanças de código) → **4.2B-4** (próximo
-  passo opcional — endpoint owner-only para listar audit de leitura
-  clínica/transparência LGPD-art.18, ou pular direto para a Fase 4.3 se
-  jurídico priorizar receitas) → **4.3** documentos médicos/receitas v0.1
+  docs atualizados; zero mudanças de código) → **4.2E ✅** LGPD-art.18
+  `GET /clinical/read-audit` owner-only; `ClinicalReadAuditPanel` na aba Segurança;
+  smoke 8/8 PASS; sem migrations → **4.3** documentos médicos/receitas v0.1
   (sem ICP-Brasil) → **4.4** financeiro v0.1 → **4.5** relatórios gerenciais
   v0.1 → **4.6** convênios/faturamento básico v0.1 (TISS/TUSS real fora) →
   **4.7** estoque básico v0.1 (medicamentos controlados/ANVISA fora).
@@ -243,7 +256,9 @@ Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
   `POST /clinical/encounters/:id/notes`,
   `GET /patients/:id/clinical-timeline` (METADATA-only),
   `GET/POST /clinical/roles[/grant|/revoke]` (owner-only via
-  `requireRole(CLINIC_ADMIN_ROLES)`). Logger redact estendido com 4 camadas:
+  `requireRole(CLINIC_ADMIN_ROLES)`),
+  `GET /clinical/read-audit` (owner-only LGPD-art.18; metadados de acesso;
+  sem conteúdo clínico; `ip`/`user_agent` apenas no DB, não no payload). Logger redact estendido com 4 camadas:
   top-level, `*.field` (1-level), `body/req.body/payload.<field>` (2-level),
   `body/req.body/payload.initial_note.<field>` (3-level) — verificado por
   teste de vazamento 7/7 PASS antes do commit (`config/logger.ts`).
