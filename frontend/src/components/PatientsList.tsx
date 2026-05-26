@@ -14,6 +14,7 @@ import {
   Archive,
   ArchiveRestore,
   X,
+  ClipboardList,
 } from 'lucide-react';
 import {
   api,
@@ -25,7 +26,9 @@ import {
 } from '../services/api';
 import { getToken } from '../services/authStorage';
 import { useAuth } from '../services/AuthProvider';
+import { ClinicalPatientPane } from './ClinicalPatientPane';
 import styles from './PatientsList.module.css';
+import clinicalStyles from './ClinicalPatientPane.module.css';
 
 const FORBIDDEN_ROLE_MESSAGE =
   'Seu usuário não tem permissão para executar esta ação. Peça a um administrador da clínica.';
@@ -151,6 +154,9 @@ export function PatientsList({
   // Per-card archive/restore state.
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Clinical pane state — tracks which patient's prontuário is open.
+  const [clinicalPatient, setClinicalPatient] = useState<PublicPatient | null>(null);
 
   const loadFirstPage = useCallback(
     async (search: string, status: PatientStatusFilter) => {
@@ -652,51 +658,61 @@ export function PatientsList({
                   </div>
                 </dl>
 
-                {(canWrite || isOwner) && (
-                  <div className={styles.cardActions}>
-                    {canWrite && (
+                <div className={styles.cardActions}>
+                  {canWrite && (
+                    <button
+                      type="button"
+                      className={styles.cardActionBtn}
+                      onClick={() => openEdit(p)}
+                      disabled={actionBusyId === p.id}
+                    >
+                      <Pencil size={14} aria-hidden="true" />
+                      Editar
+                    </button>
+                  )}
+                  {isOwner &&
+                    (p.status === 'archived' ? (
                       <button
                         type="button"
                         className={styles.cardActionBtn}
-                        onClick={() => openEdit(p)}
+                        onClick={() => void handleRestore(p)}
                         disabled={actionBusyId === p.id}
                       >
-                        <Pencil size={14} aria-hidden="true" />
-                        Editar
+                        {actionBusyId === p.id ? (
+                          <Loader2 size={14} className={styles.spin} aria-hidden="true" />
+                        ) : (
+                          <ArchiveRestore size={14} aria-hidden="true" />
+                        )}
+                        Restaurar
                       </button>
-                    )}
-                    {isOwner &&
-                      (p.status === 'archived' ? (
-                        <button
-                          type="button"
-                          className={styles.cardActionBtn}
-                          onClick={() => void handleRestore(p)}
-                          disabled={actionBusyId === p.id}
-                        >
-                          {actionBusyId === p.id ? (
-                            <Loader2 size={14} className={styles.spin} aria-hidden="true" />
-                          ) : (
-                            <ArchiveRestore size={14} aria-hidden="true" />
-                          )}
-                          Restaurar
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className={`${styles.cardActionBtn} ${styles.cardActionDanger}`}
-                          onClick={() => void handleArchive(p)}
-                          disabled={actionBusyId === p.id}
-                        >
-                          {actionBusyId === p.id ? (
-                            <Loader2 size={14} className={styles.spin} aria-hidden="true" />
-                          ) : (
-                            <Archive size={14} aria-hidden="true" />
-                          )}
-                          Arquivar
-                        </button>
-                      ))}
-                  </div>
-                )}
+                    ) : (
+                      <button
+                        type="button"
+                        className={`${styles.cardActionBtn} ${styles.cardActionDanger}`}
+                        onClick={() => void handleArchive(p)}
+                        disabled={actionBusyId === p.id}
+                      >
+                        {actionBusyId === p.id ? (
+                          <Loader2 size={14} className={styles.spin} aria-hidden="true" />
+                        ) : (
+                          <Archive size={14} aria-hidden="true" />
+                        )}
+                        Arquivar
+                      </button>
+                    ))}
+                  {/* Prontuário button — available for non-archived patients;
+                      backend is authoritative on whether the user has clinical access. */}
+                  {p.status !== 'archived' && (
+                    <button
+                      type="button"
+                      className={clinicalStyles.prontuarioBtn}
+                      onClick={() => setClinicalPatient(p)}
+                    >
+                      <ClipboardList size={13} aria-hidden="true" />
+                      Prontuário
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -721,6 +737,14 @@ export function PatientsList({
             </div>
           )}
         </>
+      )}
+      {/* Clinical pane — mounted once; backend decides if the user has access */}
+      {clinicalPatient && (
+        <ClinicalPatientPane
+          patient={clinicalPatient}
+          open={clinicalPatient !== null}
+          onClose={() => setClinicalPatient(null)}
+        />
       )}
     </section>
   );

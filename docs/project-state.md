@@ -7,7 +7,75 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.2B-3** (entregue) — **controllers + rotas clínicas + logger
+**Sprint 4.2C** (entregue) — **Frontend do Prontuário v0.1.** Primeira UI
+clínica consumindo os endpoints já existentes da 4.2B-3. **Sem alterações
+de backend, sem migrations, sem env vars novas, sem AWS, sem dado clínico
+real persistido.**
+
+**Arquivos criados:**
+- `frontend/src/components/ClinicalPatientPane.tsx` — drawer lateral
+  (right-side pane via `<dialog>`) com máquina de estado: `timeline`,
+  `detail`, `new-encounter`, `new-note`. Sub-componentes internos:
+  `TimelineView` (metadata-only), `ClinicalEncounterDetail` (CONTENT-READ
+  com form de cancelamento inline), `NoteCard` (renderiza campos clínicos;
+  `internal_note null` → oculto, sem placeholder), `ClinicalEncounterForm`
+  (cria encounter + nota inicial opcional), `ClinicalNoteForm` (adiciona
+  ou retifica nota — ao menos 1 campo obrigatório). TanStack Query com
+  `staleTime: 0` nos dados clínicos; invalidação pós-mutation correta.
+  Audit notice permanente no topo do pane.
+- `frontend/src/components/ClinicalPatientPane.module.css` — estilos
+  completos: overlay backdrop, pane 680px, encounter cards, note cards,
+  badge de status, forms, botões, `.cancelSection`/`.cancelWarning`
+  para o form inline de cancelamento, `.rolesPanel` e subestilos para
+  o `ClinicalRolesPanel` (mesmo CSS module compartilhado).
+- `frontend/src/components/ClinicalRolesPanel.tsx` — painel owner-only
+  na aba Equipe. `useQuery(['clinicalRoles'])` + `useQuery(['clinicMembers'])`
+  em paralelo; exibe grants com nome do membro; form de concessão
+  (select membro + select role + botão); botão de revogação por grant;
+  erros contextuais. Retorna `null` para não-owners.
+
+**Arquivos alterados:**
+- `frontend/src/services/api.ts` — adicionados tipos e funções antes de
+  `getImportFileRetentionDryRun`: `ClinicalEncounterStatus`,
+  `ClinicalRoleName`, `ClinicalCancelReasonCode`, `ClinicalNoteRectifyCode`,
+  `PublicClinicalEncounterListItem`, `PublicClinicalEncounter`,
+  `PublicClinicalNote`, `PublicClinicalRoleGrant`,
+  `CreateClinicalEncounterPayload`, `CancelClinicalEncounterPayload`,
+  `AddClinicalNotePayload`; e funções `listClinicalTimeline`,
+  `getClinicalEncounterDetail`, `createClinicalEncounter`,
+  `cancelClinicalEncounter`, `addClinicalNote`, `listClinicalRoleGrants`,
+  `grantClinicalRole`, `revokeClinicalRole`.
+- `frontend/src/components/PatientsList.tsx` — importa `ClinicalPatientPane`
+  e `clinicalStyles`; adiciona estado `clinicalPatient`; botão "Prontuário"
+  (`clinicalStyles.prontuarioBtn`) em cada card não-arquivado; monta
+  `<ClinicalPatientPane>` ao final da seção. Ação "Prontuário" disponível
+  para todos os usuários logados — backend decide o acesso.
+- `frontend/src/views/Dashboard.tsx` — importa e monta `<ClinicalRolesPanel />`
+  ao final do `tab === 'equipe' && isOwner` block.
+
+**Invariantes de segurança do frontend:**
+- Nenhum `console.log` com payload clínico.
+- Dado clínico somente em memória (React state / TanStack Query cache);
+  não em `localStorage`/`sessionStorage`, não em URL/query string.
+- `internal_note null` → campo oculto, sem texto de placeholder.
+- 403/401 de endpoint clínico → mensagem genérica, sem revelar se dados
+  existem.
+- Backend é authoritative; frontend não toma decisões de autorização.
+- Sem `dangerouslySetInnerHTML`; conteúdo clínico renderizado como texto.
+
+**Verificação:**
+- `pnpm --filter frontend typecheck` ✅ (0 erros)
+- `pnpm --filter frontend build` ✅ (warning de chunk size pré-existente)
+- `git diff --check` rc=0
+
+**O que NÃO entrou (intencional):** nenhuma alteração de backend; nenhuma
+migration; nenhuma env var nova; nenhum AWS; nenhum dado clínico real;
+nenhuma tela de auditoria LGPD-art.18 (fica para 4.2B-4 ou Fase 4.5);
+nenhum campo fora dos 5 já decididos na ADR 0010.
+
+---
+
+**Sprint anterior: 4.2B-3** (entregue) — **controllers + rotas clínicas + logger
 redaction + smoke tests do Prontuário v0.1.** Implementa exatamente o que
 a ADR 0010 §15 passos 6–9 decidiu sobre a camada interna entregue na
 4.2B-2. **Sem frontend, sem migrations novas, sem AWS, sem dado clínico
