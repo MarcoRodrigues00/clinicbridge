@@ -3232,5 +3232,84 @@ Detalhes + IDs + script de recriação: `docs/testing-checklist.md` §"Usuários
 - Sem export CSV do audit (fora de escopo).
 - Sem AWS.
 
-**Próxima sprint natural:** 4.3 (documentos médicos/receitas v0.1, exige ADR própria
-antes de qualquer código).
+**Próxima sprint natural:** 4.3A (ADR documentos médicos/receitas v0.1 — docs-only).
+
+---
+
+## Sprint 4.3A (docs/ADR-only)
+
+**Data:** 2026-05-26
+**Tipo:** ADR + operacional docs-only
+**Objetivo:** Fechar as decisões arquiteturais do módulo de Documentos Médicos e Receitas
+v0.1 antes de qualquer código. Autoriza Sprint 4.3B (implementação backend).
+
+**Entregáveis:**
+- `docs/adr/0011-medical-documents-prescriptions-v0.md` — ADR 0011, Status: Accepted
+- `docs/medical-documents-v0-scope.md` — companheiro operacional
+
+**Decisões registradas (11 compromissos):**
+1. 5 tipos de documento: `receipt_simple`, `attestation`, `declaration`, `exam_request`, `orientation`.
+2. 1 tabela nova: `clinical_documents` (prefixo `clinical_`, schema public — consistente com ADR 0010).
+3. Ciclo de vida `draft → finalized → canceled` (sem restore, sem delete físico).
+4. Sem delete físico — invariante.
+5. PDF gerado on-demand, não armazenado no v0.1.
+6. Audit duplo: escrita em `audit_logs` (4 eventos) + leitura em `clinical_read_audit` (3 eventos).
+   `clinical_read_audit.recurso='document'` já aceito pelo CHECK existente — sem migration.
+7. Logger redaction: estende 4 camadas da ADR 0010 com `body` (document), `cancel_reason_text`
+   (document), `metadata_json`.
+8. Permissões: `profissional_clinico` cria/edita/finaliza/cancela os próprios; `dono_clinica`/
+   `gestor_clinica` leem qualquer com audit; `secretaria`/`funcionario_admin` sem acesso; `admin_sistema`
+   bloqueado por `requireClinic`.
+9. `encounter_id` opcional (NULL-permitido) — clínica pode emitir documento sem encounter formal.
+10. `metadata_json` validado no service, não por DB CHECK — flexibilidade para evolução de templates.
+11. Aviso jurídico na UI: sem ICP-Brasil, sem assinatura digital válida; rodapé obrigatório no PDF.
+
+**Schema conceitual `clinical_documents`:**
+```
+id, clinica_id (CASCADE), patient_id (RESTRICT), encounter_id (SET NULL),
+author_user_id (RESTRICT), doc_type CHECK(...), title NOT NULL (≤200), body NULL (≤10000),
+metadata_json jsonb NULL, status DEFAULT 'draft' CHECK(...), finalized_at, finalized_by_user_id (SET NULL),
+canceled_at, canceled_by_user_id (SET NULL), cancel_reason_code CHECK(...), cancel_reason_text (≤200),
+supersedes_document_id (self-ref, SET NULL), created_at, updated_at
++ 4 CHECK constraints de consistência de estado
++ 5 índices: clinica_patient_created, clinica_author_created, clinica_status, encounter (WHERE NOT NULL),
+  supersedes (WHERE NOT NULL)
+```
+
+**8 endpoints conceituais:**
+```
+POST   /clinical/documents                     (criar rascunho; profissional_clinico)
+GET    /clinical/documents                     (listar; profissional|gestor|dono; audit)
+GET    /clinical/documents/:id                 (conteúdo; audit strict)
+PATCH  /clinical/documents/:id                 (editar rascunho; profissional; só draft + próprio)
+POST   /clinical/documents/:id/finalize        (finalizar; profissional; body obrigatório)
+POST   /clinical/documents/:id/cancel          (cancelar; profissional; reason_code obrigatório)
+GET    /clinical/documents/:id/pdf             (PDF on-demand; finalizado; audit strict)
+GET    /patients/:id/documents                 (documentos do paciente; profissional|gestor|dono; audit)
+```
+
+**PDF — estrutura obrigatória:**
+- Cabeçalho: clínica (nome, CNPJ, endereço), metadados (profissional, paciente, data), body,
+  campos por tipo (metadata_json), campo de assinatura manual.
+- **Rodapé obrigatório:** "Este documento foi gerado pelo ClinicBridge e não possui assinatura
+  digital ICP-Brasil. A validade jurídica plena pode exigir assinatura física do profissional
+  responsável ou assinatura digital com certificado válido (ICP-Brasil/CFM). Não é uma
+  prescrição eletrônica legalmente válida."
+
+**LGPD:**
+- `body` e `metadata_json` = dados pessoais sensíveis de saúde.
+- Audit de leitura obrigatório (herda `CLINICAL_READ_AUDIT_STRICT` da ADR 0010).
+- Sem política de retenção automática no v0.1 (pendente ADR 0002 + jurídico externo).
+- `secretaria` bloqueada: limitação de finalidade.
+
+**Fora de escopo (ADR 0011 §4 + §19):**
+- Prescrição eletrônica ICP-Brasil; qualquer assinatura digital; Memed/Mevo.
+- Receituários especiais; medicamentos controlados; SNGPC/ANVISA.
+- CID estruturado obrigatório; validação de CRM/CRO.
+- Envio automático PDF por WhatsApp/e-mail; QR code de validação pública.
+- Armazenamento persistente de PDF (S3); upload de exames/anexos clínicos; IA gerando conteúdo.
+- `secretaria`/`admin_sistema` acessando conteúdo de documentos.
+- Edição/cancelamento de documento alheio por dono/gestor.
+
+**Próxima sprint natural:** 4.3B (implementação backend: migration + DAOs + services +
+`clinicalDocumentPdfService` + endpoints + logger + smoke tests).

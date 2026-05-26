@@ -16,6 +16,14 @@
 > `docs/clinical-encounters-v0-scope.md`. Fecha o escopo do Prontuário
 > v0.1 e autoriza a Sprint 4.2B (implementação backend, sem ADR nova).
 >
+> **Sprints 4.2B–4.2E entregues** (2026-05-26) — Prontuário v0.1 completo:
+> backend + frontend + QA + endpoint LGPD-art.18.
+>
+> **Sprint 4.3A entregue** (2026-05-26, docs/ADR-only) — ADR 0011
+> (`docs/adr/0011-medical-documents-prescriptions-v0.md`) +
+> `docs/medical-documents-v0-scope.md`. Fecha o escopo de Documentos
+> Médicos/Receitas v0.1 e autoriza a Sprint 4.3B (implementação backend).
+>
 > A trilha AWS real (Sprint 3.41B em diante) continua **pausada
 > estrategicamente**. Gate da ADR 0009 §10 (ADR 0010 aceita +
 > reavaliação) atendido na 4.2A — porém a **execução real** da AWS
@@ -59,7 +67,9 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **4.0** ✅ | Expansão para Clinic OS modular (ADR 0008 + roadmap próprio em `docs/product-clinic-os-roadmap.md`) |
 | **4.1** ✅ | Arquitetura clínica + roles granulares + audit de leitura + LGPD clínica (ADR 0009 + `docs/clinical-architecture-and-permissions.md`). Bloqueia 4.2 até ADR 0010 abrir |
 | **4.2A** ✅ | ADR 0010 — escopo do Prontuário/Atendimento v0.1 (4 tabelas, 5 endpoints, roles em tabela paralela, audit de leitura paralelo, cifra de coluna fora). Operacional: `docs/clinical-encounters-v0-scope.md`. Autoriza 4.2B |
-| **4.2B** ⏳ | Implementação backend do Prontuário v0.1 (migration + DAOs + middleware `requireClinicalRole` + services + endpoints + logger + smoke tests). Sem ADR nova |
+| **4.2B–4.2E** ✅ | Implementação completa do Prontuário v0.1: migration + DAOs + services + endpoints + logger redaction 4 camadas + smoke 76/76 PASS (4.2B) → frontend drawer + roles panel (4.2C) → QA hardening (4.2D) → endpoint LGPD-art.18 `GET /clinical/read-audit` + `ClinicalReadAuditPanel` smoke 8/8 PASS (4.2E) |
+| **4.3A** ✅ | ADR 0011 — escopo de Documentos Médicos e Receitas v0.1 (5 tipos, 1 tabela `clinical_documents`, PDF on-demand, sem ICP-Brasil, cifra de coluna revisável). Operacional: `docs/medical-documents-v0-scope.md`. Autoriza 4.3B |
+| **4.3B** ⏳ | Implementação backend de Documentos Médicos v0.1 (migration `clinical_documents` + DAOs + services + `clinicalDocumentPdfService` + 8 endpoints + logger redaction estendido + smoke tests). Sem ADR nova |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.

@@ -1584,3 +1584,59 @@ curl -sk -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN_OWNER" 
 | Sem CID/diagnóstico estruturado | Fora do escopo v0.1 (ADR 0010 §2.4) |
 | `staleTime: 0` nas queries clínicas | Sem cache de dado clínico; recarrega sempre |
 | `staleTime: 30s` no audit panel | Metadados imutáveis; 30s é seguro sem risco de exibir conteúdo stale |
+
+---
+
+## Documentos Médicos e Receitas — Sprint 4.3B (pendente — ADR 0011)
+
+> **Sprint 4.3A foi docs/ADR-only.** Nenhum smoke test aqui ainda.
+> Esta seção é o placeholder para os testes da Sprint 4.3B (implementação backend).
+> Detalhes dos testes: `docs/medical-documents-v0-scope.md` §11.7 (smoke) e §11.8 (SQL).
+
+### Pré-requisitos para executar (Sprint 4.3B)
+
+- Migration `clinical_documents` aplicada: `pnpm --filter backend migrate:latest`
+- Backend rebuild com novo código: `docker compose --profile edge up -d --build backend`
+- Usuários smoke persistentes disponíveis (ver §"Usuários smoke persistentes" acima)
+
+### Smoke tests previstos (Sprint 4.3B)
+
+| # | Teste | Resultado esperado |
+|---|-------|--------------------|
+| 1 | Criar rascunho (`receipt_simple`) com `smoke.profissional` | 201; `status='draft'` |
+| 2 | Editar rascunho | 200; campos atualizados |
+| 3 | Finalizar rascunho (body preenchido) | 200; `status='finalized'` |
+| 4 | Tentar finalizar sem body | 400 `document_body_required` |
+| 5 | Tentar editar após finalizar | 400 `document_already_finalized` |
+| 6 | Baixar PDF do documento finalizado | 200; `Content-Type: application/pdf`; rodapé presente |
+| 7 | Cancelar documento finalizado | 200; `status='canceled'` |
+| 8 | Tentar PDF de documento cancelado | 400 `document_canceled` |
+| 9 | Profissional B lê documento do profissional A | 404 (anti-enumeração) |
+| 10 | Profissional B cancela documento do profissional A | 404 |
+| 11 | Dono lê documento alheio | 200 + row em `clinical_read_audit` |
+| 12 | Gestor lê documento alheio | 200 + audit |
+| 13 | Secretaria (`smoke.secretaria`) → qualquer endpoint | 403 `forbidden_role` |
+| 14 | Admin sistema (`smoke.admin`) → qualquer endpoint | 403 `no_clinic_context` |
+| 15 | Cross-tenant | 404 |
+| 16 | Paciente arquivado → criar documento | 404 `patient_not_found` |
+| 17 | Strict mode fail-closed: `GET .../id` com audit failure | 500 sem conteúdo; PDF não entregue |
+| 18 | Body do documento nunca em logs | grep sem resultado |
+
+### SQL checks previstos (Sprint 4.3B)
+
+```sql
+SELECT count(*) FROM clinical_documents WHERE status='finalized' AND finalized_at IS NULL; -- 0
+SELECT count(*) FROM clinical_documents WHERE status='canceled' AND cancel_reason_code IS NULL; -- 0
+SELECT acao, recurso FROM audit_logs WHERE acao LIKE 'clinical.document.%' ORDER BY criado_em DESC LIMIT 5;
+SELECT acao, recurso FROM clinical_read_audit WHERE recurso='document' ORDER BY criado_em DESC LIMIT 5;
+```
+
+### Ressalvas aceitas (documentadas para referência)
+
+| Ressalva | Decisão |
+|---|---|
+| PDF sem armazenamento | On-demand no v0.1; S3 revisável quando AWS provisionada |
+| Sem ICP-Brasil | ADR 0011 §4; aviso obrigatório no PDF e UI |
+| `body` sem cifra de coluna | ADR 0011 §18; audit como compensating control; revisável |
+| Sem delete físico de documento | `canceled` é o estado final; invariante |
+| Sem cancelamento de doc alheio por dono/gestor | Preserva responsabilidade médico-legal |
