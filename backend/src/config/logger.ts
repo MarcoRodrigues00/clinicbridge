@@ -34,6 +34,13 @@ const redactPaths = [
   'refresh_token',
 
   // Sprint 4.2B-3 — clinical content fields (ADR 0010 §8.4).
+  // Sprint 4.3B — extended with `metadata_json` for clinical documents
+  // (ADR 0011 §8.4). `body` as a redact path would clash with `req.body` /
+  // `payload.body` wrappers used in legitimate non-clinical logs, so we
+  // redact `body` ONLY when nested under {req., payload., note., document.}
+  // (Layer 3 below) — discipline + explicit nested patterns cover the
+  // realistic logger shapes. Top-level `body` (rare and almost always means
+  // request body anyway) is also redacted.
   // Layer 1: top-level.
   'chief_complaint',
   'anamnesis',
@@ -46,6 +53,20 @@ const redactPaths = [
   'internal_note',
   'cancel_reason_text',
   'rectification_reason_text',
+  // `metadata_json` — clinical-document per-type semi-structured fields
+  // (ADR 0011 §8.4). May contain dosage, exams, CID free text. Treated as
+  // clinical content for logging purposes.
+  'metadata_json',
+  // Clinical-document body and title (Sprint 4.3B; ADR 0011 §8.4).
+  // - `body`: free-text clinical content. Top-level redact protects
+  //   `logger.info({ body: documentRow.body })`. Wildcard `*.body` covers
+  //   the same field nested one level down.
+  // - `title`: operator-supplied document title. May contain PII (patient
+  //   name) or clinical info (diagnosis). Treated as clinical content.
+  // No legitimate non-clinical logger payload in this project uses these
+  // names at top level; verified by grep across backend/src.
+  'body',
+  'title',
   // Pseudonymized patient identifier (ADR 0009 §6.2, ADR 0010 §5.3).
   // Personal data under LGPD; lives ONLY in clinical_read_audit.
   // `patient_id` (English/snake_case) is NOT redacted globally because it is
@@ -61,6 +82,9 @@ const redactPaths = [
   '*.internal_note',
   '*.cancel_reason_text',
   '*.rectification_reason_text',
+  '*.metadata_json',
+  '*.body',
+  '*.title',
   '*.paciente_id',
 
   // Layer 3: explicit two-level paths for the three most likely logger shapes.
@@ -73,7 +97,13 @@ const redactPaths = [
   'body.internal_note',
   'body.cancel_reason_text',
   'body.rectification_reason_text',
+  'body.metadata_json',
   'body.paciente_id',
+  // Sprint 4.3B — document body field nested under request payload wrappers.
+  // `body.body` covers `logger.error({ body: req.body })` where the user
+  // payload itself has a `body` property holding the document content.
+  'body.body',
+  'body.title',
 
   'req.body.chief_complaint',
   'req.body.anamnesis',
@@ -82,7 +112,10 @@ const redactPaths = [
   'req.body.internal_note',
   'req.body.cancel_reason_text',
   'req.body.rectification_reason_text',
+  'req.body.metadata_json',
   'req.body.paciente_id',
+  'req.body.body',
+  'req.body.title',
 
   'payload.chief_complaint',
   'payload.anamnesis',
@@ -91,7 +124,10 @@ const redactPaths = [
   'payload.internal_note',
   'payload.cancel_reason_text',
   'payload.rectification_reason_text',
+  'payload.metadata_json',
   'payload.paciente_id',
+  'payload.body',
+  'payload.title',
 
   // Layer 4: explicit three-level paths for the `initial_note` sub-object
   // accepted by `POST /clinical/encounters`. Covers accidental

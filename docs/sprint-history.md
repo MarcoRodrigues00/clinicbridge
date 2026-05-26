@@ -3313,3 +3313,121 @@ GET    /patients/:id/documents                 (documentos do paciente; profissi
 
 **Próxima sprint natural:** 4.3B (implementação backend: migration + DAOs + services +
 `clinicalDocumentPdfService` + endpoints + logger + smoke tests).
+
+---
+
+## Sprint 4.3B (backend — Documentos Médicos v0.1)
+
+**Data:** 2026-05-26
+**Tipo:** Backend — migration + DAOs + services + PDF + endpoints
+**Objetivo:** Implementar o módulo de Documentos Médicos v0.1 autorizado pela ADR 0011 e Sprint 4.3A.
+**Sem frontend (4.3C), sem AWS, sem ICP-Brasil, sem armazenamento de PDF.**
+
+### Arquivos criados/modificados
+
+**Novos:**
+- `backend/migrations/20260603000000_clinical_documents_v0.ts` — migration aditiva: tabela
+  `clinical_documents` com 4 CHECK constraints de consistência de estado, 5 índices;
+  rollback DROP TABLE limpo.
+- `backend/src/dao/clinicalDocumentDao.ts` — DAO tenant-scoped; invariantes:
+  `clinica_id` em toda query, sem `listAll()`, `author_user_id_self` aplicado defesa em profundidade
+  no DAO (não apenas no service), sem DELETE físico, `finalize`/`cancel` como CAS atomico.
+- `backend/src/services/clinicalDocumentService.ts` — service layer; 7 métodos públicos:
+  `create`, `list`, `listForPatient`, `findById`, `updateDraft`, `finalize`, `cancel`, `getForPdf`;
+  strict-mode read audit ANTES de serializar qualquer conteúdo; `document_body_required` ao
+  finalizar sem body; projeções separadas METADATA-LIST vs. DETAIL.
+- `backend/src/services/clinicalDocumentPdfService.ts` — PDF on-demand via PDFKit;
+  `compress: false` para streams legíveis em smoke tests sem dependência de poppler;
+  rodapé jurídico obrigatório ADR 0011 §10.2 ("ICP-Brasil") desenhado na primeira
+  página explicitamente + via `pageAdded` para páginas adicionais; fonte Helvetica built-in
+  (sem lookups externos); sem armazenamento.
+- `backend/src/controllers/clinicalDocumentController.ts` — thin controller; 7 handlers.
+- `backend/src/routes/clinicalDocuments.ts` — 8 rotas; pipeline
+  `rateLimit → requireAuth → requireClinic → requireClinicalRole`; GETs com `patientsRateLimit`,
+  writes com `importRateLimit`.
+
+**Modificados:**
+- `backend/src/types/db.d.ts` — adicionado `ClinicalDocumentRow`, `ClinicalDocumentType`,
+  `ClinicalDocumentStatus`, `ClinicalDocumentCancelReasonCode`.
+- `backend/src/config/logger.ts` — estendido com 3 paths novos de redação:
+  `body`/`title`/`metadata_json` em top-level + wildcard (`*.body`, `*.title`, `*.metadata_json`) +
+  nested (`body.body`, `body.title`, `req.body.body`, `req.body.title`, `payload.body`, `payload.title`,
+  `body.metadata_json`, etc.). 10 paths novos totais.
+- `backend/src/services/clinicalReadAuditService.ts` — allowlist de `acao` estendida com
+  `clinical.document.list`, `clinical.document.read`, `clinical.document.pdf.downloaded`.
+- `backend/src/app.ts` — registro do `clinicalDocumentsRouter`.
+- `backend/package.json` + `pnpm-lock.yaml` — `pdfkit@0.18.0` + `@types/pdfkit@0.17.6`.
+
+### Segurança / invariantes mantidos
+
+- **Tenant:** `clinica_id` em TODA query DAO; sem `listAll()`; cross-tenant → 404 genérico.
+- **"Profissional vê só os próprios":** `author_user_id_self` no DAO; fallback dono/gestor via `null`.
+- **Audit de leitura strict-mode:** `clinical.document.read` e `clinical.document.pdf.downloaded`
+  emitidos ANTES da serialização — falha de audit aborta com 500 sem vazar conteúdo.
+- **Metadata-list nunca expõe `body`/`metadata_json`/`cancel_reason_text`:** projeção `toListItem`
+  no service; verificado por smoke (tests 15).
+- **PDF só para `status='finalized'`:** service retorna 400 `document_canceled` para cancelados.
+- **Rodapé jurídico obrigatório:** texto fixo por ADR 0011 §10.2 em toda página do PDF;
+  presença verificada em smoke (testes 9 com extração Node.js de hex streams).
+- **Sem armazenamento de PDF:** stream pipeado diretamente para response; sem S3/disco.
+- **Logger sem sentinels clínicos:** 10/10 checks PASS em testes estáticos de grep.
+
+### Smoke tests executados — 47/47 PASS
+
+Execução via `/tmp/sprint-4.3B-smoke.sh` (Node.js, sem jq; script temporário não versionado).
+PDF footer validado via extração de hex streams — sem poppler.
+
+| # | Cenário | Resultado |
+|---|---------|-----------|
+| 1 | sem token → 401 | ✅ |
+| 2 | secretaria → 403 forbidden_role | ✅ |
+| 3 | admin_sistema → 403 no_clinic_context | ✅ |
+| 4 | profissional cria draft → 201 + status=draft | ✅ |
+| 5 | profissional edita draft → 200 + title atualizado | ✅ |
+| 6 | finalizar sem body → 400 document_body_required | ✅ |
+| 7 | finalizar com body → 200 finalized + finalized_at set | ✅ |
+| 8 | editar finalized → 400 document_already_finalized | ✅ |
+| 9 | PDF finalized → 200 + magic %PDF + ICP-Brasil no rodapé + prescri[cao] | ✅ |
+| 10 | cancel finalized → 200 canceled | ✅ |
+| 11 | PDF canceled → 400 document_canceled | ✅ |
+| 12 | owner lê documento → 200 + body visível | ✅ |
+| 13 | gestor lê documento → 200 | ✅ |
+| 14 | secretaria não lê → 403 | ✅ |
+| 15–17 | list owner: body/metadata_json/cancel_reason_text ausentes | ✅ |
+| 18 | list ≥ 1 doc, 200 | ✅ |
+| 19 | GET /patients/:id/documents owner → 200 | ✅ |
+| 20 | UUID inexistente → 404 document_not_found | ✅ |
+| 21 | patient inexistente → 404 patient_not_found | ✅ |
+| 22 | doc_type inválido → 400 clinical_document_invalid | ✅ |
+| 23 | body >10000 → 400 | ✅ |
+| 24 | cancel_reason_code inválido → 400 clinical_document_cancel_invalid | ✅ |
+| 25–26 | list secretaria/admin → 403 | ✅ |
+
+### Audit e cleanup
+
+- `clinical_read_audit` tem registros dos 3 eventos novos: `document.list` (f/t paciente_id),
+  `document.read` (t), `document.pdf.downloaded` (t). Sem conteúdo clínico na tabela.
+- `audit_logs` tem 4 eventos de escrita: `created`, `updated`, `finalized`, `canceled`. Sem body/title/metadata_json (schema da tabela não tem essas colunas — by design).
+- Dados sintéticos da Sprint 4.3B (`clinical_documents`) deletados pós-smoke.
+  Audit/read_audit preservados (metadados, sem conteúdo clínico).
+- Usuários smoke `*@clinicbridge.local` preservados.
+
+### Verificação
+
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter backend migrate:status` — 14 applied, 0 pending ✅
+- `git diff --check` rc=0
+- Docker rebuild `clinicbridge-backend:local` com `compress: false` no PDFKit ✅
+
+### O que NÃO entrou (intencional)
+
+- Frontend (4.3C).
+- AWS / provisionamento.
+- ICP-Brasil / assinatura digital.
+- Armazenamento persistente de PDF.
+- Cifra a nível de coluna (revisável post-4.3).
+- Env vars novas (reutiliza `CLINICAL_READ_AUDIT_STRICT`).
+
+**Próxima sprint natural:** 4.3C (frontend — aba Documentos em `ClinicalPatientPane`).

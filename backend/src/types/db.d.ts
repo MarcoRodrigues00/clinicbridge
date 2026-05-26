@@ -263,6 +263,68 @@ export interface ClinicalReadAuditRow {
   criado_em: Date;
 }
 
+// Clinical Documents v0.1 — Sprint 4.3B (ADR 0011).
+//
+// Second clinical module: documents (receita, atestado, declaração, exame,
+// orientação). Reuses clinical_read_audit (recurso='document' is already in the
+// allowlist since 4.2B-1), audit_logs, and the requireClinicalRole gate.
+//
+// Lifecycle invariants enforced both by DB CHECK and the DAO:
+//   - status: draft → finalized → canceled  (one-way; no restore; no re-edit
+//     after finalized; no DELETE in any state).
+//   - body/title/metadata_json: mutable only while status='draft'.
+//   - finalized: requires finalized_at + finalized_by_user_id.
+//   - canceled : requires canceled_at + canceled_by_user_id + cancel_reason_code.
+
+export type ClinicalDocumentType =
+  | 'receipt_simple'
+  | 'attestation'
+  | 'declaration'
+  | 'exam_request'
+  | 'orientation';
+
+export type ClinicalDocumentStatus = 'draft' | 'finalized' | 'canceled';
+
+export type ClinicalDocumentCancelReasonCode =
+  | 'error'
+  | 'duplicate'
+  | 'patient_request'
+  | 'other';
+
+export interface ClinicalDocumentRow {
+  id: string;
+  clinica_id: string;
+  patient_id: string;
+  // Encounter linkage is OPTIONAL by ADR 0011 §3.5. When set, the service
+  // verifies same clinica + same patient.
+  encounter_id: string | null;
+  author_user_id: string;
+  doc_type: ClinicalDocumentType;
+  // Title is required; service supplies a default when client omits.
+  title: string;
+  // Body holds the clinical text. NULL in draft; non-empty required to finalize.
+  // Capped at 10 000 chars by DB CHECK + service.
+  body: string | null;
+  // Per-type semi-structured fields. Validated by service (not DB CHECK) to
+  // keep template iteration cheap. NEVER carries PII bruta (CPF/phone): the
+  // PDF reads PII from the patient record at render time (minimization).
+  metadata_json: Record<string, unknown> | null;
+  status: ClinicalDocumentStatus;
+  finalized_at: Date | null;
+  finalized_by_user_id: string | null;
+  canceled_at: Date | null;
+  canceled_by_user_id: string | null;
+  cancel_reason_code: ClinicalDocumentCancelReasonCode | null;
+  // Free-text cancel reason capped at 200 chars by DB CHECK. NEVER logged.
+  // NEVER written to audit_logs (no column for it; mirrors clinical_encounters).
+  cancel_reason_text: string | null;
+  // Soft self-reference: this document replaces an earlier finalized one that
+  // was canceled. UI may surface "substitui o doc de DD/MM/AAAA" with this.
+  supersedes_document_id: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // New clinical roles live in their own table (parallel to users.papel) so the
 // legacy 'dono_clinica' / 'secretaria' / 'admin_sistema' enum and the JWT/auth
 // pipeline keep working unchanged. financeiro is reserved for Sprint 4.4 and
@@ -297,6 +359,7 @@ declare module 'knex/types/tables' {
     clinical_encounters: ClinicalEncounterRow;
     clinical_encounter_notes: ClinicalEncounterNoteRow;
     clinical_read_audit: ClinicalReadAuditRow;
+    clinical_documents: ClinicalDocumentRow;
     user_clinical_roles: UserClinicalRoleRow;
   }
 }
