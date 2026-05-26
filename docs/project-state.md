@@ -7,7 +7,149 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.2B-1** (entregue) — **base técnica do Prontuário v0.1:
+**Sprint 4.2B-2** (entregue) — **camada interna do Prontuário v0.1:
+DAOs + middleware `requireClinicalRole` + services base, sem rotas
+públicas.** Implementa exatamente o que a ADR 0010 §15 passos 3–5
+decidiu, sem desvio. **Nenhuma rota clínica registrada em `app.ts`;
+nenhum controller; nenhum frontend.** Autoriza a 4.2B-3 (controllers,
+rotas, logger estendido, smoke tests) a consumir esta camada sem
+refactor.
+
+**Arquivos criados (9, todos sob `backend/src/`):**
+
+DAOs (`dao/`):
+- `userClinicalRoleDao.ts` — append-only. `grant`, `revoke` (CAS),
+  `listActiveRoleNames`, `findActiveForUserRole`, `listActiveByClinic`.
+  Toda query tenant-scoped. Partial unique index do schema garante
+  uma concessão ativa por (user, clinica, role); duplicata vira
+  Postgres `23505` que o service traduz em 400.
+- `clinicalReadAuditDao.ts` — append-only, espelha `auditLogDao`.
+  Único método `record`, com `clip()` para colunas limitadas. Sem
+  `update`/`delete`. DB CHECK força namespace `clinical.*`.
+- `clinicalEncounterDao.ts` — `create`, `findByIdForClinic`,
+  `listForClinic`, `listForPatient`, `cancelOwn` (CAS por id +
+  clinica_id + attending_user_id = self + status='active'). Parâmetro
+  `attending_user_id_self` defensivo aplicado SEMPRE quando presente
+  (ADR 0010 §6.1 — defesa no DAO, não no controller). Sem update
+  clínico (encounter não tem texto) nem delete físico.
+- `clinicalEncounterNoteDao.ts` — append-only estrito. `create`,
+  `findByIdInEncounter`, `listByEncounter`. Sem `update`/`delete`.
+  Retorna `internal_note` raw — redação é decisão do service.
+
+Middleware (`middlewares/requireClinicalRole.ts`):
+- Compõe APÓS `requireAuth` + `requireClinic`. Recebe lista de
+  `UserClinicalRoleName`. `admin_sistema` e `secretaria` → 403
+  firme. `dono_clinica` passa **implicitamente apenas quando
+  `gestor_clinica` está na allowlist** (operações de leitura).
+  Para escrita (`profissional_clinico` only), o owner precisa de
+  concessão explícita em `user_clinical_roles` (ADR 0010 §7 linha 1).
+  Demais roles vêm de SELECT em `user_clinical_roles`. Popula
+  `req.clinicalRoles: Set<ClinicalCapability>`. 403 `forbidden_role`
+  é genérico (anti-enumeração).
+
+Services (`services/`):
+- `userClinicalRoleService.ts` — `grant` (valida target ativo +
+  mesma clínica + papel ≠ admin_sistema; trata `23505` como 400
+  `clinical_role_already_granted`), `revoke` (CAS + audit
+  `clinical.role.revoked.success` na transação — mesmo padrão do
+  patientMergeService), `listActive`. Audit em `audit_logs`
+  (`recurso='user_clinical_role'`).
+- `clinicalReadAuditService.ts` — **controle compensatório principal**
+  da ausência de cifra a nível de coluna (ADR 0010 §13). Allowlist
+  de acoes. Modo determinado por `env.CLINICAL_READ_AUDIT_STRICT`:
+  `recordStrict` (falha → 500 `clinical_read_audit_unavailable`),
+  `recordBestEffort` (falha logada sem PII), `recordReadAudit`
+  (default — usa strict em prod, best-effort em dev/test). Snapshot
+  `papel_at_read` anti-stale (dono > gestor > profissional).
+- `clinicalEncounterService.ts` — separação rigorosa entre
+  **metadados** e **conteúdo clínico**:
+  - **METADADOS-LIST** (`list`, `listForPatient`) → retorna
+    `PublicClinicalEncounterListItem` (sem os 5 campos textuais; sem
+    `cancel_reason_text`). DAO `listForClinic`/`listForPatient` consulta
+    APENAS `clinical_encounters` (sem JOIN com notas) — defesa de schema.
+    `toListItem` dropa `cancel_reason_text`. Audit `clinical.encounter.list`
+    (lista geral, `paciente_id=null`) ou `clinical.timeline.list` (single-patient,
+    `paciente_id` presente). Strict mode aplica também aos audits de
+    metadados — falha aborta a resposta antes do SELECT.
+  - **CONTEÚDO-READ** (`findById`) → única operação que retorna notas
+    (5 campos textuais). Audit STRICT `clinical.encounter.read` com
+    `paciente_id` emitido **após** carregar a metadata mas **antes** de
+    carregar as notas. Em strict mode, falha do audit aborta antes de
+    qualquer texto clínico sair. `internal_note` redacted para não-autor
+    pelo helper único do note service.
+  - **WRITE** (`create`, `cancel`) → audit administrativo
+    (`clinical.encounter.created/canceled.success`) em `audit_logs`,
+    best-effort. `create` valida paciente ativo + não-mesclado +
+    mesma clínica; `started_at` bound 1d/5y. `cancel` via CAS no DAO.
+  `attendingSelfFilterFor(actor)` aplica self-filter no DAO (null
+  para dono/gestor, `usuario_id` para profissional). **Audit de
+  metadados (list/timeline) NÃO substitui audit de conteúdo (read)**
+  — são `acao` distintas e jamais intercambiáveis.
+- `clinicalEncounterNoteService.ts` — `create` cobre criação simples
+  e retificação. Helper público `applyInternalNoteRedaction(row, actor)`
+  é o **único ponto auditável** de redação — autor + dono + gestor
+  veem `internal_note`; demais leitores recebem `null`. DAO sempre
+  devolve raw; service projeta. `normalizeInitialNotePayload`
+  reusado pelo encounter service para validação UPFRONT antes de
+  abrir transação. Rectification exige nota alvo no mesmo encounter
+  + mesmo autor (ADR 0010 §9.1).
+
+**Decisões técnicas resumidas:**
+1. **`dono_clinica` implícito apenas quando `gestor_clinica` está
+   na allowlist.** Owner-as-clinician precisa da concessão explícita
+   (ADR 0010 §7 linha 1).
+2. **Defesa em profundidade no DAO** — `attending_user_id_self` no
+   DAO sempre aplicado, service-bug-proof.
+3. **Audit STRICT antes da query principal** (atomicidade simples).
+4. **Redaction só no service**, ponto único auditável.
+5. **Audit administrativo best-effort × audit de leitura strict**:
+   mecanismos diferentes (`auditLogDao` vs. `clinicalReadAuditDao`),
+   nunca confundidos.
+6. **404 genérico em todos os mismatches** (cross-tenant, autor
+   alheio, paciente mesclado/arquivado, encounter cancelado).
+7. **Sem `update`/`delete` clínico**: encounter cancela via CAS,
+   notas só INSERT, roles via `revoked_at`.
+
+**Verificação executada:**
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `git diff --check` rc=0
+- `git status --short`: 9 arquivos novos, todos sob
+  `backend/src/{dao,middlewares,services}/`. Nada mais.
+- `grep -rn 'clinical\|encounter'` em `backend/src/app.ts` e
+  `backend/src/routes/` — só comentários administrativos antigos.
+  **Sem rota clínica registrada.**
+- `backend/src/controllers/` — nenhum controller clínico criado.
+
+**O que NÃO é entregue nesta sprint (intencional):** nenhuma rota
+clínica em `app.ts`/`routes/`, nenhum controller, nenhum frontend,
+nenhuma alteração em `logger.ts` (extensão de `redactPaths` fica
+para 4.2B-3), nenhum seed de role clínica em banco real, nenhuma
+inserção em tabelas clínicas, nenhum recurso AWS, nenhum secret novo,
+nenhuma migration adicional. ADR 0010 §15 passos 6–9 (controllers,
+rotas, logger, smoke tests) vão para a **Sprint 4.2B-3**.
+
+**Riscos / ressalvas:**
+- Camada interna sem cobertura por endpoint ainda — services não
+  são exercitados ponta a ponta. Smoke tests da matriz cross-tenant /
+  "profissional só vê os próprios" / redaction de `internal_note` /
+  fail-closed strict / 403 para funcionário/financeiro/admin_sistema
+  (ADR 0010 §15 passo 9) ficam para a 4.2B-3.
+- `user_clinical_roles` continua vazia em dev/staging. Antes de
+  qualquer teste ponta a ponta da 4.2B-3 será necessário endpoint
+  owner-only de grant ou seed dev-only.
+- Disciplina de logging não automatizada: services aqui não passam
+  conteúdo clínico ao `logger`, mas `redactPaths` em `config/logger.ts`
+  só cobre `password`/`senha`/`cpf`/`token`. A 4.2B-3 deve estender
+  com os 5 campos clínicos + cancel/rectification reason_text (ADR
+  0010 §8.4). Hoje a defesa é discipline-only.
+- `applyInternalNoteRedaction` é ponto único de redação. Um
+  controller futuro que devolver o row do DAO direto vaza
+  `internal_note` — smoke test obrigatório na 4.2B-3.
+
+---
+
+**Sprint anterior: 4.2B-1** (entregue) — **base técnica do Prontuário v0.1:
 migration aditiva + tipos + env guard.** Primeira sprint a tocar
 código clínico de verdade. **Sem endpoints, sem DAOs, sem services,
 sem controllers, sem UI, sem AWS.** Implementa exatamente o que a
