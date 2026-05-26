@@ -27,24 +27,40 @@
 
 ## Estado atual (resumido — atualizado 2026-05-26)
 
-**Sprint atual: 4.2C** (entregue) — **Frontend do Prontuário v0.1.**
-Primeira UI clínica consumindo os endpoints da 4.2B-3. **Sem alterações de
-backend, sem migrations, sem env vars novas, sem AWS, sem dado clínico real.**
+**Sprint atual: 4.2D** (entregue) — **Hardening/QA clínico final do Prontuário v0.1.**
+QA de segurança, logs, audit e dados sintéticos antes de avançar para Fase 4.3.
+**Sem código novo, sem migrations, sem env vars, sem AWS, sem dado clínico real.**
 
-- **`ClinicalPatientPane`** — drawer lateral (right-side `<dialog>`) com
-  máquina de estados: `timeline` (metadata-only) → `detail` (CONTENT-READ
-  + cancelamento inline) → `new-encounter` (form de criação) →
-  `new-note`/`new-note-rectify` (form de nota). Audit notice permanente.
-  `internal_note null` → campo oculto (sem placeholder). 403/401 → mensagem
-  genérica. Nunca loga payload clínico. TanStack Query com `staleTime: 0`.
-- **`ClinicalRolesPanel`** — painel owner-only na aba Equipe: lista grants
-  com nome do membro (join com `listClinicMembers`), form de concessão
-  (membro + role), botão de revogação por grant.
-- **`PatientsList`** — botão "Prontuário" em cards não-arquivados; backend
-  decide o acesso (403 → mensagem genérica no pane).
+**Validações confirmadas (análise estática + inspeção de DB):**
+- **Logger redaction:** 4 camadas em `logger.ts` cobrem os 7 campos clínicos
+  (`chief_complaint`, `anamnesis`, `evolution`, `plan`, `internal_note`,
+  `cancel_reason_text`, `rectification_reason_text`) e `paciente_id`.
+  Nenhum controller/service loga payload clínico diretamente (grep confirmado).
+- **Clinical read audit:** 3 categorias corretas (`clinical.encounter.read`
+  com `paciente_id`, `clinical.encounter.list` sem, `clinical.timeline.list`
+  com). Strict mode (`CLINICAL_READ_AUDIT_STRICT`) aborta antes de serializar
+  conteúdo clínico se audit falhar. `audit_logs` administrativos nunca recebem
+  conteúdo clínico.
+- **Permissões:** `dono_clinica` lê sem grant explícito; precisa de grant
+  `profissional_clinico` para escrever. `gestor_clinica` lê somente. `secretaria`
+  e `admin_sistema` bloqueados via `requireClinicalRole` (403 `forbidden_role`).
+  profA não vê encounters de profB (DAO self-filter `attending_user_id_self`).
+  `internal_note` redactado via helper único `applyInternalNoteRedaction`.
+- **Frontend:** sem `console.log`, sem `localStorage`/`sessionStorage` com dado
+  clínico (JWT em `localStorage` é o padrão do MVP); sem `dangerouslySetInnerHTML`;
+  sem dado clínico em URL/query string. `internal_note null` → oculto. `staleTime: 0`.
+- **Dados sintéticos:** 2 encounters + 3 notes de QA deletados do dev DB (SQL
+  direto, autorizados por serem dados sintéticos de dev). 14 `clinical_read_audit`
+  rows preservados (sem conteúdo clínico — só metadados de auditoria). 1 grant
+  `user_clinical_roles` preservado (permissão funcional).
 
-**Verificação:** `pnpm --filter frontend typecheck` ✅ (0 erros) ·
-`pnpm --filter frontend build` ✅ · `git diff --check` rc=0.
+**Verificação:** `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend
+build` ✅ · `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
+`git diff --check` rc=0 · `git status --short` limpo.
+
+**Sprint anterior: 4.2C** (entregue) — **Frontend do Prontuário v0.1.**
+`ClinicalPatientPane` (drawer, máquina de estados timeline→detail→new-encounter→new-note),
+`ClinicalRolesPanel` (owner-only grants), botão "Prontuário" no `PatientsList`.
 
 **Sprint anterior: 4.2B-3** (entregue) — **controllers + rotas clínicas +
 logger redaction + smoke tests do Prontuário v0.1.** Rotas registradas em
@@ -78,7 +94,8 @@ para Clinic OS modular (ADR 0008).
 **Fases Clinic OS planejadas:** 4.0 ✅ decisão → **4.1 ✅** ADR 0009 →
 **4.2A ✅** ADR 0010 → **4.2B-1 ✅** base técnica → **4.2B-2 ✅** camada
 interna → **4.2B-3 ✅** controllers + rotas + smoke 76/76 PASS → **4.2C ✅**
-frontend (drawer, roles panel, botão Prontuário) → **4.2B-4** (opcional —
+frontend (drawer, roles panel, botão Prontuário) → **4.2D ✅** QA/hardening
+(logs, audit, permissões, dados sintéticos, docs) → **4.2B-4** (opcional —
 endpoint LGPD-art.18 de auditoria de leitura) → **4.3** documentos
 médicos/receitas (sem ICP-Brasil) → **4.4** financeiro → **4.5** relatórios
 gerenciais → **4.6** convênios/faturamento básico (TISS/TUSS real fora) →
@@ -158,7 +175,9 @@ conceitual e audit de leitura). Sequência de fases administrativas:
   (DAOs, middleware `requireClinicalRole`, services base; sem rotas) →
   **4.2B-3 ✅** controllers + rotas + logger redaction 4 camadas + smoke 76/76 PASS
   → **4.2C ✅** frontend (drawer `ClinicalPatientPane`, painel `ClinicalRolesPanel`,
-  botão Prontuário em PatientsList; typecheck/build ✅) → **4.2B-4** (próximo
+  botão Prontuário em PatientsList; typecheck/build ✅) → **4.2D ✅** QA/hardening
+  (logs validados, audit validado, permissões validadas, dados sintéticos limpos,
+  docs atualizados; zero mudanças de código) → **4.2B-4** (próximo
   passo opcional — endpoint owner-only para listar audit de leitura
   clínica/transparência LGPD-art.18, ou pular direto para a Fase 4.3 se
   jurídico priorizar receitas) → **4.3** documentos médicos/receitas v0.1

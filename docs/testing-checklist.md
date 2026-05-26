@@ -1284,3 +1284,136 @@ e-mail, telefone, valores de campo, ou valores dos secundários. Verifique
 | Sem roles granulares | Só dono/secretaria no MVP |
 | Sem WhatsApp API/automático | Manual-first; API é sprint futura |
 | Histórico visual de auditoria | Leitura de `audit_logs` na UI é Fase 4 |
+
+---
+
+## Prontuário clínico v0.1 — Sprint 4.2D (QA hardening)
+
+> Smoke tests e verificações de segurança para o módulo clínico (ADR 0010).
+> Backend: `http://localhost:3001`. Requer `TOKEN` do usuário com grant clínico.
+> Verificações de DB requerem `docker compose exec postgres psql -U clinicbridge -d clinicbridge`.
+
+### Setup de pré-condição
+
+```bash
+# 1. Verificar se o usuário tem grant profissional_clinico
+docker compose exec postgres psql -U clinicbridge -d clinicbridge -c "
+  SELECT ucr.role, u.email FROM user_clinical_roles ucr
+  JOIN users u ON u.id = ucr.user_id WHERE ucr.revoked_at IS NULL;"
+
+# 2. Obter token (usuário com grant clínico)
+TOKEN=$(curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"email":"...","senha":"..."}' http://localhost:3001/auth/login | jq -r '.token')
+
+# 3. Obter um patient_id ativo
+PID=$(curl -s -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/patients | jq -r '.patients[0].id')
+```
+
+### 1. Logger redaction (validação estática)
+
+```bash
+# Grep: nenhum logger.* com campo clínico em controllers/services
+grep -n "logger\." backend/src/controllers/clinicalEncounterController.ts  # esperado: NONE
+grep -n "logger\." backend/src/services/clinicalEncounterService.ts | grep -v "audit_write_failed\|clinical_read_audit_failed"  # esperado: NONE
+# Verificar cobertura no logger.ts:
+grep -c "chief_complaint\|anamnesis\|evolution\|internal_note" backend/src/config/logger.ts  # esperado: >= 16
+```
+
+### 2. Permissões — profissional_clinico
+
+```bash
+# Criar encounter (deve retornar 201)
+ENC=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d "{\"patient_id\":\"$PID\",\"started_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
+  http://localhost:3001/clinical/encounters)
+EID=$(echo $ENC | jq -r '.encounter.id')
+echo "Encounter: $EID"
+
+# Timeline (deve retornar 200, SEM campos textuais clínicos)
+curl -s -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/patients/$PID/clinical-timeline | jq '.encounters[0] | keys'
+# Esperado: campos de metadata apenas (id, started_at, status…) — sem chief_complaint/anamnesis
+
+# Detalhe (deve retornar 200 + audit criado)
+curl -s -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/clinical/encounters/$EID | jq '.encounter.id, (.notes | length)'
+
+# Cancelar (deve retornar 200)
+curl -s -X PATCH -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"reason_code":"data_error"}' \
+  http://localhost:3001/clinical/encounters/$EID/cancel | jq '.encounter.status'  # esperado: "canceled"
+```
+
+### 3. Permissões — secretaria (deve retornar 403)
+
+```bash
+# Obter token de secretaria (sem grant clínico)
+STOKEN=$(curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"email":"...secretaria...","senha":"..."}' http://localhost:3001/auth/login | jq -r '.token')
+
+curl -s -H "Authorization: Bearer $STOKEN" \
+  http://localhost:3001/patients/$PID/clinical-timeline | jq '.error.code'
+# Esperado: "forbidden_role"
+
+curl -s -X POST -H "Authorization: Bearer $STOKEN" -H 'Content-Type: application/json' \
+  -d "{\"patient_id\":\"$PID\",\"started_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
+  http://localhost:3001/clinical/encounters | jq '.error.code'
+# Esperado: "forbidden_role"
+```
+
+### 4. Permissões — dono_clinica sem grant (leitura ✅, escrita ❌)
+
+```bash
+# Com token do dono (sem grant profissional_clinico):
+# Timeline → 200 (implicit gestor para leitura)
+# POST /clinical/encounters → 403 (owner precisa de grant explícito para escrever)
+```
+
+### 5. Audit clínico — clinical_read_audit
+
+```bash
+# Após acessar detalhe de um encounter, verificar registro de audit:
+docker compose exec postgres psql -U clinicbridge -d clinicbridge -c "
+  SELECT acao, papel_at_read, recurso, paciente_id IS NOT NULL AS has_paciente
+  FROM clinical_read_audit ORDER BY criado_em DESC LIMIT 5;"
+# Esperado:
+#   clinical.encounter.read  | <papel> | encounter | t
+#   clinical.timeline.list   | <papel> | timeline  | t
+#   clinical.encounter.list  | <papel> | encounter | f  (paciente_id NULL na listagem geral)
+```
+
+### 6. internal_note — redação para não-autor
+
+```bash
+# Criar nota com internal_note
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d "{\"chief_complaint\":\"teste\",\"internal_note\":\"nota privada\"}" \
+  http://localhost:3001/clinical/encounters/$EID/notes | jq '.note.internal_note'
+# Esperado: "nota privada" (autor vê)
+
+# Acessar o mesmo encounter com token de outro profissional (com grant mas não autor)
+# Esperado: internal_note == null no NoteCard
+```
+
+### 7. Invariantes de banco
+
+```bash
+docker compose exec postgres psql -U clinicbridge -d clinicbridge -c "
+  SELECT 'encounters' AS t, count(*) FROM clinical_encounters
+  UNION ALL SELECT 'notes', count(*) FROM clinical_encounter_notes
+  UNION ALL SELECT 'audit', count(*) FROM clinical_read_audit
+  UNION ALL SELECT 'roles', count(*) FROM user_clinical_roles;"
+# Pós-Sprint 4.2D: encounters=0, notes=0 (dados sintéticos limpos); audit>=14; roles>=1
+```
+
+### Ressalvas aceitas (Prontuário v0.1)
+
+| Item | Detalhe |
+|------|---------|
+| Sem cifra a nível de coluna | ADR 0010 §13: audit como compensating control; cifra é fase futura |
+| Sem tela LGPD-art.18 | Endpoint 4.2B-4 futuro (ou fase 4.5) |
+| Sem delete físico de encounter | Cancelamento é one-way; restore fora do escopo |
+| Sem undo de nota | Append-only por design (ADR 0010 §9) |
+| Sem CID/diagnóstico estruturado | Fora do escopo v0.1 (ADR 0010 §2.4) |
+| `staleTime: 0` nas queries clínicas | Sem cache de dado clínico; recarrega sempre |
