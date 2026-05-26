@@ -13,6 +13,8 @@ import { clinicProfessionalsRouter } from './routes/clinicProfessionals';
 import { appointmentsRouter } from './routes/appointments';
 import { clinicJoinRequestsRouter } from './routes/clinicJoinRequests';
 import { clinicMembersRouter } from './routes/clinicMembers';
+import { clinicalEncountersRouter } from './routes/clinicalEncounters';
+import { clinicalRolesRouter } from './routes/clinicalRoles';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -84,6 +86,12 @@ export function createApp(): Express {
   app.use(appointmentsRouter);
   app.use(clinicJoinRequestsRouter);
   app.use(clinicMembersRouter);
+  // Clinical Prontuário v0.1 (Sprint 4.2B-3, ADR 0010). All routes are gated
+  // by requireAuth + requireClinic + (requireClinicalRole | requireRole).
+  // Logger redacts the 5 textual clinical fields + cancel/rectification
+  // reason_text + paciente_id (config/logger.ts).
+  app.use(clinicalRolesRouter);
+  app.use(clinicalEncountersRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

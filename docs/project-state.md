@@ -7,7 +7,159 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.2B-2** (entregue) — **camada interna do Prontuário v0.1:
+**Sprint 4.2B-3** (entregue) — **controllers + rotas clínicas + logger
+redaction + smoke tests do Prontuário v0.1.** Implementa exatamente o que
+a ADR 0010 §15 passos 6–9 decidiu sobre a camada interna entregue na
+4.2B-2. **Sem frontend, sem migrations novas, sem AWS, sem dado clínico
+real.**
+
+**Arquivos criados:**
+- `backend/src/controllers/clinicalEncounterController.ts` — `create`,
+  `list`, `detail`, `cancel`, `createNote`, `timeline`. `clinicalActor(req)`
+  monta `{clinica_id, usuario_id, clinicalRoles}` confiando no que a
+  pipeline de middleware já validou; falha hard se `clinicalRoles` ausente
+  (defesa em profundidade).
+- `backend/src/controllers/userClinicalRoleController.ts` — `listActive`,
+  `grant`, `revoke`. Usa `ownerActor(req)` (não precisa de `clinicalRoles`
+  — endpoint é administrativo).
+- `backend/src/routes/clinicalEncounters.ts` — registra:
+  - `POST /clinical/encounters` →
+    `importRateLimit + requireAuth + requireClinic + requireClinicalRole(['profissional_clinico'])`
+  - `GET /clinical/encounters` →
+    `patientsRateLimit + ... + requireClinicalRole(['profissional_clinico','gestor_clinica'])`
+  - `GET /clinical/encounters/:id` → idem GET
+  - `PATCH /clinical/encounters/:id/cancel` → idem POST
+  - `POST /clinical/encounters/:id/notes` → idem POST
+  - `GET /patients/:id/clinical-timeline` → idem GET
+- `backend/src/routes/clinicalRoles.ts` — registra
+  `GET /clinical/roles`, `POST /clinical/roles/grant`,
+  `POST /clinical/roles/revoke` gateadas por
+  `requireRole(CLINIC_ADMIN_ROLES)` (owner-only). NÃO usa
+  `requireClinicalRole` — administração de roles é tarefa do dono, não
+  ação clínica.
+
+**Arquivos alterados:**
+- `backend/src/config/logger.ts` — `redactPaths` estendida com 4 camadas
+  de cobertura (ajuste pós-4.2B-3, antes do commit):
+  1. Top-level: `chief_complaint`, `anamnesis`, `evolution`, `plan`,
+     `internal_note`, `cancel_reason_text`, `rectification_reason_text`,
+     `paciente_id`.
+  2. 1-level wildcards: `*.field` — cobre `body.<f>`, `note.<f>`, etc.
+  3. 2-level explícito: `body.<f>`, `req.body.<f>`, `payload.<f>` — cobre
+     `logger.info({ body: req.body })`.
+  4. 3-level explícito: `body.initial_note.<f>`, `req.body.initial_note.<f>`,
+     `payload.initial_note.<f>` — cobre `POST /clinical/encounters` com
+     sub-objeto `initial_note`. Verificado por teste de vazamento 7/7 PASS
+     (`/tmp/test-logger-redact-4.2B-3b.js`, removido após o run):
+     nenhum valor sentinel (`queixa-vazamento-teste`, `interno-vazamento-teste`,
+     `cancelamento-vazamento-teste`, `paciente_id UUID`, etc.) aparece nos
+     logs em nenhuma das 7 formas testadas.
+  `plan` é redação broad (campo único no projeto; `clinics.plano` é
+  "plano" em PT e não conflita). `patient_id` (admin) NÃO é redacted
+  globalmente — quebraria logs administrativos legítimos; discipline-only
+  nos clinical services.
+- `backend/src/app.ts` — registra `clinicalRolesRouter` e
+  `clinicalEncountersRouter` (admin antes do clínico — ordem REST
+  tradicional). Comentário explícito sobre redação no logger.
+
+**Decisões técnicas:**
+1. **Rate limit reusa limiters existentes:** `patientsRateLimit` em GETs
+   leves (list/detail/timeline) e `importRateLimit` em writes
+   (POST/PATCH). ADR 0010 §12 sugere `CLINICAL_WRITE_*` dedicado — ficou
+   para sprint futura se o volume real exigir; introduzir env vars novas
+   estava fora do escopo desta sprint.
+2. **`dono_clinica` implícito apenas quando `gestor_clinica` na allowlist:**
+   para criar/cancelar (`['profissional_clinico']`), o owner precisa de
+   concessão explícita. Confirmado pelo smoke test 1.4 e 6.2.
+3. **Timeline em `clinicalEncountersRouter`:** path `/patients/:id/clinical-timeline`
+   pertence semanticamente ao módulo clínico (decide audit, requireClinicalRole,
+   etc.), mesmo seguindo a convenção REST de sub-resource do paciente.
+4. **Logger cobre 4 camadas de profundidade explícita:** fast-redact não
+   suporta wildcards recursivos (`**`), então paths de 3 níveis são
+   declarados explicitamente. Defesa principal continua discipline-only
+   nos services (que nunca passam clinical row ao logger).
+5. **`patient_id` NÃO globalmente redacted:** seria destrutivo para logs
+   administrativos (appointments, scheduling). Restrição é discipline-only.
+
+**Smoke test (76/76 PASS — `/tmp/test-clinical-sprint-4.2B-3.sh`, removido
+após o run):**
+- **Seção 1 — Autorização:** sem token → 401 (5 cenários); secretaria →
+  403 em todos os clinical endpoints; profissional sem grant → 403; owner
+  sem `profissional_clinico` não cria (mas lista — gestor implícito);
+  não-owner não concede role.
+- **Seção 2 — Grant/revoke role:** owner concede profA/profB
+  (`profissional_clinico`) e gestor (`gestor_clinica`) → 201; duplicata →
+  400 `clinical_role_already_granted`; cross-tenant grant → 404 genérico;
+  role `financeiro` → 400 (fora do v0.1).
+- **Seção 3 — Create + patient guards:** profA cria → 201; profB cria
+  outro → 201; paciente arquivado → 404 `patient_not_found`; paciente
+  mesclado → 404; UUID aleatório → 404; encounter sem initial_note → 201.
+- **Seção 4 — Metadata-only:** `list` e `timeline` retornam ZERO ocorrências
+  de `chief_complaint|anamnesis|evolution|plan|internal_note|cancel_reason_text|notes`;
+  profA NÃO vê encounter do profB (DAO self-filter); owner/gestor com
+  filter por paciente veem AMBOS encounters.
+- **Seção 5 — Detail + redaction:** autor vê próprio `internal_note`;
+  owner (gestor implícito) lendo encounter alheio vê `internal_note`;
+  gestor lendo encounter alheio vê `internal_note`; profissional A → 404
+  no encounter do B (anti-enumeração); owner lendo encounter de profB vê
+  o `internal_note` que profB anotou.
+- **Seção 6 — Cancel:** profB cancela alheio → 404; owner sem grant não
+  cancela → 403; profA cancela próprio → 200 + status=canceled;
+  segunda cancelamento → 404 (CAS idempotente).
+- **Seção 7 — Notes:** append OK; profB em encounter de profA → 404;
+  nota vazia → 400; rectify próprio → 201; profB rectify de profA → 404;
+  rectify sem `rectification_reason_code` → 400.
+- **Seção 8 — Audit/SQL:** `audit_logs` sem texto clínico em
+  recurso/recurso_id; `clinical_read_audit` com 9 linhas para clinica A,
+  todas com `acao LIKE 'clinical.%'` + recurso no allowlist; snapshots
+  `papel_at_read` com `dono_clinica`, `gestor_clinica`, `profissional_clinico`
+  presentes; `paciente_id` NULL em `clinical.encounter.list` e NOT NULL
+  em `clinical.encounter.read` / `clinical.timeline.list`.
+- **Seção 9 — Logs:** grep nos logs em `chief_complaint|anamnesis|...
+  |"queixa A"|"interno A"|"queixa A corrigida"` → 0 ocorrências; grep nas
+  chaves JSON `"chief_complaint":|"anamnesis":|...` → 0.
+- **Seção 10 — Strict fail-closed:** best-effort com CHECK `NOT VALID`
+  quebrando inserts → 200 OK + conteúdo entregue + log `clinical_read_audit_failed`
+  sem `paciente_id`; strict mode via Node child mockando o DAO ⇒
+  `HttpError(500, clinical_read_audit_unavailable)`; production boot
+  guard validado pela 4.2B-1 (9/9).
+- **Seção 11 — Revoke:** owner revoga grant → 200; profA não cria após
+  revoke → 403 (middleware re-queries `user_clinical_roles` por request);
+  segundo revoke → 404 (idempotente).
+
+**Cleanup pós-smoke:** todas as 4 tabelas clínicas voltaram para count=0;
+clinics/users/patients/audit_logs de teste deletados; constraint
+`clinical_read_audit_acao_prefix_check` restaurada; invariantes locais
+preservados (patients=26, import_files=25, import_sessions=8, users=35).
+
+**O que NÃO entrou nesta sprint (intencional):** nenhum frontend; nenhum
+endpoint de transparência LGPD-art.18 ("quem leu meu prontuário" —
+opcional, vai para 4.2B-4 ou Fase 4.5); nenhum env var nova (rate
+limiter dedicado `CLINICAL_WRITE_*` não foi criado — reusa
+`importRateLimit`); nenhuma migration nova; nenhum recurso AWS; nenhum
+dado clínico real persistido (smoke usa fixtures sintéticos limpos).
+
+**Riscos / ressalvas:**
+- **Rate limit compartilhado com import** — em produção real, pode valer
+  introduzir `CLINICAL_WRITE_*` dedicado (env vars + scope) se houver
+  volume; hoje o write-class compartilha 120 req/15min com a pipeline
+  de import.
+- **`patient_id` em logs administrativos NÃO é redacted globalmente** —
+  discipline-only nos clinical services. Auditoria periódica do log
+  deve confirmar.
+- **`plan` é redação broad no logger** — qualquer top-level/1-deep `plan`
+  em qualquer contexto será removido. Aceitável: `clinics.plano` (PT)
+  não conflita, e nenhuma feature atual loga top-level `plan`. Documentado
+  no comentário do `logger.ts`.
+- **Sem CSRF token** — JWT em Authorization header, não cookie; sem
+  cross-site state-changing risk. Mantém o padrão atual.
+- **Smoke test exigiu bumpar `AUTH_RATE_LIMIT_MAX=200` temporariamente**
+  durante o run (precisa 30+ requests em /auth/* na fase de setup); env
+  foi restaurada para 20 ao final. **Não comitar o bump.**
+
+---
+
+**Sprint anterior: 4.2B-2** (entregue) — **camada interna do Prontuário v0.1:
 DAOs + middleware `requireClinicalRole` + services base, sem rotas
 públicas.** Implementa exatamente o que a ADR 0010 §15 passos 3–5
 decidiu, sem desvio. **Nenhuma rota clínica registrada em `app.ts`;
