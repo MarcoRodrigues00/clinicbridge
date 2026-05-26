@@ -25,136 +25,65 @@
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
 > - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
 
-## Estado atual (resumido — atualizado 2026-05-25)
+## Estado atual (resumido — atualizado 2026-05-26)
 
-**Sprint atual: 4.2B-3** (entregue) — **controllers + rotas clínicas +
-logger redaction + smoke tests do Prontuário v0.1.** Implementa ADR 0010
-§15 passos 6–9 sobre a camada interna entregue na 4.2B-2. Rotas
-registradas em `app.ts` com pipeline
+**Sprint atual: 4.2C** (entregue) — **Frontend do Prontuário v0.1.**
+Primeira UI clínica consumindo os endpoints da 4.2B-3. **Sem alterações de
+backend, sem migrations, sem env vars novas, sem AWS, sem dado clínico real.**
+
+- **`ClinicalPatientPane`** — drawer lateral (right-side `<dialog>`) com
+  máquina de estados: `timeline` (metadata-only) → `detail` (CONTENT-READ
+  + cancelamento inline) → `new-encounter` (form de criação) →
+  `new-note`/`new-note-rectify` (form de nota). Audit notice permanente.
+  `internal_note null` → campo oculto (sem placeholder). 403/401 → mensagem
+  genérica. Nunca loga payload clínico. TanStack Query com `staleTime: 0`.
+- **`ClinicalRolesPanel`** — painel owner-only na aba Equipe: lista grants
+  com nome do membro (join com `listClinicMembers`), form de concessão
+  (membro + role), botão de revogação por grant.
+- **`PatientsList`** — botão "Prontuário" em cards não-arquivados; backend
+  decide o acesso (403 → mensagem genérica no pane).
+
+**Verificação:** `pnpm --filter frontend typecheck` ✅ (0 erros) ·
+`pnpm --filter frontend build` ✅ · `git diff --check` rc=0.
+
+**Sprint anterior: 4.2B-3** (entregue) — **controllers + rotas clínicas +
+logger redaction + smoke tests do Prontuário v0.1.** Rotas registradas em
+`app.ts` com pipeline
 `rateLimit → requireAuth → requireClinic → (requireClinicalRole | requireRole)`:
-- **`POST /clinical/encounters`** (profissional_clinico) — cria encounter +
-  initial note opcional;
-- **`GET /clinical/encounters`** (profissional_clinico, gestor_clinica,
-  dono_clinica implícito) — METADATA-LIST; sem 5 campos textuais; sem
-  `cancel_reason_text`; sem notas;
-- **`GET /clinical/encounters/:id`** (idem) — CONTENT-READ; audit STRICT
-  `clinical.encounter.read` com `paciente_id` emitido **antes** de carregar
-  notas; `internal_note` redacted para não-autor (autor + dono + gestor
-  veem);
-- **`PATCH /clinical/encounters/:id/cancel`** (profissional_clinico) — autor
-  próprio só; CAS no DAO; 404 genérico no miss;
-- **`POST /clinical/encounters/:id/notes`** (profissional_clinico) — autor
-  próprio cria/retifica nota; retificação preserva autoria;
-- **`GET /patients/:id/clinical-timeline`** (profissional_clinico,
-  gestor_clinica, dono implícito) — TIMELINE-METADATA single-patient com
-  audit `paciente_id` presente;
-- **`GET/POST /clinical/roles[/grant|/revoke]`** (`requireRole(CLINIC_ADMIN_ROLES)`,
-  dono-only) — administração de roles clínicas. **`logger.ts` estendido**
-  (defesa em profundidade) com `chief_complaint`, `anamnesis`, `evolution`,
-  `plan`, `internal_note`, `cancel_reason_text`,
-  `rectification_reason_text`, `paciente_id` (top-level + `*.field`
-  wildcards). Reusa `patientsRateLimit` em GETs leves e `importRateLimit`
-  em writes (ADR 0010 §12 — dedicated CLINICAL_WRITE_* fica para sprint
-  futura se o volume real exigir).
+`POST/GET /clinical/encounters`, `GET /clinical/encounters/:id`,
+`PATCH /clinical/encounters/:id/cancel`, `POST /clinical/encounters/:id/notes`,
+`GET /patients/:id/clinical-timeline`, `GET/POST /clinical/roles[/grant|/revoke]`.
+`logger.ts` estendido com 4 camadas (top-level, `*.field`, `body/req.body/payload.<field>`,
+`body/req.body/payload.initial_note.<field>`). Smoke 76/76 PASS.
 
-**Smoke test (76/76 PASS)** — script `/tmp/test-clinical-sprint-4.2B-3.sh`
-(removido após o run) exercitou: 401 sem token; 403 para
-secretaria/admin_sistema/profissional sem grant; owner sem
-profissional_clinico não cria mas lista (gestor implícito); dono concede e
-revoga roles, owner alheio bloqueado (404 cross-tenant); criação bloqueada
-para paciente arquivado/mesclado (404 patient_not_found); profissional A
-NÃO vê encounter do B (DAO self-filter); dono e gestor leem com audit;
-list e timeline NÃO carregam nenhum dos 5 campos textuais nem
-`cancel_reason_text`; detail entrega notas; `internal_note` redacted para
-não-autor + não-dono/gestor; cancel próprio OK + idempotência; cancel
-alheio 404; rectification preserva autoria (404 quando outra autor tenta);
-**best-effort do audit** quebrado via `CHECK ... NOT VALID` ⇒ leitura
-segue 200 com conteúdo + log de erro sem `paciente_id`; **strict mode**
-via Node child mockando o DAO ⇒ throws `HttpError(500,
-clinical_read_audit_unavailable)`; production boot guard validado pela
-4.2B-1 (9/9). `audit_logs` e `clinical_read_audit` sem conteúdo clínico
-(SQL grep); aplicação não logou nenhum dos 5 campos textuais
-(`chief/anamnesis/evolution/plan/internal/cancel_reason_text` +
-`queixa A corrigida` busca direta). Cleanup dropou todos os fixtures
-(clinical_*, patients de teste, users de teste, clinics de teste,
-audit_logs de teste); invariantes locais administrativos preservados
-(patients=26, import_files=25, import_sessions=8).
+**Sprint anterior: 4.2B-2** (entregue) — camada interna: 4 DAOs + 1 middleware
+`requireClinicalRole` + 4 services; separação metadata-list × content-read;
+`clinicalReadAuditService` strict/best-effort via `CLINICAL_READ_AUDIT_STRICT`.
 
-**O que NÃO entrou nesta sprint (intencional):** nenhum frontend; nenhuma
-nova migration ou alteração de schema; nenhum recurso AWS; nenhum rate
-limiter dedicado para writes clínicos (reusa `importRateLimit`); nenhum
-campo clínico fora dos 5 já decididos (sem CID, receita, exames, anexos,
-ICP-Brasil, TISS, medicamentos); nenhum dado clínico real.
+**Sprint anterior: 4.2B-1** (entregue) — migration `20260602000000_clinical_encounters_v0.ts`
+(4 tabelas, 13 CHECK constraints, 14 índices) + tipos `db.d.ts` + env guard
+`CLINICAL_READ_AUDIT_STRICT`.
 
-**Sprint anterior: 4.2B-2** (entregue) — **camada interna do Prontuário
-v0.1: DAOs + middleware `requireClinicalRole` + services base, sem rotas
-públicas.** 4 DAOs + 1 middleware + 4 services; separação rigorosa
-metadata-list × content-read; `clinicalReadAuditService` strict/best-effort
-controlado por `env.CLINICAL_READ_AUDIT_STRICT`.
-
-**Sprint anterior: 4.2B-1** (entregue) — **base técnica do Prontuário v0.1:
-migration + tipos + env guard.** Migration aditiva
-`20260602000000_clinical_encounters_v0.ts` cria as 4 tabelas decididas na
-ADR 0010 (`clinical_encounters`, `clinical_encounter_notes`,
-`clinical_read_audit`, `user_clinical_roles`) com FKs conservadoras
-(`patient_id`/`attending_user_id`/`encounter_id`/`author_user_id` →
-`RESTRICT` para histórico médico-legal; `clinica_id` → `CASCADE`;
-`usuario_id`/`clinica_id` em `clinical_read_audit` → `SET NULL` espelhando
-`audit_logs`), 13 CHECK constraints, 14 índices nomeados. Tipos em
-`backend/src/types/db.d.ts` + env var `CLINICAL_READ_AUDIT_STRICT` em
-`backend/src/config/env.ts` com guard de produção (mesmo padrão da
-Sprint 3.39 `MFA_ENCRYPTION_KEY`).
-
-**Sprint anterior: 4.2A** (entregue — docs/ADR-only) — **escopo do módulo
-Prontuário/Atendimento clínico v0.1.** ADR 0010
-(`docs/adr/0010-clinical-encounters-medical-record-v0.md`) + operacional
-`docs/clinical-encounters-v0-scope.md`. Define: 5 campos textuais clínicos
-(`chief_complaint`/`anamnesis`/`evolution`/`plan`/`internal_note`); 4
-tabelas novas conceituais (`clinical_encounters`,
-`clinical_encounter_notes`, `clinical_read_audit`, `user_clinical_roles`);
-status `active|canceled` (one-way; sem restore no v0.1); notas append-only
-com retificação por `revises_note_id`; **profissional só vê os próprios**
-atendimentos; dono/gestor leem qualquer com audit mas **não editam alheio**;
-funcionario/financeiro/admin_sistema → 403 em todo endpoint clínico;
-`internal_note` redacted para não-autor; criar encounter exige paciente
-ativo + não-mesclado (ADR 0007 — sem mistura automática de histórico clínico);
-**cifra a nível de coluna FORA do v0.1** (decisão revisável — confia em
-RDS encryption at rest + TLS + controles de aplicação + audit de leitura
-+ logger redigindo campos clínicos). 5 endpoints clínicos + 2
-administrativos (grant/revoke role). Roles novas em tabela paralela
-`user_clinical_roles` append-only (mantém `users.papel` retrocompatível).
-Audit de leitura em tabela paralela `clinical_read_audit` com `paciente_id`
-pseudonimizado; **postura de falha** controlada por
-`CLINICAL_READ_AUDIT_STRICT` — best-effort apenas em dev/staging com
-dados sintéticos; **fail-closed obrigatório em produção** (guard de boot
-em `config/env.ts` força `true` quando `NODE_ENV=production`; falha →
-500 `clinical_read_audit_unavailable` + conteúdo clínico **nunca** sai
-no body); smoke test de fail-closed obrigatório na 4.2B.
-**Autoriza Sprint 4.2B** a implementar exatamente este
-escopo — sem desvios. Sem código, sem migration, sem AWS.
+**Sprint anterior: 4.2A** (entregue — docs/ADR-only) — ADR 0010 + operacional
+`docs/clinical-encounters-v0-scope.md`. Define os 5 campos textuais clínicos,
+4 tabelas, audit de leitura com fail-closed em prod. Autorizou a 4.2B.
 
 **Sprint anterior: 4.1** (entregue — docs/ADR-only) — arquitetura clínica
-conceitual + roles granulares + audit de leitura + LGPD clínica (ADR 0009
-+ `docs/clinical-architecture-and-permissions.md`). **Sprint 4.1.1** —
-correção LGPD/segurança no `paciente_id` (identificador interno
-pseudonimizado, dado pessoal com acesso restrito).
+conceitual + roles granulares + audit de leitura + LGPD clínica (ADR 0009).
+Sprint 4.1.1 — correção LGPD/segurança no `paciente_id`.
 
 **Sprint anterior: 4.0** (entregue — docs/ADR-only) — expansão estratégica
-para Clinic OS modular (ADR 0008). ADR 0001 (Opção C) parcialmente
-superseded — base administrativa segura continua sendo pré-requisito.
+para Clinic OS modular (ADR 0008).
 
-**Fases Clinic OS planejadas:** 4.0 ✅ decisão → **4.1 ✅** arquitetura
-clínica + roles granulares + audit de leitura (ADR 0009) → **4.2A ✅** ADR
-0010 escopo do Prontuário v0.1 → **4.2B-1 ✅** base técnica (migration +
-tipos + env guard) → **4.2B-2 ✅** camada interna (DAOs + middleware
-`requireClinicalRole` + services base, sem rotas) → **4.2B-3 ✅**
-controllers + rotas (`/clinical/encounters`, `/clinical/roles`,
-`/patients/:id/clinical-timeline`) + logger redaction estendido + smoke
-tests 76/76 PASS → 4.3 documentos médicos/receitas (sem ICP-Brasil) → 4.4
-financeiro → 4.5 relatórios gerenciais → 4.6 convênios/faturamento básico
-(TISS/TUSS real fora) → 4.7 estoque básico (medicamentos controlados/ANVISA
-fora). Cada **fase nova** exige ADR própria; 4.2B implementou o que a 4.2A
-decidiu. Detalhe: `docs/product-clinic-os-roadmap.md`.
+**Fases Clinic OS planejadas:** 4.0 ✅ decisão → **4.1 ✅** ADR 0009 →
+**4.2A ✅** ADR 0010 → **4.2B-1 ✅** base técnica → **4.2B-2 ✅** camada
+interna → **4.2B-3 ✅** controllers + rotas + smoke 76/76 PASS → **4.2C ✅**
+frontend (drawer, roles panel, botão Prontuário) → **4.2B-4** (opcional —
+endpoint LGPD-art.18 de auditoria de leitura) → **4.3** documentos
+médicos/receitas (sem ICP-Brasil) → **4.4** financeiro → **4.5** relatórios
+gerenciais → **4.6** convênios/faturamento básico (TISS/TUSS real fora) →
+**4.7** estoque básico (medicamentos controlados/ANVISA fora). Cada **fase
+nova** exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **Este MVP NÃO está pronto para produção** — ver P1 em
 `docs/security-notes.md`. Nunca descrever como "pronto para produção".
@@ -227,11 +156,9 @@ conceitual e audit de leitura). Sequência de fases administrativas:
   ADR 0010 escopo Prontuário v0.1 → **4.2B-1 ✅** base técnica (migration +
   tipos + env guard `CLINICAL_READ_AUDIT_STRICT`) → **4.2B-2 ✅** camada interna
   (DAOs, middleware `requireClinicalRole`, services base; sem rotas) →
-  **4.2B-3 ✅** controllers + rotas (`POST /clinical/encounters`,
-  `GET /clinical/encounters`, `GET /clinical/encounters/:id`,
-  `PATCH /clinical/encounters/:id/cancel`, `POST /clinical/encounters/:id/notes`,
-  `GET /patients/:id/clinical-timeline`, `GET/POST /clinical/roles[/grant|/revoke]`)
-  + logger redaction estendido + smoke tests 76/76 PASS → **4.2B-4** (próximo
+  **4.2B-3 ✅** controllers + rotas + logger redaction 4 camadas + smoke 76/76 PASS
+  → **4.2C ✅** frontend (drawer `ClinicalPatientPane`, painel `ClinicalRolesPanel`,
+  botão Prontuário em PatientsList; typecheck/build ✅) → **4.2B-4** (próximo
   passo opcional — endpoint owner-only para listar audit de leitura
   clínica/transparência LGPD-art.18, ou pular direto para a Fase 4.3 se
   jurídico priorizar receitas) → **4.3** documentos médicos/receitas v0.1

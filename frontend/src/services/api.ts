@@ -553,6 +553,102 @@ export interface CreateAppointmentPayload {
   administrative_notes?: string | null;
 }
 
+// --- Clinical Encounters v0.1 types (Sprint 4.2C — ADR 0010) ----------------
+// SECURITY: These types carry clinical content. Never pass instances to
+// console.log, localStorage, sessionStorage, or URL parameters.
+
+export type ClinicalEncounterStatus = 'active' | 'canceled';
+export type ClinicalRoleName = 'profissional_clinico' | 'gestor_clinica';
+export type ClinicalCancelReasonCode =
+  | 'duplicated'
+  | 'wrong_patient'
+  | 'data_error'
+  | 'other';
+export type ClinicalNoteRectifyCode =
+  | 'typo'
+  | 'clinical_correction'
+  | 'add_info'
+  | 'other';
+
+// Metadata-only: no 5 textual clinical fields, no cancel_reason_text, no notes.
+// Returned by GET /clinical/encounters and GET /patients/:id/clinical-timeline.
+export interface PublicClinicalEncounterListItem {
+  id: string;
+  clinica_id: string;
+  patient_id: string;
+  attending_user_id: string;
+  professional_id: string | null;
+  appointment_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  status: ClinicalEncounterStatus;
+  cancel_reason_code: ClinicalCancelReasonCode | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Full encounter metadata (list item + cancel_reason_text).
+// Returned by POST /clinical/encounters, GET /clinical/encounters/:id,
+// PATCH /clinical/encounters/:id/cancel.
+export interface PublicClinicalEncounter extends PublicClinicalEncounterListItem {
+  cancel_reason_text: string | null;
+}
+
+// Clinical note. internal_note is null when the backend redacted it for
+// non-author/non-owner/non-gestor readers. The frontend must treat null as
+// "not visible" — never infer content or show a misleading placeholder.
+export interface PublicClinicalNote {
+  id: string;
+  encounter_id: string;
+  author_user_id: string;
+  chief_complaint: string | null;
+  anamnesis: string | null;
+  evolution: string | null;
+  plan: string | null;
+  internal_note: string | null;
+  revises_note_id: string | null;
+  rectification_reason_code: ClinicalNoteRectifyCode | null;
+  created_at: string;
+}
+
+// Active clinical role grant. Does not include user name/email — the caller
+// must join with clinic members list to display them.
+export interface PublicClinicalRoleGrant {
+  id: string;
+  user_id: string;
+  role: ClinicalRoleName;
+  granted_at: string;
+  granted_by_user_id: string | null;
+}
+
+export interface CreateClinicalEncounterPayload {
+  patient_id: string;
+  started_at: string;
+  ended_at?: string | null;
+  initial_note?: {
+    chief_complaint?: string | null;
+    anamnesis?: string | null;
+    evolution?: string | null;
+    plan?: string | null;
+    internal_note?: string | null;
+  } | null;
+}
+
+export interface CancelClinicalEncounterPayload {
+  reason_code: ClinicalCancelReasonCode;
+  reason_text?: string | null;
+}
+
+export interface AddClinicalNotePayload {
+  chief_complaint?: string | null;
+  anamnesis?: string | null;
+  evolution?: string | null;
+  plan?: string | null;
+  internal_note?: string | null;
+  revises_note_id?: string | null;
+  rectification_reason_code?: ClinicalNoteRectifyCode | null;
+}
+
 export interface ApiErrorBody {
   code: string;
   message: string;
@@ -1037,6 +1133,78 @@ export const api = {
       `/appointments/${encodeURIComponent(id)}/reschedule`,
       { method: 'PATCH', body: payload, token },
     );
+  },
+
+  // --- Clinical Encounters v0.1 (Sprint 4.2C — ADR 0010) --------------------
+  // SECURITY: Never log payloads from these functions. Clinical content must
+  // not appear in the browser console, localStorage, or sessionStorage.
+  // The backend is the authoritative source of authorization; never bypass a
+  // 403 with a frontend fallback.
+
+  listClinicalTimeline(
+    token: string,
+    patientId: string,
+  ): Promise<{ encounters: PublicClinicalEncounterListItem[] }> {
+    return apiFetch(`/patients/${encodeURIComponent(patientId)}/clinical-timeline`, {
+      method: 'GET',
+      token,
+    });
+  },
+
+  getClinicalEncounterDetail(
+    token: string,
+    id: string,
+  ): Promise<{ encounter: PublicClinicalEncounter; notes: PublicClinicalNote[] }> {
+    return apiFetch(`/clinical/encounters/${encodeURIComponent(id)}`, {
+      method: 'GET',
+      token,
+    });
+  },
+
+  createClinicalEncounter(
+    token: string,
+    payload: CreateClinicalEncounterPayload,
+  ): Promise<{ encounter: PublicClinicalEncounter }> {
+    return apiFetch('/clinical/encounters', { method: 'POST', body: payload, token });
+  },
+
+  cancelClinicalEncounter(
+    token: string,
+    id: string,
+    payload: CancelClinicalEncounterPayload,
+  ): Promise<{ encounter: PublicClinicalEncounter }> {
+    return apiFetch(`/clinical/encounters/${encodeURIComponent(id)}/cancel`, {
+      method: 'PATCH',
+      body: payload,
+      token,
+    });
+  },
+
+  addClinicalNote(
+    token: string,
+    encounterId: string,
+    payload: AddClinicalNotePayload,
+  ): Promise<{ note: PublicClinicalNote }> {
+    return apiFetch(`/clinical/encounters/${encodeURIComponent(encounterId)}/notes`, {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
+  listClinicalRoleGrants(token: string): Promise<{ grants: PublicClinicalRoleGrant[] }> {
+    return apiFetch('/clinical/roles', { method: 'GET', token });
+  },
+
+  grantClinicalRole(
+    token: string,
+    payload: { user_id: string; role: ClinicalRoleName },
+  ): Promise<{ grant: PublicClinicalRoleGrant }> {
+    return apiFetch('/clinical/roles/grant', { method: 'POST', body: payload, token });
+  },
+
+  revokeClinicalRole(token: string, grantId: string): Promise<{ status: 'revoked' }> {
+    return apiFetch('/clinical/roles/revoke', { method: 'POST', body: { id: grantId }, token });
   },
 
   getImportFileRetentionDryRun(

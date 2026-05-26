@@ -1,0 +1,686 @@
+/* Clinical Patient Pane — shared styles for all clinical sub-components.
+ * Sprint 4.2C. Uses the same design tokens as the rest of the app.
+ * SECURITY: This UI renders clinical content; no dangerouslySetInnerHTML. */
+
+/* ─── Dialog / overlay ──────────────────────────────────────────────── */
+.dialog {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  z-index: 200;
+}
+
+.dialog::backdrop {
+  background: rgba(0, 0, 10, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.pane {
+  width: min(680px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+  border-left: 1px solid var(--surface-border-strong);
+  overflow: hidden;
+}
+
+/* ─── Pane header ───────────────────────────────────────────────────── */
+.paneHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--surface-border);
+  background: rgba(14, 22, 40, 0.9);
+  flex-shrink: 0;
+}
+
+.paneTitle {
+  flex: 1;
+  min-width: 0;
+}
+
+.paneTitleMain {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.paneTitleSub {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  margin-top: 0.1rem;
+}
+
+.closeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--surface-border);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.closeBtn:hover { background: rgba(255,255,255,0.07); color: var(--text-0); }
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--surface-border);
+  background: transparent;
+  color: var(--text-1);
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.backBtn:hover { background: rgba(255,255,255,0.06); }
+
+/* ─── Pane body (scrollable) ────────────────────────────────────────── */
+.paneBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ─── Audit notice ──────────────────────────────────────────────────── */
+.auditNotice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--r-sm);
+  background: rgba(34, 211, 238, 0.06);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  color: var(--text-2);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+.auditNotice svg { flex-shrink: 0; color: var(--cyan-soft); }
+
+/* ─── State messages ────────────────────────────────────────────────── */
+.stateMsg {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.93rem;
+  color: var(--text-2);
+  padding: 1.5rem 0;
+}
+
+.forbiddenMsg {
+  padding: 1.5rem;
+  border-radius: var(--r-md);
+  background: rgba(248, 113, 113, 0.06);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  color: var(--text-1);
+  font-size: 0.93rem;
+  line-height: 1.6;
+}
+
+.errorMsg {
+  padding: 0.75rem 1rem;
+  border-radius: var(--r-sm);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  color: #fca5a5;
+  font-size: 0.88rem;
+}
+
+.emptyMsg {
+  color: var(--text-2);
+  font-size: 0.93rem;
+  padding: 1.5rem 0;
+}
+
+/* ─── Timeline / encounter list ─────────────────────────────────────── */
+.timelineHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sectionLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.newBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--r-sm);
+  background: var(--cyan);
+  border: 1px solid var(--cyan);
+  color: #04141a;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.newBtn:hover { opacity: 0.88; }
+.newBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.encounterList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.encounterCard {
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md);
+  background: rgba(16, 25, 44, 0.55);
+  border: 1px solid var(--surface-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  transition: border-color 0.15s ease;
+}
+.encounterCard:hover { border-color: var(--surface-border-strong); }
+
+.encounterMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.encounterDate {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.encounterTime {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  margin-top: 0.15rem;
+}
+
+.statusBadge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.statusActive {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+}
+
+.statusCanceled {
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.detailBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid var(--surface-border-strong);
+  color: var(--cyan-soft);
+  font-size: 0.84rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.detailBtn:hover { background: rgba(34, 211, 238, 0.07); }
+
+/* ─── Encounter detail ──────────────────────────────────────────────── */
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.detailMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.detailDate {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.detailSubMeta {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  margin-top: 0.2rem;
+}
+
+.detailActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.addNoteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--r-sm);
+  background: var(--cyan);
+  border: none;
+  color: #04141a;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.addNoteBtn:hover { opacity: 0.88; }
+.addNoteBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.cancelEncBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: var(--danger);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.cancelEncBtn:hover { background: rgba(248, 113, 113, 0.08); }
+.cancelEncBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.notesDivider {
+  border: none;
+  border-top: 1px solid var(--surface-border);
+  margin: 0.5rem 0;
+}
+
+/* ─── Inline cancel section ─────────────────────────────────────────── */
+.cancelSection {
+  padding: 1rem;
+  border-radius: var(--r-md);
+  background: rgba(248, 113, 113, 0.05);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cancelWarning {
+  font-size: 0.88rem;
+  color: #fca5a5;
+  line-height: 1.5;
+}
+
+.noteCard {
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md);
+  background: rgba(10, 15, 30, 0.5);
+  border: 1px solid var(--surface-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.noteCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.noteAuthor {
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
+.noteDate {
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+
+.noteField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.noteFieldLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cyan-soft);
+}
+
+.noteFieldValue {
+  font-size: 0.9rem;
+  color: var(--text-0);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.internalNoteRedacted {
+  font-size: 0.84rem;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+.formHint {
+  font-size: 0.84rem;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.rectifyBadge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  color: #fbbf24;
+}
+
+/* ─── Forms (shared) ────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.formTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.formLabel {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.formInput,
+.formSelect,
+.formTextarea {
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-0);
+  font-size: 0.93rem;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+.formInput:focus,
+.formSelect:focus,
+.formTextarea:focus {
+  outline: 2px solid rgba(34, 211, 238, 0.4);
+  outline-offset: 1px;
+}
+
+.formInput::placeholder,
+.formTextarea::placeholder {
+  color: var(--text-3);
+}
+
+.formTextarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.formSelect option {
+  background: var(--bg-2);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .formRow { grid-template-columns: 1fr; }
+}
+
+.formError {
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--r-sm);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  color: #fca5a5;
+  font-size: 0.85rem;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--r-sm);
+  background: var(--cyan);
+  border: none;
+  color: #04141a;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.submitBtn:hover { opacity: 0.88; }
+.submitBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.cancelFormBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-1);
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.cancelFormBtn:hover { background: rgba(255,255,255,0.05); }
+.cancelFormBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Clinical roles panel (equipe tab) ─────────────────────────────── */
+.rolesPanel {
+  margin-top: 2rem;
+  padding: clamp(1.2rem, 2.5vw, 1.75rem);
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, rgba(20, 30, 52, 0.7), rgba(10, 15, 30, 0.5));
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-card);
+}
+
+.rolesPanelTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.rolesPanelSubtitle {
+  margin-top: 0.4rem;
+  color: var(--text-1);
+  font-size: 0.93rem;
+  max-width: 60ch;
+  line-height: 1.55;
+}
+
+.grantList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.grantRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--r-sm);
+  background: rgba(16, 25, 44, 0.5);
+  border: 1px solid var(--surface-border);
+  flex-wrap: wrap;
+}
+
+.grantInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.grantName {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grantRole {
+  font-size: 0.8rem;
+  color: var(--cyan-soft);
+  margin-top: 0.1rem;
+}
+
+.grantDate {
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+.revokeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: var(--danger);
+  font-size: 0.8rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.revokeBtn:hover { background: rgba(248, 113, 113, 0.07); }
+.revokeBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.grantForm {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: var(--r-md);
+  background: rgba(10, 15, 30, 0.5);
+  border: 1px solid var(--surface-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.grantFormRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+
+@media (max-width: 600px) {
+  .grantFormRow { grid-template-columns: 1fr; }
+}
+
+/* ─── Prontuário button on patient cards ────────────────────────────── */
+.prontuarioBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--r-sm);
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  color: var(--cyan-soft);
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.prontuarioBtn:hover { background: rgba(34, 211, 238, 0.14); }
+
+@media (max-width: 640px) {
+  .pane { width: 100%; border-left: none; border-top: 1px solid var(--surface-border-strong); }
+}

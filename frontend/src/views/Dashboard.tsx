@@ -22,6 +22,7 @@ import { AdministrativeSchedulePanel } from '../components/AdministrativeSchedul
 import { MfaSettings } from '../components/MfaSettings';
 import { JoinClinicGate } from '../components/JoinClinicGate';
 import { TeamManagementPanel } from '../components/TeamManagementPanel';
+import { ClinicalRolesPanel } from '../components/ClinicalRolesPanel';
 import { useAuth } from '../services/AuthProvider';
 import type { SafeUser } from '../services/api';
 import styles from './Dashboard.module.css';
@@ -202,6 +203,7 @@ export function Dashboard(): JSX.Element {
           <>
             <TeamManagementPanel />
             <ClinicProfessionalsPanel />
+            <ClinicalRolesPanel />
           </>
         )}
 

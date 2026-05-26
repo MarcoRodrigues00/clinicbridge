@@ -2948,3 +2948,83 @@ Backend dev process encerrado.
 
 Primeira sprint a expor endpoints clínicos reais. Ainda sem frontend,
 ainda sem dado clínico real, ainda sem AWS, ainda sem commit automático.
+
+---
+
+## Sprint 4.2C (frontend do Prontuário v0.1)
+
+**Objetivo:** Criar a UI inicial do Prontuário v0.1 consumindo os endpoints
+existentes da Sprint 4.2B-3. Sem alterações de backend, sem migrations, sem
+env vars novas, sem AWS.
+
+**Arquivos criados:**
+- `frontend/src/components/ClinicalPatientPane.tsx` — drawer lateral
+  (right-side pane via `<dialog>`) com estado de navegação
+  `timeline | detail | new-encounter | new-note`. Sub-componentes:
+  `TimelineView` (metadata-only, sem campos textuais), `ClinicalEncounterDetail`
+  (CONTENT-READ; form de cancelamento inline sem usar `ConfirmDialog` com
+  children — evita bug de props), `NoteCard` (`internal_note null` → oculto),
+  `ClinicalEncounterForm` (encounter + nota inicial), `ClinicalNoteForm`
+  (adicionar / retificar nota, mínimo 1 campo). TanStack Query com
+  `staleTime: 0` em dados clínicos; invalidação pós-mutation correta.
+  Audit notice permanente. Sem `console.log` de dados clínicos.
+- `frontend/src/components/ClinicalPatientPane.module.css` — estilos
+  completos para o pane, cards, forms, badges, `.cancelSection`,
+  `.cancelWarning`, `.rolesPanel` e subestilos compartilhados com
+  `ClinicalRolesPanel`.
+- `frontend/src/components/ClinicalRolesPanel.tsx` — painel owner-only
+  na aba Equipe. Carrega grants + members em paralelo; exibe nome do
+  membro resolvido via memberMap; form de concessão + revogação; `null`
+  para não-owners.
+
+**Arquivos alterados:**
+- `frontend/src/services/api.ts` — tipos clínicos (`ClinicalEncounterStatus`,
+  `ClinicalRoleName`, `ClinicalCancelReasonCode`, `ClinicalNoteRectifyCode`,
+  `PublicClinicalEncounterListItem`, `PublicClinicalEncounter`,
+  `PublicClinicalNote`, `PublicClinicalRoleGrant`,
+  `CreateClinicalEncounterPayload`, `CancelClinicalEncounterPayload`,
+  `AddClinicalNotePayload`) + funções API (`listClinicalTimeline`,
+  `getClinicalEncounterDetail`, `createClinicalEncounter`,
+  `cancelClinicalEncounter`, `addClinicalNote`, `listClinicalRoleGrants`,
+  `grantClinicalRole`, `revokeClinicalRole`).
+- `frontend/src/components/PatientsList.tsx` — botão "Prontuário"
+  (`clinicalStyles.prontuarioBtn`) em cada card não-arquivado; estado
+  `clinicalPatient`; monta `<ClinicalPatientPane>`. Ação disponível a
+  todos — backend decide.
+- `frontend/src/views/Dashboard.tsx` — `<ClinicalRolesPanel />` no bloco
+  `tab === 'equipe' && isOwner`.
+
+**Decisões técnicas:**
+1. **Form de cancelamento inline (não ConfirmDialog com children):**
+   `ConfirmDialog` não aceita `children` no seu `props`. O flow de
+   cancelamento usa um `div.cancelSection` inline no detail view —
+   mais simples e sem dependência de extensão do dialog genérico.
+2. **`internal_note null` → oculto (sem placeholder):** exibir
+   "(não disponível)" seria misleading — null pode significar "não
+   escrito" ou "redacted". ADR 0010 e as instruções da sprint são
+   explícitas: tratar null como campo ausente.
+3. **`ClinicalRolesPanel` compartilha CSS com `ClinicalPatientPane`:**
+   ambas são componentes clínicos com visual consistente; manter um
+   único módulo CSS reduz duplicação.
+4. **Botão "Prontuário" disponível para todos (sem guard por papel):**
+   backend retorna 403 se o usuário não tiver acesso clínico; a UI
+   mostra mensagem genérica. Evita lógica de permissão duplicada no
+   frontend.
+
+**Verificação:**
+- `pnpm --filter frontend typecheck` ✅ (0 erros)
+- `pnpm --filter frontend build` ✅ (warning de chunk pré-existente)
+- `git diff --check` rc=0
+
+**O que NÃO entrou (intencional):**
+- Nenhuma alteração de backend nem migration.
+- Nenhuma env var nova.
+- Nenhuma tela de auditoria LGPD-art.18 (fica para 4.2B-4 ou Fase 4.5).
+- Nenhum campo clínico fora dos 5 da ADR 0010.
+- Nenhum dado clínico real persistido.
+- Nenhuma feature de busca/filtro no prontuário (paginação futura).
+- Nenhum AWS.
+
+**Próxima sprint natural:** 4.2B-4 (endpoint owner-only de auditoria de
+leitura clínica, LGPD-art.18) ou pular direto para 4.3 (documentos
+médicos/receitas v0.1), dependendo da prioridade jurídica.
