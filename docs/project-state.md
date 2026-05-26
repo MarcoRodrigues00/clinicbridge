@@ -7,26 +7,57 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.3A** (entregue) — **ADR Documentos Médicos e Receitas v0.1 (docs/ADR-only).**
+**Sprint 4.3B** (entregue) — **Implementação backend de Documentos Médicos e Receitas v0.1.**
+Migration + DAOs + services + PDF on-demand + 8 endpoints. Smoke 47/47 PASS.
+**Sem frontend (4.3C), sem AWS, sem ICP-Brasil, sem armazenamento de PDF.**
+
+**Componentes entregues:**
+- `backend/migrations/20260603000000_clinical_documents_v0.ts` — migration aditiva:
+  tabela `clinical_documents` com 4 CHECK constraints + 5 índices; rollback DROP TABLE limpo.
+- `backend/src/dao/clinicalDocumentDao.ts` — DAO tenant-scoped; invariante `clinica_id`
+  em toda query; `author_user_id_self` como defesa em profundidade; sem DELETE físico;
+  `finalize`/`cancel` como CAS atômico.
+- `backend/src/services/clinicalDocumentService.ts` — 7 métodos; strict-mode audit ANTES
+  de serializar conteúdo; projeções METADATA-LIST vs. DETAIL separadas.
+- `backend/src/services/clinicalDocumentPdfService.ts` — PDF via PDFKit; `compress: false`
+  para validação de rodapé sem poppler; rodapé jurídico obrigatório ADR 0011 §10.2
+  ("ICP-Brasil/CFM; não é prescrição eletrônica legalmente válida"); sem armazenamento.
+- `backend/src/controllers/clinicalDocumentController.ts` — thin; 7 handlers.
+- `backend/src/routes/clinicalDocuments.ts` — 8 rotas com pipeline
+  `rateLimit → requireAuth → requireClinic → requireClinicalRole`.
+- **Modificados:** `db.d.ts` (4 tipos novos), `logger.ts` (+10 paths de redação para `body`,
+  `title`, `metadata_json`), `clinicalReadAuditService.ts` (+3 eventos), `app.ts`
+  (registro do router), `package.json`/`pnpm-lock.yaml` (`pdfkit@0.18.0`).
+
+**Smoke tests 47/47 PASS** (via usuários smoke persistentes `*@clinicbridge.local`):
+1–3. sem token→401; secretaria→403; admin→403/no_clinic_context ✅
+4–5. profissional cria draft→201; edita→200 ✅
+6–7. finalize sem body→400/document_body_required; com body→200/finalized ✅
+8. editar finalized→400/document_already_finalized ✅
+9. PDF→200 + magic%PDF + "ICP-Brasil" no rodapé + "prescri" (hex extraction Node.js) ✅
+10–11. cancel→200/canceled; PDF canceled→400/document_canceled ✅
+12–14. owner lê→200/body; gestor→200; secretaria→403 ✅
+15–18. list metadata-only (body/metadata_json/cancel_reason_text ausentes); GET /patients/:id/documents ✅
+19–26. UUID inexistente→404; patient inexistente→404; doc_type inválido→400; body>10000→400; cancel_reason_code inválido→400; list secretaria/admin→403 ✅
+
+**Verificação:**
+- `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter backend migrate:status` — 14 applied, 0 pending ✅
+- `git diff --check` rc=0 · Docker rebuild + health ✅
+
+---
+
+**Sprint anterior: 4.3A** (entregue) — **ADR Documentos Médicos e Receitas v0.1 (docs/ADR-only).**
 ADR 0011 + operacional `docs/medical-documents-v0-scope.md`.
 **Sem código, sem migration, sem env vars, sem AWS, sem dado clínico real.**
 
 **Componentes entregues:**
 - `docs/adr/0011-medical-documents-prescriptions-v0.md` — ADR completa (20 seções, Status:
-  Accepted): 5 tipos de documento (`receipt_simple`, `attestation`, `declaration`,
-  `exam_request`, `orientation`); 1 tabela nova `clinical_documents` com schema, 4 CHECK
-  constraints de consistência e 5 índices; ciclo de vida `draft→finalized→canceled` (sem
-  restore, sem delete físico); PDF on-demand não armazenado com rodapé jurídico obrigatório;
-  audit de escrita em `audit_logs` (4 eventos) + audit de leitura em `clinical_read_audit`
-  (3 eventos; herda `CLINICAL_READ_AUDIT_STRICT`); logger redaction estendido com `body` e
-  `cancel_reason_text` de documento; 8 endpoints conceituais; permissões espelhando ADR 0010
-  (`profissional_clinico` cria/edita próprios, `dono/gestor` lê qualquer + audit, `secretaria`
-  bloqueada); `encounter_id` opcional; `supersedes_document_id` para substituição.
-- `docs/medical-documents-v0-scope.md` — companheiro operacional: tabela de tipos,
-  diagrama de ciclo de vida, matriz de permissões, cheat-sheet de 8 endpoints, catálogo
-  de audit (escrita + leitura), logger redaction, estrutura do PDF, schema completo da
-  tabela, checklists das Sprints 4.3B (11 seções) e 4.3C, tabela de validações, itens
-  fora de escopo, referências.
+  Accepted): 5 tipos de documento; 1 tabela `clinical_documents`; ciclo `draft→finalized→canceled`;
+  PDF on-demand não armazenado; audit duplo; logger redaction; 8 endpoints conceituais;
+  permissões espelhando ADR 0010.
+- `docs/medical-documents-v0-scope.md` — companheiro operacional.
 
 **`git diff --check`** rc=0 · **`git status --short`** apenas docs novos/modificados.
 

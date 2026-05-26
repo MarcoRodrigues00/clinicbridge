@@ -28,20 +28,46 @@
 
 ## Estado atual (resumido — atualizado 2026-05-26)
 
-**Sprint atual: 4.3A** (entregue) — **ADR Documentos Médicos e Receitas v0.1 (docs/ADR-only).**
-ADR 0011 (`docs/adr/0011-medical-documents-prescriptions-v0.md`) + operacional
-`docs/medical-documents-v0-scope.md`. Fecha escopo do módulo de documentos antes de qualquer
-código. **Sem código, sem migration, sem env vars, sem AWS, sem dado clínico real.**
+**Sprint atual: 4.3B** (entregue) — **Implementação backend de Documentos Médicos e Receitas v0.1.**
+Migration + DAOs + services + PDF on-demand + 8 endpoints registrados. Smoke 47/47 PASS.
+**Sem frontend (4.3C), sem AWS, sem ICP-Brasil, sem armazenamento de PDF.**
 
 **Componentes entregues:**
-- `docs/adr/0011-medical-documents-prescriptions-v0.md` — ADR completa (20 seções):
-  5 tipos de documento, 1 tabela nova (`clinical_documents`), ciclo de vida
-  `draft→finalized→canceled`, PDF on-demand sem armazenamento, audit duplo
-  (`audit_logs` + `clinical_read_audit`), permissões espelhando ADR 0010,
-  logger redaction estendido, 8 endpoints conceituais, postura LGPD, sem ICP-Brasil.
-- `docs/medical-documents-v0-scope.md` — companheiro operacional: tabelas de
-  permissão, cheat-sheet de endpoints, catálogo de audit, schema da tabela,
-  checklists das Sprints 4.3B e 4.3C, validações e itens fora de escopo.
+- `backend/migrations/20260603000000_clinical_documents_v0.ts` — tabela `clinical_documents`
+  (4 CHECK constraints, 5 índices; rollback DROP TABLE).
+- `backend/src/dao/clinicalDocumentDao.ts` — tenant-scoped, sem `listAll()`, `author_user_id_self`
+  como defesa em profundidade, sem DELETE físico, `finalize`/`cancel` como CAS atômico.
+- `backend/src/services/clinicalDocumentService.ts` — 7 métodos; strict-mode audit ANTES de
+  serializar; METADATA-LIST vs. DETAIL separados.
+- `backend/src/services/clinicalDocumentPdfService.ts` — PDF via PDFKit (`compress: false`
+  para validação de rodapé sem poppler); rodapé jurídico obrigatório ADR 0011 §10.2;
+  sem armazenamento.
+- `backend/src/controllers/clinicalDocumentController.ts` — thin; 7 handlers.
+- `backend/src/routes/clinicalDocuments.ts` — 8 rotas.
+- **Modificados:** `db.d.ts`, `logger.ts` (+10 paths: `body`/`title`/`metadata_json`),
+  `clinicalReadAuditService.ts` (+3 eventos document), `app.ts`, `package.json`/`pnpm-lock.yaml`
+  (`pdfkit@0.18.0` + `@types/pdfkit@0.17.6`).
+
+**Smoke tests executados — 47/47 PASS** (usuários smoke persistentes `*@clinicbridge.local`):
+1. sem token → 401 ✅ · 2. secretaria → 403 ✅ · 3. admin → 403/no_clinic_context ✅
+4. profissional cria draft → 201 ✅ · 5. edita draft → 200 ✅
+6. finalize sem body → 400/document_body_required ✅ · 7. finalize com body → 200/finalized ✅
+8. editar finalized → 400/document_already_finalized ✅
+9. PDF → 200 + %PDF + "ICP-Brasil" + "prescri" no rodapé (hex extraction Node.js) ✅
+10. cancel → 200/canceled ✅ · 11. PDF canceled → 400/document_canceled ✅
+12. owner lê → 200 ✅ · 13. gestor lê → 200 ✅ · 14. secretaria não lê → 403 ✅
+15–17. list metadata-only (body/metadata_json/cancel_reason_text ausentes) ✅
+18. GET /patients/:id/documents → 200 ✅ · 19. UUID inexistente → 404 ✅
+20. patient inexistente → 404 ✅ · 21. doc_type inválido → 400 ✅
+22. body >10000 → 400 ✅ · 23. cancel_reason_code inválido → 400 ✅
+24–26. list secretaria/admin → 403 ✅
+
+**Verificação:** `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
+`pnpm --filter frontend typecheck` ✅ · `migrate:status` 14 applied/0 pending ✅ ·
+`git diff --check` rc=0 · Docker rebuild health OK ✅
+
+**Sprint anterior: 4.3A** (entregue) — **ADR Documentos Médicos e Receitas v0.1 (docs/ADR-only).**
+ADR 0011 + `docs/medical-documents-v0-scope.md`. **Sem código, sem migration.**
 
 **Sprint anterior: 4.2E** (entregue) — **Endpoint LGPD-art.18 de auditoria de leitura clínica.**
 `GET /clinical/read-audit` owner-only; lista metadados de acesso ao prontuário sem conteúdo
@@ -123,9 +149,9 @@ frontend (drawer, roles panel, botão Prontuário) → **4.2D ✅** QA/hardening
 LGPD-art.18 `GET /clinical/read-audit` (owner-only; metadados de acesso;
 frontend `ClinicalReadAuditPanel`; smoke 8/8 PASS) → **4.3A ✅** ADR 0011 +
 operacional `docs/medical-documents-v0-scope.md` (docs-only; 5 tipos; 1 tabela;
-PDF on-demand; sem ICP-Brasil) → **4.3B** implementação backend (migration +
-DAOs + services + PDF + smoke) → **4.3C** frontend (aba Documentos no drawer) →
-**4.4** financeiro → **4.5** relatórios
+PDF on-demand; sem ICP-Brasil) → **4.3B ✅** implementação backend (migration +
+DAOs + services + PDF + 8 endpoints + smoke 47/47 PASS) → **4.3C** frontend
+(aba Documentos no drawer) → **4.4** financeiro → **4.5** relatórios
 gerenciais → **4.6** convênios/faturamento básico (TISS/TUSS real fora) →
 **4.7** estoque básico (medicamentos controlados/ANVISA fora). Cada **fase
 nova** exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
@@ -165,7 +191,8 @@ job/cron; gestão de usuários/papéis na UI.
 `20260523_import_sessions` · `20260524_patients` · `20260525_import_sessions_summary` ·
 `20260526_scheduling` · `20260527_user_mfa` · `20260528_user_mfa_backup_codes` ·
 `20260529_clinic_team` · `20260530_clinic_join_requests_revoked` ·
-`20260601_patients_merged_into` · `20260602_clinical_encounters_v0`.
+`20260601_patients_merged_into` · `20260602_clinical_encounters_v0` ·
+`20260603_clinical_documents_v0`.
 
 **Invariantes locais (sanity-check):** patients=6 (base, sem demo), import_files=24,
 import_sessions=7. Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac,
@@ -214,8 +241,9 @@ conceitual e audit de leitura). Sequência de fases administrativas:
   `GET /clinical/read-audit` owner-only; `ClinicalReadAuditPanel` na aba Segurança;
   smoke 8/8 PASS; sem migrations → **4.3A ✅** ADR 0011 documentos médicos/receitas
   v0.1 (docs-only; 5 tipos; 1 tabela `clinical_documents`; PDF on-demand; sem
-  ICP-Brasil; operacional `docs/medical-documents-v0-scope.md`) → **4.3B**
-  implementação backend (migration + DAOs + services + PDF + smoke) → **4.3C**
+  ICP-Brasil; operacional `docs/medical-documents-v0-scope.md`) → **4.3B ✅**
+  implementação backend (migration + DAOs + services + PDF `compress:false` +
+  8 endpoints + smoke 47/47 PASS) → **4.3C**
   frontend (aba Documentos no drawer `ClinicalPatientPane`) → **4.4** financeiro
   v0.1 → **4.5** relatórios gerenciais v0.1 → **4.6** convênios/faturamento
   básico v0.1 (TISS/TUSS real fora) → **4.7** estoque básico v0.1

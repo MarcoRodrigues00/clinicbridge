@@ -37,6 +37,16 @@ const ALLOWED_ACOES = new Set<string>([
   'clinical.encounter.read',
   'clinical.encounter.list',
   'clinical.timeline.list',
+  // Sprint 4.3B — Documentos Médicos v0.1 (ADR 0011 §8.2):
+  //   - 'clinical.document.list'             — METADATA-LIST (cross-patient
+  //                                            or single-patient listing).
+  //   - 'clinical.document.read'             — CONTENT-READ (body + metadata_json).
+  //                                            Always STRICT mode.
+  //   - 'clinical.document.pdf.downloaded'   — PDF download (clinical content
+  //                                            in PDF form). Always STRICT mode.
+  'clinical.document.list',
+  'clinical.document.read',
+  'clinical.document.pdf.downloaded',
 ]);
 
 // Actor identity for a clinical read. usuario_id is required (this code path is

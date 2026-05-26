@@ -16,6 +16,7 @@ import { clinicMembersRouter } from './routes/clinicMembers';
 import { clinicalEncountersRouter } from './routes/clinicalEncounters';
 import { clinicalRolesRouter } from './routes/clinicalRoles';
 import { clinicalReadAuditRouter } from './routes/clinicalReadAudit';
+import { clinicalDocumentsRouter } from './routes/clinicalDocuments';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -93,6 +94,10 @@ export function createApp(): Express {
   // reason_text + paciente_id (config/logger.ts).
   app.use(clinicalRolesRouter);
   app.use(clinicalEncountersRouter);
+  // Clinical Documents v0.1 (Sprint 4.3B, ADR 0011): receita/atestado/
+  // declaração/exame/orientação. Same middleware shape as encounters;
+  // strict-mode audit on every content read + PDF download.
+  app.use(clinicalDocumentsRouter);
   // LGPD-art.18 transparency (Sprint 4.2E): owner-only read-audit listing.
   app.use(clinicalReadAuditRouter);
 

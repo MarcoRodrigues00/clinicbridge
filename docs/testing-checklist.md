@@ -1587,11 +1587,100 @@ curl -sk -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN_OWNER" 
 
 ---
 
-## Documentos Médicos e Receitas — Sprint 4.3B (pendente — ADR 0011)
+## Documentos Médicos e Receitas — Sprint 4.3B (ADR 0011)
 
-> **Sprint 4.3A foi docs/ADR-only.** Nenhum smoke test aqui ainda.
-> Esta seção é o placeholder para os testes da Sprint 4.3B (implementação backend).
-> Detalhes dos testes: `docs/medical-documents-v0-scope.md` §11.7 (smoke) e §11.8 (SQL).
+> Smoke executado em 2026-05-26. Script temporário em `/tmp/sprint-4.3B-smoke.sh` (não versionado).
+> PDF footer validado via extração de hex streams com Node.js — sem poppler.
+
+### Smoke tests 47/47 PASS
+
+| # | Cenário | Resultado |
+|---|---------|-----------|
+| 1 | sem token → 401 | ✅ |
+| 2 | secretaria → 403 forbidden_role | ✅ |
+| 3 | admin_sistema → 403 no_clinic_context | ✅ |
+| 4 | profissional cria draft → 201 + status=draft + id | ✅ |
+| 5 | profissional edita draft → 200 + title atualizado | ✅ |
+| 6 | finalizar sem body → 400 document_body_required | ✅ |
+| 7 | finalizar com body → 200 status=finalized + finalized_at | ✅ |
+| 8 | editar finalized → 400 document_already_finalized | ✅ |
+| 9 | PDF finalized → 200 + magic %PDF + "ICP-Brasil" no rodapé + "prescri" | ✅ |
+| 10 | cancel finalized → 200 status=canceled | ✅ |
+| 11 | PDF canceled → 400 document_canceled | ✅ |
+| 12 | owner lê documento → 200 + body visível | ✅ |
+| 13 | gestor lê documento → 200 | ✅ |
+| 14 | secretaria não lê → 403 | ✅ |
+| 15 | list owner → 200 + body ausente na lista | ✅ |
+| 16 | list owner → metadata_json ausente na lista | ✅ |
+| 17 | list owner → cancel_reason_text ausente na lista | ✅ |
+| 18 | list owner → ≥ 1 documento | ✅ |
+| 19 | GET /patients/:id/documents owner → 200 | ✅ |
+| 20 | UUID inexistente → 404 document_not_found | ✅ |
+| 21 | patient inexistente → 404 patient_not_found | ✅ |
+| 22 | doc_type inválido → 400 clinical_document_invalid | ✅ |
+| 23 | body >10000 chars → 400 | ✅ |
+| 24 | cancel_reason_code inválido → 400 clinical_document_cancel_invalid | ✅ |
+| 25 | list secretaria → 403 | ✅ |
+| 26 | list admin_sistema → 403 | ✅ |
+
+### Logger leak — 10/10 PASS
+
+```bash
+# clinicalDocumentController sem logger.*
+grep -c "logger\." backend/src/controllers/clinicalDocumentController.ts
+# esperado: 0
+
+# clinicalDocumentService sem logger exceto audit fail
+grep "logger\." backend/src/services/clinicalDocumentService.ts | grep -v "audit_write_failed"
+# esperado: sem output
+
+# clinicalDocumentPdfService sem logger
+grep -c "logger\." backend/src/services/clinicalDocumentPdfService.ts
+# esperado: 0
+
+# logger.ts tem body/title/metadata_json (>=2 cada)
+grep -c "'body'\|'title'" backend/src/config/logger.ts    # >= 2
+grep -c "metadata_json" backend/src/config/logger.ts       # >= 1
+
+# logger.ts cobertura clínica total (>=16)
+grep -c "chief_complaint\|anamnesis\|evolution\|internal_note" backend/src/config/logger.ts
+# esperado: >= 16
+```
+
+### Audit/read_audit SQL checks
+
+```bash
+# Eventos de clinical_read_audit para documentos
+docker compose exec postgres psql -U clinicbridge -d clinicbridge -c "
+SELECT acao, recurso, paciente_id IS NOT NULL AS has_paciente
+FROM clinical_read_audit
+WHERE acao LIKE 'clinical.document.%'
+ORDER BY criado_em DESC LIMIT 10;"
+# Esperado: clinical.document.list (false/true), clinical.document.read (true),
+#           clinical.document.pdf.downloaded (true)
+
+# Eventos de audit_logs para documentos (sem body/title/metadata_json)
+docker compose exec postgres psql -U clinicbridge -d clinicbridge -c "
+SELECT acao FROM audit_logs WHERE acao LIKE 'clinical.document.%' ORDER BY criado_em DESC LIMIT 10;"
+# Esperado: created, updated, finalized, canceled
+
+# Invariantes de banco (pós-cleanup)
+docker compose exec postgres psql -U clinicbridge -d clinicbridge -c "
+SELECT 'clinical_documents' AS t, count(*) FROM clinical_documents
+UNION ALL SELECT 'clinical_read_audit', count(*) FROM clinical_read_audit
+UNION ALL SELECT 'smoke_users', count(*) FROM users WHERE email LIKE '%@clinicbridge.local';"
+# Pós-Sprint 4.3B: clinical_documents=0 (dados sintéticos limpos); smoke_users=5
+```
+
+### Ressalvas aceitas (Documentos Médicos v0.1)
+
+| Item | Detalhe |
+|------|---------|
+| `compress: false` no PDFKit | PDFs ligeiramente maiores; aceitável para docs on-demand não armazenados |
+| Sem cifra de coluna | `body`/`metadata_json` em plaintext no DB; audit como compensating control |
+| Sem delete físico | `canceled` é estado terminal; sem restore |
+| Sem validação de CRM/CRO | Profissional pode incluir no `body` |
+| `metadata_json` sem schema per-type no DB | Validação light no service; flexível para evolução de templates |
 
 ### Pré-requisitos para executar (Sprint 4.3B)
 

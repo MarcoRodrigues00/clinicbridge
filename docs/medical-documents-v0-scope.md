@@ -20,9 +20,9 @@
 |---|---|
 | **Módulo** | Documentos Médicos e Receitas |
 | **Versão** | v0.1 |
-| **Sprint conceitual** | 4.3A (esta — ADR 0011) |
-| **Sprint de implementação backend** | 4.3B (pendente) |
-| **Sprint de implementação frontend** | 4.3C (pendente; depois da 4.3B) |
+| **Sprint conceitual** | 4.3A (ADR 0011 — entregue) |
+| **Sprint de implementação backend** | 4.3B (entregue 2026-05-26; smoke 47/47 PASS) |
+| **Sprint de implementação frontend** | 4.3C (pendente) |
 | **Tabelas novas** | 1 (`clinical_documents`) |
 | **Endpoints novos** | 8 (ver §5) |
 | **Roles novas** | Nenhuma — reutiliza `profissional_clinico`, `gestor_clinica` da ADR 0010 |
