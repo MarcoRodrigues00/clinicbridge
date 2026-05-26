@@ -3028,3 +3028,85 @@ env vars novas, sem AWS.
 **Próxima sprint natural:** 4.2B-4 (endpoint owner-only de auditoria de
 leitura clínica, LGPD-art.18) ou pular direto para 4.3 (documentos
 médicos/receitas v0.1), dependendo da prioridade jurídica.
+
+---
+
+## Sprint 4.2D (hardening/QA clínico final — Prontuário v0.1)
+
+**Objetivo:** QA de segurança, logs, audit e limpeza de dados sintéticos antes
+de avançar para Fase 4.3 (documentos médicos/receitas). Sprint zero-code — somente
+análise estática, inspeção de DB e docs.
+
+**Arquivos alterados:**
+- `docs/project-state.md` — Sprint 4.2D adicionada; 4.2C movida para "Sprint anterior".
+- `docs/sprint-history.md` — esta seção.
+- `docs/testing-checklist.md` — seção "11. Prontuário clínico v0.1" adicionada.
+- `CLAUDE.md` — estado atualizado para 4.2D; Fases Clinic OS e Próximas prioridades atualizadas.
+
+**Validações (análise estática + inspeção de DB):**
+
+### Logger redaction
+- `backend/src/config/logger.ts` — 4 camadas verificadas por grep.
+- Nenhum `logger.*` em `clinicalEncounterService`, `clinicalEncounterNoteService`,
+  `clinicalEncounterController` loga payload clínico (campos textuais ou
+  `cancel_reason_text`/`rectification_reason_text`). Apenas `err`, `acao`,
+  `audit_write_failed` são logados nos `safeAudit` best-effort.
+- `clinicalReadAuditService`: no failure path, loga `err`, `acao`,
+  `clinical_read_audit_failed` — nunca `paciente_id` nem conteúdo clínico.
+
+### Clinical read audit
+- 3 `acao` permitidos: `clinical.encounter.read` (CONTENT-READ, `paciente_id` obrigatório),
+  `clinical.encounter.list` (METADATA-LIST, `paciente_id=null`),
+  `clinical.timeline.list` (TIMELINE-METADATA, `paciente_id` presente).
+- Strict mode (`CLINICAL_READ_AUDIT_STRICT=true`): falha de persist → 500
+  `clinical_read_audit_unavailable` → `listByEncounter` nunca chamado → conteúdo
+  clínico nunca serializado.
+- `audit_logs` (administrativo): recebe `acao`, `recurso`, `recurso_id`, IDs —
+  nunca campos textuais clínicos.
+
+### Permissões (análise estática)
+| Papel / grant | create/cancel/notes | list/detail/timeline |
+|---|---|---|
+| `profissional_clinico` | ✅ | ✅ (só próprios) |
+| `gestor_clinica` | ❌ 403 | ✅ (toda a clínica) |
+| `dono_clinica` sem grant | ❌ 403 | ✅ (implicit gestor) |
+| `dono_clinica` + grant `profissional_clinico` | ✅ | ✅ |
+| `secretaria` | ❌ 403 | ❌ 403 |
+| `admin_sistema` | ❌ 403 | ❌ 403 |
+
+- profA não vê encounters de profB: DAO `attending_user_id_self` enforces; miss → 404 genérico.
+- `internal_note`: `applyInternalNoteRedaction` — autor ou dono/gestor veem; outros → null.
+- Frontend renderiza `internal_note !== null` (oculto quando null, sem placeholder).
+
+### Frontend
+- Sem `console.log` com payload clínico (grep confirmado em todos os arquivos clínicos).
+- `localStorage` somente para JWT em `authStorage.ts` (padrão MVP conhecido).
+- Sem `dangerouslySetInnerHTML` em componentes clínicos.
+- Sem dado clínico em URL/query string.
+- `staleTime: 0` em todas as queries clínicas (`clinicalTimeline`, `clinicalEncounterDetail`).
+- 403/401 → mensagem genérica `clinicalErrorMessage` — sem revelar existência de dados.
+
+### Limpeza de dados sintéticos (dev DB)
+- **Deletados:** 2 `clinical_encounters` + 3 `clinical_encounter_notes` criados durante
+  QA da Sprint 4.2C (dados sintéticos, dev DB, via SQL direto — autorizado).
+- **Preservados:** 14 `clinical_read_audit` rows (só metadados de auditoria, sem conteúdo
+  clínico — manter é a prática correta mesmo em dev). 1 `user_clinical_roles` grant
+  (permissão funcional do dono da clínica).
+
+**Verificação:**
+- `pnpm --filter frontend typecheck` ✅ (0 erros)
+- `pnpm --filter frontend build` ✅ (warning de chunk pré-existente)
+- `pnpm --filter backend typecheck` ✅ (0 erros)
+- `pnpm --filter backend build` ✅
+- `git diff --check` rc=0
+- `git status --short` limpo (zero arquivos de código alterados — docs somente)
+
+**O que NÃO entrou (intencional):**
+- Nenhuma migration nova.
+- Nenhuma env var nova.
+- Nenhum endpoint novo (4.2B-4 LGPD-art.18 adiado).
+- Nenhum dado clínico real criado.
+- Sem AWS.
+
+**Próxima sprint natural:** 4.2B-4 (endpoint owner-only auditoria LGPD-art.18) ou
+4.3 (documentos médicos/receitas v0.1, exige ADR própria).
