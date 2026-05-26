@@ -608,3 +608,45 @@
 - **Prescrição só com análise ICP-Brasil/compliance** — assinatura digital,
   workflow de emissão/cancelamento e risco jurídico avaliados (Fase 7 do
   `docs/roadmap-next-phase.md`).
+
+## Documentos Médicos v0.1 — guardrails (ADR 0011, Sprint 4.3A)
+
+> ADR 0011 autoriza a Sprint 4.3B (implementação backend). Estas regras valem
+> a partir do momento em que a 4.3B começar. Sem código, sem enforcement ainda.
+
+- **`secretaria`/`funcionario_administrativo` sem acesso ao conteúdo de documentos
+  médicos.** `body` e `metadata_json` podem conter dados de saúde sensíveis
+  (diagnóstico em atestado, medicamento em receita). Acesso restrito por
+  `requireClinicalRole`.
+- **Sem delete físico em `clinical_documents`.** Invariante. `canceled` é o estado
+  final negativo. `DAO` sem `DELETE`.
+- **Após `status='finalized'`, `body`/`title`/`metadata_json` são imutáveis.**
+  Service recusa PATCH com 400 `document_already_finalized`.
+- **PDF em strict mode**: `clinical.document.pdf.downloaded` é auditado em
+  `clinical_read_audit` **antes** de gerar o PDF. Se o audit falhar:
+  500 `clinical_read_audit_unavailable` — o PDF não é entregue. Conteúdo clínico
+  nunca sai sem audit íntegro.
+- **`CLINICAL_READ_AUDIT_STRICT`** (herdado da ADR 0010): obrigatório `true` em
+  produção. Falha de audit → 500; conteúdo de documento nunca retornado.
+  Boot em `NODE_ENV=production` com `STRICT=false` → **falha de boot**.
+- **Logger redaction** estendido com: `body` (document body), `cancel_reason_text`
+  (document), `metadata_json`. Payload de `/clinical/documents` nunca logado
+  integralmente.
+- **Audit de escrita**: falha aborta a transação — sem estado de documento sem
+  evidência (mesmo padrão ADR 0010 + ADR 0007).
+- **`patient_id` ativo + não-mesclado**: criar documento para paciente
+  `archived` ou `merged_into_id IS NOT NULL` → 404 `patient_not_found`
+  (anti-enumeração).
+- **`author_user_id`** injetado pelo service a partir do JWT — nunca confia no body.
+  CAS no DAO para editar/finalizar/cancelar: mismatch → 404 genérico.
+- **Cross-tenant**: DAO filtra `clinica_id` em toda query → 404 genérico.
+- **Rodapé obrigatório no PDF**: aviso de ausência de ICP-Brasil e validade
+  jurídica. Não há mecanismo de força-legal — o aviso é o controle compensatório.
+- **`metadata_json` sem PII bruta**: sem CPF, telefone, endereço em `metadata_json`.
+  PII do paciente vem do cadastro via JOIN no momento do PDF (minimização).
+- **Sem prescrição eletrônica legalmente válida** no v0.1: sem ICP-Brasil, sem
+  cert digital de qualquer provedor. Qualquer tentativa de tratar o PDF como
+  prescrição oficial é responsabilidade do profissional. UI alerta explicitamente.
+- **Biblioteca PDF**: avaliar CVEs antes do merge na 4.3B; `pnpm audit` no PR.
+- **Cifra de coluna**: `body` não cifrado no v0.1 (mesma postura da ADR 0010).
+  Revisável antes de produção real se jurídico/regulatório exigir.

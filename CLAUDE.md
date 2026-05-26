@@ -20,6 +20,7 @@
 > - **Expansão para Clinic OS modular (Sprint 4.0; sem telemedicina; migração como diferencial; ADR própria por módulo; trilha AWS pausada estrategicamente):** ADR `docs/adr/0008-clinicbridge-clinic-os-expansion.md` + roadmap `docs/product-clinic-os-roadmap.md`
 > - **Arquitetura clínica + roles granulares + audit de leitura + LGPD clínica (Sprint 4.1, docs/ADR-only; bloqueia 4.2+; gate de retomada AWS atualizado):** ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` + operacional `docs/clinical-architecture-and-permissions.md`
 > - **Prontuário/Atendimento clínico v0.1 — escopo do módulo (Sprint 4.2A, docs/ADR-only; autoriza Sprint 4.2B; sem migration/endpoint ainda; cifra a nível de coluna fora do v0.1 — decisão revisável):** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` + operacional `docs/clinical-encounters-v0-scope.md`
+> - **Documentos Médicos e Receitas v0.1 — escopo do módulo (Sprint 4.3A, docs/ADR-only; autoriza Sprint 4.3B; PDF on-demand; sem ICP-Brasil; cifra de coluna revisável):** ADR `docs/adr/0011-medical-documents-prescriptions-v0.md` + operacional `docs/medical-documents-v0-scope.md`
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
 > - **Demo/piloto v0.1 (Sprint 3.20; dados fictícios, não clínico):** `docs/demo-data/README.md` (+ `docs/demo-data/pacientes-demo.csv`), `docs/demo-pilot-v0.1-script.md`, `docs/demo-pilot-v0.1-checklist.md` — seed dev-only de agenda: `backend/scripts/seed-demo-scheduling.ts` (`pnpm --filter backend seed:demo` / `seed:demo:clean`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
@@ -27,7 +28,22 @@
 
 ## Estado atual (resumido — atualizado 2026-05-26)
 
-**Sprint atual: 4.2E** (entregue) — **Endpoint LGPD-art.18 de auditoria de leitura clínica.**
+**Sprint atual: 4.3A** (entregue) — **ADR Documentos Médicos e Receitas v0.1 (docs/ADR-only).**
+ADR 0011 (`docs/adr/0011-medical-documents-prescriptions-v0.md`) + operacional
+`docs/medical-documents-v0-scope.md`. Fecha escopo do módulo de documentos antes de qualquer
+código. **Sem código, sem migration, sem env vars, sem AWS, sem dado clínico real.**
+
+**Componentes entregues:**
+- `docs/adr/0011-medical-documents-prescriptions-v0.md` — ADR completa (20 seções):
+  5 tipos de documento, 1 tabela nova (`clinical_documents`), ciclo de vida
+  `draft→finalized→canceled`, PDF on-demand sem armazenamento, audit duplo
+  (`audit_logs` + `clinical_read_audit`), permissões espelhando ADR 0010,
+  logger redaction estendido, 8 endpoints conceituais, postura LGPD, sem ICP-Brasil.
+- `docs/medical-documents-v0-scope.md` — companheiro operacional: tabelas de
+  permissão, cheat-sheet de endpoints, catálogo de audit, schema da tabela,
+  checklists das Sprints 4.3B e 4.3C, validações e itens fora de escopo.
+
+**Sprint anterior: 4.2E** (entregue) — **Endpoint LGPD-art.18 de auditoria de leitura clínica.**
 `GET /clinical/read-audit` owner-only; lista metadados de acesso ao prontuário sem conteúdo
 clínico; frontend `ClinicalReadAuditPanel` na aba Segurança; sem migrations, sem env vars.
 
@@ -105,8 +121,11 @@ interna → **4.2B-3 ✅** controllers + rotas + smoke 76/76 PASS → **4.2C ✅
 frontend (drawer, roles panel, botão Prontuário) → **4.2D ✅** QA/hardening
 (logs, audit, permissões, dados sintéticos, docs) → **4.2E ✅** endpoint
 LGPD-art.18 `GET /clinical/read-audit` (owner-only; metadados de acesso;
-frontend `ClinicalReadAuditPanel`; smoke 8/8 PASS) → **4.3** documentos
-médicos/receitas (sem ICP-Brasil) → **4.4** financeiro → **4.5** relatórios
+frontend `ClinicalReadAuditPanel`; smoke 8/8 PASS) → **4.3A ✅** ADR 0011 +
+operacional `docs/medical-documents-v0-scope.md` (docs-only; 5 tipos; 1 tabela;
+PDF on-demand; sem ICP-Brasil) → **4.3B** implementação backend (migration +
+DAOs + services + PDF + smoke) → **4.3C** frontend (aba Documentos no drawer) →
+**4.4** financeiro → **4.5** relatórios
 gerenciais → **4.6** convênios/faturamento básico (TISS/TUSS real fora) →
 **4.7** estoque básico (medicamentos controlados/ANVISA fora). Cada **fase
 nova** exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
@@ -193,20 +212,23 @@ conceitual e audit de leitura). Sequência de fases administrativas:
   (logs validados, audit validado, permissões validadas, dados sintéticos limpos,
   docs atualizados; zero mudanças de código) → **4.2E ✅** LGPD-art.18
   `GET /clinical/read-audit` owner-only; `ClinicalReadAuditPanel` na aba Segurança;
-  smoke 8/8 PASS; sem migrations → **4.3** documentos médicos/receitas v0.1
-  (sem ICP-Brasil) → **4.4** financeiro v0.1 → **4.5** relatórios gerenciais
-  v0.1 → **4.6** convênios/faturamento básico v0.1 (TISS/TUSS real fora) →
-  **4.7** estoque básico v0.1 (medicamentos controlados/ANVISA fora).
+  smoke 8/8 PASS; sem migrations → **4.3A ✅** ADR 0011 documentos médicos/receitas
+  v0.1 (docs-only; 5 tipos; 1 tabela `clinical_documents`; PDF on-demand; sem
+  ICP-Brasil; operacional `docs/medical-documents-v0-scope.md`) → **4.3B**
+  implementação backend (migration + DAOs + services + PDF + smoke) → **4.3C**
+  frontend (aba Documentos no drawer `ClinicalPatientPane`) → **4.4** financeiro
+  v0.1 → **4.5** relatórios gerenciais v0.1 → **4.6** convênios/faturamento
+  básico v0.1 (TISS/TUSS real fora) → **4.7** estoque básico v0.1
+  (medicamentos controlados/ANVISA fora).
   **Fases futuras (sem número):** IA clínica assistiva (depois de 4.2 madura),
   assinatura digital ICP-Brasil (depois de 4.3 madura), TISS/TUSS real (depois
   de 4.6), SNGPC/ANVISA (depois de 4.7). Cada **fase nova** = ADR própria.
   Detalhe: `docs/product-clinic-os-roadmap.md`.
 - **Trilha AWS (pausada estrategicamente):** **3.41A ✅** plano operacional →
   **3.41B-0 ✅** runbook executável → **3.41B** execução real ⏸️ → **3.42** go/no-go ⏸️
-  → **3.43** piloto ⏸️. Gate de retomada atualizado pela ADR 0009 §10:
-  **ADR 0010 (prontuário v0.1) aceita** + reavaliação de dimensionamento
-  RDS/EBS/KMS para dados clínicos + decisão sobre KMS CMK dedicada para cifra
-  clínica (se aplicável) + região `sa-east-1` preferida por LGPD.
+  → **3.43** piloto ⏸️. Gate de retomada: ADR 0010 + ADR 0011 aceitas ✅ +
+  reavaliação de dimensionamento RDS/EBS/KMS para dados clínicos + decisão sobre
+  KMS CMK dedicada + região `sa-east-1` preferida por LGPD.
 - **P1 pendentes antes de prod:** bucket S3 + IAM + agendamento + alertas do backup offsite
   (3.40 entregou scripts/docs; falta provisionar); banco/Redis gerenciados (3.41); WAF;
   deploy real (3.42); provisionar Redis/proxy reais (`TRUST_PROXY`/`REDIS_URL` em prod);

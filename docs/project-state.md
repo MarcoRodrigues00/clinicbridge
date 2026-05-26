@@ -7,7 +7,32 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.2E** (entregue) — **Endpoint LGPD-art.18 de auditoria de leitura clínica.**
+**Sprint 4.3A** (entregue) — **ADR Documentos Médicos e Receitas v0.1 (docs/ADR-only).**
+ADR 0011 + operacional `docs/medical-documents-v0-scope.md`.
+**Sem código, sem migration, sem env vars, sem AWS, sem dado clínico real.**
+
+**Componentes entregues:**
+- `docs/adr/0011-medical-documents-prescriptions-v0.md` — ADR completa (20 seções, Status:
+  Accepted): 5 tipos de documento (`receipt_simple`, `attestation`, `declaration`,
+  `exam_request`, `orientation`); 1 tabela nova `clinical_documents` com schema, 4 CHECK
+  constraints de consistência e 5 índices; ciclo de vida `draft→finalized→canceled` (sem
+  restore, sem delete físico); PDF on-demand não armazenado com rodapé jurídico obrigatório;
+  audit de escrita em `audit_logs` (4 eventos) + audit de leitura em `clinical_read_audit`
+  (3 eventos; herda `CLINICAL_READ_AUDIT_STRICT`); logger redaction estendido com `body` e
+  `cancel_reason_text` de documento; 8 endpoints conceituais; permissões espelhando ADR 0010
+  (`profissional_clinico` cria/edita próprios, `dono/gestor` lê qualquer + audit, `secretaria`
+  bloqueada); `encounter_id` opcional; `supersedes_document_id` para substituição.
+- `docs/medical-documents-v0-scope.md` — companheiro operacional: tabela de tipos,
+  diagrama de ciclo de vida, matriz de permissões, cheat-sheet de 8 endpoints, catálogo
+  de audit (escrita + leitura), logger redaction, estrutura do PDF, schema completo da
+  tabela, checklists das Sprints 4.3B (11 seções) e 4.3C, tabela de validações, itens
+  fora de escopo, referências.
+
+**`git diff --check`** rc=0 · **`git status --short`** apenas docs novos/modificados.
+
+---
+
+**Sprint anterior: 4.2E** (entregue) — **Endpoint LGPD-art.18 de auditoria de leitura clínica.**
 `GET /clinical/read-audit` owner-only para transparência LGPD sobre acesso ao prontuário.
 **Sem migrations, sem env vars, sem dado clínico real. Smoke 8/8 PASS.**
 
