@@ -621,6 +621,35 @@ export interface PublicClinicalRoleGrant {
   granted_by_user_id: string | null;
 }
 
+// Sprint 4.2E — LGPD-art.18 transparency: clinical read audit entry.
+// ip/user_agent are intentionally excluded from the API response (forensic
+// metadata kept server-side only). No clinical content is ever stored in this
+// table; what you see here is purely access metadata.
+export interface PublicClinicalReadAuditEntry {
+  id: string;
+  acao: string;
+  recurso: string;
+  recurso_id: string | null;
+  paciente_id: string | null;
+  paciente_nome: string | null;
+  usuario_id: string | null;
+  usuario_nome: string | null;
+  usuario_email: string | null;
+  papel_at_read: string;
+  request_id: string | null;
+  criado_em: string;
+}
+
+export interface ClinicalReadAuditFilters {
+  patient_id?: string;
+  user_id?: string;
+  acao?: string;
+  date_from?: string;
+  date_to?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export interface CreateClinicalEncounterPayload {
   patient_id: string;
   started_at: string;
@@ -1205,6 +1234,22 @@ export const api = {
 
   revokeClinicalRole(token: string, grantId: string): Promise<{ status: 'revoked' }> {
     return apiFetch('/clinical/roles/revoke', { method: 'POST', body: { id: grantId }, token });
+  },
+
+  listClinicalReadAudit(
+    token: string,
+    filters: ClinicalReadAuditFilters = {},
+  ): Promise<{ audits: PublicClinicalReadAuditEntry[] }> {
+    const q = new URLSearchParams();
+    if (filters.patient_id) q.set('patient_id', filters.patient_id);
+    if (filters.user_id) q.set('user_id', filters.user_id);
+    if (filters.acao) q.set('acao', filters.acao);
+    if (filters.date_from) q.set('date_from', filters.date_from);
+    if (filters.date_to) q.set('date_to', filters.date_to);
+    if (filters.limit !== undefined) q.set('limit', String(filters.limit));
+    if (filters.offset !== undefined) q.set('offset', String(filters.offset));
+    const qs = q.toString();
+    return apiFetch(`/clinical/read-audit${qs ? `?${qs}` : ''}`, { method: 'GET', token });
   },
 
   getImportFileRetentionDryRun(

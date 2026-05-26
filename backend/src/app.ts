@@ -15,6 +15,7 @@ import { clinicJoinRequestsRouter } from './routes/clinicJoinRequests';
 import { clinicMembersRouter } from './routes/clinicMembers';
 import { clinicalEncountersRouter } from './routes/clinicalEncounters';
 import { clinicalRolesRouter } from './routes/clinicalRoles';
+import { clinicalReadAuditRouter } from './routes/clinicalReadAudit';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -92,6 +93,8 @@ export function createApp(): Express {
   // reason_text + paciente_id (config/logger.ts).
   app.use(clinicalRolesRouter);
   app.use(clinicalEncountersRouter);
+  // LGPD-art.18 transparency (Sprint 4.2E): owner-only read-audit listing.
+  app.use(clinicalReadAuditRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

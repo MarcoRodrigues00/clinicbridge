@@ -1,0 +1,223 @@
+/* ClinicalReadAuditPanel — Sprint 4.2E */
+
+.panel {
+  background: var(--surface-1);
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin-top: 1.5rem;
+}
+
+.panelHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-0);
+  margin: 0;
+}
+
+.panelTitle svg { color: var(--cyan-soft); flex-shrink: 0; }
+
+.panelSubtitle {
+  font-size: 0.84rem;
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Filters */
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 140px;
+}
+
+.filterLabel {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.filterSelect,
+.filterInput {
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  color: var(--text-1);
+  font-size: 0.86rem;
+  padding: 0.42rem 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.filterSelect:focus,
+.filterInput:focus {
+  outline: none;
+  border-color: var(--cyan-soft);
+}
+
+.filterActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+  padding-bottom: 1px;
+}
+
+.searchBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--cyan-soft);
+  color: #0a0e14;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.searchBtn:hover { opacity: 0.88; }
+
+.resetBtn {
+  background: transparent;
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 0.84rem;
+  padding: 0.42rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.resetBtn:hover { background: rgba(255,255,255,0.04); color: var(--text-1); }
+
+/* State messages */
+.stateMsg {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.87rem;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.errorMsg {
+  font-size: 0.85rem;
+  color: var(--red-soft, #f87171);
+  background: rgba(248, 113, 113, 0.07);
+  border: 1px solid rgba(248, 113, 113, 0.18);
+  border-radius: 6px;
+  padding: 0.55rem 0.8rem;
+  margin: 0;
+}
+
+.emptyMsg {
+  font-size: 0.86rem;
+  color: var(--text-3);
+  font-style: italic;
+  margin: 0;
+}
+
+.countMsg {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  margin: 0;
+}
+
+/* Audit list */
+.auditList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.auditRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
+  border-radius: 7px;
+  padding: 0.75rem 0.9rem;
+}
+
+@media (max-width: 540px) {
+  .auditRow { flex-direction: column; gap: 0.4rem; }
+}
+
+.auditLeft { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; }
+.auditRight { display: flex; flex-direction: column; gap: 0.15rem; text-align: right; flex-shrink: 0; }
+
+.auditAcao {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-1);
+  margin: 0;
+}
+
+.auditMeta {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.auditUser {
+  font-size: 0.85rem;
+  color: var(--text-1);
+  font-weight: 500;
+  margin: 0;
+}
+
+.auditUserEmail {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  margin: 0;
+}
+
+.auditDate {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  margin: 0;
+}
+
+.reloadBtn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 0.83rem;
+  padding: 0.38rem 0.7rem;
+  cursor: pointer;
+}
+
+.reloadBtn:hover { background: rgba(255,255,255,0.04); color: var(--text-1); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }

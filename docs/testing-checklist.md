@@ -4,6 +4,96 @@
 > (`docs/sprint-history.md`). Use como roteiro de smoke test / regressão local.
 > Endpoints tenant-scoped exigem `Authorization: Bearer <token>` (de `/auth/login`).
 
+## Usuários smoke persistentes (dev local apenas)
+
+> Existem apenas no ambiente local/dev. **Nunca usar em produção. Nunca versionar
+> em arquivos de deploy ou seed de produção.** Senha dev-only documentada abaixo
+> — claramente falsa, sem valor de segurança.
+
+| E-mail | `users.papel` | Grant clínico (`user_clinical_roles`) | Clínica |
+|--------|--------------|---------------------------------------|---------|
+| `smoke.owner@clinicbridge.local` | `dono_clinica` | — | Clinica Smoke Dev |
+| `smoke.secretaria@clinicbridge.local` | `secretaria` | — | Clinica Smoke Dev |
+| `smoke.profissional@clinicbridge.local` | `secretaria` | `profissional_clinico` | Clinica Smoke Dev |
+| `smoke.gestor@clinicbridge.local` | `secretaria` | `gestor_clinica` | Clinica Smoke Dev |
+| `smoke.admin@clinicbridge.local` | `admin_sistema` | — | (sem clínica) |
+
+**Senha dev:** `SmokeDevOnly!23` — claramente fake, apenas para testes locais.
+
+**Obter tokens:**
+
+```bash
+PASS="SmokeDevOnly!23"
+get_token() {
+  curl -sk -X POST https://localhost:8443/auth/login \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"${1}\",\"senha\":\"${PASS}\"}" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin).get('token','LOGIN_FAILED'))"
+}
+TOKEN_OWNER=$(get_token "smoke.owner@clinicbridge.local")
+TOKEN_SEC=$(get_token "smoke.secretaria@clinicbridge.local")
+TOKEN_PROF=$(get_token "smoke.profissional@clinicbridge.local")
+TOKEN_GESTOR=$(get_token "smoke.gestor@clinicbridge.local")
+TOKEN_ADMIN=$(get_token "smoke.admin@clinicbridge.local")
+```
+
+**Regras de uso:**
+- Não apagar esses usuários ao final de sprints.
+- Pode criar dados clínicos sintéticos com eles e deletar os *dados* ao final; os *usuários* ficam.
+- Se precisar recriar (ex.: after `docker compose down -v`), verificar por e-mail primeiro:
+  ```sql
+  SELECT email, papel FROM users WHERE email LIKE '%@clinicbridge.local';
+  ```
+- Não existe seed de produção que inclua esses usuários.
+- `smoke.admin` não tem `clinica_id` (papel `admin_sistema`); retorna `no_clinic_context` em
+  endpoints tenant-scoped — comportamento correto.
+
+**IDs atuais (dev DB — podem mudar após `down -v` / recreate):**
+```
+smoke.owner        id=06026581-4595-47f6-b1ae-ce0221c70d8a  clinica_id=c48d1ac4-362d-4f10-9cf8-71771efd43c8
+smoke.secretaria   id=031d9227-5946-4069-bce0-4b5a87c56077
+smoke.profissional id=5730f0c3-e867-4384-813c-b8fb2122468f
+smoke.gestor       id=9d17215b-9c6e-4fbf-8d18-d1c6c7af43c0
+smoke.admin        id=9a408925-e7d1-4797-95c2-ff6795f3953d  (sem clinica_id)
+```
+
+**Recriar do zero (se necessário após `docker compose down -v`):**
+```bash
+# 1. Registrar owner (cria hash argon2 + clínica)
+curl -sk -X POST https://localhost:8443/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"Smoke Owner","email":"smoke.owner@clinicbridge.local","senha":"SmokeDevOnly!23","nome_clinica":"Clinica Smoke Dev","consentimento_lgpd":true}'
+
+# 2. Obter hash e clinica_id
+CLINICA_ID=$(docker exec clinicbridge-postgres psql -U clinicbridge -d clinicbridge -t -c \
+  "SELECT id FROM clinics WHERE nome='Clinica Smoke Dev';" | tr -d ' \n')
+OWNER_ID=$(docker exec clinicbridge-postgres psql -U clinicbridge -d clinicbridge -t -c \
+  "SELECT id FROM users WHERE email='smoke.owner@clinicbridge.local';" | tr -d ' \n')
+HASH=$(docker exec clinicbridge-postgres psql -U clinicbridge -d clinicbridge -t -c \
+  "SELECT senha_hash FROM users WHERE email='smoke.owner@clinicbridge.local';" | tr -d ' \n')
+
+# 3. Inserir demais usuários
+docker exec clinicbridge-postgres psql -U clinicbridge -d clinicbridge -c "
+INSERT INTO users (nome, email, senha_hash, papel, clinica_id, ativo) VALUES
+  ('Smoke Secretaria',   'smoke.secretaria@clinicbridge.local',   '${HASH}', 'secretaria',   '${CLINICA_ID}', true),
+  ('Smoke Profissional', 'smoke.profissional@clinicbridge.local', '${HASH}', 'secretaria',   '${CLINICA_ID}', true),
+  ('Smoke Gestor',       'smoke.gestor@clinicbridge.local',       '${HASH}', 'secretaria',   '${CLINICA_ID}', true),
+  ('Smoke Admin',        'smoke.admin@clinicbridge.local',        '${HASH}', 'admin_sistema', NULL,            true)
+ON CONFLICT (email) DO NOTHING;"
+
+PROF_ID=$(docker exec clinicbridge-postgres psql -U clinicbridge -d clinicbridge -t -c \
+  "SELECT id FROM users WHERE email='smoke.profissional@clinicbridge.local';" | tr -d ' \n')
+GESTOR_ID=$(docker exec clinicbridge-postgres psql -U clinicbridge -d clinicbridge -t -c \
+  "SELECT id FROM users WHERE email='smoke.gestor@clinicbridge.local';" | tr -d ' \n')
+
+# 4. Grants clínicos
+docker exec clinicbridge-postgres psql -U clinicbridge -d clinicbridge -c "
+INSERT INTO user_clinical_roles (user_id, clinica_id, role, granted_by_user_id) VALUES
+  ('${PROF_ID}',   '${CLINICA_ID}', 'profissional_clinico', '${OWNER_ID}'),
+  ('${GESTOR_ID}', '${CLINICA_ID}', 'gestor_clinica',       '${OWNER_ID}')
+ON CONFLICT DO NOTHING;"
+```
+
 ## MFA / TOTP (Sprint 3.19)
 
 App autenticador (TOTP); sem SMS/e-mail OTP/serviço externo. Backend e2e (backend
@@ -1407,13 +1497,90 @@ docker compose exec postgres psql -U clinicbridge -d clinicbridge -c "
 # Pós-Sprint 4.2D: encounters=0, notes=0 (dados sintéticos limpos); audit>=14; roles>=1
 ```
 
+## Auditoria de leitura clínica — Sprint 4.2E (LGPD-art.18)
+
+> Usa os **usuários smoke persistentes** definidos acima. Obtenha os tokens com `get_token()` antes de rodar.
+
+```bash
+# Pré-requisito: executar get_token() da seção "Usuários smoke persistentes" acima.
+
+# --- Permissões ---
+# 1. Sem token → 401
+curl -sk -o /dev/null -w "%{http_code}" https://localhost:8443/clinical/read-audit
+# → 401
+
+# 2. smoke.owner (dono_clinica) → 200
+curl -sk -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN_OWNER" \
+  https://localhost:8443/clinical/read-audit
+# → 200
+
+# 3. smoke.secretaria → 403 forbidden_role
+curl -sk -H "Authorization: Bearer $TOKEN_SEC" https://localhost:8443/clinical/read-audit \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['error']['code'])"
+# → forbidden_role
+
+# 4. smoke.profissional (secretaria + grant profissional_clinico) → 403 forbidden_role
+curl -sk -H "Authorization: Bearer $TOKEN_PROF" https://localhost:8443/clinical/read-audit \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['error']['code'])"
+# → forbidden_role
+
+# 5. smoke.gestor (secretaria + grant gestor_clinica) → 403 forbidden_role
+curl -sk -H "Authorization: Bearer $TOKEN_GESTOR" https://localhost:8443/clinical/read-audit \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['error']['code'])"
+# → forbidden_role
+
+# 6. smoke.admin (admin_sistema, sem clinica_id) → 403 no_clinic_context
+curl -sk -H "Authorization: Bearer $TOKEN_ADMIN" https://localhost:8443/clinical/read-audit \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['error']['code'])"
+# → no_clinic_context
+
+# --- Ausência de campos proibidos ---
+# 7. Resposta não contém campos clínicos nem ip/user_agent
+RESP=$(curl -sk -H "Authorization: Bearer $TOKEN_OWNER" https://localhost:8443/clinical/read-audit)
+for f in chief_complaint anamnesis evolution plan internal_note cancel_reason_text rectification_reason_text ip user_agent; do
+  echo -n "$f: "; echo "$RESP" | grep -q "\"$f\"" && echo "FAIL" || echo "OK"
+done
+# → OK para todos os 9 campos
+
+# --- Validação de filtros ---
+# 8. acao inválida → 400 clinical_read_audit_filter_invalid
+curl -sk -H "Authorization: Bearer $TOKEN_OWNER" \
+  "https://localhost:8443/clinical/read-audit?acao=x" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['error']['code'])"
+# → clinical_read_audit_filter_invalid
+
+# 9. patient_id inválido → 400
+curl -sk -H "Authorization: Bearer $TOKEN_OWNER" \
+  "https://localhost:8443/clinical/read-audit?patient_id=abc" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['error']['code'])"
+# → clinical_read_audit_filter_invalid
+
+# 10. date_from inválido → 400
+curl -sk -H "Authorization: Bearer $TOKEN_OWNER" \
+  "https://localhost:8443/clinical/read-audit?date_from=not-a-date" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['error']['code'])"
+# → clinical_read_audit_filter_invalid
+
+# 11. date_to < date_from → 400
+curl -sk -H "Authorization: Bearer $TOKEN_OWNER" \
+  "https://localhost:8443/clinical/read-audit?date_from=2026-05-26&date_to=2026-05-20" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['error']['code'])"
+# → clinical_read_audit_filter_invalid
+
+# 12. Filtro válido com acao + limit
+curl -sk -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN_OWNER" \
+  "https://localhost:8443/clinical/read-audit?acao=clinical.encounter.read&limit=10"
+# → 200
+```
+
 ### Ressalvas aceitas (Prontuário v0.1)
 
 | Item | Detalhe |
 |------|---------|
 | Sem cifra a nível de coluna | ADR 0010 §13: audit como compensating control; cifra é fase futura |
-| Sem tela LGPD-art.18 | Endpoint 4.2B-4 futuro (ou fase 4.5) |
+| Sem tela LGPD-art.18 separada | `ClinicalReadAuditPanel` entregue na aba Segurança (Sprint 4.2E) |
 | Sem delete físico de encounter | Cancelamento é one-way; restore fora do escopo |
 | Sem undo de nota | Append-only por design (ADR 0010 §9) |
 | Sem CID/diagnóstico estruturado | Fora do escopo v0.1 (ADR 0010 §2.4) |
 | `staleTime: 0` nas queries clínicas | Sem cache de dado clínico; recarrega sempre |
+| `staleTime: 30s` no audit panel | Metadados imutáveis; 30s é seguro sem risco de exibir conteúdo stale |

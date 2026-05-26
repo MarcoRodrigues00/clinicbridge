@@ -3108,5 +3108,129 @@ análise estática, inspeção de DB e docs.
 - Nenhum dado clínico real criado.
 - Sem AWS.
 
-**Próxima sprint natural:** 4.2B-4 (endpoint owner-only auditoria LGPD-art.18) ou
+**Próxima sprint natural após 4.2D:** 4.2E (endpoint owner-only auditoria LGPD-art.18) ou
 4.3 (documentos médicos/receitas v0.1, exige ADR própria).
+
+---
+
+## Sprint 4.2E (endpoint LGPD-art.18 de auditoria de leitura clínica)
+
+**Contexto:** A Sprint 4.2D confirmou que a tabela `clinical_read_audit` captura
+corretamente quem acessou o prontuário, quando e para qual paciente. A Sprint 4.2E
+expõe esses metadados ao dono da clínica via endpoint owner-only, fechando o ciclo
+de transparência LGPD-art.18 para o módulo Prontuário v0.1. Sem migrations, sem
+env vars novas, sem dado clínico real.
+
+### Arquivos criados/modificados
+
+**Backend:**
+- `backend/src/dao/clinicalReadAuditDao.ts` — adicionado `list()`: consulta
+  `clinical_read_audit as cra` tenant-scoped (`cra.clinica_id = clinica_id`); LEFT JOIN
+  `patients as p` para `paciente_nome` + LEFT JOIN `users as u` para `usuario_nome`/
+  `usuario_email`; filtros opcionais: `patient_id` (UUID), `user_id` (UUID), `acao`
+  (allowlist), `date_from`/`date_to` (Date); `ORDER BY cra.criado_em DESC`; `LIMIT`/`OFFSET`.
+  Shape público `ClinicalReadAuditListRow` exclui `ip` e `user_agent` por design
+  (forense — não necessários para transparência básica). Comentário explica por que o
+  LEFT JOIN em `patients` não adiciona `p.clinica_id` (defense-in-depth já está na
+  origem dos dados; adicioná-lo silenciaria pacientes arquivados).
+- `backend/src/services/clinicalReadAuditListService.ts` — parse e validação de todos
+  os filtros: UUID regex `/^[0-9a-f]{8}-…$/i`; `ALLOWED_ACAO_FILTERS` Set de 3 valores;
+  `parseDateFilter` com `Number.isNaN`; invariante `date_to > date_from` (não `>=`);
+  `limit∈[1,100]` (default 50); `offset∈[0,10000]` (default 0). Erro 400 com código
+  `clinical_read_audit_filter_invalid`. Best-effort audit admin `clinical_read_audit.list.success`
+  (falha silenciada para não bloquear a resposta). `toPublic()` garante que nunca vazam
+  campos além dos 12 definidos em `PublicClinicalReadAuditEntry`.
+- `backend/src/controllers/clinicalReadAuditController.ts` — thin controller; `ownerActor()`
+  extrai `clinica_id`/`usuario_id` do JWT; repassa raw query ao service.
+- `backend/src/routes/clinicalReadAudit.ts` — `GET /clinical/read-audit`; pipeline:
+  `patientsRateLimit → requireAuth → requireClinic → requireRole(CLINIC_ADMIN_ROLES)`.
+  Comentário inline justifica por que gestor/profissional/secretaria não têm acesso
+  (só dono é responsável LGPD pela transparência ao titular dos dados).
+- `backend/src/app.ts` — `import { clinicalReadAuditRouter }` + `app.use(clinicalReadAuditRouter)`.
+
+**Frontend:**
+- `frontend/src/services/api.ts` — `ClinicalReadAuditFilters` interface; `ClinicalReadAuditEntry`
+  interface (12 campos; sem `ip`/`user_agent`/campos clínicos); `api.listClinicalReadAudit()`.
+- `frontend/src/components/ClinicalReadAuditPanel.tsx` — painel owner-only via
+  `user?.papel === 'dono_clinica'`; filtros: dropdown de `acao` + date inputs `date_from`/
+  `date_to` com botão "Buscar" (aplicação explícita = sem refetch por keystroke); reset.
+  Lista entradas com: tipo de ação (label pt-BR), nome do paciente ou "listagem geral",
+  papel do accessor (label pt-BR), nome+e-mail do accessor, data formatada `pt-BR`.
+  `staleTime: 30_000` (audit metadata é imutável; 0 seria seguro mas desnecessário).
+  Aviso explícito "apenas metadados de acesso — nunca conteúdo do prontuário".
+  Sem IP, sem user_agent, sem campo clínico. `enabled: isOwner && !!token`.
+- `frontend/src/components/ClinicalReadAuditPanel.module.css` — estilos do painel.
+- `frontend/src/views/Dashboard.tsx` — `import ClinicalReadAuditPanel`; renderiza
+  `{isOwner && <ClinicalReadAuditPanel />}` na aba `seguranca`.
+
+### Segurança / invariantes mantidos
+
+- **Tenant:** `cra.clinica_id = clinica_id` é a primeira cláusula WHERE em `list()`.
+- **Conteúdo clínico:** tabela `clinical_read_audit` nunca armazenou campos clínicos
+  por design (ADR 0010 §8). `toPublic()` adiciona uma camada extra de segurança
+  mapeando explicitamente apenas os 12 campos seguros.
+- **ip/user_agent:** presentes na tabela para forense; excluídos do shape público
+  e da resposta HTTP (não necessários para transparência LGPD básica).
+- **Autorização:** `requireRole(CLINIC_ADMIN_ROLES)` → só `dono_clinica`; sem exception.
+- **Validação de filtros:** erros com código específico `clinical_read_audit_filter_invalid`;
+  mensagem segura (sem echo de input); não revelam estado interno.
+
+### Smoke tests executados — 10/10 PASS
+
+Testados com **usuários smoke persistentes** `*@clinicbridge.local` criados nesta sprint
+(ver adendo abaixo). Não mais descartáveis por sprint.
+
+| # | Usuário / Input | Resultado |
+|---|-----------------|-----------|
+| 1 | sem token | 401 `unauthorized` ✅ |
+| 2 | `smoke.owner` (dono_clinica) | 200 `{ audits: [] }` ✅ |
+| 3 | 9 campos proibidos ausentes (7 clínicos + `ip` + `user_agent`) | OK ✅ |
+| 4 | `smoke.secretaria` (secretaria, mesmo tenant) | 403 `forbidden_role` ✅ |
+| 5 | `smoke.profissional` (secretaria + grant `profissional_clinico`) | 403 `forbidden_role` ✅ |
+| 6 | `smoke.gestor` (secretaria + grant `gestor_clinica`) | 403 `forbidden_role` ✅ |
+| 7 | `smoke.admin` (`admin_sistema`, sem `clinica_id`) | 403 `no_clinic_context` ✅ |
+| 8 | `?acao=invalid.acao.value` | 400 `clinical_read_audit_filter_invalid` ✅ |
+| 9 | `?patient_id=not-a-uuid` | 400 `clinical_read_audit_filter_invalid` ✅ |
+| 10 | `?date_from=nao-e-data` | 400 `clinical_read_audit_filter_invalid` ✅ |
+
+Também testado: `date_to < date_from` → 400 ✅; `?acao=clinical.encounter.read&limit=10` → 200 ✅.
+
+**Nota sobre `smoke.admin`:** retorna `no_clinic_context` (via `requireClinic`) e não
+`forbidden_role` (via `requireRole`) porque `admin_sistema` não tem `clinica_id`. A pipeline
+`requireAuth → requireClinic → requireRole` bloqueia antes de chegar no role check. Correto.
+
+### Adendo: usuários smoke persistentes (dev local)
+
+Criados nesta sprint para evitar criar/deletar usuários descartáveis a cada sprint.
+5 usuários `*@clinicbridge.local` na "Clinica Smoke Dev", senha dev `SmokeDevOnly!23`.
+Não versionar em seed de produção. Não deletar entre sprints.
+
+| E-mail | papel | grant clínico |
+|--------|-------|---------------|
+| `smoke.owner@clinicbridge.local` | `dono_clinica` | — |
+| `smoke.secretaria@clinicbridge.local` | `secretaria` | — |
+| `smoke.profissional@clinicbridge.local` | `secretaria` | `profissional_clinico` |
+| `smoke.gestor@clinicbridge.local` | `secretaria` | `gestor_clinica` |
+| `smoke.admin@clinicbridge.local` | `admin_sistema` | — (sem clinica_id) |
+
+Detalhes + IDs + script de recriação: `docs/testing-checklist.md` §"Usuários smoke persistentes".
+
+### Verificação
+
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅ (warning de chunk pré-existente)
+- `git diff --check` rc=0
+- Docker rebuild `clinicbridge-backend` com novo código ✅ (`health` ok após start)
+
+**O que NÃO entrou (intencional):**
+- Nenhuma migration nova.
+- Nenhuma env var nova.
+- Nenhum dado clínico real.
+- Sem paginação cursor-based (limit/offset suficiente para MVP).
+- Sem export CSV do audit (fora de escopo).
+- Sem AWS.
+
+**Próxima sprint natural:** 4.3 (documentos médicos/receitas v0.1, exige ADR própria
+antes de qualquer código).

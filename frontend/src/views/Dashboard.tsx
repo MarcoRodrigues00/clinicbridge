@@ -23,6 +23,7 @@ import { MfaSettings } from '../components/MfaSettings';
 import { JoinClinicGate } from '../components/JoinClinicGate';
 import { TeamManagementPanel } from '../components/TeamManagementPanel';
 import { ClinicalRolesPanel } from '../components/ClinicalRolesPanel';
+import { ClinicalReadAuditPanel } from '../components/ClinicalReadAuditPanel';
 import { useAuth } from '../services/AuthProvider';
 import type { SafeUser } from '../services/api';
 import styles from './Dashboard.module.css';
@@ -210,6 +211,7 @@ export function Dashboard(): JSX.Element {
         {tab === 'seguranca' && (
           <>
           <MfaSettings />
+          {isOwner && <ClinicalReadAuditPanel />}
           <div className={styles.grid}>
             <section className={styles.card}>
               <span className={`${styles.cardBadge} ${styles.cardBadgeOk}`}>
