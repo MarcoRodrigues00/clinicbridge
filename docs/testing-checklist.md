@@ -2580,3 +2580,75 @@ grep -n "isError" frontend/src/components/ServicesPanel.tsx
 grep -n "servicos\|ServicesPanel" frontend/src/views/Dashboard.tsx
 # → { key: 'servicos', label: 'Serviços', icon: Briefcase }  (sem ownerOnly)
 ```
+
+---
+
+## Convênios — Sprint 4.7B (Backend Convênios v0.1)
+
+> Smoke executado em 2026-05-27. 47/47 PASS. Dados sintéticos limpos após os testes.
+
+### Smoke tests 47/47 PASS
+
+| # | Bloco | Cenário | Resultado |
+|---|-------|---------|-----------|
+| 1 | Auth/anon | GET /insurance/providers sem token → 401 | ✅ |
+| 2 | Auth/anon | POST /insurance/providers sem token → 401 | ✅ |
+| 3 | Auth/anon | GET /patients/:id/insurances sem token → 401 | ✅ |
+| 4 | Auth/anon | POST /patients/:id/insurances sem token → 401 | ✅ |
+| 5 | Admin_sistema | GET /insurance/providers como admin_sistema → 403 no_clinic_context | ✅ |
+| 6 | Admin_sistema | POST /insurance/providers como admin_sistema → 403 no_clinic_context | ✅ |
+| 7 | CRUD providers | POST → 201 + id + name + active=true | ✅ |
+| 8 | CRUD providers | GET list → 200 + array com provider criado | ✅ |
+| 9 | CRUD providers | GET :id → 200 + campos completos | ✅ |
+| 10 | CRUD providers | PATCH :id → 200 + campos atualizados | ✅ |
+| 11 | CRUD providers | PATCH :id/status (deactivate) → 200 + active=false | ✅ |
+| 12 | CRUD plans | POST → 201 + id + provider_id | ✅ |
+| 13 | CRUD plans | GET list (filtro provider_id) → 200 + plano correto | ✅ |
+| 14 | CRUD plans | GET :id → 200 | ✅ |
+| 15 | CRUD plans | PATCH :id → 200 | ✅ |
+| 16 | CRUD plans | PATCH :id/status → 200 + active=false | ✅ |
+| 17 | CRUD service-prices | POST → 201 + id + reference_price_cents | ✅ |
+| 18 | CRUD service-prices | GET list (filtros) → 200 + item correto | ✅ |
+| 19 | CRUD service-prices | GET :id → 200 | ✅ |
+| 20 | CRUD service-prices | PATCH :id → 200 | ✅ |
+| 21 | CRUD service-prices | PATCH :id/status → 200 + active=false | ✅ |
+| 22 | Permissões secretaria | GET /insurance/providers → 200 (leitura OK) | ✅ |
+| 23 | Permissões secretaria | POST /insurance/providers → 403 forbidden_role | ✅ |
+| 24 | Permissões secretaria | POST /patients/:id/insurances → 201 (escrita OK) | ✅ |
+| 25 | Permissões secretaria | POST /insurance/plans → 403 forbidden_role | ✅ |
+| 26 | Profissional bloqueado | GET /insurance/providers → 403 | ✅ |
+| 27 | Profissional bloqueado | GET /insurance/plans → 403 | ✅ |
+| 28 | Profissional bloqueado | GET /patients/:id/insurances → 403 | ✅ |
+| 29 | Profissional bloqueado | POST /patients/:id/insurances → 403 | ✅ |
+| 30 | PII mascarado em list | GET /patients/:id/insurances → member_number mascarado (****1234) | ✅ |
+| 31 | PII raw em detail | GET /patients/:id/insurances/:id → member_number completo | ✅ |
+| 32 | PII holder_name | holder_name ausente em audit_logs | ✅ |
+| 33 | payer_type private | POST /financial/charges com payer_type=private → 201; campos convênio rejeitados | ✅ |
+| 34 | payer_type insurance | POST /financial/charges com payer_type=insurance + patient_insurance_id → 201 | ✅ |
+| 35 | payer_type insurance | POST /financial/charges com payer_type=insurance sem patient_insurance_id → 400 | ✅ |
+| 36 | payer_type mixed | POST com mixed + copay + insurance = amount_cents → 201 | ✅ |
+| 37 | payer_type mixed | POST com mixed + copay + insurance ≠ amount_cents → 400 | ✅ |
+| 38 | audit sem PII (provider) | audit_log insurance.provider.create → sem name, sem PII | ✅ |
+| 39 | audit sem PII (plan) | audit_log insurance.plan.create → sem name | ✅ |
+| 40 | audit sem PII (patient) | audit_log insurance.patient.create → sem member_number, sem holder_name | ✅ |
+| 41 | audit sem PII (price) | audit_log insurance.service_price.create → sem valor | ✅ |
+| 42 | audit sem PII (financial) | audit_log financial.charge.create com payer_type → sem PII | ✅ |
+| 43 | audit sem PII (log grep) | grep member_number/holder_name em logs → 0 ocorrências | ✅ |
+| 44 | Cross-tenant provider | GET /insurance/providers/:id de outra clínica → 404 | ✅ |
+| 45 | Cross-tenant patient_ins | GET /patients/:id/insurances de outra clínica → 404 | ✅ |
+| 46 | UUID inválido | GET /insurance/providers/not-a-uuid → 400 | ✅ |
+| 47 | reference_price não auto-popula | POST /financial/charges sem amount_cents + service_price existente → 400 (amount_cents obrigatório) | ✅ |
+
+### Sanity checks (código)
+
+```bash
+# Sem auto-propagação de reference_price_cents para amount_cents
+grep -n "reference_price_cents" backend/src/services/financialChargeService.ts  # → 0 ocorrências
+
+# member_number e holder_name na lista de redação do logger
+grep -n "member_number\|holder_name" backend/src/config/logger.ts  # → presente em redactKeys
+
+# Audit sem PII de convênio
+grep -n "member_number\|holder_name\|nome\|name" backend/src/services/insuranceService.ts \
+  | grep -i "audit"  # → 0 ocorrências com dados pessoais
+```

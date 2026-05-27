@@ -4949,3 +4949,128 @@ online; gateway de pagamento; repasse automático; NFS-e; ICP-Brasil; dado clín
 **Sprint 4.7A entregue.** Gate para 4.7B aberto.
 
 **Próxima sprint:** **4.7B** backend Convênios v0.1 (migration + DAOs + services + endpoints).
+
+---
+
+## Sprint 4.7B — Backend Convênios v0.1 (2026-05-27)
+
+### Objetivo
+
+Implementar o backend completo de Convênios v0.1: migration aditiva, 4 DAOs, service
+único com sub-services e helpers, controller, rotas e integração com `financialChargeService`.
+
+### Migration
+
+`20260606000000_insurance_billing_v0.ts` — aditiva, sem alterar tabelas existentes além
+de adicionar colunas nullable a `financial_charges`.
+
+**Tabelas novas:**
+- `insurance_providers(id uuid, clinica_id FK CASCADE, name, active, created_at, updated_at)` — UNIQUE INDEX `(clinica_id, lower(btrim(name)))`.
+- `insurance_plans(id uuid, clinica_id FK CASCADE, provider_id FK, name, active, created_at, updated_at)` — UNIQUE INDEX `(clinica_id, provider_id, lower(btrim(name)))`.
+- `patient_insurances(id uuid, clinica_id FK CASCADE, patient_id FK, provider_id FK, plan_id FK nullable, member_number, holder_name nullable, valid_until nullable, notes nullable, active, created_at, updated_at)`.
+- `service_insurance_prices(id uuid, clinica_id FK CASCADE, service_id FK, provider_id FK, plan_id FK nullable, reference_price_cents, active, created_at, updated_at)` — UNIQUE INDEX `(clinica_id, service_id, provider_id, COALESCE(plan_id, sentinel))`.
+
+**Extensão de `financial_charges`:**
+- `payer_type varchar(20) nullable` — CHECK `('private','insurance','mixed')`.
+- `insurance_provider_id uuid nullable` FK `insurance_providers`.
+- `patient_insurance_id uuid nullable` FK `patient_insurances`.
+- `copay_amount_cents integer nullable` — CHECK `0..99_999_999`.
+- `insurance_amount_cents integer nullable` — CHECK `0..99_999_999`.
+- Índices parciais: `financial_charges(clinica_id, patient_insurance_id) WHERE patient_insurance_id IS NOT NULL`.
+
+### Arquivos criados
+
+- `backend/migrations/20260606000000_insurance_billing_v0.ts`
+- `backend/src/dao/insuranceProviderDao.ts`
+- `backend/src/dao/insurancePlanDao.ts`
+- `backend/src/dao/patientInsuranceDao.ts`
+- `backend/src/dao/serviceInsurancePriceDao.ts`
+- `backend/src/services/insuranceService.ts` — exporta `insuranceProviderService`, `insurancePlanService`, `patientInsuranceService`, `serviceInsurancePriceService` + `parseInsuranceFieldsForCharge` + `validateInsuranceForCharge`.
+- `backend/src/controllers/insuranceController.ts`
+- `backend/src/routes/insurance.ts`
+
+### Arquivos modificados
+
+- `backend/src/app.ts` — monta `insuranceRouter` em `/api`.
+- `backend/src/config/logger.ts` — `member_number` e `holder_name` adicionados à lista de redação (layers 1/2/3).
+- `backend/src/types/db.d.ts` — tipos `InsuranceProviderRow`, `InsurancePlanRow`, `PatientInsuranceRow`, `ServiceInsurancePriceRow` + extensão de `FinancialChargeRow`.
+- `backend/src/dao/financialChargeDao.ts` — suporte a `payer_type`, `insurance_provider_id`, `patient_insurance_id`, `copay_amount_cents`, `insurance_amount_cents`.
+- `backend/src/services/financialChargeService.ts` — `create`/`update` aceitam campos de convênio; chama `validateInsuranceForCharge` e `parseInsuranceFieldsForCharge`.
+- `backend/src/controllers/financialChargeController.ts` — passa campos de convênio do body para o service.
+
+### Endpoints (17 novos)
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/insurance/providers` | Lista operadoras da clínica |
+| POST | `/insurance/providers` | Cria operadora (owner-only) |
+| GET | `/insurance/providers/:id` | Detalhe operadora |
+| PATCH | `/insurance/providers/:id` | Edita operadora (owner-only) |
+| PATCH | `/insurance/providers/:id/status` | Ativa/desativa operadora (owner-only) |
+| GET | `/insurance/plans` | Lista planos (filtro `provider_id`) |
+| POST | `/insurance/plans` | Cria plano (owner-only) |
+| GET | `/insurance/plans/:id` | Detalhe plano |
+| PATCH | `/insurance/plans/:id` | Edita plano (owner-only) |
+| PATCH | `/insurance/plans/:id/status` | Ativa/desativa plano (owner-only) |
+| GET | `/insurance/service-prices` | Lista preços de referência (filtros `service_id`/`provider_id`/`plan_id`) |
+| POST | `/insurance/service-prices` | Cria preço de referência (owner-only) |
+| GET | `/insurance/service-prices/:id` | Detalhe preço |
+| PATCH | `/insurance/service-prices/:id` | Edita preço (owner-only) |
+| PATCH | `/insurance/service-prices/:id/status` | Ativa/desativa preço (owner-only) |
+| GET | `/patients/:patient_id/insurances` | Lista carteirinhas do paciente |
+| POST | `/patients/:patient_id/insurances` | Registra carteirinha (owner + secretaria) |
+| GET | `/patients/:patient_id/insurances/:id` | Detalhe carteirinha (PII raw) |
+| PATCH | `/patients/:patient_id/insurances/:id` | Edita carteirinha (owner + secretaria) |
+| PATCH | `/patients/:patient_id/insurances/:id/status` | Ativa/desativa carteirinha |
+
+### Permissões
+
+- Pipeline: `patientsRateLimit + requireAuth + requireClinic + requireRole(['dono_clinica','secretaria'])`.
+- `profissional_clinico`: bloqueado no service via `assertNotProfissional` (clinical grant check).
+- Writes providers/plans/service-prices: `requireRole(['dono_clinica'])` (CLINIC_ADMIN_ROLES).
+- Writes patient_insurances: owner + secretaria.
+- `admin_sistema`: 403 `no_clinic_context` em todos (bloqueado em `requireClinic`).
+
+### Invariantes implementados
+
+- `validateInsuranceForCharge`:
+  - `payer_type='insurance'` ou `'mixed'` → exige `patient_insurance_id`.
+  - `payer_type='private'` → rejeita todos os campos de convênio.
+  - `payer_type='mixed'` com ambos `copay_amount_cents` + `insurance_amount_cents` presentes → valida `copay + insurance = amount_cents`.
+  - `reference_price_cents` de `service_insurance_prices` **nunca** auto-popula `amount_cents`.
+- Campos legados `patients.convenio` e `patients.numero_carteirinha` intactos (zero migração).
+
+### PII e LGPD
+
+- `member_number` mascarado (`****1234`) em list endpoints; raw apenas em detail.
+- `member_number` e `holder_name` na lista de redação do logger (layers 1/2/3).
+- Audit metadata-only: `insurance.provider.*`, `insurance.plan.*`, `insurance.patient.*`, `insurance.service_price.*` — sem nome, sem `member_number`, sem valor, sem CID.
+- Dados sintéticos criados durante smoke limpos após os testes.
+
+### Smoke tests — 47/47 PASS
+
+| Bloco | Cenários | Resultado |
+|-------|----------|-----------|
+| Auth / anon | 4 cenários | ✅ |
+| Admin_sistema | 2 cenários | ✅ |
+| CRUD providers (owner) | 5 cenários | ✅ |
+| CRUD plans (owner) | 5 cenários | ✅ |
+| CRUD service-prices (owner) | 5 cenários | ✅ |
+| Permissões secretaria (read OK / write 403) | 4 cenários | ✅ |
+| Profissional bloqueado (read 403) | 4 cenários | ✅ |
+| PII mascarado em list × raw em detail | 3 cenários | ✅ |
+| payer_type private/insurance/mixed (soma errada) | 5 cenários | ✅ |
+| audit_logs sem PII | 6 cenários | ✅ |
+| Cross-tenant / UUID inválido | 4 cenários | ✅ |
+
+### Gates finais (4.7B)
+
+- `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 17/0 ✅.
+- `pnpm --filter frontend typecheck` ✅.
+- `git diff --check` rc=0 ✅.
+- Smoke 47/47 PASS.
+- Dados sintéticos limpos após smoke.
+
+**Sprint 4.7B entregue.** Gate para 4.7C aberto.
+
+**Próxima sprint:** **4.7C** Frontend Convênios v0.1.

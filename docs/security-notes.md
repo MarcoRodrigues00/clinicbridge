@@ -28,6 +28,15 @@
 - `errorHandler` nunca retorna stack/SQL/path; 500 vira `internal_error` genérico. Erros de parse de arquivo viram mensagens genéricas (nunca ecoam conteúdo da planilha).
 - Nunca expor `nome_original`/`nome_interno`/path/sha256/conteúdo do arquivo na API pública.
 
+## PII de Convênios (Sprint 4.7B)
+
+- **`member_number`** (número de carteirinha) e **`holder_name`** (nome do titular) são PII pessoal — adicionados à lista de redação do `logger.ts` (layers 1/2/3) na Sprint 4.7B.
+- **List endpoints** de `patient_insurances` retornam `member_number` mascarado (`****1234`). **Detail endpoint** retorna o valor raw — só acessível a `dono_clinica` e `secretaria`.
+- **Audit metadata-only** para todos os eventos de convênio (`insurance.provider.*`, `insurance.plan.*`, `insurance.patient.*`, `insurance.service_price.*`): sem nome, sem `member_number`, sem `holder_name`, sem valor monetário, sem CID.
+- **`notes`** em qualquer entidade de convênio nunca contém dado clínico — verificação de responsabilidade do operador; sem validação automática de conteúdo.
+- **`reference_price_cents`** de `service_insurance_prices` nunca auto-propaga para `amount_cents` — invariante do `financialChargeService` e `validateInsuranceForCharge`.
+- Profissional clínico bloqueado em todos os endpoints de convênio via `assertNotProfissional` (clinical grants check no service, não só no middleware).
+
 ## CPF mascarado
 
 - `GET /patients`, `/patients/duplicates`, `/patients/export` nunca retornam CPF bruto — só `cpf_masked` (`***.***.789-01`). `include_cpf_raw=true` no export → 400.

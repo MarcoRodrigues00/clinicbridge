@@ -384,6 +384,15 @@ export interface FinancialChargeRow {
   // Optional link to the services catalog (Sprint 4.6B, ADR 0015).
   // Pure label — price is NEVER auto-propagated to amount_cents.
   service_id: string | null;
+  // Convênios v0.1 — Sprint 4.7B (ADR 0016). All five fields NULL by default
+  // (retrocompat with existing rows). `payer_type` NULL = particular by
+  // convention. reference_price_cents from service_insurance_prices NEVER
+  // auto-propagates to amount_cents (humano decide).
+  payer_type: 'private' | 'insurance' | 'mixed' | null;
+  insurance_provider_id: string | null;
+  patient_insurance_id: string | null;
+  copay_amount_cents: number | null;
+  insurance_amount_cents: number | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -412,6 +421,67 @@ export interface ProfessionalServiceRow {
   professional_id: string;
   service_id: string;
   clinica_id: string;
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Convênios v0.1 — Sprint 4.7B (ADR 0016).
+// ADMINISTRATIVE / COMMERCIAL layer. NEVER carries clinical content;
+// `reference_price_cents` is reference-only and NEVER auto-propagates to
+// `financial_charges.amount_cents`. `member_number` and `holder_name` are PII
+// and are redacted by the logger (config/logger.ts).
+
+export type FinancialPayerType = 'private' | 'insurance' | 'mixed';
+
+export interface InsuranceProviderRow {
+  id: string;
+  clinica_id: string;
+  name: string;
+  notes: string | null;
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface InsurancePlanRow {
+  id: string;
+  clinica_id: string;
+  provider_id: string;
+  name: string;
+  notes: string | null;
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface PatientInsuranceRow {
+  id: string;
+  clinica_id: string;
+  patient_id: string;
+  // provider_id is NOT NULL at INSERT time, but SET NULL on provider hard-
+  // deletion (no app path hits this; defense-in-depth FK behavior).
+  provider_id: string | null;
+  plan_id: string | null;
+  // PII — number of the carteirinha. Redacted by logger (Sprint 4.7B).
+  member_number: string | null;
+  // PII — titular (if patient is dependent). Redacted by logger.
+  holder_name: string | null;
+  valid_until: string | null;
+  notes: string | null;
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ServiceInsurancePriceRow {
+  id: string;
+  clinica_id: string;
+  service_id: string;
+  provider_id: string;
+  plan_id: string | null;
+  reference_price_cents: number | null;
+  notes: string | null;
   active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -456,5 +526,9 @@ declare module 'knex/types/tables' {
     financial_charges: FinancialChargeRow;
     clinic_services: ClinicServiceRow;
     professional_services: ProfessionalServiceRow;
+    insurance_providers: InsuranceProviderRow;
+    insurance_plans: InsurancePlanRow;
+    patient_insurances: PatientInsuranceRow;
+    service_insurance_prices: ServiceInsurancePriceRow;
   }
 }

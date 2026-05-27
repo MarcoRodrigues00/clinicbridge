@@ -11,10 +11,15 @@ import type {
   FinancialChargeRow,
   FinancialChargeStatus,
   FinancialPaymentMethod,
+  FinancialPayerType,
   UserClinicalRoleName,
   UserPapel,
 } from '../types/db';
 import type { AuthContext } from './authService';
+import {
+  parseInsuranceFieldsForCharge,
+  validateInsuranceForCharge,
+} from './insuranceService';
 
 // Financial Module v0.1 service (Sprint 4.4B; ADR 0012).
 //
@@ -408,6 +413,12 @@ export interface PublicFinancialChargeListItem {
   payment_method: FinancialPaymentMethod | null;
   canceled_at: Date | null;
   canceled_by_user_id: string | null;
+  // Sprint 4.7B — insurance metadata visible on list (UI badges).
+  payer_type: FinancialPayerType | null;
+  insurance_provider_id: string | null;
+  patient_insurance_id: string | null;
+  copay_amount_cents: number | null;
+  insurance_amount_cents: number | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -435,6 +446,11 @@ function toListItem(row: FinancialChargeRow): PublicFinancialChargeListItem {
     payment_method: row.payment_method,
     canceled_at: row.canceled_at,
     canceled_by_user_id: row.canceled_by_user_id,
+    payer_type: row.payer_type,
+    insurance_provider_id: row.insurance_provider_id,
+    patient_insurance_id: row.patient_insurance_id,
+    copay_amount_cents: row.copay_amount_cents,
+    insurance_amount_cents: row.insurance_amount_cents,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -465,6 +481,11 @@ export const financialChargeService = {
       amount_cents?: unknown;
       due_date?: unknown;
       notes?: unknown;
+      payer_type?: unknown;
+      insurance_provider_id?: unknown;
+      patient_insurance_id?: unknown;
+      copay_amount_cents?: unknown;
+      insurance_amount_cents?: unknown;
     },
     ctx: AuthContext,
   ): Promise<{ charge: PublicFinancialCharge }> {
@@ -496,6 +517,15 @@ export const financialChargeService = {
       appointment_id,
     );
 
+    // Optional insurance metadata (Sprint 4.7B, ADR 0016). reference_price_cents
+    // of service_insurance_prices is NEVER read here — humano decide amount_cents.
+    const insurance = await validateInsuranceForCharge(
+      parseInsuranceFieldsForCharge(body),
+      actor.clinica_id,
+      patient_id,
+      amount_cents,
+    );
+
     const row = await financialChargeDao.create({
       clinica_id: actor.clinica_id,
       patient_id,
@@ -506,6 +536,11 @@ export const financialChargeService = {
       amount_cents,
       due_date,
       notes,
+      payer_type: insurance.payer_type,
+      insurance_provider_id: insurance.insurance_provider_id,
+      patient_insurance_id: insurance.patient_insurance_id,
+      copay_amount_cents: insurance.copay_amount_cents,
+      insurance_amount_cents: insurance.insurance_amount_cents,
     });
 
     await safeAudit('financial.charge.created.success', row.id, actor, ctx);
@@ -579,6 +614,11 @@ export const financialChargeService = {
       notes?: unknown;
       appointment_id?: unknown;
       service_id?: unknown;
+      payer_type?: unknown;
+      insurance_provider_id?: unknown;
+      patient_insurance_id?: unknown;
+      copay_amount_cents?: unknown;
+      insurance_amount_cents?: unknown;
     },
     ctx: AuthContext,
   ): Promise<{ charge: PublicFinancialCharge }> {
@@ -600,6 +640,11 @@ export const financialChargeService = {
       notes?: string | null;
       appointment_id?: string | null;
       service_id?: string | null;
+      payer_type?: FinancialPayerType | null;
+      insurance_provider_id?: string | null;
+      patient_insurance_id?: string | null;
+      copay_amount_cents?: number | null;
+      insurance_amount_cents?: number | null;
     } = {};
 
     if (body.description !== undefined) {
@@ -636,6 +681,50 @@ export const financialChargeService = {
         actor.clinica_id,
         targetApptId,
       );
+    }
+
+    // Insurance fields (Sprint 4.7B). Re-validate the effective payer block
+    // when ANY field of the block is present in the patch — easier and safer
+    // than partial validation. If none is present, leave the existing values
+    // untouched.
+    const insuranceTouched =
+      body.payer_type !== undefined ||
+      body.insurance_provider_id !== undefined ||
+      body.patient_insurance_id !== undefined ||
+      body.copay_amount_cents !== undefined ||
+      body.insurance_amount_cents !== undefined;
+    if (insuranceTouched) {
+      const parsed = parseInsuranceFieldsForCharge({
+        payer_type:
+          body.payer_type !== undefined ? body.payer_type : existing.payer_type,
+        insurance_provider_id:
+          body.insurance_provider_id !== undefined
+            ? body.insurance_provider_id
+            : existing.insurance_provider_id,
+        patient_insurance_id:
+          body.patient_insurance_id !== undefined
+            ? body.patient_insurance_id
+            : existing.patient_insurance_id,
+        copay_amount_cents:
+          body.copay_amount_cents !== undefined
+            ? body.copay_amount_cents
+            : existing.copay_amount_cents,
+        insurance_amount_cents:
+          body.insurance_amount_cents !== undefined
+            ? body.insurance_amount_cents
+            : existing.insurance_amount_cents,
+      });
+      const validated = await validateInsuranceForCharge(
+        parsed,
+        actor.clinica_id,
+        existing.patient_id,
+        patch.amount_cents ?? existing.amount_cents,
+      );
+      patch.payer_type = validated.payer_type;
+      patch.insurance_provider_id = validated.insurance_provider_id;
+      patch.patient_insurance_id = validated.patient_insurance_id;
+      patch.copay_amount_cents = validated.copay_amount_cents;
+      patch.insurance_amount_cents = validated.insurance_amount_cents;
     }
 
     const updated = await financialChargeDao.updatePending(

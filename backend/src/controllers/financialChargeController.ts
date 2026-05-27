@@ -33,7 +33,7 @@ function asObject(body: unknown): Record<string, unknown> {
 }
 
 export const financialChargeController = {
-  // POST /financial/charges — create pending. ADR 0012 §11.1.
+  // POST /financial/charges — create pending. ADR 0012 §11.1 + ADR 0016 §3.5.
   async create(req: Request, res: Response): Promise<void> {
     const actor = await financialActor(req);
     const ctx = buildAuthContext(req);
@@ -48,6 +48,11 @@ export const financialChargeController = {
         amount_cents: body.amount_cents,
         due_date: body.due_date,
         notes: body.notes,
+        payer_type: body.payer_type,
+        insurance_provider_id: body.insurance_provider_id,
+        patient_insurance_id: body.patient_insurance_id,
+        copay_amount_cents: body.copay_amount_cents,
+        insurance_amount_cents: body.insurance_amount_cents,
       },
       ctx,
     );
@@ -76,7 +81,7 @@ export const financialChargeController = {
     res.status(200).json(result);
   },
 
-  // PATCH /financial/charges/:id — update pending. ADR 0012 §11.4.
+  // PATCH /financial/charges/:id — update pending. ADR 0012 §11.4 + ADR 0016 §3.5.
   async update(req: Request, res: Response): Promise<void> {
     const actor = await financialActor(req);
     const ctx = buildAuthContext(req);
@@ -91,6 +96,11 @@ export const financialChargeController = {
         notes: body.notes,
         appointment_id: body.appointment_id,
         service_id: body.service_id,
+        payer_type: body.payer_type,
+        insurance_provider_id: body.insurance_provider_id,
+        patient_insurance_id: body.patient_insurance_id,
+        copay_amount_cents: body.copay_amount_cents,
+        insurance_amount_cents: body.insurance_amount_cents,
       },
       ctx,
     );
