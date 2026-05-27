@@ -3841,3 +3841,85 @@ Script `/tmp/smoke_4_4b.js` (não versionado). Cobriu:
 - AWS.
 
 **Próxima sprint natural:** 4.4D (QA/hardening financeiro — smoke de permissões via browser, validação de logs, cleanup de dados sintéticos).
+
+---
+
+## Sprint 4.4D — QA/Hardening Módulo Financeiro v0.1
+
+**Entregue:** 2026-05-27
+**Objetivo:** Validar o Módulo Financeiro v0.1 (backend + frontend) via smoke API 60/60, SQL invariants, audit/log redaction, checks de segurança frontend e cleanup de dados sintéticos. Zero mudanças de código.
+
+### Resultados
+
+**Smoke backend/API — 60/60 PASS**
+Cobertura: sem token/admin 401/403; secretaria/owner create 201; gestor create 403;
+profissional all ops 403; list (notes omitido)/detail (notes presente); gestor list/detail;
+gestor PATCH 403; secretaria edita pending; gestor mark-paid; edit/pay/cancel paid 400;
+cancel pending + edit canceled 400; gestor cancel; validações (amount=0/-100, desc_vazia,
+patient_not_found, method_invalido/ausente); appointment_id válido/filtro/outro_patient/ghost;
+patient charges/inexistente; summary shape/gestor/bad_date; charge not found/bad uuid;
+redação de sentinels nos logs (FIN_DESC_SENTINEL, FIN_NOTES_SENTINEL, FIN_CANCEL_SENTINEL).
+
+**SQL invariants — 9/9 PASS · 0 violações**
+- paid sem paid_at = 0
+- paid sem paid_by_user_id = 0
+- paid sem payment_method = 0
+- non-paid com paid fields = 0
+- canceled sem canceled_at = 0
+- canceled sem canceled_by_user_id = 0
+- non-canceled com canceled fields = 0
+- pending com dados de pagamento/cancelamento = 0
+- appointment_id com patient_id divergente = 0
+
+**Audit — 4 ações verificadas em audit_logs**
+`financial.charge.created.success` · `financial.charge.updated.success` ·
+`financial.charge.paid.success` · `financial.charge.canceled.success`
+
+**Log redaction — PASS**
+- `docker logs backend` sem FIN_DESC_SENTINEL, FIN_NOTES_SENTINEL, FIN_CANCEL_SENTINEL
+- Campos `description`, `notes`, `cancel_reason`, `amount_cents` não vazam em logs
+
+**Checks de segurança frontend — PASS (code review)**
+- Sem `console.log` de dados financeiros em `FinancialPanel.tsx`
+- Sem `localStorage` / `sessionStorage` em `FinancialPanel.tsx`
+- Sem `dangerouslySetInnerHTML` em `FinancialPanel.tsx`
+- `notes` / `cancel_reason` ausentes da listagem (só em `ChargeDetailView`, linhas 1183/1200)
+- `FinancialChargeListItem` não tem campo `notes` nem `cancel_reason` no tipo TypeScript
+- Token não colocado em URL query string (passa via `Authorization: Bearer` no cabeçalho)
+- Filtros de `listFinancialCharges` usam apenas: `patient_id`, `appointment_id`, `status`, `date_from`, `date_to`, `limit`, `offset` — sem `notes`
+- `staleTime: 0` em `ChargeDetailView` (ln 1076), `EditChargeDetailLoader` (ln 1261), `MarkPaidModalLoader` (ln 1333)
+- `profissional_clinico` bloqueado em duas camadas: `isPapelAllowed` no componente + `effectiveFinancialAccess=none` no service (retorna 403 → `onAccessBlocked()`)
+
+**QA frontend/browser — validado pelo usuário**
+- smoke.secretaria: lista, nova cobrança, detalhe, editar, marcar pago, cancelar ✅
+- smoke.owner: fluxo básico ✅
+- smoke.gestor: listar/ver/marcar pago/cancelar, sem criar/editar ✅
+- smoke.profissional: bloqueado com mensagem segura ✅
+- Dark theme aprovado; observações administrativas legíveis; sem branco estourado
+
+### Cleanup
+
+- 2 cobranças `pending` de testes anteriores canceladas via SQL direto (`cancel_reason='Cancelado no cleanup da Sprint 4.4D'`)
+- Estado final: 19 `canceled` + 6 `paid` + 0 `pending` — todas as cobranças são trilha auditável
+- Usuários smoke preservados (`smoke.*@clinicbridge.local`)
+- Pacientes, agendamentos, documentos e importações base intactos
+
+### Ressalvas aceitas (Módulo Financeiro v0.1)
+
+- Financeiro v0.1 é **manual** — humano decide sempre; sem automação de cobrança
+- Sem gateway de pagamento, Pix automático, NFS-e
+- Sem integração visual com Agenda (badge/alertas ficam para Sprint 4.4E)
+- Picker de pacientes usa `limit=100`; paginação futura se clínica grande
+- Footer e landing/demo ficam para sprint futura de polish/posicionamento
+
+### Checks finais
+
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter backend migrate:status` — 15 applied / 0 pending ✅
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅ (aviso chunk >500kB esperado — SPA monolítica; não é erro)
+- `git diff --check` rc=0 ✅
+- `git status --short` — limpo ✅
+
+**Próxima sprint natural:** 4.4E (Integração Agenda × Financeiro — badge de cobrança pendente, alertas sugestivos, botão "Criar cobrança" a partir de agendamento; ADR própria necessária).

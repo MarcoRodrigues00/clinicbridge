@@ -7,7 +7,14 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.4C** (entregue 2026-05-27) — **Frontend do Módulo Financeiro v0.1.**
+**Sprint 4.4D** (entregue 2026-05-27) — **QA/Hardening Módulo Financeiro v0.1.**
+Smoke API 60/60 PASS · SQL invariants 9/9 · audit 4 ações · log redaction PASS ·
+frontend security checks PASS · cleanup (0 pending, 19 canceled, 6 paid).
+`pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
+`pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ ·
+`migrate:status` 15/0 ✅ · `git diff --check` rc=0. **Zero mudanças de código.**
+
+**Sprint anterior: 4.4C** (entregue 2026-05-27) — **Frontend do Módulo Financeiro v0.1.**
 Aba "Financeiro" no Dashboard; `FinancialPanel` auto-contido; 8 tipos + 8 funções API.
 `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ · `pnpm --filter backend typecheck` ✅ · `git diff --check` rc=0.
 **Sem migration, sem backend novo, sem gateway, sem badge na Agenda.**

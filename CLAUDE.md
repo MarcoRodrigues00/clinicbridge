@@ -17,18 +17,17 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.4C** (entregue) — **Frontend do Módulo Financeiro v0.1.**
+**Sprint atual: 4.4D** (entregue) — **QA/Hardening Módulo Financeiro v0.1.**
+Smoke API **60/60 PASS** · SQL invariants **9/9** · audit 4 ações ✅ · log redaction ✅ · frontend security checks ✅ ·
+QA browser pelo usuário ✅ · cleanup (0 pending, 19 canceled, 6 paid).
+`pnpm --filter backend typecheck` ✅ · `pnpm --filter frontend typecheck` ✅ · `git diff --check` rc=0.
+**Zero mudanças de código.** Detalhe: `docs/project-state.md`.
+
+**Sprint anterior: 4.4C** (entregue) — **Frontend do Módulo Financeiro v0.1.**
 Aba "Financeiro" no Dashboard; `FinancialPanel` (lista + cards resumo; formulário criar; detalhe; editar; marcar pago;
 cancelar com confirmação em modal); 8 tipos + 8 funções API adicionados.
 `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ · `pnpm --filter backend typecheck` ✅ · `git diff --check` rc=0.
-**Sem migration, sem backend novo, sem gateway, sem badge na Agenda, sem commit.** Detalhe: `docs/project-state.md`.
-
-**Sprint anterior: 4.4B** (entregue) — **Backend do Módulo Financeiro v0.1.**
-Migration `financial_charges` (11 CHECKs, 5 índices, batch 15) + `financialChargeDao` + `financialChargeService`
-(`effectiveFinancialAccess` full/transact/none; `appointment_id` cross-tenant/cross-patient) + controller + 8 rotas.
-Logger redaction: `description`/`notes`/`cancel_reason`/`amount_cents` × 4 camadas.
-Smoke **49/49 PASS** · SQL invariants 4/4 · typecheck/build ✅ · `git diff --check` rc=0.
-**Sem frontend, sem AWS, sem gateway.** Detalhe: `docs/project-state.md`.
+**Sem migration, sem backend novo, sem gateway, sem badge na Agenda.** Detalhe: `docs/project-state.md`.
 
 **Endpoints financeiros registrados:**
 `POST /financial/charges` · `GET /financial/charges` (incl. `?appointment_id`) · `GET /financial/summary` ·
@@ -36,6 +35,7 @@ Smoke **49/49 PASS** · SQL invariants 4/4 · typecheck/build ✅ · `git diff -
 `POST /financial/charges/:id/cancel` · `GET /patients/:id/charges`
 
 **Sprints anteriores (resumo — detalhes em `docs/sprint-history.md`):**
+- **4.4C** ✅ Frontend Financeiro — `FinancialPanel` + Dashboard tab "Financeiro" — typecheck/build ✅
 - **4.4B** ✅ Backend Financeiro — migration + DAOs + services + 8 endpoints — smoke 49/49 PASS
 - **4.4A** ✅ ADR 0012 + `docs/financial-v0-scope.md` (docs-only)
 - **4.3D** ✅ QA/hardening Documentos Médicos — smoke 50/50 PASS
@@ -49,8 +49,7 @@ Smoke **49/49 PASS** · SQL invariants 4/4 · typecheck/build ✅ · `git diff -
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.4C ✅ → **4.4D** QA financeiro →
-**4.4E** integração Agenda × Financeiro (badge; alertas; sem automação) →
+4.0–4.4D ✅ → **4.4E** integração Agenda × Financeiro (badge; alertas; sem automação) →
 **4.5** relatórios → **4.6** convênios/faturamento básico → **4.7** estoque básico.
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
@@ -64,7 +63,7 @@ prontuário v0.1 (encounters, notes, read-audit LGPD); documentos médicos v0.1 
 financeiro v0.1 backend + frontend (aba Financeiro; lista + cards resumo; criar/editar/detalhe; marcar pago; cancelar).
 Detalhe: `docs/project-state.md`.
 
-**O que NÃO existe (sprint explícita):** QA/hardening financeiro (4.4D); badge Agenda × Financeiro (4.4E);
+**O que NÃO existe (sprint explícita):** badge Agenda × Financeiro (4.4E);
 delete físico de paciente; undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
 
 **Migrações (15 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
@@ -89,9 +88,7 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.4C** frontend financeiro (aba Financeiro; totalizadores; lista; nova cobrança; vinculado a agendamento)
-- **4.4D** QA/hardening financeiro
-- **4.4E** integração Agenda × Financeiro (badge; alertas sugestivos; botão criar cobrança; sem automação)
+- **4.4E** integração Agenda × Financeiro (badge de cobrança pendente; alertas sugestivos; botão criar cobrança; ADR própria; sem automação)
 - **4.5** relatórios gerenciais v0.1 (ADR própria)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod

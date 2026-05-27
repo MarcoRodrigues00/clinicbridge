@@ -1955,3 +1955,39 @@ pnpm --filter frontend build      # deve compilar sem erros
 pnpm --filter backend typecheck   # sem regressão
 git diff --check                  # sem whitespace errors
 ```
+
+---
+
+## Sprint 4.4D — QA/Hardening Financeiro v0.1 (entregue 2026-05-27)
+
+### Resultados
+
+| Check | Resultado |
+|-------|-----------|
+| Smoke backend/API | **60/60 PASS** |
+| SQL invariants | **9/9 · 0 violações** |
+| Audit logs (4 ações) | ✅ |
+| Log redaction (sentinels) | ✅ PASS |
+| Frontend security (code review) | ✅ PASS |
+| QA browser (usuário) | ✅ PASS |
+| Cleanup (0 pending) | ✅ |
+| `pnpm --filter backend typecheck` | ✅ |
+| `pnpm --filter backend build` | ✅ |
+| `pnpm --filter frontend typecheck` | ✅ |
+| `pnpm --filter frontend build` | ✅ |
+| `migrate:status` | 15 applied / 0 pending ✅ |
+| `git diff --check` | rc=0 ✅ |
+
+### Checks de segurança frontend (verificados)
+
+- `FinancialPanel.tsx` — sem `console.log`, `localStorage`, `sessionStorage`, `dangerouslySetInnerHTML`
+- `notes` / `cancel_reason` ausentes da listagem; presentes apenas em `ChargeDetailView`
+- Token não aparece em URL (passa via `Authorization: Bearer` header)
+- Filtros não expõem `notes`; apenas: `status`, `date_from`, `date_to`, `patient_id`, `appointment_id`, `limit`, `offset`
+- `staleTime: 0` em todas as queries de detalhe
+- `profissional_clinico` bloqueado em duas camadas (componente + service)
+
+### Cleanup pós-4.4D
+
+Estado final `financial_charges`: 0 pending · 6 paid · 19 canceled.
+Usuários smoke preservados. Pacientes/agendamentos/documentos/importações base intactos.
