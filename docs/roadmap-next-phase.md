@@ -78,11 +78,14 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **4.4D** ✅ | QA/hardening Financeiro v0.1 (smoke 60/60 PASS; SQL 9/9; audit/logs; frontend security; cleanup). Zero código |
 | **4.4D-conv** ✅ | Planejamento docs-only: estratégia Convênios/Faturamento Básico. `docs/insurance-billing-future-scope.md` criado; Fase 4.6 detalhada. Zero código |
 | **4.4E-A** ✅ | ADR 0013 — Integração Agenda × Financeiro v0.1 (docs/ADR-only). Badge, alertas, botão criar cobrança, endpoints, permissões documentados. Operacional: `docs/agenda-financial-integration-v0-scope.md` |
-| **4.4E-B** ⏳ | Backend Agenda × Financeiro (avaliar se necessário; endpoint `/appointments/:id/charges` opcional). Gate: ADR 0013 aceita |
-| **4.4E-C** ⏳ | Frontend Agenda × Financeiro (badge + alertas A1–A4 + botão "Criar cobrança"). Gate: 4.4E-A aceita |
-| **4.4E-D** ⏳ | QA/hardening Agenda × Financeiro. Gate: 4.4E-C entregue |
-| **4.5** ⏳ | Relatórios gerenciais v0.1. ADR 0014 antes do início |
-| **4.6A** ⏳ | ADR 0015 — Convênios/faturamento básico v0.1 (docs-only). Gate: 4.4E entregue + planejamento em `docs/insurance-billing-future-scope.md` aceito |
+| **4.4E-B** ✅ | Backend Agenda × Financeiro — avaliação docs-only; decisão: reutilizar endpoints existentes. Zero código |
+| **4.4E-C** ✅ | Frontend Agenda × Financeiro — badge (5 estados), alertas A1–A4, botão "Criar cobrança", link "Ver cobrança". typecheck/build ✅ |
+| **4.4E-D** ✅ | QA/hardening Agenda × Financeiro — code review 13/13, smoke 24/24, SQL 9/9, audit. Zero código |
+| **4.5A** ✅ | ADR 0014 — Relatórios Gerenciais v0.1 (docs-only). 4 relatórios (R-A/B/C/D), permissões, fontes, API, UX, roadmap. Operacional: `docs/management-reports-v0-scope.md` |
+| **4.5B** ⏳ | Backend Relatórios v0.1 — DAO + service + 4 endpoints (`/reports/*`) + smoke. Gate: ADR 0014 aceita ✅ |
+| **4.5C** ⏳ | Frontend Relatórios v0.1 — aba "Relatórios" + ReportsPanel + filtros + cards. Gate: 4.5B entregue |
+| **4.5D** ⏳ | QA/hardening Relatórios v0.1. Gate: 4.5C entregue |
+| **4.6A** ⏳ | ADR 0015 — Convênios/faturamento básico v0.1 (docs-only). Gate: 4.5 entregue + planejamento em `docs/insurance-billing-future-scope.md` aceito |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.

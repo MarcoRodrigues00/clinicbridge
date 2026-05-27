@@ -4224,4 +4224,66 @@ Sprint 4.4E-C foi validada visualmente pelo usuário antes da 4.4E-D:
 - `migrate:status` 15 applied / 0 pending ✅
 - `git diff --check` rc=0 ✅
 
-**Próxima sprint natural:** 4.5 (ADR 0014 Relatórios gerenciais v0.1).
+**Próxima sprint natural:** 4.5A (ADR 0014 Relatórios gerenciais v0.1 — docs/ADR-only).
+
+---
+
+## Sprint 4.5A — ADR 0014 Relatórios Gerenciais v0.1 (docs/ADR-only)
+
+**Entregue:** 2026-05-27
+**Objetivo:** Definir o escopo dos Relatórios Gerenciais v0.1 antes de qualquer código:
+4 relatórios, permissões por papel, fontes de dados, API, UX, segurança/LGPD, roadmap.
+Zero mudanças de código, schema, migration ou env.
+
+### Decisões registradas
+
+1. **4 relatórios no v0.1:**
+   - R-A Resumo Operacional (appointments): status counts, attendance_rate.
+   - R-B Resumo Financeiro (financial_charges): received, pending, overdue, cancelled, by_method.
+   - R-C Resumo de Pacientes (patients metadata): active, archived, new, with_appointment.
+   - R-D Agenda × Financeiro: cobrança por status de consulta.
+
+2. **Permissões:**
+   - R-A e R-C: todos os papéis administrativos (dono + secretaria).
+   - R-B e R-D: `effectiveFinancialAccess !== 'none'` (profissional bloqueado; secretaria pura = full).
+   - `profissional_clinico`: zero relatórios no v0.1.
+   - `admin_sistema`: bloqueado (requireClinic).
+
+3. **Fontes de dados permitidas:**
+   `appointments`, `financial_charges`, `patients` (metadata), `clinic_professionals` (join de filtro).
+   **Proibidas:** qualquer tabela clínica, `administrative_notes`, `notes`/`cancel_reason`/`description`
+   de cobranças em listas, CPF/nome/telefone/e-mail de pacientes.
+
+4. **API: 4 endpoints separados** (`/reports/appointments`, `/reports/financial`,
+   `/reports/patients`, `/reports/agenda-financial`). Endpoints separados para gating
+   de autorização limpo. Filtros `date_from`/`date_to` obrigatórios (default: mês atual).
+   Intervalo máximo: 366 dias.
+
+5. **Sem migration nova** — relatórios consultam tabelas existentes com queries parametrizadas.
+
+6. **Sem export no v0.1** — apenas tela. Export futuro exige ADR/escopo próprio.
+
+7. **Audit:** `report.view.success` em todos os relatórios, com `recurso_id=<tipo>:<date_from>:<date_to>`.
+   Sem PII nos campos de audit.
+
+8. **UX:** nova aba "Relatórios" no Dashboard; filtros de período (hoje/7d/mês/customizado);
+   cards de indicadores; sem gráficos no v0.1.
+
+9. **ADR números:** ADR 0014 = Relatórios v0.1 (esta). ADR 0015 = Convênios v0.1 (Fase 4.6).
+
+### Documentos criados/atualizados
+
+- **CRIADO** `docs/adr/0014-management-reports-v0.md`
+- **CRIADO** `docs/management-reports-v0-scope.md`
+- **Atualizado** `CLAUDE.md` — sprint atual → 4.5A; ADR 0014 referenciada; trilha Clinic OS atualizada
+- **Atualizado** `docs/project-state.md` — sprint atual → 4.5A
+- **Atualizado** `docs/sprint-history.md` — esta seção
+- **Atualizado** `docs/roadmap-next-phase.md` — 4.5B/C/D adicionados; 4.6A numeração corrigida
+- **Atualizado** `docs/product-clinic-os-roadmap.md` — ADR numeração corrigida (0014/0015/0016)
+
+### Checks finais
+
+- `git diff --check` rc=0 ✅
+- `git status --short` — apenas docs modificados/criados ✅
+
+**Próxima sprint natural:** 4.5B (backend relatórios — DAO + service + 4 endpoints + smoke tests).

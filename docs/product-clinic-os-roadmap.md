@@ -45,9 +45,9 @@
 | **4.2B** | Clínico — implementação | Pendente | sem ADR nova | Backend Prontuário v0.1 (migration + DAOs + middleware `requireClinicalRole` + services + endpoints + logger + smoke tests) |
 | **4.3** | Clínico — documentos | Pendente | ADR 0011 (futura) | Documentos médicos/receitas v0.1 (sem ICP-Brasil) |
 | **4.4** | Operacional — financeiro | Pendente | ADR 0012 (futura) | Financeiro v0.1 (contas a pagar/receber, fluxo de caixa) |
-| **4.5** | Operacional — relatórios | Pendente | ADR 0013 (futura) | Relatórios gerenciais v0.1 (alto valor percebido) |
-| **4.6** | Operacional — convênios | Pendente | ADR 0014 (futura) | Convênios/faturamento básico v0.1 (TISS/TUSS real fora) |
-| **4.7** | Operacional — estoque | Pendente | ADR 0015 (futura) | Estoque básico v0.1 (medicamentos controlados/ANVISA fora) |
+| **4.5** | Operacional — relatórios | 4.5A ✅ docs/ADR · 4.5B–D ⏳ | ADR 0014 ✅ | Relatórios gerenciais v0.1 · `docs/management-reports-v0-scope.md` |
+| **4.6** | Operacional — convênios | Pendente | ADR 0015 (futura) | Convênios/faturamento básico v0.1 (TISS/TUSS real fora) |
+| **4.7** | Operacional — estoque | Pendente | ADR 0016 (futura) | Estoque básico v0.1 (medicamentos controlados/ANVISA fora) |
 
 **Fases futuras planejadas (sem número ainda, exigem ADR própria):**
 
@@ -312,7 +312,7 @@ relatórios já agregam valor com os módulos 4.0–4.4 entregues, enquanto
 convênios e estoque exigem mais dados acumulados para terem retorno real.
 
 **Entregáveis esperados:**
-1. **ADR 0013** — escopo dos relatórios:
+1. **ADR 0014** ✅ (Sprint 4.5A) — escopo dos relatórios (aceita em 2026-05-27):
    - **Relatórios mínimos do v0.1:**
      - agenda por profissional / por período / por status;
      - atendimentos realizados por profissional;
@@ -360,18 +360,18 @@ manual, cobrança com split particular × convênio. **Sem TISS/TUSS real no v0.
 
 | Sprint | Escopo |
 |---|---|
-| **4.6A** | ADR 0014 — escopo convênios v0.1 (docs-only) |
+| **4.6A** | ADR 0015 — escopo convênios v0.1 (docs-only) |
 | **4.6B** | Backend: `insurance_providers` + `patient_insurance_plans` + alertas básicos |
 | **4.6C** | Frontend: seção convênios no paciente + badge na agenda + split financeiro |
 | **4.6D** | QA/hardening convênios |
 | **Fase futura** | `insurance_authorizations` + split copay/convênio em `financial_charges` |
 
-**Entidades conceituais (rascunho para ADR 0014):**
+**Entidades conceituais (rascunho para ADR 0015):**
 - `insurance_providers(clinica_id, name, active)` — cadastro de operadoras da clínica.
 - `patient_insurance_plans(patient_id, provider_id, plan_name, member_number, valid_until)`.
 - `insurance_authorizations(appointment_id, provider_id, authorization_number, status)`.
 - `financial_charges` ganha: `payer_type`, `insurance_provider_id`, `copay_amount_cents`,
-  `insurance_amount_cents` (na ADR 0014, não agora).
+  `insurance_amount_cents` (na ADR 0015, não agora).
 
 **Migração:** `patients.convenio` + `patients.numero_carteirinha` (texto livre hoje)
 podem ser importados para `patient_insurance_plans` na sprint 4.6B.
