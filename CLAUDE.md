@@ -8,6 +8,7 @@
 > - **Fonte de verdade produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
 > - **Roadmap Clinic OS:** `docs/product-clinic-os-roadmap.md`
 > - **Módulo Financeiro v0.1:** ADR `docs/adr/0012-financial-module-v0.md` · operacional `docs/financial-v0-scope.md`
+> - **Integração Agenda × Financeiro v0.1:** ADR `docs/adr/0013-agenda-financial-integration-v0.md` · `docs/agenda-financial-integration-v0-scope.md`
 > - **Convênios/faturamento básico (futuro — Fase 4.6):** `docs/insurance-billing-future-scope.md`
 > - **Documentos Médicos v0.1:** ADR `docs/adr/0011-medical-documents-prescriptions-v0.md` · `docs/medical-documents-v0-scope.md`
 > - **Prontuário v0.1:** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` · `docs/clinical-encounters-v0-scope.md`
@@ -18,28 +19,21 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.4D-conv** (entregue) — **Planejamento Convênios/Faturamento Básico (docs-only).**
-`docs/insurance-billing-future-scope.md` criado; Fase 4.6 detalhada; `financial-v0-scope.md` expandido.
+**Sprint atual: 4.4E-A** (entregue) — **ADR 0013 Integração Agenda × Financeiro v0.1 (docs/ADR-only).**
+ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados. Badge, alertas, botão "Criar cobrança",
+estratégia de endpoints (reutilizar existentes), permissões e segurança documentados.
 `git diff --check` rc=0. **Zero mudanças de código.** Detalhe: `docs/project-state.md`.
 
-**Sprint anterior: 4.4D** (entregue) — **QA/Hardening Módulo Financeiro v0.1.**
-Smoke API **60/60 PASS** · SQL invariants **9/9** · audit 4 ações ✅ · log redaction ✅ · frontend security checks ✅ ·
-QA browser pelo usuário ✅ · cleanup (0 pending, 19 canceled, 6 paid).
-`pnpm --filter backend typecheck` ✅ · `pnpm --filter frontend typecheck` ✅ · `git diff --check` rc=0.
-**Zero mudanças de código.**
-
-**Sprint anterior: 4.4C** (entregue) — **Frontend do Módulo Financeiro v0.1.**
-Aba "Financeiro" no Dashboard; `FinancialPanel` (lista + cards resumo; formulário criar; detalhe; editar; marcar pago;
-cancelar com confirmação em modal); 8 tipos + 8 funções API adicionados.
-`pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ · `pnpm --filter backend typecheck` ✅ · `git diff --check` rc=0.
-**Sem migration, sem backend novo, sem gateway, sem badge na Agenda.** Detalhe: `docs/project-state.md`.
+**Sprint anterior imediata: 4.4D-conv** (entregue) — **Planejamento Convênios/Faturamento Básico (docs-only).**
+`docs/insurance-billing-future-scope.md` criado; Fase 4.6 detalhada; `financial-v0-scope.md` expandido.
+`git diff --check` rc=0. **Zero mudanças de código.**
 
 **Endpoints financeiros registrados:**
 `POST /financial/charges` · `GET /financial/charges` (incl. `?appointment_id`) · `GET /financial/summary` ·
 `GET /financial/charges/:id` · `PATCH /financial/charges/:id` · `POST /financial/charges/:id/mark-paid` ·
 `POST /financial/charges/:id/cancel` · `GET /patients/:id/charges`
 
-**Sprints anteriores (resumo — detalhes em `docs/sprint-history.md`):**
+**Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
 - **4.4D** ✅ QA/Hardening Financeiro — smoke 60/60, SQL 9/9, frontend security PASS, cleanup
 - **4.4C** ✅ Frontend Financeiro — `FinancialPanel` + Dashboard tab "Financeiro" — typecheck/build ✅
 - **4.4B** ✅ Backend Financeiro — migration + DAOs + services + 8 endpoints — smoke 49/49 PASS
@@ -55,7 +49,7 @@ cancelar com confirmação em modal); 8 tipos + 8 funções API adicionados.
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.4D-conv ✅ → **4.4E** integração Agenda × Financeiro (badge; alertas; sem convênio) →
+4.0–4.4E-A ✅ → **4.4E-B/C/D** implementação Agenda × Financeiro (badge; alertas; botão criar cobrança) →
 **4.5** relatórios → **4.6** convênios/faturamento básico → **4.7** estoque básico.
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
@@ -69,7 +63,7 @@ prontuário v0.1 (encounters, notes, read-audit LGPD); documentos médicos v0.1 
 financeiro v0.1 backend + frontend (aba Financeiro; lista + cards resumo; criar/editar/detalhe; marcar pago; cancelar).
 Detalhe: `docs/project-state.md`.
 
-**O que NÃO existe (sprint explícita):** badge Agenda × Financeiro (4.4E); convênios/carteirinha estruturada (4.6A+);
+**O que NÃO existe (sprint explícita):** badge/alertas Agenda × Financeiro (4.4E-C); convênios/carteirinha estruturada (4.6A+);
 delete físico de paciente; undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
 
 **Migrações (15 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
@@ -94,9 +88,9 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.4E** integração Agenda × Financeiro (badge; alertas sugestivos; botão criar cobrança; ADR adendo à 0012; sem convênio; sem automação)
-- **4.5** relatórios gerenciais v0.1 (ADR 0013)
-- **4.6A** ADR 0014 Convênios v0.1 (gate: 4.4E entregue; planejamento em `docs/insurance-billing-future-scope.md`)
+- **4.4E-B/C/D** implementação Agenda × Financeiro (ADR 0013 aceita ✅; badge; alertas; botão criar cobrança; sem convênio)
+- **4.5** relatórios gerenciais v0.1 (ADR 0014)
+- **4.6A** ADR 0015 Convênios v0.1 (gate: 4.4E entregue; planejamento em `docs/insurance-billing-future-scope.md`)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)

@@ -3989,4 +3989,69 @@ separando claramente o Financeiro v0.1 particular/manual do módulo de convênio
 - `git diff --check` rc=0 ✅
 - `git status --short` — apenas docs modificados/criados ✅
 
-**Próxima sprint natural:** 4.4E (Integração Agenda × Financeiro — ADR adendo à ADR 0012 + badge + alertas + botão criar cobrança; sem convênios).
+**Próxima sprint natural:** 4.4E-A (ADR 0013 Integração Agenda × Financeiro — docs/ADR-only, gate para 4.4E-B/C/D).
+
+---
+
+## Sprint 4.4E-A — ADR 0013 Integração Agenda × Financeiro v0.1 (docs/ADR-only)
+
+**Entregue:** 2026-05-27
+**Objetivo:** Definir o escopo da integração entre Agenda e Financeiro antes de qualquer código:
+badge financeiro, alertas sugestivos, botão "Criar cobrança", estratégia de endpoints,
+permissões e segurança. Zero mudanças de código, schema, migration ou env.
+
+### Decisões registradas
+
+1. **Dois eixos independentes** — status da consulta e status financeiro não se alteram
+   automaticamente. O sistema sugere, o humano decide.
+
+2. **Badge financeiro** — 5 estados derivados de `financial_charges.appointment_id`:
+   - `none` → "Sem cobrança" (cinza/opaco)
+   - `pending` → "Pagamento pendente" (amarelo)
+   - `overdue` → "Vencido" (vermelho)
+   - `paid` → "Pago" (verde)
+   - `charge_canceled` → "Cobrança cancelada" (cinza)
+
+3. **Alertas sugestivos A1–A4** — informativos e dismissíveis; nenhum executa ação:
+   - A1: cobrança paga + consulta scheduled/confirmed → "Deseja confirmar a consulta?"
+   - A2: cobrança vencida + consulta ativa → "Pagamento vencido. Revise antes da consulta."
+   - A3: consulta cancelada + cobrança pending → "Consulta cancelada. Revise a cobrança."
+   - A4: cobrança cancelada + consulta ativa → "Cobrança cancelada. Revise o agendamento."
+
+4. **Botão "Criar cobrança"** via agenda:
+   - `patient_id` pré-selecionado, `appointment_id` pré-preenchido (readonly).
+   - Descrição sugerida neutra ("Consulta"), editável pelo usuário.
+   - Aviso anti-clínico nas observações (mesmo padrão do FinancialPanel).
+   - Após criar: `invalidateQueries(['financial'])` + `invalidateQueries(['appointments'])`.
+
+5. **Estratégia de endpoints MVP** — reutilizar existentes, sem endpoint agregador:
+   - `GET /financial/charges?limit=100` → frontend monta `Map<appointment_id, charge>` por dia.
+   - `POST /financial/charges` com `appointment_id` — já existe.
+   - `GET /financial/charges?appointment_id=<id>` — já existe.
+   - Endpoint `GET /appointments/:id/charges` é opcional para 4.4E-B (decidir na sprint).
+
+6. **Permissões:**
+   - Badge + alertas: `dono_clinica`, `secretaria`, `gestor_clinica`.
+   - Criar cobrança via agenda: `dono_clinica`, `secretaria` (gestor não cria em v0.1).
+   - `profissional_clinico`: sem badge, sem alertas, sem acesso financeiro na agenda.
+
+7. **ADR 0013 atribui números futuros:**
+   - ADR 0014 = Relatórios gerenciais v0.1 (Fase 4.5)
+   - ADR 0015 = Convênios/faturamento básico v0.1 (Fase 4.6)
+
+### Documentos criados/atualizados
+
+- **CRIADO** `docs/adr/0013-agenda-financial-integration-v0.md`
+- **CRIADO** `docs/agenda-financial-integration-v0-scope.md`
+- **Atualizado** `CLAUDE.md` — sprint atual → 4.4E-A; ADR 0013 referenciada; numeração ADR corrigida
+- **Atualizado** `docs/project-state.md` — sprint atual → 4.4E-A
+- **Atualizado** `docs/sprint-history.md` — esta seção
+- **Atualizado** `docs/roadmap-next-phase.md` — 4.4E expandido em A/B/C/D; ADR 0014/0015 renumerados
+- **Atualizado** `docs/financial-v0-scope.md` — §11.6 checklist 4.4E atualizado
+
+### Checks finais
+
+- `git diff --check` rc=0 ✅
+- `git status --short` — apenas docs modificados/criados ✅
+
+**Próxima sprint natural:** 4.4E-B (avaliar se endpoint novo é necessário) ou direto para 4.4E-C (frontend badge + alertas + botão criar cobrança).

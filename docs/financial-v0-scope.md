@@ -351,21 +351,44 @@ Migration da 4.4B é **estritamente aditiva** (1 tabela + índices).
 - [ ] `git diff --check` rc=0 ✅
 - [ ] Docs atualizados (CLAUDE.md, project-state, sprint-history, testing-checklist)
 
-## 11.6 Checklist Sprint 4.4E (Integração Agenda × Financeiro — após 4.4D)
+## 11.6 Checklist Sprint 4.4E (Integração Agenda × Financeiro)
 
-> Sprint que implementa o "Nível 3" da integração. Exige ADR aditiva ou adendo à ADR 0012
-> antes do início, conforme política Clinic OS (§2 da ADR 0008).
+> ADR 0013 criada na Sprint 4.4E-A (2026-05-27). Implementação nas Sprints 4.4E-B/C/D.
+> Ver `docs/adr/0013-agenda-financial-integration-v0.md` e `docs/agenda-financial-integration-v0-scope.md`.
 
-- [ ] Backend: endpoint ou filtro `GET /appointments/:id/charges` (decisão de rota na sprint)
-- [ ] Backend: query de status financeiro agregado por agendamento (JOIN `financial_charges`)
-- [ ] Frontend Agenda: badge financeiro por card de agendamento (pending/pago/vencido/sem cobrança)
-- [ ] Frontend Agenda: botão "Criar cobrança" no card/detalhe de agendamento (abre form financeiro pré-preenchido com `appointment_id`)
-- [ ] Frontend Agenda: botão "Ver cobrança" no card (se cobrança existir)
-- [ ] Frontend: alerta "Pagamento recebido. Deseja confirmar a consulta?" após `mark-paid` com `appointment_id` vinculado
-- [ ] Frontend: alerta "Agendamento cancelado. Revise a cobrança vinculada." após cancelar agendamento com cobrança ativa
-- [ ] Frontend: alerta "Cobrança cancelada. Revise o agendamento vinculado." após cancelar cobrança com agendamento ativo
-- [ ] **Invariante validada:** nenhum alerta executa ação automaticamente — todos são dismissíveis e opcionais
-- [ ] Smoke tests cobrindo os fluxos de alerta
+### Sprint 4.4E-A (ADR/docs-only) — ENTREGUE 2026-05-27
+
+- [x] ADR 0013 criada (`docs/adr/0013-agenda-financial-integration-v0.md`)
+- [x] Doc operacional criado (`docs/agenda-financial-integration-v0-scope.md`)
+- [x] Badge 5 estados definidos; alertas A1–A4 catalogados
+- [x] Estratégia de endpoints MVP documentada (reutilizar existentes)
+- [x] Permissões e segurança documentadas
+
+### Sprint 4.4E-B (backend — avaliar se necessário)
+
+- [ ] Decisão: criar `GET /appointments/:id/charges` ou usar `?appointment_id=` filter
+- [ ] Se criar: `rateLimit → requireAuth → requireClinic → requireRole`; smoke permissions
+- [ ] Typecheck + build ✅
+
+### Sprint 4.4E-C (frontend)
+
+- [ ] Badge financeiro no card de agendamento (5 estados, conforme ADR 0013 §3.2)
+- [ ] Sem badge para `profissional_clinico`
+- [ ] Alertas A1–A4 no detalhe do agendamento; dismiss local sem chamada de API
+- [ ] Botão "Criar cobrança" (dono + secretaria; patient_id + appointment_id pré-preenchidos)
+- [ ] Descrição sugerida neutra ("Consulta"); aviso anti-clínico
+- [ ] Botão "Ver cobrança" (dono + secretaria + gestor; link para detalhe no Financeiro)
+- [ ] `invalidateQueries(['financial'])` + `invalidateQueries(['appointments'])` ao criar/pagar/cancelar cobrança
+- [ ] Typecheck + build ✅
+
+### Sprint 4.4E-D (QA)
+
+- [ ] Smoke: smoke.secretaria — badge visível, criar cobrança via agenda
+- [ ] Smoke: smoke.gestor — badge visível, sem criar cobrança
+- [ ] Smoke: smoke.profissional — sem seção financeira na agenda
+- [ ] Alertas A1 e A3 funcionais e dismissíveis
+- [ ] Nenhum alerta executa ação automaticamente
+- [ ] Logs sem `description`/`notes`/`amount_cents` do badge
 - [ ] Docs atualizados
 
 ---
