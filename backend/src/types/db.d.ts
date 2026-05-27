@@ -167,6 +167,9 @@ export interface AppointmentRow {
   administrative_notes: string | null;
   created_by_user_id: string | null;
   updated_by_user_id: string | null;
+  // Optional link to the services catalog (Sprint 4.6B, ADR 0015).
+  // Pure label — duration is NOT propagated automatically.
+  service_id: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -378,6 +381,38 @@ export interface FinancialChargeRow {
   // Administrative notes, max 500 chars by DB CHECK. NEVER contains clinical
   // content (invariant — ADR 0012 §6.1). Logger REDACTS this field.
   notes: string | null;
+  // Optional link to the services catalog (Sprint 4.6B, ADR 0015).
+  // Pure label — price is NEVER auto-propagated to amount_cents.
+  service_id: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Catálogo de Serviços v0.1 — Sprint 4.6B (ADR 0015).
+// ADMINISTRATIVE / COMMERCIAL label only. NEVER contains clinical content;
+// `price_cents` is reference-only and is NEVER auto-propagated to
+// financial_charges.amount_cents; `duration_minutes` is a UI suggestion.
+export interface ClinicServiceRow {
+  id: string;
+  clinica_id: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  duration_minutes: number | null;
+  price_cents: number | null;
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Binding row: a professional offers a service. Soft-delete via active.
+// Composite PK (professional_id, service_id) — a single row per pair;
+// re-linking flips active back to true at the service layer.
+export interface ProfessionalServiceRow {
+  professional_id: string;
+  service_id: string;
+  clinica_id: string;
+  active: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -419,5 +454,7 @@ declare module 'knex/types/tables' {
     clinical_documents: ClinicalDocumentRow;
     user_clinical_roles: UserClinicalRoleRow;
     financial_charges: FinancialChargeRow;
+    clinic_services: ClinicServiceRow;
+    professional_services: ProfessionalServiceRow;
   }
 }

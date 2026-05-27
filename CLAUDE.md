@@ -21,7 +21,39 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.6A** (entregue) — **ADR 0015 Catálogo de Serviços v0.1 + Camada Comercial (docs/ADR-only).**
+**Sprint atual: 4.6B** (entregue) — **Backend Catálogo de Serviços v0.1.**
+Migration única aditiva `20260605_clinic_services_v0`: tabelas `clinic_services` (catálogo com
+`name 1..120` + CHECK `char_length(btrim(name)) >= 1`, `category ≤80`, `description ≤500`,
+`duration_minutes 5..720`, `price_cents 0..99_999_999`, `active`; UNIQUE INDEX normalizado
+`(clinica_id, lower(btrim(name)))` — duplicata case-insensitive e tolerante a espaços
+→ 409 `service_name_duplicated`) e `professional_services` (PK composta professional×service + clinica_id +
+`active`; índices por clínica). `appointments.service_id` e `financial_charges.service_id` adicionados
+como NULL opcionais (FK SET NULL; coluna pronta, **wiring deferido para 4.6C** — sem mudança de payload
+em endpoints existentes nesta sprint). Nenhuma tabela clínica tocada.
+8 endpoints novos: `GET /clinic-services` · `POST /clinic-services` · `GET /clinic-services/:id` ·
+`PATCH /clinic-services/:id` · `PATCH /clinic-services/:id/status` ·
+`GET /clinic-services/:id/professionals` · `POST /clinic-services/:id/professionals` ·
+`PATCH /clinic-services/:id/professionals/:professional_id/status`.
+Pipeline: `patientsRateLimit + requireAuth + requireClinic + requireRole`. **Reads** abertos a
+`dono_clinica + secretaria` (profissional_clinico passa pela leitura — necessário para seletor de agenda;
+admin_sistema bloqueado em `requireClinic` com `no_clinic_context`). **Writes** restritos a
+`CLINIC_ADMIN_ROLES = ['dono_clinica']`. Re-link de profissional×serviço é idempotente
+(`active` volta a true; sem linha duplicada). Audit metadata-only — sem nome/preço/category/body:
+`clinic_service.create.success`, `.update.success`, `.status.update.success`, `.professional.link.success`,
+`.professional.status.update.success`. Índices parciais tenant-scoped em
+`appointments (clinica_id, service_id) WHERE service_id IS NOT NULL` e
+`financial_charges (clinica_id, service_id) WHERE service_id IS NOT NULL`.
+**Smoke 51/51 PASS** após revisão de normalização — inclui case-insensitive (`consulta médica` colide
+com `Consulta médica`), whitespace-pad (`  Consulta médica  ` → 409), whitespace-only (`   ` → 400),
+rename para nome normalizado colidente → 409, rename self com casing diferente → 200; mais regressão
+completa (anônimo 401; admin 403; owner CRUD+link; secretaria/gestor/profissional read OK + write 403;
+cross-tenant 404; UUID inválido 400; payload-safety sem PII/clínico). **Invariante-chave:** serviço é
+etiqueta administrativa — sem TUSS/CBHPM, sem prontuário, sem auto-propagação de preço para
+`amount_cents`, sem auto-duração para `ends_at`.
+`pnpm --filter backend typecheck` ✅ · build ✅ · `pnpm --filter frontend typecheck` ✅ ·
+`migrate:status` 16/0 ✅ · `git diff --check` rc=0.
+
+**Sprint anterior: 4.6A** (entregue) — **ADR 0015 Catálogo de Serviços v0.1 + Camada Comercial (docs/ADR-only).**
 ADR 0015 + `docs/services-catalog-v0-scope.md` criados. Decisão de faseamento: **4.6 = Catálogo de Serviços**
 (esta ADR), **4.7 = Convênios manual básico** (ADR 0016 futura), **4.8 = Estoque** (ADR 0017 futura).
 Entidades definidas: `clinic_services` (catálogo com preço de tabela, duração, categoria), `professional_services`
@@ -94,7 +126,14 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 **Endpoints de relatórios registrados (Sprint 4.5B):**
 `GET /reports/appointments` · `GET /reports/financial` · `GET /reports/patients` · `GET /reports/agenda-financial`
 
+**Endpoints do Catálogo de Serviços registrados (Sprint 4.6B):**
+`GET /clinic-services` · `POST /clinic-services` · `GET /clinic-services/:id` ·
+`PATCH /clinic-services/:id` · `PATCH /clinic-services/:id/status` ·
+`GET /clinic-services/:id/professionals` · `POST /clinic-services/:id/professionals` ·
+`PATCH /clinic-services/:id/professionals/:professional_id/status`
+
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **4.6A** ✅ ADR 0015 Catálogo de Serviços v0.1 (docs-only)
 - **4.5A** ✅ ADR 0014 Relatórios Gerenciais v0.1 (docs-only)
 - **4.4D-conv** ✅ Planejamento Convênios/Faturamento — `insurance-billing-future-scope.md` criado
 - **4.4D** ✅ QA/Hardening Financeiro — smoke 60/60, SQL 9/9, frontend security PASS, cleanup
@@ -112,8 +151,8 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A ✅ (ADR 0015 Catálogo de Serviços — docs/ADR-only) →
-**4.6B** backend Catálogo de Serviços → **4.6C** frontend → **4.6D** QA →
+4.0–4.5D ✅ · 4.6A ✅ · 4.6B ✅ (backend Catálogo de Serviços) →
+**4.6C** frontend Catálogo de Serviços (+wire `service_id` em appointments/financial) → **4.6D** QA →
 **4.7A** ADR 0016 Convênios → **4.7B–D** implementação → **4.8** Estoque (ADR 0017).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
@@ -128,18 +167,23 @@ financeiro v0.1 backend + frontend (aba Financeiro; lista + cards resumo; criar/
 badge financeiro na agenda (5 estados), alertas A1–A4, botão "Criar cobrança" inline, link "Ver cobrança";
 relatórios gerenciais v0.1 backend + frontend (aba Relatórios; hero "Resumo do período" + 4 blocos:
 Agenda, Financeiro, Pacientes, Agenda × Financeiro; filtros Hoje/7d/Mês/Personalizado; frases
-interpretativas por bloco; 403 por relatório vira card "Acesso restrito" intencional).
+interpretativas por bloco; 403 por relatório vira card "Acesso restrito" intencional);
+catálogo de serviços v0.1 backend (clinic_services + professional_services; CRUD owner-only;
+leitura aberta para seletor de agenda; soft-delete; re-link idempotente; colunas `service_id`
+nullable em appointments/financial_charges aguardando wiring 4.6C).
 Detalhe: `docs/project-state.md`.
 
-**O que NÃO existe (sprint explícita):** export de relatórios (futuro com ADR própria);
-gráficos complexos / BI customizável; catálogo de serviços implementado (4.6B+); convênios/carteirinha estruturada (4.7B+); delete físico de paciente;
+**O que NÃO existe (sprint explícita):** frontend de catálogo de serviços (4.6C); wiring de
+`service_id` em endpoints de appointments/financial (4.6C); export de relatórios (futuro com ADR própria);
+gráficos complexos / BI customizável; convênios/carteirinha estruturada (4.7B+); delete físico de paciente;
 undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
 
-**Migrações (15 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
+**Migrações (16 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
 `20260523_import_sessions` · `20260524_patients` · `20260525_import_sessions_summary` ·
 `20260526_scheduling` · `20260527_user_mfa` · `20260528_user_mfa_backup_codes` ·
 `20260529_clinic_team` · `20260530_clinic_join_requests_revoked` · `20260601_patients_merged_into` ·
-`20260602_clinical_encounters_v0` · `20260603_clinical_documents_v0` · `20260604_financial_charges_v0`.
+`20260602_clinical_encounters_v0` · `20260603_clinical_documents_v0` · `20260604_financial_charges_v0` ·
+`20260605_clinic_services_v0`.
 
 **Invariantes locais:** patients=6 (base, sem demo), import_files=24, import_sessions=7.
 Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac, +7 agend); reverter: `seed:demo:clean`.
@@ -157,7 +201,8 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.6B** backend Catálogo de Serviços v0.1 (gate: ADR 0015 aceita ✅; detalhes em `docs/services-catalog-v0-scope.md` §7)
+- **4.6C** frontend Catálogo de Serviços v0.1 (gate: 4.6B ✅; aba "Serviços" no Dashboard;
+  wiring `service_id` em seletor de agendamento e cobrança; detalhes em `docs/services-catalog-v0-scope.md` §7)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)

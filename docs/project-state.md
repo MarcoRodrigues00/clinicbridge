@@ -7,6 +7,129 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.6B** (entregue 2026-05-27) — **Backend Catálogo de Serviços v0.1.**
+Migration única aditiva + DAO + service + controller + routes registradas em `app.ts`.
+Nenhuma tabela clínica alterada. Reads abertos a `dono_clinica + secretaria`; writes restritos a
+`CLINIC_ADMIN_ROLES`. Sem auto-propagação de preço/duração; sem clinical fields no payload.
+
+**Arquivos criados:**
+- `backend/migrations/20260605000000_clinic_services_v0.ts` — `clinic_services` (CHECK
+  `char_length(btrim(name)) >= 1` + UNIQUE INDEX normalizado
+  `idx_clinic_services_clinica_name_normalized_unique (clinica_id, lower(btrim(name)))`) +
+  `professional_services` + colunas `service_id` nullable em `appointments` e `financial_charges`
+  (FK SET NULL) com índices parciais tenant-scoped
+  `idx_appointments_clinica_service (clinica_id, service_id) WHERE service_id IS NOT NULL` e
+  `idx_financial_charges_clinica_service (clinica_id, service_id) WHERE service_id IS NOT NULL`.
+- `backend/src/dao/clinicServiceDao.ts` — DAOs gêmeos (`clinicServiceDao`, `professionalServiceDao`);
+  todo read/write scoped por `clinica_id`; sem `listAll`; sem delete físico.
+- `backend/src/services/clinicServiceService.ts` — validações (nome 1..120, category ≤80, description ≤500,
+  duration 5..720, price 0..99_999_999); duplicate-name pré-check + 23505 handler; re-link idempotente;
+  audit metadata-only.
+- `backend/src/controllers/clinicServiceController.ts` — thin controller; reusa `buildAuthContext`.
+- `backend/src/routes/clinicServices.ts` — 8 endpoints; pipeline `patientsRateLimit + requireAuth +
+  requireClinic + requireRole(...)`.
+
+**Arquivos modificados:**
+- `backend/src/types/db.d.ts` — `ClinicServiceRow`, `ProfessionalServiceRow`; `service_id: string | null`
+  em `AppointmentRow` e `FinancialChargeRow`; registro no `Tables` knex.
+- `backend/src/app.ts` — `app.use(clinicServicesRouter)` após `reportsRouter`.
+- `CLAUDE.md` — estado atualizado.
+- `docs/project-state.md` — esta entrada.
+- `docs/sprint-history.md` — entrada 4.6B.
+- `docs/testing-checklist.md` — comandos smoke do catálogo.
+- `docs/services-catalog-v0-scope.md` — checklist da Sprint 4.6B marcado.
+
+**Endpoints (todos sob `patientsRateLimit + requireAuth + requireClinic`):**
+| Método | Path | Roles |
+|---|---|---|
+| GET | `/clinic-services` | dono + secretaria |
+| POST | `/clinic-services` | dono_clinica |
+| GET | `/clinic-services/:id` | dono + secretaria |
+| PATCH | `/clinic-services/:id` | dono_clinica |
+| PATCH | `/clinic-services/:id/status` | dono_clinica |
+| GET | `/clinic-services/:id/professionals` | dono + secretaria |
+| POST | `/clinic-services/:id/professionals` | dono_clinica |
+| PATCH | `/clinic-services/:id/professionals/:professional_id/status` | dono_clinica |
+
+**Validações enforçadas (defesa em profundidade — DB CHECK + service):**
+- `name`: service faz `trim`; DB CHECK `char_length(btrim(name)) >= 1` + `char_length(name) <= 120`;
+  UNIQUE INDEX normalizado `(clinica_id, lower(btrim(name)))` — duplicata case-insensitive e tolerante
+  a espaços rejeitada com 409 `service_name_duplicated` (pré-check do service + handler 23505 cobrem
+  a race).
+- `category`: trim ou null, ≤80 chars.
+- `description`: trim ou null, ≤500 chars.
+- `duration_minutes`: inteiro 5..720, ou null.
+- `price_cents`: inteiro 0..99_999_999, ou null.
+- `active`: boolean (status endpoint exclusivo).
+- UUID format check em path/body.
+
+**Permissões reconciliadas com smoke users:**
+- `smoke.owner` (dono_clinica) — CRUD full + link.
+- `smoke.secretaria` (secretaria pura) — leitura/listagem; mutações 403 `forbidden_role`.
+- `smoke.gestor` (secretaria + gestor_clinica) — mesmo que secretaria pura (write 403).
+- `smoke.profissional` (secretaria + profissional_clinico) — leitura/listagem (necessário para seletor
+  de agenda); writes 403. **Documentado:** profissional puro vê catálogo via mesmo gate `requireRole`;
+  não há downgrade fine-grained nesta sprint (catálogo é admin, não tem fluxo de "transact").
+- `smoke.admin` (admin_sistema) — `requireClinic` retorna 403 `no_clinic_context`.
+
+**Audit metadata-only (recurso=`clinic_service`):**
+- `clinic_service.create.success`
+- `clinic_service.update.success`
+- `clinic_service.status.update.success`
+- `clinic_service.professional.link.success`
+- `clinic_service.professional.status.update.success`
+Sem nome/preço/category/description/body em nenhum log. `recurso_id` = id do serviço.
+
+**Integração Agenda × Financeiro (decisão de escopo):**
+- Colunas `appointments.service_id` e `financial_charges.service_id` criadas como nullable com FK SET NULL.
+- **Wiring deferido para 4.6C** — endpoints existentes de agendamento e cobrança não foram alterados
+  nesta sprint. A coluna está pronta para o frontend popular sem mudança aditiva ulterior.
+- Invariantes confirmadas: nunca auto-preencher `amount_cents` a partir de `price_cents`; nunca
+  auto-criar cobrança a partir de agendamento; nunca tocar tabelas clínicas.
+
+**Smoke tests (51/51 PASS — revisão pós-rollback):**
+- 5 logins (owner, secretaria, gestor, profissional, admin).
+- Anonymous → 401; Admin → 403 `no_clinic_context`.
+- Owner cria 2 serviços; list/detail/PATCH/status (deactivate/reactivate); filtro `active=true|false`.
+- **Normalização case-insensitive + trim (novos casos):**
+  - `consulta médica` colide com `Consulta médica` → 409.
+  - `  Consulta médica  ` (whitespace-pad) colide → 409.
+  - `  CONSULTA MÉDICA  ` (upper + whitespace) colide → 409.
+  - Apenas 1 linha persistida, preservando `name` exatamente como o usuário digitou.
+  - `   ` (só espaços) → 400 `clinic_service_invalid`.
+  - Rename de outro serviço para `  consulta médica  ` (já existente normalizado) → 409.
+  - Rename self com casing diferente (`sessão DE fisio`) → 200 (sem falso colisão).
+- Validações negativas: empty name 400; name >120 400; duration <5 / >720 400; price >cap 400.
+- Secretaria/gestor/profissional reads OK; writes 403.
+- Owner link/list-links/re-link idempotente/deactivate-link/reactivate via re-link; secretaria link 403.
+- Cross-tenant / UUID inexistente → 404; UUID malformado → 400.
+- Payload safety: zero ocorrências de `cid|diagnos|anamnes|evolution|internal_note|chief_complaint|cpf|telefone`.
+
+**SQL/security checks:**
+- `migrate:status` 16/0 ✅.
+- `clinic_services` tem 5 CHECK constraints (name `char_length(btrim) >= 1` + length cap, category,
+  description, duration, price) + UNIQUE INDEX normalizado `(clinica_id, lower(btrim(name)))` +
+  FK clinics CASCADE + índice `(clinica_id, active, name)`.
+- `professional_services` tem PK composta + 3 FKs (CASCADE) + 2 índices `(clinica_id, service_id)` e
+  `(clinica_id, professional_id)`.
+- `appointments.service_id` e `financial_charges.service_id` nullable; FK SET NULL; índices parciais
+  **tenant-scoped** `(clinica_id, service_id) WHERE service_id IS NOT NULL` em ambas as tabelas.
+- Sem alteração em tabelas clínicas (`clinical_encounters`, `clinical_documents`, etc.).
+- Greps em arquivos novos: zero `clinical_*` referenciado (exceto comentário documentando "never JOINs");
+  zero `SELECT *`; zero concatenação SQL com input; toda query usa knex parametrizado.
+
+**Gates finais:**
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter backend migrate:status` 16/0 ✅
+- `pnpm --filter frontend typecheck` ✅
+- `git diff --check` rc=0 ✅
+
+**Próxima sprint:** **4.6C** frontend Catálogo de Serviços + wiring `service_id` em endpoints
+existentes de agendamento e cobrança.
+
+---
+
 **Sprint 4.6A** (entregue 2026-05-27) — **ADR 0015 Catálogo de Serviços v0.1 + Camada Comercial (docs/ADR-only).**
 Sprint docs/ADR-only. Zero código, zero schema, zero migration, zero env.
 

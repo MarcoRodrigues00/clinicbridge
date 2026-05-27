@@ -4581,3 +4581,128 @@ camada comercial (4.6 Serviços / 4.7 Convênios / 4.8 Estoque), e atualizar a d
 - **Zero código, zero migration, zero schema, zero env.**
 
 **Próxima sprint:** **4.6B** backend Catálogo de Serviços v0.1 (gate: ADR 0015 aceita ✅).
+
+---
+
+## Sprint 4.6B — Backend Catálogo de Serviços v0.1
+
+**Data:** 2026-05-27
+**Natureza:** backend + migration aditiva. Zero alteração em tabelas clínicas.
+
+### Objetivo
+
+Implementar o backend do Catálogo de Serviços conforme ADR 0015: tabelas `clinic_services` e
+`professional_services`, colunas `service_id` nullable em `appointments` e `financial_charges`,
+8 endpoints REST com permissões reconciliadas, audit metadata-only.
+
+### Migration aplicada
+
+`20260605000000_clinic_services_v0`:
+
+1. `clinic_services(id, clinica_id, name[1..120; btrim non-empty], category[≤80], description[≤500],
+   duration_minutes[5..720], price_cents[0..99_999_999], active, created_at, updated_at)` +
+   UNIQUE INDEX normalizado `idx_clinic_services_clinica_name_normalized_unique
+   (clinica_id, lower(btrim(name)))` + índice `(clinica_id, active, name)`. 5 CHECK constraints
+   (name usa `char_length(btrim(name)) >= 1` + cap 120).
+2. `professional_services(professional_id, service_id, clinica_id, active, created_at, updated_at)` +
+   PK composta + 3 FKs CASCADE + 2 índices `(clinica_id, service_id)` e `(clinica_id, professional_id)`.
+3. `ALTER TABLE appointments ADD COLUMN service_id uuid NULL REFERENCES clinic_services(id) ON DELETE SET NULL`
+   + índice parcial **tenant-scoped** `(clinica_id, service_id) WHERE service_id IS NOT NULL`.
+4. `ALTER TABLE financial_charges ADD COLUMN service_id uuid NULL REFERENCES clinic_services(id) ON DELETE SET NULL`
+   + índice parcial **tenant-scoped** `(clinica_id, service_id) WHERE service_id IS NOT NULL`.
+
+Nenhuma migração de dados — registros históricos ficam com `service_id = NULL`.
+
+### Endpoints (pipeline: `patientsRateLimit + requireAuth + requireClinic + requireRole`)
+
+- `GET /clinic-services` — dono + secretaria.
+- `POST /clinic-services` — dono_clinica.
+- `GET /clinic-services/:id` — dono + secretaria.
+- `PATCH /clinic-services/:id` — dono_clinica.
+- `PATCH /clinic-services/:id/status` — dono_clinica.
+- `GET /clinic-services/:id/professionals` — dono + secretaria.
+- `POST /clinic-services/:id/professionals` — dono_clinica (idempotente: re-link existente flipa active).
+- `PATCH /clinic-services/:id/professionals/:professional_id/status` — dono_clinica.
+
+### Permissões reconciliadas
+
+- `smoke.owner` → CRUD + link.
+- `smoke.secretaria` → reads OK; writes 403 `forbidden_role`.
+- `smoke.gestor` → reads OK; writes 403 (mesmo gate, sem downgrade fine-grained nesta sprint —
+  catálogo é admin, não tem tier "transact" como financeiro).
+- `smoke.profissional` → reads OK (necessário para seletor de agenda); writes 403.
+- `smoke.admin` → 403 `no_clinic_context` em `requireClinic`.
+
+### Audit metadata-only
+
+`recurso='clinic_service'`, `recurso_id=<service_id>`, sem nome/preço/category/description/body:
+- `clinic_service.create.success`
+- `clinic_service.update.success`
+- `clinic_service.status.update.success`
+- `clinic_service.professional.link.success`
+- `clinic_service.professional.status.update.success`
+
+### Integração Agenda × Financeiro
+
+Coluna `service_id` adicionada como nullable com FK SET NULL em ambas as tabelas. **Wiring do
+payload deferido para 4.6C** (frontend) — endpoints existentes de agendamento/cobrança não foram
+alterados nesta sprint. Invariantes confirmadas:
+- nunca auto-preencher `amount_cents` com `price_cents`;
+- nunca auto-criar cobrança a partir de agendamento;
+- nunca tocar tabelas clínicas.
+
+### Validações
+
+- `name`: service faz `trim`; DB CHECK `char_length(btrim(name)) >= 1` + cap 120;
+  UNIQUE INDEX normalizado `(clinica_id, lower(btrim(name)))` rejeita variações case-insensitive
+  e tolerantes a espaços → 409 `service_name_duplicated`.
+- `category`: trim ou null, ≤80 chars.
+- `description`: trim ou null, ≤500 chars.
+- `duration_minutes`: integer 5..720 ou null.
+- `price_cents`: integer 0..99_999_999 ou null.
+- UUID validation em path/body — UUID inválido → 400 `clinic_service_invalid`.
+- Cross-tenant / não-existente → 404 `service_not_found` / `professional_not_found`.
+
+### Smoke tests (51/51 PASS — revisão pós-rollback)
+
+Reusa smoke users persistentes. Cobertura: anônimo 401; admin 403; owner CRUD/filtros/edge; secretaria
+reads OK + writes 403; gestor reads OK + writes 403; profissional reads OK + writes 403; link idempotente;
+cross-tenant 404; UUID malformado 400; payload-safety (sem `cid|diagnos|anamnes|evolution|internal_note|
+chief_complaint|cpf|telefone` em respostas).
+
+**Casos adicionados na revisão de normalização:**
+- `consulta médica` cria com `Consulta médica` já existindo → 409.
+- `  Consulta médica  ` (whitespace pad) → 409.
+- `  CONSULTA MÉDICA  ` → 409.
+- `   ` (só espaços) → 400 `clinic_service_invalid`.
+- Apenas 1 linha persiste, com `name` preservado exatamente como o usuário digitou.
+- PATCH em outro serviço para `  consulta médica  ` (já normalizado existente) → 409.
+- PATCH self com casing diferente (`sessão DE fisio`) → 200 (sem falso colisão).
+
+### Arquivos criados
+
+- `backend/migrations/20260605000000_clinic_services_v0.ts`
+- `backend/src/dao/clinicServiceDao.ts` — DAOs gêmeos (clinicServiceDao + professionalServiceDao).
+- `backend/src/services/clinicServiceService.ts`
+- `backend/src/controllers/clinicServiceController.ts`
+- `backend/src/routes/clinicServices.ts`
+
+### Arquivos modificados
+
+- `backend/src/types/db.d.ts` — `ClinicServiceRow`, `ProfessionalServiceRow`; `AppointmentRow.service_id`
+  e `FinancialChargeRow.service_id` nullable; registro no `Tables` knex.
+- `backend/src/app.ts` — `app.use(clinicServicesRouter)`.
+- `CLAUDE.md` — estado 4.6B; migrações 16/16; endpoints novos.
+- `docs/project-state.md` — entrada Sprint 4.6B detalhada.
+- `docs/sprint-history.md` — esta entrada.
+- `docs/testing-checklist.md` — comandos smoke do catálogo.
+- `docs/services-catalog-v0-scope.md` — checklist 4.6B marcado.
+
+### Gates finais
+
+- `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 16/0 ✅
+- `pnpm --filter frontend typecheck` ✅
+- `git diff --check` rc=0 ✅
+
+**Próxima sprint:** **4.6C** frontend Catálogo de Serviços (aba "Serviços" no Dashboard) +
+wiring de `service_id` nos endpoints de agendamento e cobrança.
