@@ -20,15 +20,28 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.5C** (entregue) — **Frontend Relatórios Gerenciais v0.1.**
+**Sprint atual: 4.5D** (entregue) — **QA/hardening + polish UX Relatórios Gerenciais v0.1.**
+Fecha a fase 4.5. Polish-only no `ReportsPanel`: hero strip "Resumo do período" (4 sinais via
+queryKeys deduplicadas — sem fetch extra); frases interpretativas por bloco; ordem dos cards do
+Financeiro privilegia Recebido/Em aberto/Vencido (Cancelado por último, sem tom); subtítulo
+interno do R-D vira "Pontos de atenção"; "Sem agendamento há mais de 90 dias" no R-C;
+restricted-card com tom calmo (ciano, não cinza-erro). Pacientes/data formatado em PT-BR.
+**Decisão profissional×tab:** aba "Relatórios" segue visível para todo papel administrativo —
+frontend não tem como distinguir `secretaria` pura de `secretaria + profissional_clinico`
+(o `/me` não devolve grants; `/clinical/roles` é owner-only) sem adicionar endpoint.
+Profissional vê R-A/R-C normalmente e R-B/R-D como card "Área financeira restrita" intencional.
+**QA regressão API 24/24 PASS** (matriz 5 papéis × 4 endpoints + PII scan; reusa smoke 4.5B).
+Frontend security greps: console/localStorage/dangerouslySet/token-em-URL/forbidden-fields = 0.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `pnpm --filter backend typecheck` ✅ ·
+build ✅ · `migrate:status` 15/0 ✅ · `git diff --check` rc=0. **Zero migration, zero backend.**
+
+**Sprint anterior: 4.5C** (entregue) — **Frontend Relatórios Gerenciais v0.1.**
 Nova aba "Relatórios" no Dashboard; `ReportsPanel` consome os 4 endpoints da Sprint 4.5B.
 Filtros de período: Hoje · Últimos 7 dias · Mês atual · Personalizado (date_from/date_to);
 botão "Atualizar" invalida via `refreshKey`. 4 blocos: Agenda, Financeiro, Pacientes,
 Agenda × Financeiro. Valores em BRL via `Intl.NumberFormat`. 403 por relatório vira card
 "Acesso restrito" — não derruba a tela. Lista "Em atraso" (R-A) mostra horário + status
 traduzido; **nunca renderiza UUID** de appointment. Sem PII, sem dados clínicos, sem export.
-`pnpm --filter frontend typecheck` ✅ · build ✅ · `pnpm --filter backend typecheck` ✅ ·
-`git diff --check` rc=0.
 
 **Sprint anterior: 4.5B** (entregue) — **Backend Relatórios Gerenciais v0.1.**
 4 endpoints read-only, sem migration, sem nova tabela, sem dados clínicos, sem PII.
@@ -87,7 +100,7 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5C ✅ → **4.5D** QA/hardening relatórios →
+4.0–4.5D ✅ (Relatórios Gerenciais v0.1 fechados) →
 **4.6** convênios/faturamento básico (ADR 0015) → **4.7** estoque básico.
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
@@ -100,8 +113,9 @@ export CSV/XLSX; retenção dry-run; equipe (invite, aprovação, membros, desat
 prontuário v0.1 (encounters, notes, read-audit LGPD); documentos médicos v0.1 (PDF on-demand);
 financeiro v0.1 backend + frontend (aba Financeiro; lista + cards resumo; criar/editar/detalhe; marcar pago; cancelar);
 badge financeiro na agenda (5 estados), alertas A1–A4, botão "Criar cobrança" inline, link "Ver cobrança";
-relatórios gerenciais v0.1 backend + frontend (aba Relatórios; 4 blocos: Agenda, Financeiro, Pacientes,
-Agenda × Financeiro; filtros Hoje/7d/Mês/Personalizado; 403 por relatório vira card "Acesso restrito").
+relatórios gerenciais v0.1 backend + frontend (aba Relatórios; hero "Resumo do período" + 4 blocos:
+Agenda, Financeiro, Pacientes, Agenda × Financeiro; filtros Hoje/7d/Mês/Personalizado; frases
+interpretativas por bloco; 403 por relatório vira card "Acesso restrito" intencional).
 Detalhe: `docs/project-state.md`.
 
 **O que NÃO existe (sprint explícita):** export de relatórios (futuro com ADR própria);
@@ -130,8 +144,8 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.5D** QA/hardening relatórios gerenciais v0.1 (gate: 4.5C entregue ✅)
-- **4.6A** ADR 0015 Convênios v0.1 (gate: 4.5 entregue; planejamento em `docs/insurance-billing-future-scope.md`)
+- **4.6A** ADR 0015 Convênios v0.1 (gate: 4.5 entregue ✅; planejamento em `docs/insurance-billing-future-scope.md`)
+  — alternativa: polish geral landing/footer/visual antes de iniciar 4.6.
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)

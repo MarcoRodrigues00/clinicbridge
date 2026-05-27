@@ -2268,3 +2268,65 @@ VITE_API_BASE_URL=https://localhost:8443 pnpm --filter frontend dev --host 0.0.0
 - [ ] Cards viram grid 2 colunas (`<640px`)
 - [ ] Botão **Atualizar** ocupa largura total
 - [ ] Sem scroll horizontal estranho
+
+## QA Regressão Relatórios v0.1 — Sprint 4.5D
+
+> Sprint de polish + regressão. Reusa os roteiros das sprints 4.5B/4.5C.
+
+### API regressão (24/24 PASS — Sprint 4.5D)
+
+Reusa tokens persistentes dos smoke users (em `/tmp/cb-smoke/tokens.json` localmente).
+Confirma que o polish do frontend não introduziu regressão em rotas/policies.
+
+| # | Caso | Esperado |
+|---|------|----------|
+| 1-4 | owner × 4 endpoints | 200 |
+| 5-8 | secretaria × 4 endpoints | 200 |
+| 9-12 | gestor × 4 endpoints | 200 |
+| 13-14 | profissional R-A / R-C | 200 |
+| 15-16 | profissional R-B / R-D | 403 `forbidden_role` |
+| 17-20 | admin × 4 endpoints | 403 `no_clinic_context` |
+| 21-24 | payload PII scan (owner × 4 endpoints) | 0 chaves proibidas |
+
+### Polish UX (Sprint 4.5D) — smoke browser manual
+
+Subir:
+```bash
+docker compose --profile edge up -d --build backend nginx
+VITE_API_BASE_URL=https://localhost:8443 pnpm --filter frontend dev --host 0.0.0.0
+```
+
+Verificar na aba **Relatórios** (smoke.owner):
+
+- [ ] **Hero "Resumo do período"** aparece acima dos 4 blocos com 4 sinais grandes (Consultas no período / Recebido / Em aberto / Pacientes novos).
+- [ ] "Em aberto" mostra hint "X vencido" se houver vencido; senão "saldo atual".
+- [ ] Cada bloco tem **uma frase interpretativa** acima dos cards.
+- [ ] **Agenda** — Realizadas / Confirmadas / Agendadas vêm primeiro; Canceladas sem cor (não warning); Faltas em vermelho só se > 0.
+- [ ] **Financeiro** — Recebido (verde) / Em aberto (ciano) / Vencido (vermelho só se > 0); Cancelado no fim, sem cor.
+- [ ] **Pacientes** — label "Sem agendamento há mais de 90 dias"; hint "oportunidade de retorno".
+- [ ] **Agenda × Financeiro** — sub-bloco "Pontos de atenção" com 2 linhas; valor em amarelo se > 0.
+- [ ] **Datas** no cabeçalho de período em PT-BR (DD/MM/AAAA).
+
+Verificar com **smoke.profissional**:
+
+- [ ] Aba Relatórios continua visível.
+- [ ] Hero strip: Recebido e Em aberto mutados (opacidade reduzida + hint "acesso restrito").
+- [ ] Blocos Agenda / Pacientes carregam normalmente.
+- [ ] Blocos Financeiro / Agenda × Financeiro mostram card **ciano-calmo** ("Área financeira restrita...") — não vermelho/erro.
+- [ ] Copy: "Os blocos Agenda e Pacientes continuam disponíveis."
+
+Verificar **regressão de segurança**:
+
+- [ ] Network tab: nenhum request com token na URL.
+- [ ] Network tab: nenhum request a `localhost:3001` direto (tudo via `https://localhost:8443`).
+- [ ] Console DevTools: zero `console.log` de payload de relatório.
+- [ ] DOM inspector: nenhum `appointment_id` (UUID) renderizado como texto.
+- [ ] DOM: nenhum nome de paciente, CPF, e-mail, telefone.
+- [ ] DOM: nenhum `amount_cents` cru (só `R$ X,XX`).
+
+### Decisão registrada (4.5D)
+
+A aba **Relatórios continua visível para todo papel administrativo** (dono + secretaria). O frontend não consegue distinguir `secretaria` pura de `secretaria + profissional_clinico` no v0.1 (o `/me` não devolve grants; `/clinical/roles` é owner-only).
+Profissional recebe blocos financeiros como "acesso restrito" intencional, com tom calmo.
+
+**Relatórios Gerenciais v0.1 → CLOSED na sprint 4.5D.**

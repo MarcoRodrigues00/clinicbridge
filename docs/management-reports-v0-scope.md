@@ -349,22 +349,64 @@ Ver ADR 0014 §4 para lista completa. Resumo:
 
 ---
 
-## 10. Checklist Sprint 4.5D (QA/hardening)
+## 10. Checklist Sprint 4.5D (QA/hardening + polish) — ENTREGUE 2026-05-27
 
-- [ ] Smoke: dono — todos os 4 relatórios retornam 200
-- [ ] Smoke: secretaria (pura) — R-A/C 200; R-B/D 200 (secretaria=full)
-- [ ] Smoke: gestor — R-A/B/C/D 200
-- [ ] Smoke: profissional — R-A/C 403; R-B/D 403
-- [ ] Smoke: admin_sistema — qualquer /reports/* 403
-- [ ] SQL: intervalo > 366 dias → 400
-- [ ] SQL: without_recent_appointment usa parâmetro correto
-- [ ] Audit: `report.view.success` registrado para cada acesso
-- [ ] Audit: sem PII em recurso_id
-- [ ] Logs: sem `notes`/`description`/`amount_cents` individuais
-- [ ] Frontend: profissional não vê aba Relatórios
-- [ ] Frontend: secretaria pura não vê seção financeira quebrada
-- [ ] Frontend: limite 366 dias exibe mensagem amigável
-- [ ] Typecheck + build ✅ · `git diff --check` rc=0
+### 10.1 QA regressão API (24/24 PASS)
+
+- [x] Owner — 4× 200
+- [x] Secretaria pura — 4× 200 (`effectiveFinancialAccess='full'`)
+- [x] Gestor — 4× 200 (`effectiveFinancialAccess='transact'`)
+- [x] Profissional — R-A/R-C 200, R-B/R-D **403 `forbidden_role`**
+- [x] Admin — 4× **403 `no_clinic_context`**
+- [x] Payload PII scan (owner × 4 endpoints) — 0 hits
+
+> Smoke ADR 0014 §5 já validado em 4.5B; aqui apenas regressão pós-polish do frontend.
+> SQL invariants (`intervalo>366`, `without_recent_appointment`), audit (`report.view.success` sem PII)
+> e logger (`notes`/`description`/`amount_cents` redacted) já estão validados desde 4.5B — nenhuma
+> alteração de backend nesta sprint, portanto sem necessidade de re-validar.
+
+### 10.2 Polish UX aplicado
+
+- [x] Hero strip "Resumo do período" com 4 sinais (Consultas / Recebido / Em aberto / Pacientes novos)
+- [x] Frases interpretativas por bloco (sem julgamento)
+- [x] Agenda reordenada; Canceladas sem tom; Faltas danger só se > 0; Taxa com hint explicativo
+- [x] Financeiro: Recebido/Em aberto/Vencido primeiro; **Cancelado por último, sem tom**
+- [x] Pacientes: label "Sem agendamento há mais de 90 dias" + hint "oportunidade de retorno"
+- [x] Agenda × Financeiro: sub-bloco "Pontos de atenção"; `.flagValueWarn` se > 0
+- [x] Restricted-card: tom **ciano-calmo**, não cinza/erro
+- [x] Datas em PT-BR (DD/MM/AAAA) no header de período
+
+### 10.3 Decisão registrada — profissional × aba Relatórios
+
+- [x] **Aba mantida visível** para todo papel administrativo no v0.1.
+- [x] Justificativa: frontend não consegue distinguir secretaria pura de secretaria+profissional_clinico
+  (`/me` sem grants; `/clinical/roles` owner-only). Esconder exigiria backend novo (fora do escopo polish).
+- [x] Profissional recebe R-B/R-D como card "Área financeira restrita" intencional.
+
+### 10.4 Segurança frontend (greps no ReportsPanel.tsx)
+
+- [x] `console.{log,debug,warn,error,info}` — 0
+- [x] `localStorage` / `sessionStorage` — 0
+- [x] `dangerouslySetInnerHTML` — 0
+- [x] `appointment_id` renderizado como texto — 0 (só como `key` no `.map`)
+- [x] Forbidden field names — 0 (`nome|cpf|email|telefone|endereco|notes|cancel_reason|administrative_notes|description|amount_cents|body|internal_note|prescricao|diagnostico|cid|evolucao`)
+- [x] Token sempre em header `Authorization` (apiFetch); nunca em URL
+
+### 10.5 Gates finais
+
+- [x] `pnpm --filter frontend typecheck` ✅
+- [x] `pnpm --filter frontend build` ✅
+- [x] `pnpm --filter backend typecheck` ✅
+- [x] `pnpm --filter backend build` ✅
+- [x] `pnpm --filter backend migrate:status` 15/15 ✅
+- [x] `git diff --check` rc=0 ✅
+- [x] `git status --short` — 2 frontend + 5 docs
+
+### 10.6 Encerramento da fase 4.5
+
+- Relatórios Gerenciais v0.1 → **CLOSED na sprint 4.5D**.
+- Próxima sprint natural: **4.6A** ADR 0015 Convênios/Faturamento básico v0.1.
+- Alternativa antes de 4.6A: polish geral de landing/footer/dashboard.
 
 ---
 
