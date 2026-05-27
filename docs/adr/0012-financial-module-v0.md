@@ -63,7 +63,7 @@ ocorrerá em staging local com dados sintéticos.
 
 ## 2. Decisão — resumo dos compromissos
 
-Esta ADR registra 10 compromissos arquiteturais.
+Esta ADR registra 11 compromissos arquiteturais.
 
 1. **Uma entidade central:** `financial_charges` — cobrança financeira criada
    manualmente pelo operador. Representa o que o paciente deve (ou pagou) por
@@ -92,6 +92,11 @@ Esta ADR registra 10 compromissos arquiteturais.
 10. **UX simples:** aba "Financeiro" no app shell com lista de cobranças, cards
     de totais e ação rápida "Marcar como pago". Seção de cobranças do paciente
     dentro do perfil administrativo.
+11. **Integração Agenda × Financeiro sem automação agressiva.** Uma cobrança
+    pode estar vinculada a um agendamento (`appointment_id` opcional). O status
+    financeiro é visível na agenda (badge), mas **nunca altera o status da consulta
+    automaticamente** no v0.1. Humano decide. Alertas são sugestivos, não
+    executivos. Automação configurável por clínica fica para a Sprint 4.4E.
 
 Esta ADR **não autoriza dado financeiro real em produção** — só staging com
 dados sintéticos depois da 4.4B implementar.
@@ -140,12 +145,13 @@ base que viabiliza essas evoluções.
 | Operação | Descrição |
 |---|---|
 | Criar cobrança | Operador cria cobrança com paciente, valor, descrição e vencimento |
-| Listar cobranças | Lista com filtros: status, data, paciente; ordenação por `due_date` desc |
-| Ver detalhe | Dados completos de uma cobrança (valor, método, pagamento, notas) |
+| Listar cobranças | Lista com filtros: status, data, paciente, `appointment_id`; ordenação por `due_date` desc |
+| Ver detalhe | Dados completos de uma cobrança (valor, método, pagamento, notas, agendamento vinculado) |
 | Marcar como pago | Registra `paid_at`, `payment_method` e `paid_by_user_id` |
 | Cancelar | Registra `canceled_at` + `cancel_reason`; sem delete físico |
 | Totalizadores | Em aberto, recebido no período, atrasado (calculados em query) |
 | Histórico por paciente | Cobranças do paciente na tela de cadastro administrativo |
+| Cobranças por agendamento | Filtro `appointment_id` na listagem geral; ou endpoint dedicado `GET /financial/charges?appointment_id=` |
 
 ### 4.2 Ciclo de vida de uma cobrança
 
@@ -207,6 +213,10 @@ base que viabiliza essas evoluções.
 - `payment_method` é allowlist (CHECK constraint): `cash`, `pix`, `card`,
   `bank_transfer`, `other`.
 - `status` é allowlist (CHECK constraint): `pending`, `paid`, `canceled`.
+- `appointment_id`, se informado, deve pertencer à **mesma `clinica_id`** da
+  cobrança e ao **mesmo `patient_id`** do agendamento — validação no service
+  (400 `financial_charge_invalid`). Sem cruzamento de tenant. Sem cruzamento
+  de paciente. Agendamento inexistente/cross-tenant → 400 genérico.
 
 ### 4.4 Totalizadores
 
@@ -242,6 +252,12 @@ Escopo do período: padrão = mês atual; filtros: `date_from`, `date_to`.
 | **`admin_sistema` acessando cobranças** | Bloqueado por `requireClinic` |
 | **Profissional vendo financeiro de outros pacientes** | Sem acesso a financeiro por padrão no v0.1 |
 | **Parcialmente pago / em disputa** | Fora do v0.1 — ciclo de vida simples; revisável em v0.2 |
+| **Confirmação automática de consulta por pagamento** | Fora do v0.1 — humano decide; alerta sugestivo na 4.4E; automação configurável por clínica fica para ADR aditiva |
+| **Cancelamento automático de cobrança por cancelamento de consulta** | Fora do v0.1 — alerta ao operador (4.4E); sem automatismo |
+| **Cancelamento automático de consulta por cancelamento de cobrança** | Fora do v0.1 — alerta ao operador (4.4E); sem automatismo |
+| **Pré-reserva automática até pagamento** | Fora do v0.1 — ADR futura; exige workflow de expiração/liberação de slot |
+| **Webhook de pagamento** | Fora do v0.1 — exige gateway; ADR futura |
+| **Política configurável por clínica** (pagamento → confirmar consulta auto) | Sprint 4.4E ou posterior — ADR aditiva; v0.1 é manual |
 | **Cópia de UI/textos de concorrentes** | Vedada (ADR 0008 §2.9) |
 
 ## 6. Modelo de dados conceitual
@@ -505,6 +521,48 @@ Modal simples:
 
 Sem campo de comprovante no v0.1 (upload exigiria validação de arquivo/MIME).
 
+### 10.6 Cobrança vinculada a agendamento — visibilidade (Sprint 4.4C)
+
+Quando `appointment_id` está preenchido, a cobrança mostra no detalhe:
+- Link/referência ao agendamento vinculado: data, paciente, profissional, status da consulta.
+- Permite navegar ao agendamento a partir do financeiro e vice-versa.
+
+Formulário de nova cobrança: campo opcional "Agendamento vinculado" (dropdown dos agendamentos
+recentes do paciente selecionado) — já previsto no §10.4.
+
+### 10.7 Badge financeiro na Agenda (Sprint 4.4E)
+
+> Planejamento conceitual — **não é escopo da 4.4C** (frontend financeiro).
+> A Sprint 4.4E implementará a integração visual Agenda × Financeiro.
+
+Cada card de agendamento na aba Agenda deve exibir um badge de status financeiro:
+
+| Situação | Badge | Cor sugerida |
+|---|---|---|
+| Cobrança `pending`, `due_date` ainda não vencido (ou NULL) | "Cobrança pendente" | amarelo |
+| Cobrança `pending`, `due_date < hoje` | "Vencido" | vermelho |
+| Cobrança `paid` | "Pago" | verde |
+| Cobrança `canceled` | "Cobrança cancelada" | cinza |
+| Sem cobrança vinculada | (sem badge financeiro) | — |
+
+O badge é **informativo** — não altera o status da consulta automaticamente.
+
+### 10.8 Alertas de integração Agenda × Financeiro (Sprint 4.4E)
+
+Alertas são **sugestões ao operador** — sem automação agressiva. Invariante do v0.1.
+
+| Evento | Alerta exibido | Ação sugerida |
+|---|---|---|
+| Cobrança marcada como paga | "Pagamento recebido. Deseja confirmar a consulta?" | Botão "Confirmar consulta" (opcional — operador decide) |
+| Agendamento cancelado com cobrança `pending` ou `paid` vinculada | "Este agendamento tem cobrança vinculada. Revise a cobrança." | Botão "Ver cobrança" |
+| Cobrança cancelada com agendamento `scheduled` ou `confirmed` | "Esta cobrança está vinculada a um agendamento ativo. Revise a agenda." | Botão "Ver agendamento" |
+
+**Invariantes dos alertas:**
+- Cancelar consulta **nunca cancela cobrança automaticamente** no v0.1.
+- Marcar cobrança como paga **nunca confirma consulta automaticamente** no v0.1.
+- O humano (secretaria/dono/gestor) sempre decide cada ação.
+- Alertas são dismissíveis — não bloqueiam o fluxo.
+
 ## 11. Endpoints conceituais
 
 Prefixo `/financial/`. Todos exigem `requireAuth` + `requireClinic`.
@@ -521,8 +579,10 @@ Permissões conforme §7.
 ### 11.2 `GET /financial/charges` — listar
 
 - **Middleware:** `requireAuth → requireClinic → requireRole(['dono_clinica','secretaria','gestor_clinica'])`.
-- **Query params:** `patient_id?`, `status?`, `date_from?`, `date_to?`, `limit?`, `offset?`.
+- **Query params:** `patient_id?`, `status?`, `date_from?`, `date_to?`, `appointment_id?`, `limit?`, `offset?`.
 - **Response 200:** lista de cobranças (sem `notes` no shape de lista — apenas em detalhe).
+  Se `appointment_id` informado, retorna cobranças vinculadas ao agendamento específico
+  (com validação de tenant, mas **sem exigir** `patient_id` extra — o agendamento já pertence à clínica).
 - **Erros:** 400, 403, 401.
 
 ### 11.3 `GET /financial/charges/:id` — detalhe
@@ -571,6 +631,17 @@ Permissões conforme §7.
 - **Response 200:** lista de cobranças do paciente (sem `notes`).
 - **Erros:** 404 `patient_not_found`, 403, 401.
 
+### 11.9 `GET /appointments/:id/charges` — cobranças de um agendamento (Sprint 4.4E)
+
+> **Decisão:** este endpoint **não entra na 4.4B**. O filtro `appointment_id?` em
+> `GET /financial/charges` é suficiente para a 4.4B. O endpoint dedicado
+> `/appointments/:id/charges` pode ser adicionado na **Sprint 4.4E** (integração
+> Agenda × Financeiro) se o produto justificar.
+>
+> Justificativa: o endpoint exigiria montar o router de appointments no contexto do
+> financeiro ou duplicar lógica. O filtro via query param resolve o caso de uso com
+> zero código extra na 4.4B.
+
 ## 12. Plano de implementação Sprint 4.4B
 
 Ordem sugerida. Cada passo é um commit independente.
@@ -601,6 +672,10 @@ Ordem sugerida. Cada passo é um commit independente.
    - Tentar editar cobrança paga/cancelada → 400.
    - Totalizadores em aberto / recebido / atrasado.
    - Cobranças do paciente.
+   - Criar cobrança com `appointment_id` válido (mesmo `patient_id`) → 201.
+   - `GET /financial/charges?appointment_id=<uuid>` → 200 (só a cobrança vinculada).
+   - Criar cobrança com `appointment_id` de outro paciente → 400 `financial_charge_invalid`.
+   - Criar cobrança com `appointment_id` de outra clínica → 400 genérico.
    - secretaria pode criar/pagar/cancelar → 200.
    - gestor pode listar/pagar/cancelar → 200; gestor não cria → 403.
    - profissional_clinico → 403 em todos endpoints.
@@ -616,6 +691,20 @@ Ordem sugerida. Cada passo é um commit independente.
 10. **Documentação:** atualizar `CLAUDE.md`, `project-state.md`,
     `sprint-history.md`, `security-notes.md`, `testing-checklist.md`.
 11. **Limpeza:** dados sintéticos dos smoke tests removidos.
+
+### 12.1 Sprints seguintes após 4.4B
+
+| Sprint | Escopo |
+|---|---|
+| **4.4C** | Frontend Financeiro: aba "Financeiro" no app shell; cards de totalizadores; lista de cobranças; formulário de criação (com `appointment_id` opcional); modal "Marcar como pago"; cobrança vinculada mostrando o agendamento |
+| **4.4D** | QA/hardening Financeiro v0.1: smoke N/N PASS; audit/logs verificados; cleanup; docs atualizados; zero código novo |
+| **4.4E** | Integração Agenda × Financeiro: badge financeiro na Agenda (pending/pago/vencido/sem cobrança); alertas Agenda→Financeiro e Financeiro→Agenda; botão "Criar cobrança" a partir da consulta; confirmação humana de consulta via alerta; **sem automação** (invariante v0.1) |
+
+**Decisão sobre 4.4B vs 4.4E:**
+- `appointment_id` como FK opcional **entra na 4.4B** (schema já o tem; validação simples).
+- Filtro `appointment_id?` em `GET /financial/charges` **entra na 4.4B** (parâmetro extra na query).
+- Badge e alertas na Agenda **ficam para a 4.4E** (modificam o frontend da Agenda, fora do escopo do módulo financeiro puro).
+- Botão "Criar cobrança" a partir da consulta **fica para a 4.4E** (UX de Agenda, não de Financeiro).
 
 ## 13. Impacto na trilha AWS
 
@@ -643,6 +732,12 @@ Trilha AWS continua **⏸️ pausada** (ADR 0008 §6 + ADR 0009 §10).
 | **Conversão de moeda** | `CHECK currency = 'BRL'` no v0.1; sem conversão; revisável se produto for para outros países |
 | **Cifra ausente em `amount_cents`/`notes`** | RDS encryption at rest + TLS in transit + controles de app; sem cifra de coluna no v0.1 |
 | **Cobrança duplicada por duplo clique** | Idempotência via UX (debounce/loading) + sem constraint UNIQUE no v0.1 (cobranças distintas podem ter mesmo valor) |
+| **`appointment_id` com `patient_id` divergente** | Validação no service antes do INSERT — 400 `financial_charge_invalid`; sem cruzamento silencioso |
+| **Pagamento confirmar consulta automaticamente por engano** | Sem automação no v0.1 — alerta é sugestivo; humano decide; invariante explícita em §10.8 |
+| **Consulta cancelada com cobrança ativa (estado financeiro órfão)** | Alerta ao operador na 4.4E; sem cancelamento automático de cobrança; cobrança permanece `pending` até ação humana |
+| **Cobrança cancelada com consulta ainda confirmada** | Alerta ao operador na 4.4E; sem alteração automática de agenda; consulta permanece no status atual |
+| **Paciente paga mas consulta não é confirmada por erro humano** | UX de alerta explícito (§10.8) + audit trail; humano é responsável pela confirmação — intencional no v0.1 |
+| **Dependência de webhook/gateway para automação futura** | Decisão adiada; v0.1 é 100% manual; automação exige ADR própria + análise de falhas/idempotência/rollback |
 
 ## 15. Valor de produto e oportunidades futuras
 
@@ -660,7 +755,111 @@ O módulo financeiro v0.1 adiciona valor imediato ao ClinicBridge:
 - Relatórios gerenciais avançados: DRE simples, fluxo de caixa (Fase 4.5).
 - Convênios/faturamento TISS (Fase 4.6).
 
-## 16. Notas finais
+## 16. Integração Agenda × Financeiro — Nível 3
+
+> Adicionado em ajuste da Sprint 4.4A (2026-05-27) — antes do início da 4.4B.
+> Esta seção fecha as decisões de integração antes de qualquer código.
+
+### 16.1 Modelo conceitual de dois estados independentes
+
+O produto separa explicitamente dois domínios:
+
+| Domínio | Estados | Tabela | Módulo |
+|---|---|---|---|
+| **Status da consulta** | `scheduled` → `confirmed` \| `cancelled` \| `rescheduled` \| `no_show` \| `completed` | `scheduling` (agendamentos) | Agenda Administrativa (ADR 0006) |
+| **Status financeiro** | `pending` → `paid` \| `canceled` | `financial_charges` | Financeiro (esta ADR) |
+
+**Princípio:** os dois estados são independentes. Um não controla o outro automaticamente no v0.1.
+Uma consulta `confirmed` pode ter cobrança `pending`. Uma consulta `cancelled` pode ter cobrança
+`paid`. O operador gerencia os dois explicitamente.
+
+### 16.2 Vínculo appointment_id — regras de integridade
+
+- `appointment_id` é **opcional** em `financial_charges`. Uma cobrança pode existir sem agendamento.
+- Quando informado: `appointment_id` deve pertencer à **mesma `clinica_id`** e ao **mesmo
+  `patient_id`** da cobrança — validação no service antes do INSERT/UPDATE.
+- FK no banco: `FK scheduling(id) ON DELETE SET NULL` — se o agendamento for removido fisicamente
+  (impossível com as invariantes atuais), a cobrança sobrevive sem vínculo.
+- Um agendamento pode ter **0 ou N cobranças** (sem UNIQUE constraint em `appointment_id`).
+  Caso típico é 1, mas clínicas podem ter cobranças de retorno ou itens extras.
+
+### 16.3 Fluxo operacional v0.1
+
+```
+Agendamento criado
+      │
+      ▼
+  Secretaria/dono cria cobrança manualmente
+      │  (appointment_id preenchido — link explícito)
+      ▼
+  Cobrança: pending
+      │
+      │  Paciente paga (presencialmente)
+      │  Operador clica "Marcar como pago"
+      ▼
+  Cobrança: paid
+      │
+      │  Sistema mostra alerta: "Pagamento recebido. Deseja confirmar a consulta?"
+      │  Operador clica "Confirmar consulta" (opcional)
+      ▼
+  Agendamento: confirmed  ◄── decisão humana
+```
+
+**Anti-fluxo (o que NÃO acontece no v0.1):**
+```
+  Cobrança: paid  ─── NÃO → Agendamento: confirmed  (sem automação)
+  Agendamento: cancelled ─── NÃO → Cobrança: canceled (sem automação)
+```
+
+### 16.4 Badge financeiro — modelo de dados na query
+
+Na 4.4E, o frontend da Agenda exibirá o badge financeiro. Para isso o endpoint de agendamentos
+precisará de um JOIN (ou sub-query) em `financial_charges`:
+
+```sql
+-- Para cada agendamento, pegar o status financeiro mais relevante
+SELECT
+  a.id,
+  a.status AS appointment_status,
+  (
+    SELECT fc.status
+    FROM financial_charges fc
+    WHERE fc.appointment_id = a.id
+      AND fc.clinica_id = a.clinica_id
+    ORDER BY fc.created_at DESC
+    LIMIT 1
+  ) AS financial_status,
+  (
+    SELECT fc.due_date
+    FROM financial_charges fc
+    WHERE fc.appointment_id = a.id
+      AND fc.clinica_id = a.clinica_id
+      AND fc.status = 'pending'
+    ORDER BY fc.due_date ASC NULLS LAST
+    LIMIT 1
+  ) AS pending_due_date
+FROM scheduling a
+WHERE a.clinica_id = :clinica_id
+...
+```
+
+**Decisão:** este JOIN **não entra na 4.4B nem na 4.4C** — é adicionado no endpoint de
+agendamentos na **Sprint 4.4E**. O endpoint financeiro não precisa conhecer a Agenda.
+
+### 16.5 Decisões explícitas deste ajuste
+
+| Decisão | Escolha | Justificativa |
+|---|---|---|
+| `appointment_id` entra em 4.4B? | **Sim** — FK opcional no schema, validação no service | Schema já prevê; validação simples |
+| Filtro `appointment_id?` em listagem entra em 4.4B? | **Sim** — parâmetro extra em query | Zero custo; viabiliza 4.4E sem refactor |
+| Badge financeiro na Agenda entra em 4.4C? | **Não** — fica para 4.4E | 4.4C é frontend financeiro puro; Agenda é módulo separado |
+| Alertas de integração entram em 4.4C? | **Não** — fica para 4.4E | Mesma razão; requer modificar Agenda |
+| Botão "Criar cobrança" na consulta entra em 4.4C? | **Não** — fica para 4.4E | Modifica UX de Agenda, fora do escopo de Financeiro |
+| Confirmação automática de consulta por pagamento? | **Nunca no v0.1** — invariante | Risco de erro operacional; humano decide |
+| Cancelamento automático de cobrança por consulta cancelada? | **Nunca no v0.1** — invariante | Mesmo motivo |
+| Política configurável por clínica? | **Fora do v0.1** — ADR aditiva | Complexidade de configuração; sprint futura |
+
+## 17. Notas finais
 
 - Esta ADR **não afirma conformidade fiscal, contábil ou tributária**.
   Validação jurídica/contábil externa **obrigatória** antes de qualquer dado
