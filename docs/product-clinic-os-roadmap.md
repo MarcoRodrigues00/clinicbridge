@@ -46,8 +46,8 @@
 | **4.4** | Operacional — financeiro | Pendente | ADR 0012 (futura) | Financeiro v0.1 (contas a pagar/receber, fluxo de caixa) |
 | **4.5** | Operacional — relatórios | ✅ 4.5A–D entregues | ADR 0014 ✅ | Relatórios gerenciais v0.1 · `docs/management-reports-v0-scope.md` |
 | **4.6** | Operacional — serviços | ✅ 4.6A–D entregues | ADR 0015 ✅ | Catálogo de Serviços v0.1 · `docs/services-catalog-v0-scope.md` |
-| **4.7** | Operacional — convênios | 4.7A ✅ docs/ADR · 4.7B–D ⏳ | ADR 0016 ✅ | Convênios manual básico v0.1 · `docs/insurance-billing-v0-scope.md` |
-| **4.8** | Operacional — estoque | Pendente | ADR 0017 (futura) | Estoque básico v0.1 (medicamentos controlados/ANVISA fora) |
+| **4.7** | Operacional — convênios | ✅ 4.7A–D entregues | ADR 0016 ✅ | Convênios manual básico v0.1 · `docs/insurance-billing-v0-scope.md` |
+| **4.8** | Operacional — estoque | 4.8A ✅ docs/ADR · 4.8B–D ⏳ | ADR 0017 ✅ | Estoque básico v0.1 · `docs/inventory-v0-scope.md` (medicamentos controlados/ANVISA fora) |
 
 **Fases futuras planejadas (sem número ainda, exigem ADR própria):**
 
@@ -407,9 +407,9 @@ Migração assistida (não automática) para `patient_insurances` decidida em 4.
 | Sprint | Escopo |
 |---|---|
 | **4.7A** ✅ | ADR 0016 — Convênios v0.1 (docs-only) |
-| **4.7B** ⏳ | Backend: 4 tabelas novas + extensão `financial_charges` + DAOs + endpoints |
-| **4.7C** ⏳ | Frontend: seção convênios no paciente + badge na agenda + split financeiro |
-| **4.7D** ⏳ | QA/hardening convênios |
+| **4.7B** ✅ | Backend: 4 tabelas novas + extensão `financial_charges` + 17 endpoints — smoke 47/47 PASS |
+| **4.7C** ✅ | Frontend: `InsurancePanel` (aba Convênios) + payer_type no `FinancialPanel` — typecheck/build ✅ |
+| **4.7D** ✅ | QA/hardening convênios — subtabs UI, PayerBadge, MarkPaid payer-aware, canWrite fix, holder_name PII fix |
 | **Fase futura** | `appointment_insurance_authorizations` + estados separados patient_paid/insurance_received |
 
 **Não no v0.1:**
@@ -422,32 +422,44 @@ Migração assistida (não automática) para `patient_insurances` decidida em 4.
 
 **Natureza:** **operacional**.
 
-**Status:** Pendente.
+**Status:** 4.8A ✅ (docs/ADR-only, 2026-05-27) · 4.8B–D ⏳.
 
-**ADR:** ADR 0017 (Sprint 4.8A, futura).
+**ADR:** ADR 0017 ✅ aceita — `docs/adr/0017-inventory-v0.md`.
+Operacional: `docs/inventory-v0-scope.md`.
 
-**Objetivo:** controle de estoque básico de materiais e insumos da clínica
-(gaze, seringas, materiais administrativos). **Sem medicamentos controlados
-no v0.1.**
+**Objetivo:** controle manual de entrada/saída de materiais e insumos da clínica
+(gaze, seringas, materiais administrativos). **Humano decide toda movimentação.**
+**Sem medicamentos controlados no v0.1.**
 
-**Entregáveis esperados:**
-1. **ADR 0017** — escopo do estoque:
-   - Entidades: `stock_items`, `stock_movements` (entrada/saída/ajuste),
-     `stock_categories`.
-   - Operações: cadastro de item, movimentação manual (entrada/saída),
-     alerta de estoque mínimo.
-   - Migração: importar inventário inicial via CSV/XLSX (reusa pipeline).
-   - Permissões: role **gestor** + **dono**.
-   - Vínculo com atendimento (consumo por procedimento): **opcional** no v0.1;
-     se entrar, só vínculo manual (sem dedução automática).
-2. Implementação (sprints próprias).
+**Entidades (ADR 0017 §3):**
+- `inventory_items` — catálogo de itens (name 1..120, category ≤80, unit 1..40,
+  current_quantity, minimum_quantity, location nullable, notes nullable ≤500, active;
+  UNIQUE INDEX `(clinica_id, lower(btrim(name)))`).
+- `inventory_movements` — append-only (movement_type: `entry|exit|adjustment|loss`;
+  quantity_delta ≠ 0; reason nullable ≤300; created_by_user_id).
 
-**Não no v0.1 (registrado explicitamente):**
+**Permissões (ADR 0017 §4):**
+- `dono_clinica`: CRUD de itens + registrar movimentos + ler.
+- `secretaria`: registrar movimentos + ler (sem CRUD de itens).
+- `profissional_clinico`: bloqueado.
+
+**Sequência de sprints:**
+
+| Sprint | Escopo |
+|---|---|
+| **4.8A** ✅ | ADR 0017 — Estoque v0.1 (docs-only). Gate: 4.7A–D ✅ |
+| **4.8B** ⏳ | Backend: `inventory_items` + `inventory_movements` + DAOs + service + endpoints |
+| **4.8C** ⏳ | Frontend: aba Estoque + `InventoryPanel` (lista, movimentos, alerta mínimo) |
+| **4.8D** ⏳ | QA/hardening Estoque v0.1 |
+
+**Não no v0.1 (invariantes permanentes desta ADR):**
 - **Medicamentos controlados (SNGPC / RDC ANVISA)** — rastreabilidade de lote
-  com fins regulatórios; receituário azul/amarelo; integração com sistema da
-  ANVISA → **ADR própria futura** depois da Fase 4.8 estabilizada.
-- Nota fiscal de saída; rastreamento por lote/validade com força legal;
-  integração com fornecedores; cotação automática; código de barras.
+  com fins regulatórios; receituário azul/amarelo; integração ANVISA → ADR própria futura.
+- Lote/validade obrigatórios com força legal; código de barras/RFID.
+- Fornecedor, pedido de compra, NF-e; custo médio; integração contábil.
+- Dedução automática por serviço ou agendamento (humano decide no v0.1).
+- Vínculo `patient_id` em movimentos (proibido sem ADR clínica).
+- Import CSV de inventário inicial (pode entrar no v0.2 com demanda real).
 
 ---
 

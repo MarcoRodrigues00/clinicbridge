@@ -7,6 +7,23 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.8A** (entregue 2026-05-27) — **ADR 0017 Estoque v0.1 (docs/ADR-only).**
+
+ADR 0017 + `docs/inventory-v0-scope.md` criados. Estoque v0.1 = controle manual de
+entrada/saída de materiais e insumos. Entidades: `inventory_items` (catálogo com
+name 1..120, category ≤80, unit 1..40, current_quantity, minimum_quantity, location,
+notes ≤500, active) + `inventory_movements` (append-only: movement_type
+entry|exit|adjustment|loss, quantity_delta ≠ 0, reason ≤300 nullable,
+created_by_user_id). Permissões: dono_clinica CRUD completo; secretaria registra
+movimentos + lê; profissional_clinico bloqueado. Invariantes: sem PII de paciente;
+notes/reason nunca em audit; append-only em movimentos; sem dedução automática;
+medicamentos controlados (SNGPC/ANVISA) fora do v0.1.
+`git diff --check` rc=0 ✅. **Zero código, schema, migration ou env.**
+
+**Próxima sprint:** **4.8B** Backend Estoque v0.1.
+
+---
+
 **Sprint 4.7D** (entregue 2026-05-27) — **QA/Hardening + UX Polish Convênios v0.1.**
 
 Bugs corrigidos: `canWrite={true}` hardcode → `canWrite={isOwner || papel === 'secretaria'}`;
@@ -18,7 +35,7 @@ UX: subtabs internas no `InsurancePanel` ("Carteirinhas dos pacientes" / "Convê
 Zero migration, zero novo endpoint.
 `pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
 
-**Próxima sprint:** **4.8A** ADR 0017 Estoque v0.1.
+**Próxima sprint:** 4.8A ✅ entregue.
 
 ---
 

@@ -91,7 +91,10 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **4.6C.2** ✅ | Correção: controllers não repassavam `service_id`; CSS; isError guard; aba Serviços separada |
 | **4.6D** ✅ | QA/hardening Catálogo de Serviços — smoke 41/41 PASS |
 | **4.7A** ✅ | ADR 0016 — Convênios v0.1 (docs-only). 4 entidades, permissões, LGPD, invariantes. Gate: ADR 0016 aceita ✅ |
-| **4.7B** ⏳ | Backend Convênios v0.1 — 4 tabelas novas + extensão `financial_charges` + endpoints. Gate: ADR 0016 ✅ |
+| **4.7B** ✅ | Backend Convênios v0.1 — 4 tabelas + extensão `financial_charges` + 17 endpoints — smoke 47/47 PASS |
+| **4.7C** ✅ | Frontend Convênios v0.1 — `InsurancePanel` (aba Convênios) + payer_type no `FinancialPanel`. typecheck/build ✅ |
+| **4.7D** ✅ | QA/hardening Convênios v0.1 — bugs canWrite/holder_name/paciente corrigidos; subtabs UI; PayerBadge; MarkPaidModal payer-aware; footer "Clinic OS". typecheck/build ✅ |
+| **4.8A** ✅ | ADR 0017 — Estoque v0.1 (docs-only). 2 entidades, permissões, invariantes. Gate: ADR 0017 aceita ✅ |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.
