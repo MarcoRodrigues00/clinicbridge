@@ -4287,3 +4287,67 @@ Zero mudanças de código, schema, migration ou env.
 - `git status --short` — apenas docs modificados/criados ✅
 
 **Próxima sprint natural:** 4.5B (backend relatórios — DAO + service + 4 endpoints + smoke tests).
+
+## Sprint 4.5B — Backend Relatórios Gerenciais v0.1
+
+**Entregue:** 2026-05-27
+**Objetivo:** Implementar os 4 endpoints read-only definidos pela ADR 0014 (sprint 4.5A).
+Sem migration, sem nova tabela, sem dados clínicos, sem PII em payload ou audit.
+
+### Implementação
+
+Arquivos novos:
+- `backend/src/dao/reportsDao.ts` — acesso a `appointments`, `financial_charges`, `patients`, `clinic_professionals` (validação cross-tenant). Sempre filtra `clinica_id`. Sem `listAll`.
+- `backend/src/services/reportsService.ts` — validação de filtros, autorização R-B/R-D (`effectiveFinancialAccess`), audit best-effort, montagem das 4 respostas.
+- `backend/src/controllers/reportsController.ts` — 4 handlers; constrói `ReportActor` + `AuthContext`.
+- `backend/src/routes/reports.ts` — 4 rotas com pipeline `patientsRateLimit → requireAuth → requireClinic → requireRole(['dono_clinica','secretaria'])`.
+
+Arquivo modificado:
+- `backend/src/app.ts` — importa e registra `reportsRouter` logo após `financialChargesRouter`.
+
+### Endpoints
+
+| Endpoint | Filtros | Acesso |
+|----------|---------|--------|
+| `GET /reports/appointments` | `date_from`, `date_to`, `professional_id?` | dono + secretaria (todos) |
+| `GET /reports/financial` | `date_from`, `date_to` | dono + secretaria; gestor=transact; profissional=403 |
+| `GET /reports/patients` | `date_from`, `date_to`, `no_appt_days?` (1..365) | dono + secretaria (todos) |
+| `GET /reports/agenda-financial` | `date_from`, `date_to`, `professional_id?` | dono + secretaria; gestor=transact; profissional=403 |
+
+### Decisões técnicas
+
+1. **Janela `[from, to)`** — `date_to` (calendário inclusivo) é traduzido em `to = date_to + 1 dia` no serviço para que toda SQL seja `>= from AND < to`.
+2. **R-B `pending`/`overdue` ignoram janela** — saldo aberto atual (ADR 0014 §3.3).
+3. **R-A `attention list`** — até 20 ids de agendamentos `scheduled`/`confirmed` que já passaram (cutoff = hoje−3 dias). Apenas `appointment_id` + `starts_at` + `status` no projection.
+4. **R-D `latest charge per appointment`** — raw SQL parametrizado com `DISTINCT ON (fc.appointment_id) ... ORDER BY fc.created_at DESC` (Postgres-only). 8 buckets agregados; nenhum id de linha sai do DAO.
+5. **Validação de data** — round-trip ISO (rejeita `2026-02-30` que JS aceita silenciosamente). UUID validado por regex antes de qualquer hit no DB. `professional_id` exige existência cross-tenant na própria clínica.
+6. **Audit metadata-only** — `report.<type>.view.success`, `recurso='report'`, `recurso_id='<type>:<from>:<to>'`. Sem totais, sem valores, sem PII. Best-effort (não aborta resposta).
+7. **Rate limit** — reusa `patientsRateLimit` (read-style, IP-keyed, antes de `requireAuth`).
+
+### Smoke tests
+
+- Auth/permissão: **24/24 PASS** (sem token, owner, secretaria, gestor, profissional, admin × 4 endpoints).
+- Filtros inválidos: **10/10 PASS** (`date_from` formato, `date_to` formato, `feb 30`, `date_to < date_from`, intervalo > 366 dias, `professional_id` mal-formado, `professional_id` cross-tenant, `no_appt_days` non-numeric/0/999).
+- Payload safety: **12/12 PASS** (varredura recursiva de chaves + substring scan em `cpf/@/diagnostic/prescric/cancel_reason/...`).
+- Content shape: **5/5 PASS** (chaves obrigatórias em `data` + `attention`).
+- Audit DB: **22 linhas** `report.*.view.success` com `recurso_id` no formato esperado, todas com `usuario_id`/`clinica_id`/`ip` preenchidos.
+
+### Gates finais
+
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter backend migrate:status` 15/15 (zero pendentes, zero novas) ✅
+- `pnpm --filter frontend typecheck` ✅
+- `git diff --check` rc=0 ✅
+- `git status --short` — 1 modificado (`app.ts`) + 4 novos (reports*) ✅
+
+### Ressalvas
+
+- Sem frontend até 4.5C.
+- Sem export (CSV/PDF/XLSX) no v0.1 — futuro com ADR própria.
+- Relatórios on-demand; sem cache nem materialização (futuro se virar gargalo de performance).
+- Intervalo máximo 366 dias por desenho (ADR 0014). Floor soft ~2 anos.
+- Sem dados clínicos. Sem nomes/CPF/contato de pacientes; apenas `appointment_id` na lista de atenção.
+- Profissional `effectiveFinancialAccess='none'` → 403 nas trilhas R-B/R-D.
+
+**Próxima sprint natural:** 4.5C (frontend relatórios — aba "Relatórios" no Dashboard com cards e filtros).

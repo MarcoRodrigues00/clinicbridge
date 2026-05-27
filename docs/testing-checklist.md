@@ -2055,3 +2055,138 @@ Estado final `financial_charges`: 1 pending · 6 paid · 22 canceled.
 
 Cobrança sintética `dcd487fb` (4.4E-D) → cancelada.
 Usuários smoke preservados. Pacientes/agendamentos/importações/documentos base intactos.
+
+## Smoke Backend Relatórios Gerenciais v0.1 — Sprint 4.5B (ADR 0014)
+
+> 4 endpoints read-only. Sem migration, sem PII, sem dados clínicos.
+
+### Endpoints
+- `GET /reports/appointments` (R-A)
+- `GET /reports/financial` (R-B)
+- `GET /reports/patients` (R-C)
+- `GET /reports/agenda-financial` (R-D)
+
+### Filtros aceitos
+- `date_from`, `date_to` — `YYYY-MM-DD`. Default: 1º do mês corrente → hoje. Intervalo ≤ 366 dias. Floor ~2 anos.
+- `professional_id` — apenas R-A e R-D. UUID v4. Validado contra `clinic_professionals` da clínica (cross-tenant → 400).
+- `no_appt_days` — apenas R-C. Inteiro 1..365, default 90.
+
+### Pipeline (toda rota)
+1. `patientsRateLimit` (IP-keyed, antes do auth)
+2. `requireAuth`
+3. `requireClinic`
+4. `requireRole(['dono_clinica','secretaria'])`
+5. Serviço (R-B/R-D): `effectiveFinancialAccess !== 'none'`
+
+### Matriz de permissão (Sprint 4.5B — 24/24 PASS)
+
+| Usuário | R-A | R-B | R-C | R-D |
+|---------|-----|-----|-----|-----|
+| (sem token) | 401 | 401 | 401 | 401 |
+| `smoke.owner` (dono_clinica) | 200 | 200 | 200 | 200 |
+| `smoke.secretaria` (secretaria, sem grants) | 200 | 200 | 200 | 200 |
+| `smoke.gestor` (secretaria + gestor_clinica) | 200 | 200 | 200 | 200 |
+| `smoke.profissional` (secretaria + profissional_clinico) | 200 | **403 forbidden_role** | 200 | **403 forbidden_role** |
+| `smoke.admin` (admin_sistema, sem clínica) | **403 no_clinic_context** | **403 no_clinic_context** | **403 no_clinic_context** | **403 no_clinic_context** |
+
+### Roteiro Python (sem jq)
+
+```python
+import json, ssl, urllib.request
+BASE = "https://localhost:8443"; PASS = "SmokeDevOnly!23"
+ctx = ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
+def post(p,b):
+    req=urllib.request.Request(f"{BASE}{p}",data=json.dumps(b).encode(),method="POST")
+    req.add_header("Content-Type","application/json")
+    try:
+        with urllib.request.urlopen(req,context=ctx) as r: return r.status,json.loads(r.read())
+    except urllib.error.HTTPError as e: return e.code,json.loads(e.read())
+def get(p,t=None):
+    req=urllib.request.Request(f"{BASE}{p}",method="GET")
+    if t: req.add_header("Authorization",f"Bearer {t}")
+    try:
+        with urllib.request.urlopen(req,context=ctx) as r: return r.status,json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        try: b=json.loads(e.read())
+        except Exception: b=None
+        return e.code,b
+T={k:post("/auth/login",{"email":f"smoke.{k}@clinicbridge.local","senha":PASS})[1]["token"]
+   for k in ["owner","secretaria","profissional","gestor","admin"]}
+for ep in ["/reports/appointments","/reports/financial","/reports/patients","/reports/agenda-financial"]:
+    print(ep, "→", {k:get(ep,T[k])[0] for k in T})
+```
+
+### Filtros inválidos (10/10 PASS — esperado `400 report_invalid_filters`)
+
+| Caso | Esperado |
+|------|----------|
+| `date_from=2026/05/01` (formato errado) | 400 |
+| `date_to=27-05-2026` (formato errado) | 400 |
+| `date_from=2026-02-30` (data impossível, round-trip ISO) | 400 |
+| `date_from=2026-05-20&date_to=2026-05-10` (ordem invertida) | 400 |
+| `date_from=2024-01-01&date_to=2026-05-27` (intervalo > 366 dias) | 400 |
+| `professional_id=not-a-uuid` | 400 |
+| `professional_id=00000000-0000-0000-0000-000000000000` (não existe na clínica) | 400 |
+| `no_appt_days=abc` | 400 |
+| `no_appt_days=0` (abaixo do mínimo) | 400 |
+| `no_appt_days=999` (acima do máximo) | 400 |
+
+### Payload safety (varredura recursiva — 12/12 PASS)
+
+Chaves proibidas (jamais aparecem nas 4 respostas):
+`cpf, email, telefone, endereco, nome, name, notes, cancel_reason, description, clinical,
+diagnostico, cid, prescricao, evolucao, body, private_note, internal_note, administrative_notes`.
+
+Substrings proibidas no JSON serializado:
+`cpf, @, prescric, diagnostic, cid (isolado), evolu, cancel_reason`.
+
+### Content shape esperado
+
+```jsonc
+// R-A
+{ "report":"appointments", "date_from":"…", "date_to":"…", "professional_id":null,
+  "data":{"total":N,"scheduled":N,"confirmed":N,"completed":N,"cancelled":N,"rescheduled":N,"no_show":N,"attendance_rate":0..1},
+  "attention":[{"appointment_id":"uuid","starts_at":"ISO","status":"…"}, …max 20],
+  "generated_at":"ISO" }
+
+// R-B
+{ "report":"financial", "date_from":"…", "date_to":"…",
+  "data":{"received_cents":N,"pending_cents":N,"overdue_cents":N,"canceled_cents":N,
+          "count_paid":N,"count_pending":N,"count_overdue":N,"count_canceled":N,
+          "by_payment_method":[{"method":"cash|pix|card|bank_transfer|other","total_cents":N,"count":N}, …]},
+  "generated_at":"ISO" }
+
+// R-C
+{ "report":"patients", "date_from":"…", "date_to":"…", "no_appt_days":N,
+  "data":{"total_active":N,"total_archived":N,"new_in_period":N,
+          "with_appointment_in_period":N,"without_recent_appointment":N},
+  "generated_at":"ISO" }
+
+// R-D
+{ "report":"agenda-financial", "date_from":"…", "date_to":"…", "professional_id":null,
+  "data":{"appointments_total":N,"with_pending_charge":N,"with_paid_charge":N,
+          "with_overdue_charge":N,"with_canceled_charge":N,"without_charge":N,
+          "cancelled_with_pending":N,"charge_canceled_appt_active":N},
+  "generated_at":"ISO" }
+```
+
+### Audit (metadata-only)
+
+```sql
+SELECT acao, recurso, recurso_id, usuario_id IS NOT NULL, clinica_id IS NOT NULL, ip IS NOT NULL
+FROM audit_logs
+WHERE acao LIKE 'report.%'
+ORDER BY criado_em DESC LIMIT 12;
+```
+
+Esperado: `acao='report.<type>.view.success'`, `recurso='report'`,
+`recurso_id='<type>:<date_from>:<date_to>'` (sem valores, sem PII).
+
+### Ressalvas (Sprint 4.5B)
+
+- Sem frontend até 4.5C.
+- Sem export (CSV/PDF/XLSX) no v0.1.
+- Relatórios on-demand, sem cache nem materialização.
+- Intervalo máximo 366 dias por desenho.
+- Sem dados clínicos; sem nomes/CPF/contato.
+- Profissional → 403 em R-B/R-D (mesma matriz do Financeiro v0.1).

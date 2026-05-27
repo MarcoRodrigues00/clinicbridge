@@ -7,6 +7,68 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.5B** (entregue 2026-05-27) — **Backend Relatórios Gerenciais v0.1.**
+Implementação dos 4 endpoints read-only definidos pela ADR 0014.
+Arquivos novos: `backend/src/dao/reportsDao.ts`, `backend/src/services/reportsService.ts`,
+`backend/src/controllers/reportsController.ts`, `backend/src/routes/reports.ts`.
+Registro: `backend/src/app.ts` adiciona `app.use(reportsRouter)` após `financialChargesRouter`.
+
+**Endpoints:**
+- `GET /reports/appointments` (R-A) — totais por status + `attendance_rate` + lista de
+  até 20 ids de "pendentes em atraso" (apenas `appointment_id` + `starts_at` + `status`).
+  Filtros: `date_from`, `date_to`, `professional_id?` (validado contra `clinic_professionals` da clínica).
+- `GET /reports/financial` (R-B) — `received_cents`/`pending_cents`/`overdue_cents`/`canceled_cents`
+  + contagens + breakdown por `payment_method`. Janela aplica em `paid_at` / `canceled_at`;
+  `pending`/`overdue` ignoram janela (saldo aberto atual, ADR 0014 §3.3).
+- `GET /reports/patients` (R-C) — `total_active`, `total_archived` (`merged_into_id IS NULL`),
+  `new_in_period`, `with_appointment_in_period`, `without_recent_appointment`.
+  Filtros extras: `no_appt_days` (1..365, default 90).
+- `GET /reports/agenda-financial` (R-D) — 8 contadores (appointments_total, with_pending_charge,
+  with_paid_charge, with_overdue_charge, with_canceled_charge, without_charge,
+  cancelled_with_pending, charge_canceled_appt_active). Join `appointments × latest_charge_por_appointment`
+  via `DISTINCT ON` em raw SQL parametrizado.
+
+**Validação de filtros:** YYYY-MM-DD (com round-trip check anti-rollover de fevereiro);
+`date_to >= date_from`; intervalo ≤ 366 dias; floor ~2 anos; default = mês corrente (1º → hoje).
+Inválidos → 400 `report_invalid_filters`. UUID validado por regex antes do hit em DB.
+
+**Permissões:**
+- Pipeline: `patientsRateLimit` → `requireAuth` → `requireClinic` → `requireRole(['dono_clinica','secretaria'])`.
+- R-B / R-D: serviço chama `effectiveFinancialAccess` (reusa `financialChargeService`); profissional → 403 `forbidden_role`.
+- Matriz validada com 5 smoke users; 24/24 PASS.
+
+**Audit (metadata-only):** `report.<type>.view.success` (recurso=`report`, recurso_id=`<type>:<from>:<to>`).
+Sem valores, sem PII; falha de audit não aborta a resposta (best-effort, mesmo padrão do financeiro).
+
+**Invariantes de segurança:**
+- DAO sempre filtra `clinica_id` (29 ocorrências); sem `listAll`.
+- Zero referências a `clinical_*` tables (gateado por grep).
+- Sem PII no payload (`nome`, `cpf`, `email`, `telefone`, `notes`, `cancel_reason`, `description`,
+  `administrative_notes`, `body`, `internal_note`, `diagnostico`, `cid`, `prescricao`, `evolucao`) — validado por walk + substring scan.
+- Nenhuma concatenação SQL; toda raw SQL é parametrizada com `?`.
+- Sem migration, sem nova tabela, sem mudança em `.env.example`.
+
+**Smoke results:**
+- Auth/permissão: 24/24 (sem token, owner, secretaria, gestor, profissional, admin).
+- Filtros inválidos: 10/10 (formatos, datas impossíveis, ordem invertida, > 366 dias,
+  professional_id mal-formado, professional_id cross-tenant, no_appt_days inválido).
+- Payload safety: 12/12 (keys + substrings).
+- Content shape: 5/5 (chaves obrigatórias presentes).
+- Audit DB: 22 linhas `report.*.view.success` com `recurso_id` no formato esperado.
+
+**Gates finais:** `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 15/15 ✅ ·
+`pnpm --filter frontend typecheck` ✅ · `git diff --check` rc=0.
+
+**Ressalvas registradas:**
+- Sem frontend até 4.5C (UI apenas a partir da próxima sprint).
+- Sem export (CSV/PDF) no v0.1 — futuro.
+- Relatórios são on-demand; sem cache nem materialização (futuro se virar gargalo).
+- Intervalo máximo 366 dias por desenho (ADR 0014).
+- Sem dados clínicos, sem nomes/CPF/contato de pacientes — apenas ids de appointment na lista de atenção.
+- Profissional `effectiveFinancialAccess='none'` → 403 nas duas trilhas financeiras (R-B, R-D).
+
+---
+
 **Sprint 4.5A** (entregue 2026-05-27) — **ADR 0014 Relatórios Gerenciais v0.1 (docs/ADR-only).**
 `docs/adr/0014-management-reports-v0.md` + `docs/management-reports-v0-scope.md` criados.
 Definidos: 4 relatórios (R-A Resumo Operacional, R-B Resumo Financeiro, R-C Resumo de Pacientes,
