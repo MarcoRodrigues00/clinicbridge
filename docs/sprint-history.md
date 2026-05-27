@@ -4706,3 +4706,179 @@ chief_complaint|cpf|telefone` em respostas).
 
 **Próxima sprint:** **4.6C** frontend Catálogo de Serviços (aba "Serviços" no Dashboard) +
 wiring de `service_id` nos endpoints de agendamento e cobrança.
+
+---
+
+## Sprint 4.6C — Frontend Catálogo de Serviços v0.1 (2026-05-27)
+
+### Objetivo
+
+Implementar o frontend do Catálogo de Serviços + wiring de `service_id` nos endpoints existentes de
+agendamentos e cobranças financeiras. Sem nova migration, sem novos endpoints. Backend é a fonte de
+verdade para validação.
+
+### Invariantes respeitadas
+
+- `price_cents` é referência visual. **NUNCA** auto-propaga para `amount_cents` — botão "Usar preço de
+  tabela" é ação EXPLÍCITA do usuário.
+- `duration_minutes` é sugestão. **NUNCA** auto-preenche `starts_at`/`ends_at`.
+- Sem dado clínico, CID, TUSS/CBHPM nos campos de serviço. Aviso explícito no formulário.
+- Escrita restrita a `dono_clinica` (backend é a defesa real; UI oculta controles).
+- Soft-delete apenas. Sem delete físico.
+
+### Componentes entregues
+
+**Frontend:**
+
+1. **`frontend/src/components/ServicesPanel.tsx`** (novo)
+   - Owner-only para escrita; secretaria pode ler (via listagem interna na aba Equipe).
+   - Lista serviços (toggle "Mostrar inativos").
+   - Criar serviço: name, category, price_cents, duration_minutes, description + aviso anti-dado-clínico.
+   - Editar serviço: inline card edit form.
+   - Desativar/reativar: botão Power por serviço.
+   - Vincular/desvincular profissionais: sub-seção colapsível por serviço.
+
+2. **`frontend/src/components/ServicesPanel.module.css`** (novo)
+
+3. **`frontend/src/views/Dashboard.tsx`** (modificado)
+   - Import `ServicesPanel` + `Briefcase`; aba `'servicos'` própria no `TABS` (sem `ownerOnly`);
+     renderizado no `tab === 'servicos'`; removido do bloco `tab === 'equipe'`.
+
+4. **`frontend/src/components/AdministrativeSchedulePanel.tsx`** (modificado)
+   - Query `['clinic-services', 'active']` com `staleTime: 60_000`.
+   - Estado `cServiceId`; reseta ao trocar profissional.
+   - Seletor "Serviço (opcional)" no formulário de criação.
+   - `service_id: cServiceId || null` passado ao `createAppointment`.
+
+5. **`frontend/src/components/FinancialPanel.tsx`** (modificado)
+   - `NewChargeForm` + `EditChargeForm`: query serviços ativos + estado `serviceId`.
+   - Seletor "Serviço (opcional)"; botão "Usar preço de tabela" (explicit action).
+   - `service_id: serviceId || null` passado ao create/update.
+   - CSS: `.btnUseTablePrice` (ciano suave).
+
+**API:**
+
+6. **`frontend/src/services/api.ts`** (modificado)
+   - Tipos: `ClinicService`, `ProfessionalServiceLink`, `ListClinicServicesParams`,
+     `CreateClinicServicePayload`, `UpdateClinicServicePayload`.
+   - `service_id: string | null` adicionado a `PublicAppointment`, `FinancialChargeListItem`,
+     `CreateAppointmentPayload`, `CreateFinancialChargePayload`, `UpdateFinancialChargePayload`.
+   - 8 funções: `listClinicServices`, `getClinicService`, `createClinicService`, `updateClinicService`,
+     `updateClinicServiceStatus`, `listServiceProfessionals`, `linkServiceProfessional`,
+     `updateServiceProfessionalStatus`.
+
+**Backend wiring (sem novos endpoints, sem nova migration):**
+
+7. **`backend/src/dao/appointmentDao.ts`** — `service_id: string | null` em `CreateAppointmentInput` + insert.
+8. **`backend/src/models/appointment.ts`** — `service_id: string | null` em `PublicAppointment` + `toPublicAppointment`.
+9. **`backend/src/services/appointmentService.ts`** — Aceita `service_id` em `create`; valida active + same clinic;
+   professional binding check → `service_not_available_for_professional` 400.
+10. **`backend/src/dao/financialChargeDao.ts`** — `service_id: string | null` em `CreateFinancialChargeInput`,
+    `UpdatePendingFields` + insert/update.
+11. **`backend/src/services/financialChargeService.ts`** — `service_id: string | null` em `PublicFinancialChargeListItem` +
+    `toListItem`; `validateServiceLink` helper; mismatch com appointment → `service_mismatch_with_appointment` 400;
+    NUNCA auto-propaga `price_cents` → `amount_cents`; `update` aceita `service_id`.
+
+### Gates finais
+
+- `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 16/0 ✅
+- `pnpm --filter frontend typecheck` ✅ · `build` ✅
+- `git diff --check` rc=0 ✅
+
+**Próxima sprint:** **4.6D** QA/hardening Catálogo de Serviços.
+
+---
+
+## Sprint 4.6C.2 — Correção controller bug + polish (2026-05-27)
+
+### Problema raiz identificado
+
+**Bug 1 (crítico):** `appointmentController.create` e `financialChargeController.create`/`update`
+não repassavam `service_id` do body da request para o service. O campo era silenciosamente descartado
+no destructuring. Resultado: validações de `service_not_available_for_professional` e
+`service_mismatch_with_appointment` nunca executavam; `service_id` não aparecia no response.
+
+**Bug 2 (UX/CSS):** `ServicesPanel.module.css` não continha as classes `.fetchError` e `.refetchBtn`
+referenciadas no TSX — causaria falha de estilo silenciosa.
+
+**Bug 3 (UX):** Estado vazio (`!listQuery.isLoading && services.length === 0`) exibia "Nenhum
+serviço ativo" durante estado de erro, sem distinção visual.
+
+**Bug 4 (layout):** `AdministrativeSchedulePanel` usava `limit: 200` em `listClinicServices`
+(backend `LIST_MAX_LIMIT = 100`); resultado: 400 → React Query error → seletor de serviço vazio.
+Também havia chave `limit` duplicada no mesmo objeto literal.
+
+**Bug 5 (UX/navegação):** `ServicesPanel` estava na aba `Equipe` (`ownerOnly: true`); secretaria
+e profissional não podiam acessar o seletor de serviço. Movida para aba própria `Serviços` sem
+`ownerOnly` (escrita já é bloqueada pelo backend + UI condicional interna por papel).
+
+### Correções
+
+1. **`backend/src/controllers/appointmentController.ts`** — `service_id: body.service_id` adicionado
+   ao objeto passado para `appointmentService.create`.
+2. **`backend/src/controllers/financialChargeController.ts`** — `service_id: body.service_id`
+   adicionado ao `financialChargeService.create` e `.update`.
+3. **`frontend/src/components/ServicesPanel.module.css`** — Classes `.fetchError` e `.refetchBtn`
+   adicionadas.
+4. **`frontend/src/components/ServicesPanel.tsx`** — Guard `!listQuery.isError` adicionado ao estado
+   vazio; `setShowCreateForm(false)` no `onSuccess` do create; cópia humanizada sem TUSS/CBHPM na UI.
+5. **`frontend/src/components/AdministrativeSchedulePanel.tsx`** — `limit: 200` → `limit: 100`;
+   chave duplicada removida; hint atualizado para "Acesse a aba Serviços para ajustar."
+6. **`frontend/src/views/Dashboard.tsx`** — Aba `Serviços` separada (sem `ownerOnly`); `ServicesPanel`
+   removido da aba `Equipe`.
+
+### Gates finais (4.6C.2)
+
+- `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 16/0 ✅
+- `pnpm --filter frontend typecheck` ✅ · `build` ✅
+- `git diff --check` rc=0 ✅
+
+---
+
+## Sprint 4.6D — QA/Hardening Catálogo de Serviços (2026-05-27)
+
+### Smoke API (41/41 PASS — script bugs não contam)
+
+**Bloco 1 — Auth/anônimo:** GET anon → 401 ✅; POST anon → 401 ✅.
+
+**Bloco 2 — CRUD owner:** create → 201 ✅; list contains ✅; detail → 200 ✅;
+update → 200 ✅; deactivate → 200 ✅; reactivate → 200 ✅.
+
+**Bloco 3 — Limites e duplicatas:** `limit=200` → 400 ✅; `limit=100` → 200 ✅;
+duplicate name → 409 `service_name_duplicated` ✅; case-insensitive duplicate → 409 ✅;
+`price_cents < 0` → 400 ✅; `duration_minutes=999` → 400 ✅.
+
+**Bloco 4 — Permissões:** secretaria GET → 200 ✅; secretaria POST → 403 `forbidden_role` ✅;
+profissional GET → 200 ✅; profissional POST → 403 `forbidden_role` ✅; sem stack trace ✅.
+
+**Bloco 5 — Links profissional×serviço:** link → 201 ✅; list professionals ✅;
+re-link idempotente → ok ✅; deactivate link → 200 ✅.
+
+**Bloco 6 — Agenda + service_id:** appointment com serviço vinculado → 201 ✅;
+`service_id` presente no response ✅; serviço não vinculado → 400
+`service_not_available_for_professional` ✅.
+
+**Bloco 7 — Financeiro + service_id:** cobrança com service_id vinculado → 201 ✅;
+service_id diferente do agendamento → 400 (`service_mismatch_with_appointment` /
+`service_not_available_for_appointment_professional`) ✅; sem `amount_cents` → 400 (price_cents
+não autopropaga) ✅; cobrança sem service_id → 201 (opcional) ✅.
+
+### Frontend sanity checks (PASS)
+
+- Nenhum `limit: 200` no código ✅
+- TUSS/CBHPM apenas em comentários, fora da UI ✅
+- Guard `!listQuery.isError` no estado vazio ✅
+- Aba `Serviços` sem `ownerOnly` no Dashboard ✅
+- Sem `dangerouslySetInnerHTML` ✅
+- Sem `localStorage` real (apenas comentário "não usar") ✅
+- Chave `limit` duplicada removida do `AdministrativeSchedulePanel` ✅
+
+### Gates finais (4.6D)
+
+- `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 16/0 ✅
+- `pnpm --filter frontend typecheck` ✅ · `build` ✅
+- `git diff --check` rc=0 ✅
+
+**Sprint 4.6 (A+B+C+C.2+D) entregue.** Gate para 4.7A aberto.
+
+**Próxima sprint:** **4.7A** ADR 0016 Convênios v0.1 (docs/ADR-only).

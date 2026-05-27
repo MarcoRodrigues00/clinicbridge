@@ -32,6 +32,7 @@ export interface UpdateClinicServiceFields {
 
 export interface ListClinicServicesFilters {
   active?: boolean | null;
+  professional_id?: string | null;
   limit: number;
   offset: number;
 }
@@ -63,6 +64,16 @@ export const clinicServiceDao = {
     const query = conn<ClinicServiceRow>('clinic_services').where({ clinica_id });
     if (filters.active === true || filters.active === false) {
       query.andWhere({ active: filters.active });
+    }
+    if (filters.professional_id) {
+      query.whereExists(
+        conn.select(conn.raw('1'))
+          .from('professional_services')
+          .where('professional_services.clinica_id', clinica_id)
+          .andWhere('professional_services.professional_id', filters.professional_id)
+          .andWhereRaw('professional_services.service_id = clinic_services.id')
+          .andWhere('professional_services.active', true),
+      );
     }
     return query.orderBy('name', 'asc').limit(filters.limit).offset(filters.offset);
   },

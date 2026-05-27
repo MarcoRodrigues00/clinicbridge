@@ -21,7 +21,40 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.6B** (entregue) — **Backend Catálogo de Serviços v0.1.**
+**Sprint atual: 4.6D** (entregue) — **QA/Hardening Catálogo de Serviços v0.1.**
+Smoke API 41/41 PASS (auth, CRUD, limites, permissões, links, Agenda+service_id, Financeiro+service_id).
+Bug crítico corrigido em 4.6C.2: `appointmentController.create` e `financialChargeController.create`/`update`
+não repassavam `service_id` do body para o service — validações de
+`service_not_available_for_professional` e `service_mismatch_with_appointment` nunca disparavam.
+Corrigido em 3 pontos dos 2 controllers. CSS `.fetchError`/`.refetchBtn` adicionados ao `ServicesPanel.module.css`.
+Guard `!listQuery.isError` no empty-state do `ServicesPanel`. `limit: 200` → `limit: 100` + chave duplicada
+removida no `AdministrativeSchedulePanel`. Aba `Serviços` separada no Dashboard (sem `ownerOnly` —
+secretaria e profissional podem ver o catálogo; escrita já bloqueada pelo backend + UI por papel).
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `pnpm --filter backend typecheck` ✅ · build ✅ ·
+`migrate:status` 16/0 ✅ · `git diff --check` rc=0.
+
+**Sprint anterior: 4.6C** (entregue) — **Frontend Catálogo de Serviços v0.1.**
+`ServicesPanel` (aba própria **Serviços**, visível a todos os papéis da clínica): lista, criar, editar,
+desativar/reativar, vincular/desvincular profissionais (owner-only para escrita; subtítulo
+"etiqueta administrativa/comercial — não TUSS/CBHPM, não prontuário"). Seletor de serviço no
+`AdministrativeSchedulePanel` (opcional; **filtra serviços pelo profissional selecionado** via
+`GET /clinic-services?professional_id=`; quando nenhum profissional selecionado, lista todos os ativos;
+hint "Nenhum serviço vinculado" quando profissional sem vínculo; reseta `cServiceId` ao trocar
+profissional; duração NUNCA preenche horário). Seletor de serviço no `FinancialPanel` (botão
+"Usar preço de tabela" é ação EXPLÍCITA; NUNCA auto-propaga `price_cents` → `amount_cents`).
+8 funções API em `api.ts` + `professional_id` filter em `ListClinicServicesParams`.
+`service_id: string | null` adicionado a `PublicAppointment`, `FinancialChargeListItem`,
+`CreateAppointmentPayload`, `CreateFinancialChargePayload`, `UpdateFinancialChargePayload`.
+Backend wiring: `appointmentService.create` valida `service_id` (active + professional binding →
+`service_not_available_for_professional`); `financialChargeService.create`/`update` validam `service_id`
+(active + mismatch com appointment → `service_mismatch_with_appointment`; **profissional do agendamento
+sem vínculo → `service_not_available_for_appointment_professional`**). `GET /clinic-services` aceita
+`professional_id` opcional (EXISTS subquery tenant-scoped, sem nova migration).
+NUNCA auto-propaga `price_cents` → `amount_cents` no backend. Zero nova migration.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `pnpm --filter backend typecheck` ✅ · build ✅ ·
+`migrate:status` 16/0 ✅ · `git diff --check` rc=0.
+
+**Sprint anterior: 4.6B** (entregue) — **Backend Catálogo de Serviços v0.1.**
 Migration única aditiva `20260605_clinic_services_v0`: tabelas `clinic_services` (catálogo com
 `name 1..120` + CHECK `char_length(btrim(name)) >= 1`, `category ≤80`, `description ≤500`,
 `duration_minutes 5..720`, `price_cents 0..99_999_999`, `active`; UNIQUE INDEX normalizado
@@ -133,6 +166,9 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 `PATCH /clinic-services/:id/professionals/:professional_id/status`
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **4.6D** ✅ QA/Hardening Catálogo de Serviços — smoke 41/41; bug controller corrigido (4.6C.2)
+- **4.6C** ✅ Frontend Catálogo de Serviços v0.1 — `ServicesPanel` + seletores Agenda/Financeiro
+- **4.6B** ✅ Backend Catálogo de Serviços v0.1 — migration + 8 endpoints — smoke 51/51 PASS
 - **4.6A** ✅ ADR 0015 Catálogo de Serviços v0.1 (docs-only)
 - **4.5A** ✅ ADR 0014 Relatórios Gerenciais v0.1 (docs-only)
 - **4.4D-conv** ✅ Planejamento Convênios/Faturamento — `insurance-billing-future-scope.md` criado
@@ -151,8 +187,7 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A ✅ · 4.6B ✅ (backend Catálogo de Serviços) →
-**4.6C** frontend Catálogo de Serviços (+wire `service_id` em appointments/financial) → **4.6D** QA →
+4.0–4.5D ✅ · 4.6A ✅ · 4.6B ✅ · 4.6C ✅ · 4.6D ✅ (QA/hardening; bug controller corrigido) →
 **4.7A** ADR 0016 Convênios → **4.7B–D** implementação → **4.8** Estoque (ADR 0017).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
@@ -168,9 +203,11 @@ badge financeiro na agenda (5 estados), alertas A1–A4, botão "Criar cobrança
 relatórios gerenciais v0.1 backend + frontend (aba Relatórios; hero "Resumo do período" + 4 blocos:
 Agenda, Financeiro, Pacientes, Agenda × Financeiro; filtros Hoje/7d/Mês/Personalizado; frases
 interpretativas por bloco; 403 por relatório vira card "Acesso restrito" intencional);
-catálogo de serviços v0.1 backend (clinic_services + professional_services; CRUD owner-only;
-leitura aberta para seletor de agenda; soft-delete; re-link idempotente; colunas `service_id`
-nullable em appointments/financial_charges aguardando wiring 4.6C).
+catálogo de serviços v0.1 backend + frontend (clinic_services + professional_services; CRUD owner-only;
+leitura aberta para seletor de agenda; soft-delete; re-link idempotente; aba "Serviços" no Dashboard
+visível a todos os papéis; seletor na Agenda filtra por profissional; seletor no Financeiro com botão
+"Usar preço de tabela" explícito; `service_id` wired em appointments e financial_charges com validação
+`service_not_available_for_professional` e `service_mismatch_with_appointment`).
 Detalhe: `docs/project-state.md`.
 
 **O que NÃO existe (sprint explícita):** frontend de catálogo de serviços (4.6C); wiring de
@@ -201,8 +238,7 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.6C** frontend Catálogo de Serviços v0.1 (gate: 4.6B ✅; aba "Serviços" no Dashboard;
-  wiring `service_id` em seletor de agendamento e cobrança; detalhes em `docs/services-catalog-v0-scope.md` §7)
+- **4.7A** ADR 0016 Convênios v0.1 (docs/ADR-only; gate: 4.6D ✅; detalhes em `docs/insurance-billing-future-scope.md`)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)

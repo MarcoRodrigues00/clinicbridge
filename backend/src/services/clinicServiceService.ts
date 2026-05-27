@@ -90,6 +90,11 @@ function parseUuid(value: unknown, field: string): string {
   return value;
 }
 
+function parseOptionalUuid(value: unknown, field: string): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  return parseUuid(value, field);
+}
+
 function parseName(value: unknown): string {
   if (typeof value !== 'string') throw invalid('name é obrigatório.');
   const trimmed = value.trim();
@@ -283,13 +288,15 @@ export const clinicServiceService = {
   // the frontend uses ?active=true to suppress soft-deleted rows.
   async list(
     actor: CatalogActor,
-    rawQuery: { active?: unknown; limit?: unknown; offset?: unknown },
+    rawQuery: { active?: unknown; limit?: unknown; offset?: unknown; professional_id?: unknown },
   ): Promise<{ services: PublicClinicService[] }> {
     const active = parseActiveFilter(rawQuery.active);
     const limit = parseLimit(rawQuery.limit);
     const offset = parseOffset(rawQuery.offset);
+    const professional_id = parseOptionalUuid(rawQuery.professional_id, 'professional_id');
     const rows = await clinicServiceDao.listForClinic(actor.clinica_id, {
       active,
+      professional_id,
       limit,
       offset,
     });

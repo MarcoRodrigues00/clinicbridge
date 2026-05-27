@@ -26,6 +26,7 @@ import {
   api,
   ApiError,
   type AppointmentStatus,
+  type ClinicService,
   type PublicAppointment,
   type PublicClinicProfessional,
   type PublicPatient,
@@ -62,6 +63,7 @@ const REMINDER_STATUSES: AppointmentStatus[] = ['scheduled', 'confirmed', 'resch
 const PROFESSIONALS_KEY = ['clinic-professionals'] as const;
 const APPOINTMENTS_KEY = ['appointments'] as const;
 const FINANCIAL_BADGE_KEY = ['financial', 'charges', 'agenda-badge'] as const;
+const SERVICES_KEY = ['clinic-services'] as const;
 
 // ── Financial badge helpers (ADR 0013) ────────────────────────────────────────
 
@@ -207,6 +209,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
 
   const [cPatientId, setCPatientId] = useState('');
   const [cProfessionalId, setCProfessionalId] = useState('');
+  const [cServiceId, setCServiceId] = useState('');
   const [cStart, setCStart] = useState('09:00');
   const [cEnd, setCEnd] = useState('10:00');
   const [cNotes, setCNotes] = useState('');
@@ -238,6 +241,30 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
     queryFn: async () => {
       const res = await api.listClinicProfessionals(token as string, { active: true });
       return res.professionals;
+    },
+  });
+
+  const servicesQuery = useQuery({
+    queryKey: [...SERVICES_KEY, 'active'],
+    enabled: !!token,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await api.listClinicServices(token as string, { active: true, limit: 100 });
+      return res.services;
+    },
+  });
+
+  const professionalFilteredServicesQuery = useQuery({
+    queryKey: [...SERVICES_KEY, 'active', 'prof', cProfessionalId],
+    enabled: !!token && !!cProfessionalId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await api.listClinicServices(token as string, {
+        active: true,
+        professional_id: cProfessionalId,
+        limit: 100,
+      });
+      return res.services;
     },
   });
 
@@ -308,6 +335,10 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
 
   const professionals: PublicClinicProfessional[] = professionalsQuery.data ?? [];
   const patients: PublicPatient[] = patientsQuery.data ?? [];
+  const services: ClinicService[] = servicesQuery.data ?? [];
+  const availableServices: ClinicService[] = cProfessionalId
+    ? (professionalFilteredServicesQuery.data ?? [])
+    : services;
 
   const appointments: PublicAppointment[] = useMemo(() => {
     const list = appointmentsQuery.data ?? [];
@@ -352,6 +383,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
       api.createAppointment(token as string, {
         patient_id: cPatientId,
         professional_id: cProfessionalId || null,
+        service_id: cServiceId || null,
         starts_at: toIsoUtc(date, cStart),
         ends_at: toIsoUtc(date, cEnd),
         administrative_notes: cNotes.trim() || null,
@@ -359,6 +391,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
     onSuccess: () => {
       setNotice('Agendamento criado.');
       setCNotes('');
+      setCServiceId('');
       setShowForm(false);
       invalidateAppointments();
     },
@@ -641,12 +674,35 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
             </label>
             <label className={styles.field}>
               <span className={styles.fieldLabel}>Profissional (opcional)</span>
-              <select className={styles.input} value={cProfessionalId} onChange={(e) => setCProfessionalId(e.target.value)}>
+              <select className={styles.input} value={cProfessionalId} onChange={(e) => { setCProfessionalId(e.target.value); setCServiceId(''); }}>
                 <option value="">Sem profissional</option>
                 {professionals.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
+            </label>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>Serviço (opcional)</span>
+              <select
+                className={styles.input}
+                value={cServiceId}
+                onChange={(e) => setCServiceId(e.target.value)}
+                disabled={!!cProfessionalId && professionalFilteredServicesQuery.isLoading}
+              >
+                <option value="">Sem serviço</option>
+                {availableServices.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}{s.category ? ` — ${s.category}` : ''}
+                  </option>
+                ))}
+              </select>
+              {cProfessionalId &&
+                !professionalFilteredServicesQuery.isLoading &&
+                availableServices.length === 0 && (
+                  <span className={styles.fieldHint}>
+                    Nenhum serviço vinculado a este profissional. Acesse a aba Serviços para ajustar.
+                  </span>
+              )}
             </label>
             <label className={styles.field}>
               <span className={styles.fieldLabel}>Início</span>

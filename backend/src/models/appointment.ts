@@ -39,6 +39,7 @@ export interface PublicAppointment {
   id: string;
   patient_id: string;
   professional_id: string | null;
+  service_id: string | null;
   starts_at: string;
   ends_at: string;
   status: AppointmentStatus;
@@ -54,6 +55,7 @@ export function toPublicAppointment(row: AppointmentRow): PublicAppointment {
     id: row.id,
     patient_id: row.patient_id,
     professional_id: row.professional_id,
+    service_id: row.service_id,
     starts_at: new Date(row.starts_at).toISOString(),
     ends_at: new Date(row.ends_at).toISOString(),
     status: row.status as AppointmentStatus,

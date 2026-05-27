@@ -12,6 +12,7 @@ import {
   CalendarDays,
   Wallet,
   BarChart3,
+  Briefcase,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { UploadPanel } from '../components/UploadPanel';
@@ -28,6 +29,7 @@ import { ClinicalRolesPanel } from '../components/ClinicalRolesPanel';
 import { ClinicalReadAuditPanel } from '../components/ClinicalReadAuditPanel';
 import { FinancialPanel } from '../components/FinancialPanel';
 import { ReportsPanel } from '../components/ReportsPanel';
+import { ServicesPanel } from '../components/ServicesPanel';
 import { useAuth } from '../services/AuthProvider';
 import type { SafeUser } from '../services/api';
 import styles from './Dashboard.module.css';
@@ -41,7 +43,7 @@ const ROLE_LABELS: Record<SafeUser['papel'], string> = {
   secretaria: 'Funcionário(a) (acesso administrativo)',
 };
 
-type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'financeiro' | 'relatorios' | 'equipe' | 'seguranca';
+type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'financeiro' | 'relatorios' | 'servicos' | 'equipe' | 'seguranca';
 
 const TABS: { key: TabKey; label: string; icon: typeof Home; ownerOnly?: boolean }[] = [
   { key: 'inicio', label: 'Início', icon: Home },
@@ -50,6 +52,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Home; ownerOnly?: boolean
   { key: 'agenda', label: 'Agenda', icon: CalendarDays },
   { key: 'financeiro', label: 'Financeiro', icon: Wallet },
   { key: 'relatorios', label: 'Relatórios', icon: BarChart3 },
+  { key: 'servicos', label: 'Serviços', icon: Briefcase },
   { key: 'equipe', label: 'Equipe', icon: Users, ownerOnly: true },
   { key: 'seguranca', label: 'Segurança', icon: ShieldCheck },
 ];
@@ -61,6 +64,7 @@ const SECTION_INTRO: Record<TabKey, { title: string; subtitle: string }> = {
   agenda: { title: 'Agenda administrativa', subtitle: 'Agendamentos administrativos. Não é prontuário nem dado clínico.' },
   financeiro: { title: 'Financeiro', subtitle: 'Cobranças e recebimentos da clínica. Não substitui contabilidade ou emissão de notas fiscais.' },
   relatorios: { title: 'Relatórios', subtitle: 'Resumos de agenda, financeiro e pacientes. Apenas dados administrativos — sem dados clínicos.' },
+  servicos: { title: 'Serviços', subtitle: 'Catálogo de tipos de atendimento da clínica — consultas, retornos, sessões e procedimentos. Aparecem na agenda e nas cobranças.' },
   equipe: { title: 'Equipe', subtitle: 'Acesso ao sistema (membros), solicitações pendentes e profissionais usados na agenda.' },
   seguranca: { title: 'Segurança e sessão', subtitle: 'Estado da autenticação e do MVP administrativo.' },
 };
@@ -214,6 +218,10 @@ export function Dashboard(): JSX.Element {
 
         {tab === 'relatorios' && (
           <ReportsPanel />
+        )}
+
+        {tab === 'servicos' && (
+          <ServicesPanel />
         )}
 
         {tab === 'equipe' && isOwner && (

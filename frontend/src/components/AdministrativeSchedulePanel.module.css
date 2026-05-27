@@ -56,6 +56,11 @@
   color: var(--text-2);
 }
 
+.fieldHint {
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
 .input,
 .textarea {
   width: 100%;

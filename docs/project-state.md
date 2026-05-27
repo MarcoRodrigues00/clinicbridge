@@ -7,6 +7,78 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.6D** (entregue 2026-05-27) — **QA/Hardening Catálogo de Serviços v0.1.**
+Smoke API 41/41 PASS. Bug crítico corrigido (4.6C.2): controllers não repassavam `service_id`.
+
+**Bug raiz (4.6C.2):** `appointmentController.create` e `financialChargeController.create`/`update`
+descartavam silenciosamente `body.service_id` no destructuring — validações de
+`service_not_available_for_professional` e `service_mismatch_with_appointment` nunca executavam.
+
+**Arquivos modificados (4.6C.2 + 4.6D):**
+- `backend/src/controllers/appointmentController.ts` — `service_id: body.service_id` adicionado ao create.
+- `backend/src/controllers/financialChargeController.ts` — `service_id: body.service_id` adicionado
+  ao create e update.
+- `frontend/src/components/ServicesPanel.module.css` — Classes `.fetchError` e `.refetchBtn` adicionadas.
+- `frontend/src/components/ServicesPanel.tsx` — Guard `!listQuery.isError` no empty-state;
+  `setShowCreateForm(false)` no `onSuccess`; cópia humanizada sem TUSS/CBHPM na UI.
+- `frontend/src/components/AdministrativeSchedulePanel.tsx` — `limit: 200` → `limit: 100`;
+  chave `limit` duplicada removida; hint atualizado.
+- `frontend/src/views/Dashboard.tsx` — Aba `Serviços` separada (sem `ownerOnly`); `ServicesPanel`
+  removido da aba `Equipe`.
+
+**Gates finais:**
+- `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 16/0 ✅
+- `pnpm --filter frontend typecheck` ✅ · `build` ✅
+- `git diff --check` rc=0 ✅
+
+**Gate 4.7A aberto.** Próxima sprint: **4.7A** ADR 0016 Convênios v0.1.
+
+---
+
+**Sprint 4.6C** (entregue 2026-05-27) — **Frontend Catálogo de Serviços v0.1.**
+Frontend completo do Catálogo de Serviços + wiring `service_id` em agendamentos/cobranças.
+Zero nova migration, zero novos endpoints.
+
+**Invariantes de segurança:**
+- `price_cents` é referência visual; NUNCA auto-propaga para `amount_cents`.
+- `duration_minutes` é sugestão; NUNCA auto-preenche `starts_at`/`ends_at`.
+- Sem dado clínico/CID nos campos de serviço. Aviso explícito em formulários.
+- Escrita owner-only (backend é defesa real; UI oculta controles por papel).
+
+**Arquivos criados:**
+- `frontend/src/components/ServicesPanel.tsx` — Aba própria "Serviços" (sem `ownerOnly`); leitura a
+  todos os papéis; escrita owner-only via UI + backend. Lista/criar/editar/desativar/reativar serviços;
+  vincular/desvincular profissionais.
+- `frontend/src/components/ServicesPanel.module.css` — estilos.
+
+**Arquivos modificados:**
+- `frontend/src/services/api.ts` — Tipos: `ClinicService`, `ProfessionalServiceLink`,
+  `ListClinicServicesParams`, `CreateClinicServicePayload`, `UpdateClinicServicePayload`;
+  `service_id: string | null` em `PublicAppointment`, `FinancialChargeListItem`,
+  `CreateAppointmentPayload`, `CreateFinancialChargePayload`, `UpdateFinancialChargePayload`;
+  8 novas funções API.
+- `frontend/src/views/Dashboard.tsx` — Aba `Serviços` separada (sem `ownerOnly`); import `ServicesPanel`.
+- `frontend/src/components/AdministrativeSchedulePanel.tsx` — Query serviços ativos; `cServiceId` state;
+  seletor "Serviço (opcional)" filtrado por profissional; passa `service_id` ao criar agendamento.
+- `frontend/src/components/FinancialPanel.tsx` + `.module.css` — Seletor serviço em `NewChargeForm` +
+  `EditChargeForm`; botão "Usar preço de tabela" (ação EXPLÍCITA); CSS `.btnUseTablePrice`.
+- `backend/src/dao/appointmentDao.ts` — `service_id` em `CreateAppointmentInput` + insert.
+- `backend/src/models/appointment.ts` — `service_id` em `PublicAppointment` + `toPublicAppointment`.
+- `backend/src/services/appointmentService.ts` — Valida `service_id`: active + same clinic +
+  professional binding → `service_not_available_for_professional` 400.
+- `backend/src/dao/financialChargeDao.ts` — `service_id` em `CreateFinancialChargeInput`,
+  `UpdatePendingFields`, insert, updatePending.
+- `backend/src/services/financialChargeService.ts` — `service_id` em `PublicFinancialChargeListItem` +
+  `toListItem`; `validateServiceLink` helper; mismatch com appointment →
+  `service_mismatch_with_appointment` 400; create/update aceitam `service_id`.
+
+**Gates finais:**
+- `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 16/0 ✅
+- `pnpm --filter frontend typecheck` ✅ · `build` ✅
+- `git diff --check` rc=0 ✅
+
+---
+
 **Sprint 4.6B** (entregue 2026-05-27) — **Backend Catálogo de Serviços v0.1.**
 Migration única aditiva + DAO + service + controller + routes registradas em `app.ts`.
 Nenhuma tabela clínica alterada. Reads abertos a `dono_clinica + secretaria`; writes restritos a

@@ -2429,3 +2429,154 @@ WHERE clinica_id = (SELECT id FROM clinics WHERE nome = 'Clinica Smoke Dev')
 ```
 
 **Catálogo de Serviços v0.1 → backend entregue na Sprint 4.6B. Frontend + wiring `service_id` na 4.6C.**
+
+---
+
+## Sprint 4.6C — Frontend Catálogo de Serviços v0.1
+
+### Smoke API — wiring service_id em appointments
+
+```bash
+# Variáveis: TOK_OWNER (dono_clinica), CLINIC_ID, SERVICE_ID (serviço ativo), PROF_ID (profissional)
+# Criar agendamento COM serviço vinculado
+curl -sk -X POST -H "Authorization: Bearer $TOK_OWNER" \
+  -H "Content-Type: application/json" \
+  -d "{\"patient_id\":\"$PATIENT_ID\",\"professional_id\":\"$PROF_ID\",\"service_id\":\"$SERVICE_ID\",\"starts_at\":\"2026-06-01T09:00:00Z\",\"ends_at\":\"2026-06-01T10:00:00Z\"}" \
+  https://localhost:8443/appointments | python3 -m json.tool
+# Esperado: 201 com service_id preenchido.
+
+# Criar agendamento com service_id de serviço inativo → 400 service_inactive
+# Criar agendamento com service_id de outra clínica → 400 service_not_found
+# Criar agendamento com service_id + profissional sem vínculo → 400 service_not_available_for_professional
+# Criar agendamento sem service_id → 201 com service_id=null (retrocompatibilidade)
+```
+
+### Smoke API — wiring service_id em financial charges
+
+```bash
+# Criar cobrança COM service_id
+curl -sk -X POST -H "Authorization: Bearer $TOK_OWNER" \
+  -H "Content-Type: application/json" \
+  -d "{\"patient_id\":\"$PATIENT_ID\",\"description\":\"Consulta\",\"amount_cents\":15000,\"service_id\":\"$SERVICE_ID\"}" \
+  https://localhost:8443/financial/charges | python3 -m json.tool
+# Esperado: 201 com service_id preenchido.
+
+# PATCH cobrança pendente — alterar service_id → 200 com novo service_id
+# Criar cobrança com service_id + appointment_id cujo service_id difere → 400 service_mismatch_with_appointment
+# Criar cobrança sem service_id → 201 com service_id=null (retrocompatibilidade)
+```
+
+### Frontend security greps
+
+```bash
+# Sem console.log, sem localStorage, sem dangerouslySetInnerHTML, sem token em URL
+grep -rn "console\.log\|localStorage\|sessionStorage\|dangerouslySetInnerHTML" \
+  frontend/src/components/ServicesPanel.tsx
+# Esperado: zero ocorrências
+
+# Sem dado clínico nos labels
+grep -in "cid|diagnos|prontuár|prescrição|queixa|anamnes" \
+  frontend/src/components/ServicesPanel.tsx
+# Esperado: zero ocorrências (apenas no aviso textual)
+```
+
+### Smoke browser — ServicesPanel (owner)
+
+- [ ] Login como `smoke.owner@clinicbridge.local` → aba Equipe → scroll até "Serviços".
+- [ ] Painel visível com subtítulo "etiqueta administrativa/comercial".
+- [ ] "Novo serviço" cria serviço com name, category, price, duration, description.
+- [ ] Aviso anti-dado-clínico visível no formulário.
+- [ ] Editar serviço (nome, preço) → 200; card atualiza.
+- [ ] Desativar → fica com chip "Inativo" / opacidade reduzida.
+- [ ] Reativar → volta ao normal.
+- [ ] Vincular profissional → aparece na lista de profissionais do serviço.
+- [ ] Desvincular → some da lista.
+
+### Smoke browser — AgendaPanel (seletor de serviço)
+
+- [ ] Formulário "Novo agendamento" mostra seletor "Serviço (opcional)".
+- [ ] Lista serviços ativos da clínica.
+- [ ] Trocar profissional reseta seleção de serviço.
+- [ ] Criar agendamento com serviço → detalhe do agendamento mostra service_id.
+- [ ] Criar agendamento sem serviço → funciona normalmente (retrocompatibilidade).
+
+### Smoke browser — FinancialPanel (seletor de serviço)
+
+- [ ] Nova cobrança: seletor "Serviço (opcional)" aparece antes da descrição.
+- [ ] Selecionar serviço com price_cents → botão "Usar preço de tabela (R$ X,XX)" aparece.
+- [ ] Clicar "Usar preço de tabela" → preenche campo de valor (não automático).
+- [ ] Criar cobrança com serviço → charge.service_id preenchido.
+- [ ] Editar cobrança pendente → service_id editável; "Usar preço de tabela" funciona.
+- [ ] Criar cobrança sem serviço → funciona normalmente (retrocompatibilidade).
+
+### Permissões frontend
+
+- [x] `smoke.owner@clinicbridge.local` — aba Serviços: painel completo com botões de criação/edição.
+- [x] `smoke.secretaria@clinicbridge.local` — aba Serviços: ServicesPanel visível mas sem botões de escrita.
+  (Backend: 403 `forbidden_role` em qualquer mutação.)
+- [x] `smoke.profissional@clinicbridge.local` — aba Serviços: catálogo visível (read-only). Seletor de
+  serviço na Agenda funciona normalmente (leitura via GET /clinic-services).
+
+**Sprint 4.6C entregue. Sprint 4.6C.2 e 4.6D entregues. Gate 4.7A aberto.**
+
+---
+
+## Sprint 4.6D — QA/Hardening Catálogo de Serviços v0.1 (entregue 2026-05-27)
+
+### Bug crítico corrigido (4.6C.2)
+
+`appointmentController.create` e `financialChargeController.create`/`update` não repassavam
+`service_id` do body request para o service — campo descartado silenciosamente no destructuring.
+Validações `service_not_available_for_professional` e `service_mismatch_with_appointment` nunca
+executavam. Corrigido em 3 pontos dos 2 controllers.
+
+### Smoke API executado (41/41 PASS)
+
+```bash
+# Setup tokens
+BASE="https://localhost:8443"
+TOK_OWNER=$(curl -sk -X POST "$BASE/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"smoke.owner@clinicbridge.local","senha":"SmokeDevOnly!23"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+PROF_ID="c43e700c-31ad-4357-b39b-aded682312da"
+PAT_ID="eaa7f3ea-6b32-45c8-ac03-6546216699cc"
+
+# Serviço vinculado (criado em 4.6B smoke)
+SVC_VINC_ID="7cf1e714-e68e-4a31-8a9b-c508a2494481"  # Smoke Vinculo
+SVC_SENV_ID="9287258c-0e90-45e5-86da-54b2151df7b6"  # Smoke Sem Vinculo
+```
+
+**Resultados por bloco:**
+
+- **Bloco 1 (auth/anon):** GET anon → 401 ✅; POST anon → 401 ✅.
+- **Bloco 2 (CRUD owner):** create 201 ✅; list ✅; detail 200 ✅; update 200 ✅; deactivate 200 ✅; reactivate 200 ✅.
+- **Bloco 3 (limites/duplicatas):** `limit=200` → 400 ✅; `limit=100` → 200 ✅; nome duplicado → 409 ✅;
+  case-insensitive → 409 ✅; `price_cents=-1` → 400 ✅; `duration_minutes=999` → 400 ✅.
+- **Bloco 4 (permissões):** secretaria GET 200 ✅; secretaria POST 403 `forbidden_role` ✅;
+  profissional GET 200 ✅; profissional POST 403 ✅; sem stack trace ✅.
+- **Bloco 5 (links):** link → ok ✅; list professionals ✅; re-link idempotente ✅; deactivate link 200 ✅.
+- **Bloco 6 (Agenda+service_id):** appointment com serviço vinculado → 201 ✅; `service_id` no response ✅;
+  serviço não vinculado → 400 `service_not_available_for_professional` ✅.
+- **Bloco 7 (Financeiro+service_id):** cobrança com service_id → 201 ✅;
+  service_id diferente do agendamento → 400 ✅; sem amount_cents → 400 (price_cents não autopropaga) ✅;
+  cobrança sem service_id → 201 ✅.
+
+### Frontend sanity greps (PASS)
+
+```bash
+# Nenhum limit: 200
+grep -rn "limit: 200" frontend/src/  # → 0 ocorrências
+
+# TUSS/CBHPM só em comentários
+grep -n "TUSS\|CBHPM" frontend/src/components/ServicesPanel.tsx  # → apenas linhas //
+
+# isError guard no empty-state
+grep -n "isError" frontend/src/components/ServicesPanel.tsx
+# → linha com !listQuery.isError na condição do empty-state
+
+# ServicesPanel na aba Serviços (sem ownerOnly)
+grep -n "servicos\|ServicesPanel" frontend/src/views/Dashboard.tsx
+# → { key: 'servicos', label: 'Serviços', icon: Briefcase }  (sem ownerOnly)
+```

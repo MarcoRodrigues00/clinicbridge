@@ -43,6 +43,7 @@ export const financialChargeController = {
       {
         patient_id: body.patient_id,
         appointment_id: body.appointment_id,
+        service_id: body.service_id,
         description: body.description,
         amount_cents: body.amount_cents,
         due_date: body.due_date,
@@ -89,6 +90,7 @@ export const financialChargeController = {
         due_date: body.due_date,
         notes: body.notes,
         appointment_id: body.appointment_id,
+        service_id: body.service_id,
       },
       ctx,
     );

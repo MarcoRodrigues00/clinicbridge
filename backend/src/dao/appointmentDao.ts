@@ -6,6 +6,7 @@ export interface CreateAppointmentInput {
   clinica_id: string;
   patient_id: string;
   professional_id: string | null;
+  service_id: string | null;
   starts_at: Date;
   ends_at: Date;
   status: string;
@@ -32,6 +33,7 @@ export const appointmentDao = {
         clinica_id: input.clinica_id,
         patient_id: input.patient_id,
         professional_id: input.professional_id,
+        service_id: input.service_id,
         starts_at: input.starts_at,
         ends_at: input.ends_at,
         status: input.status,

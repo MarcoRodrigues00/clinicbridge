@@ -33,6 +33,7 @@ export const clinicServiceController = {
       active: req.query.active,
       limit: req.query.limit,
       offset: req.query.offset,
+      professional_id: req.query.professional_id,
     });
     res.status(200).json(result);
   },

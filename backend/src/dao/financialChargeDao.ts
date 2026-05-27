@@ -30,6 +30,7 @@ export interface CreateFinancialChargeInput {
   clinica_id: string;
   patient_id: string;
   appointment_id: string | null;
+  service_id: string | null;
   created_by_user_id: string;
   description: string;
   amount_cents: number;
@@ -43,6 +44,7 @@ export interface UpdatePendingFields {
   due_date?: string | null;
   notes?: string | null;
   appointment_id?: string | null;
+  service_id?: string | null;
 }
 
 export interface ListFinancialChargesFilters {
@@ -74,6 +76,7 @@ export const financialChargeDao = {
         clinica_id: input.clinica_id,
         patient_id: input.patient_id,
         appointment_id: input.appointment_id,
+        service_id: input.service_id,
         created_by_user_id: input.created_by_user_id,
         description: input.description,
         amount_cents: input.amount_cents,
@@ -152,6 +155,7 @@ export const financialChargeDao = {
     if (patch.due_date !== undefined) updates.due_date = patch.due_date;
     if (patch.notes !== undefined) updates.notes = patch.notes;
     if (patch.appointment_id !== undefined) updates.appointment_id = patch.appointment_id;
+    if (patch.service_id !== undefined) updates.service_id = patch.service_id;
 
     const [row] = await conn<FinancialChargeRow>('financial_charges')
       .where({ id, clinica_id, status: 'pending' })

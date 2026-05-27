@@ -1,0 +1,529 @@
+.panel {
+  margin-top: 2.75rem;
+  padding: clamp(1.5rem, 3vw, 2.1rem);
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(135deg, rgba(20, 30, 52, 0.7), rgba(10, 15, 30, 0.5)),
+    radial-gradient(circle at 100% 0%, rgba(34, 211, 238, 0.1), transparent 55%);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-card);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-0);
+}
+
+.categoryChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+  white-space: nowrap;
+}
+
+.headActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.subtitle {
+  margin-top: 0.5rem;
+  max-width: 64ch;
+  color: var(--text-1);
+  font-size: 0.93rem;
+  line-height: 1.55;
+}
+
+.notice {
+  margin-top: 1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--r-sm);
+  color: var(--success);
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  font-size: 0.9rem;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.3rem;
+  color: var(--text-2);
+  font-size: 0.9rem;
+}
+
+.empty {
+  margin-top: 1.3rem;
+  padding: 1.2rem;
+  border-radius: var(--r-md);
+  border: 1px dashed var(--surface-border-strong);
+  color: var(--text-2);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.list {
+  list-style: none;
+  margin: 1.3rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+/* ── Service card ── */
+
+.card {
+  padding: 0.9rem 1rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.cardInactive {
+  opacity: 0.65;
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.cardInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.cardName {
+  font-weight: 700;
+  color: var(--text-0);
+  overflow-wrap: anywhere;
+}
+
+.chip {
+  padding: 0.13rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  background: var(--surface-strong);
+  color: var(--text-1);
+  border: 1px solid var(--surface-border-strong);
+  white-space: nowrap;
+}
+
+.inactiveChip {
+  padding: 0.13rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  white-space: nowrap;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.priceTag {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--cyan-soft);
+}
+
+.durationTag {
+  font-size: 0.82rem;
+  color: var(--text-2);
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.cardDescription {
+  margin-top: 0.45rem;
+  font-size: 0.88rem;
+  color: var(--text-1);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.cardError {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  color: var(--danger);
+  font-size: 0.86rem;
+}
+
+/* ── Edit form ── */
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.editGrid,
+.createGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.fieldLabel {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.required {
+  color: var(--danger);
+  margin-left: 0.1rem;
+}
+
+.fieldHint {
+  font-size: 0.76rem;
+  color: var(--text-2);
+}
+
+.input {
+  box-sizing: border-box;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--surface-border-strong);
+  background: var(--surface);
+  color: var(--text-0);
+  font: inherit;
+  width: 100%;
+}
+
+.input:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 4rem;
+}
+
+.editNote {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--r-sm);
+  font-size: 0.82rem;
+  color: var(--text-2);
+  background: rgba(255, 200, 0, 0.06);
+  border: 1px solid rgba(255, 200, 0, 0.18);
+}
+
+.editActions,
+.createActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Create card ── */
+
+.createCard {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--surface-border-strong);
+  background: var(--surface-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.createError {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--danger);
+  font-size: 0.88rem;
+}
+
+/* ── Professional links ── */
+
+.linksSection {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--surface-border);
+}
+
+.linksLoading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-2);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.linksEmpty {
+  color: var(--text-2);
+  font-size: 0.86rem;
+  margin: 0 0 0.5rem;
+}
+
+.linksList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.linkItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--r-sm);
+  background: var(--surface-strong);
+  font-size: 0.86rem;
+}
+
+.linkName {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-0);
+  overflow-wrap: anywhere;
+}
+
+.linkLabel {
+  font-size: 0.76rem;
+  color: var(--text-2);
+}
+
+.linkRemoveBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 0.15rem 0.3rem;
+  border-radius: var(--r-sm);
+  display: inline-flex;
+  align-items: center;
+}
+
+.linkRemoveBtn:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+.linkAddRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.linkSelect {
+  flex: 1 1 10rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--surface-border-strong);
+  background: var(--surface);
+  color: var(--text-0);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.linkError {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--danger);
+  font-size: 0.84rem;
+  margin-bottom: 0.4rem;
+}
+
+/* ── Buttons ── */
+
+.primaryBtn,
+.secondaryBtn,
+.actionBtn,
+.linkAddBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.primaryBtn {
+  background: var(--cyan);
+  color: #04121a;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  background: var(--cyan-soft);
+}
+
+.secondaryBtn {
+  background: var(--surface-strong);
+  color: var(--text-0);
+  border-color: var(--surface-border-strong);
+}
+
+.secondaryBtn:hover:not(:disabled) {
+  border-color: var(--cyan);
+}
+
+.actionBtn {
+  background: var(--surface-strong);
+  color: var(--text-1);
+  border-color: var(--surface-border-strong);
+  padding: 0.3rem 0.55rem;
+  font-size: 0.83rem;
+}
+
+.actionBtn:hover:not(:disabled) {
+  border-color: var(--cyan);
+  color: var(--text-0);
+}
+
+.linkAddBtn {
+  background: var(--surface-strong);
+  color: var(--text-0);
+  border-color: var(--surface-border-strong);
+  font-size: 0.84rem;
+  padding: 0.38rem 0.6rem;
+}
+
+.linkAddBtn:hover:not(:disabled) {
+  border-color: var(--cyan);
+}
+
+.primaryBtn:disabled,
+.secondaryBtn:disabled,
+.actionBtn:disabled,
+.linkAddBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fetchError {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--r-sm);
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.refetchBtn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: var(--r-sm);
+  padding: 0.25rem 0.7rem;
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.refetchBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.roleNote {
+  margin-top: 1.1rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--r-sm);
+  color: var(--cyan-soft);
+  background: rgba(34, 211, 238, 0.07);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.spin {
+  animation: svcSpin 0.9s linear infinite;
+}
+
+@keyframes svcSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 520px) {
+  .editGrid,
+  .createGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .headActions {
+    width: 100%;
+  }
+
+  .headActions > button {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .cardActions {
+    width: 100%;
+  }
+}

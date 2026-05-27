@@ -207,22 +207,55 @@ FK SET NULL) e o payload pode evoluir aditivamente sem breaking change.
 - `GET /clinic-services/:id/professionals` · `POST /clinic-services/:id/professionals`
 - `PATCH /clinic-services/:id/professionals/:professional_id/status`
 
-### Sprint 4.6C — Frontend Catálogo de Serviços
+### Sprint 4.6C ✅ — Frontend Catálogo de Serviços (entregue 2026-05-27)
 
-- [ ] `ServicesPanel` (aba Equipe → Serviços): lista, criar, editar, desativar.
-- [ ] Seletor de serviço no `AdministrativeSchedulePanel` (opcional, filtrado
-      pelo profissional selecionado).
-- [ ] Seletor de serviço no `FinancialPanel` ao criar/editar cobrança (opcional;
-      exibe preço de tabela como sugestão).
-- [ ] API funções em `api.ts` para os 8+ endpoints.
-- [ ] `pnpm --filter frontend typecheck` ✅ · `build` ✅.
+- [x] `ServicesPanel` (aba Equipe → Serviços): lista, criar, editar, desativar/reativar,
+      vincular/desvincular profissionais. Owner-only para escrita; subtítulo explícito
+      "etiqueta administrativa/comercial — não TUSS/CBHPM, não prontuário".
+- [x] Seletor de serviço no `AdministrativeSchedulePanel` (opcional; **filtra por serviços
+      vinculados ao profissional selecionado** via `GET /clinic-services?professional_id=`; quando
+      nenhum profissional selecionado, lista todos os serviços ativos; reseta `cServiceId` ao
+      trocar profissional; exibe hint "Nenhum serviço vinculado" quando professional selecionado
+      mas lista vazia; passa `service_id` ao criar agendamento). Duração nunca preenche horário
+      automaticamente.
+- [x] Seletor de serviço no `FinancialPanel` ao criar/editar cobrança (opcional;
+      exibe preço de tabela como sugestão; botão "Usar preço de tabela" é ação
+      EXPLÍCITA do usuário — NUNCA auto-propaga `price_cents` → `amount_cents`).
+- [x] 8 API funções em `api.ts`: `listClinicServices` (`professional_id` filter adicionado),
+      `getClinicService`, `createClinicService`, `updateClinicService`, `updateClinicServiceStatus`,
+      `listServiceProfessionals`, `linkServiceProfessional`, `updateServiceProfessionalStatus`.
+- [x] Tipos `ClinicService`, `ProfessionalServiceLink`, `ListClinicServicesParams`,
+      `CreateClinicServicePayload`, `UpdateClinicServicePayload` em `api.ts`.
+- [x] `service_id: string | null` adicionado a `PublicAppointment`, `FinancialChargeListItem`,
+      `CreateAppointmentPayload`, `CreateFinancialChargePayload`, `UpdateFinancialChargePayload`.
+- [x] Backend wiring: `appointmentService.create` aceita + valida `service_id`
+      (active, same clinic, professional binding check →`service_not_available_for_professional`).
+- [x] Backend wiring: `financialChargeService.create`/`update` aceitam + validam `service_id`
+      (active, same clinic; mismatch com appointment → `service_mismatch_with_appointment`;
+      **profissional do agendamento sem vínculo com o serviço →
+      `service_not_available_for_appointment_professional`**).
+      `validateServiceLink` helper isolado. NUNCA auto-propaga `price_cents` → `amount_cents`.
+- [x] `GET /clinic-services` aceita `professional_id` opcional: filtra via EXISTS subquery em
+      `professional_services` (active=true); tenant-scoped; sem nova migration.
+- [x] `pnpm --filter frontend typecheck` ✅ · `build` ✅.
+- [x] `pnpm --filter backend typecheck` ✅ · `build` ✅.
+- [x] `migrate:status` 16/0 ✅ · `git diff --check` rc=0.
 
-### Sprint 4.6D — QA/Hardening Catálogo de Serviços
+**Endpoints entregues (backend wire-up):**
+- `GET /clinic-services?professional_id=` filtra serviços por profissional (EXISTS subquery, tenant-scoped).
+- `POST /appointments` aceita `service_id` opcional (com validação profissional×serviço).
+- `PATCH /financial/charges` e `POST /financial/charges` aceitam `service_id` opcional
+  (valida também vínculo do serviço com o profissional do agendamento, se houver).
 
-- [ ] Smoke API (positivo + negativo + cross-tenant).
-- [ ] SQL segurança (grep sem `select *` sem filtro tenant).
-- [ ] Audit/logs verificados.
-- [ ] Código zero.
+### Sprint 4.6D — QA/Hardening Catálogo de Serviços ✅ (2026-05-27)
+
+- [x] Smoke API 41/41 PASS — auth, CRUD, limites, permissões, links, Agenda+service_id, Financeiro+service_id.
+- [x] Bug crítico corrigido: controllers não repassavam `service_id` (4.6C.2).
+- [x] CSS classes `.fetchError`/`.refetchBtn` adicionadas; guard `!isError` no empty-state.
+- [x] `limit: 200` → `limit: 100`; chave duplicada removida; aba Serviços separada.
+- [x] `pnpm --filter frontend typecheck` ✅ · `build` ✅.
+- [x] `pnpm --filter backend typecheck` ✅ · `build` ✅.
+- [x] `migrate:status` 16/0 ✅ · `git diff --check` rc=0.
 
 ---
 
