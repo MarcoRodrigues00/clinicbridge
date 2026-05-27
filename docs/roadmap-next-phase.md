@@ -77,9 +77,12 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **4.4C** ✅ | Frontend do Financeiro v0.1 (`FinancialPanel`, tab "Financeiro", summary cards, 8 tipos + 8 funções API). typecheck/build ✅ |
 | **4.4D** ✅ | QA/hardening Financeiro v0.1 (smoke 60/60 PASS; SQL 9/9; audit/logs; frontend security; cleanup). Zero código |
 | **4.4D-conv** ✅ | Planejamento docs-only: estratégia Convênios/Faturamento Básico. `docs/insurance-billing-future-scope.md` criado; Fase 4.6 detalhada. Zero código |
-| **4.4E** ⏳ | Integração Agenda × Financeiro (badge financeiro na Agenda; alertas sugestivos; botão criar cobrança na consulta; sem automação; sem convênios). ADR aditiva ou adendo à ADR 0012 antes do início |
-| **4.5** ⏳ | Relatórios gerenciais v0.1. ADR 0013 antes do início |
-| **4.6A** ⏳ | ADR 0014 — Convênios/faturamento básico v0.1 (docs-only). Gate: 4.4E entregue + planejamento em `docs/insurance-billing-future-scope.md` aceito |
+| **4.4E-A** ✅ | ADR 0013 — Integração Agenda × Financeiro v0.1 (docs/ADR-only). Badge, alertas, botão criar cobrança, endpoints, permissões documentados. Operacional: `docs/agenda-financial-integration-v0-scope.md` |
+| **4.4E-B** ⏳ | Backend Agenda × Financeiro (avaliar se necessário; endpoint `/appointments/:id/charges` opcional). Gate: ADR 0013 aceita |
+| **4.4E-C** ⏳ | Frontend Agenda × Financeiro (badge + alertas A1–A4 + botão "Criar cobrança"). Gate: 4.4E-A aceita |
+| **4.4E-D** ⏳ | QA/hardening Agenda × Financeiro. Gate: 4.4E-C entregue |
+| **4.5** ⏳ | Relatórios gerenciais v0.1. ADR 0014 antes do início |
+| **4.6A** ⏳ | ADR 0015 — Convênios/faturamento básico v0.1 (docs-only). Gate: 4.4E entregue + planejamento em `docs/insurance-billing-future-scope.md` aceito |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.

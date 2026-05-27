@@ -7,7 +7,14 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.4D-conv** (entregue 2026-05-27) — **Planejamento Convênios e Faturamento Básico (docs-only).**
+**Sprint 4.4E-A** (entregue 2026-05-27) — **ADR 0013 Integração Agenda × Financeiro v0.1 (docs/ADR-only).**
+`docs/adr/0013-agenda-financial-integration-v0.md` + `docs/agenda-financial-integration-v0-scope.md` criados.
+Definidos: badge financeiro (5 estados), alertas sugestivos (A1–A4), fluxo "Criar cobrança" via agenda,
+estratégia de endpoints (reutilizar existentes), permissões por role, segurança/LGPD, invalidação de cache.
+ADR 0013 aceita. Gate para 4.4E-B/C aberto.
+`git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.**
+
+**Sprint anterior: 4.4D-conv** (entregue 2026-05-27) — **Planejamento Convênios e Faturamento Básico (docs-only).**
 `docs/insurance-billing-future-scope.md` criado · Fase 4.6 detalhada em `product-clinic-os-roadmap.md` ·
 `financial-v0-scope.md` expandido · `roadmap-next-phase.md` atualizado.
 `git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.**
