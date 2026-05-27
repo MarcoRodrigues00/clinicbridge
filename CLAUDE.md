@@ -12,6 +12,7 @@
 > - **Relatórios Gerenciais v0.1:** ADR `docs/adr/0014-management-reports-v0.md` · `docs/management-reports-v0-scope.md`
 > - **Catálogo de Serviços v0.1 (Fase 4.6):** ADR `docs/adr/0015-services-catalog-commercial-layer-v0.md` · `docs/services-catalog-v0-scope.md`
 > - **Convênios v0.1 (Fase 4.7):** ADR `docs/adr/0016-insurance-billing-v0.md` · operacional `docs/insurance-billing-v0-scope.md` · pré-planejamento `docs/insurance-billing-future-scope.md`
+> - **Estoque v0.1 (Fase 4.8):** ADR `docs/adr/0017-inventory-v0.md` · operacional `docs/inventory-v0-scope.md`
 > - **Documentos Médicos v0.1:** ADR `docs/adr/0011-medical-documents-prescriptions-v0.md` · `docs/medical-documents-v0-scope.md`
 > - **Prontuário v0.1:** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` · `docs/clinical-encounters-v0-scope.md`
 > - **Arquitetura clínica + roles + audit:** ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` · `docs/clinical-architecture-and-permissions.md`
@@ -21,7 +22,19 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.7D** (entregue) — **QA/Hardening + UX Polish Convênios v0.1.**
+**Sprint atual: 4.8A** (entregue) — **ADR 0017 Estoque v0.1 (docs/ADR-only).**
+ADR 0017 + `docs/inventory-v0-scope.md` criados. Estoque v0.1 = controle manual de
+entrada/saída de materiais e insumos. Entidades: `inventory_items` (catálogo com name 1..120,
+category ≤80, unit 1..40, current_quantity, minimum_quantity, location, notes ≤500, active;
+UNIQUE INDEX `(clinica_id, lower(btrim(name)))`) + `inventory_movements` (append-only:
+movement_type `entry|exit|adjustment|loss`, quantity_delta ≠ 0, reason ≤300 nullable,
+created_by_user_id). Permissões: dono_clinica CRUD completo; secretaria registra movimentos
++ lê estoque; profissional_clinico bloqueado. Invariantes: sem PII de paciente; notes/reason
+nunca em audit (metadata-only: item_id + movement_type + quantity_delta); append-only em
+movimentos; sem dedução automática; medicamentos controlados (SNGPC/ANVISA) fora do v0.1.
+`git diff --check` rc=0 ✅. **Zero código, schema, migration ou env.**
+
+**Sprint anterior: 4.7D** (entregue) — **QA/Hardening + UX Polish Convênios v0.1.**
 Subtabs internas no `InsurancePanel`: "Carteirinhas dos pacientes" (default) · "Convênios aceitos"
 (operadoras + planos) · "Preços de referência". `canWrite={true}` hardcode corrigido →
 `canWrite={isOwner || papel === 'secretaria'}`. `holder_name` removido da view de lista (ficava
@@ -227,6 +240,7 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 retrocompat com cobranças existentes).
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **4.8A** ✅ ADR 0017 Estoque v0.1 (docs-only) — 2 entidades, permissões, invariantes, gate 4.8B aberto
 - **4.7D** ✅ QA/Hardening Convênios — subtabs UX · PayerBadge · MarkPaid payer-aware · canWrite fix · holder_name PII fix · bug paciente
 - **4.7C** ✅ Frontend Convênios v0.1 — `InsurancePanel` + payer_type no Financeiro — typecheck/build ✅
 - **4.7B** ✅ Backend Convênios v0.1 — migration 17 + 4 DAOs + insuranceService + 17 endpoints — smoke 47/47 PASS
@@ -252,8 +266,8 @@ retrocompat com cobranças existentes).
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) →
-**4.8A** ADR Estoque (ADR 0017).
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A ✅ (ADR 0017 Estoque aceita) →
+**4.8B** Backend Estoque v0.1.
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
@@ -286,7 +300,7 @@ Detalhe: `docs/project-state.md`.
 
 **O que NÃO existe (sprint explícita):** export de relatórios
 (futuro com ADR própria); gráficos complexos / BI customizável; migração automática de
-patients.convenio→patient_insurances (decisão deferida); estoque (4.8A+); delete físico de paciente;
+patients.convenio→patient_insurances (decisão deferida); estoque backend (4.8B+); delete físico de paciente;
 undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina;
 NFS-e; TISS/TUSS real.
 
@@ -313,7 +327,7 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.8A** ADR 0017 Estoque v0.1 (gate: 4.7A–D ✅)
+- **4.8B** Backend Estoque v0.1 (gate: ADR 0017 ✅)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)

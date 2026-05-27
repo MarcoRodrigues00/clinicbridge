@@ -5264,3 +5264,60 @@ Subtabs implementadas com CSS no `InsurancePanel.module.css` (`.tabBar`, `.tabBt
 **Sprint 4.7D entregue.** Fase 4.7 (Convênios v0.1) completa. Gate para 4.8A aberto.
 
 **Próxima sprint:** **4.8A** ADR 0017 Estoque v0.1.
+
+---
+
+## Sprint 4.8A — ADR 0017 Estoque v0.1 (2026-05-27)
+
+### Objetivo
+
+Docs/ADR-only. Criar ADR 0017 e `docs/inventory-v0-scope.md` definindo o escopo
+do módulo de Estoque básico v0.1. Atualizar CLAUDE.md, project-state, sprint-history,
+roadmap-next-phase e product-clinic-os-roadmap. Zero código, schema, migration ou env.
+
+### Decisão central (ADR 0017)
+
+**Estoque v0.1 = controle manual de entrada/saída de materiais e insumos.**
+
+Entidades:
+- `inventory_items` — catálogo de itens (name, category, unit, current_quantity,
+  minimum_quantity, location, notes, active). UNIQUE INDEX `(clinica_id, lower(btrim(name)))`.
+- `inventory_movements` — registro append-only de movimentações (movement_type:
+  `entry|exit|adjustment|loss`; quantity_delta; reason nullable; created_by_user_id).
+
+Permissões: dono_clinica CRUD completo; secretaria registra movimentos + lê estoque;
+profissional_clinico bloqueado.
+
+### Invariantes-chave
+
+- **Append-only em `inventory_movements`** — sem UPDATE/DELETE. Correção = novo ajuste.
+- **Humano decide toda movimentação** — sem dedução automática por serviço/agendamento.
+- **Sem PII de paciente** — `inventory_movements` nunca referencia paciente.
+- **`notes`/`reason` nunca em audit** — audit metadata-only: `item_id`, `movement_type`,
+  `quantity_delta`.
+- **Concorrência:** `SELECT FOR UPDATE` em transação; rejeitar movimento que causaria
+  `current_quantity < 0` → 409 `inventory_quantity_insufficient`.
+- **Medicamentos controlados (SNGPC/ANVISA) fora do v0.1** — ADR futura obrigatória.
+
+### Arquivos criados
+
+- `docs/adr/0017-inventory-v0.md` — ADR 0017 Estoque v0.1 (12 seções).
+- `docs/inventory-v0-scope.md` — escopo operacional + checklist 4.8B/C/D.
+
+### Arquivos modificados
+
+- `CLAUDE.md` — sprint atual → 4.8A; "O que NÃO existe" remove 4.8A; próximas → 4.8B.
+- `docs/project-state.md` — entrada Sprint 4.8A.
+- `docs/sprint-history.md` — esta entrada.
+- `docs/roadmap-next-phase.md` — rows 4.7C ✅, 4.7D ✅, 4.8A ✅ adicionados.
+- `docs/product-clinic-os-roadmap.md` — Fase 4.7 completa ✅; Fase 4.8 ADR 0017 aceita.
+
+### Gates finais (4.8A)
+
+- `git diff --check` rc=0 ✅
+- `git status --short` confirma apenas arquivos docs/CLAUDE.md ✅
+- **Zero mudanças de código, schema, migration ou env.**
+
+**Sprint 4.8A entregue.** Gate para 4.8B aberto.
+
+**Próxima sprint:** **4.8B** Backend Estoque v0.1.
