@@ -7,6 +7,86 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.5D** (entregue 2026-05-27) — **QA/hardening + polish UX Relatórios Gerenciais v0.1.**
+Sprint de polish + regressão. Fecha a fase 4.5. Zero backend, zero migration, zero schema, zero env.
+
+**Arquivos alterados (2 código + docs):**
+- `frontend/src/components/ReportsPanel.tsx` — refator leve para levantar as 4 queries ao root + hero strip + frases interpretativas + reordenação dos cards do Financeiro + subtítulo "Pontos de atenção" no R-D + copy do restricted-card.
+- `frontend/src/components/ReportsPanel.module.css` — `.hero*` / `.caption*` / `.flagValueWarn`; ajuste `.flagItem` (ordem label/valor invertida); `.blocked` com tom ciano-calmo (border-left 3px) em vez de cinza-erro; mobile do hero.
+
+**Polish UX aplicado:**
+
+1. **Hero strip "Resumo do período"** acima dos 4 blocos com 4 sinais grandes:
+   - Consultas no período · Recebido · Em aberto (hint mostra vencido se > 0) · Pacientes novos.
+   - Lê do **mesmo cache** das seções (queryKey idêntica → TanStack Query deduplica, mas levantei as queries ao root para evitar resubscription churn).
+   - Células de Recebido/Em aberto ficam com `.heroCellMuted` (opacity 0.6) e hint "acesso restrito" quando o usuário tem 403 no R-B.
+
+2. **Frases interpretativas** por bloco (sem julgamento, contexto operacional):
+   - Agenda: cobre 3 casos (sem consultas / nada confirmado-realizado / com cancelamentos-faltas).
+   - Financeiro: deixa explícito que "Em aberto" e "Vencido" são saldo atual e não dependem do período (ADR 0014 §3.3).
+   - Pacientes: "X novo(s). Base ativa: Y."
+   - Agenda × Financeiro: "X consulta(s) · Y ponto(s) de atenção operacional a revisar."
+
+3. **Agenda** — reordem dos cards: Total · Realizadas · Confirmadas · Agendadas · Faltas · Canceladas · Taxa.
+   - "Canceladas" perdeu o tom warning (é normal); só "Faltas" mantém danger quando > 0.
+   - Taxa de comparecimento: hint "realizadas + confirmadas / total" quando há consultas; "sem consultas no período" quando total=0.
+
+4. **Financeiro** — ordem: Recebido (success) · Em aberto (info) · Vencido (danger só se > 0) · Cobranças pagas · Cobranças pendentes (hint mostra vencidas se > 0) · **Cancelado por último, sem tom**.
+
+5. **Pacientes** — label virou `"Sem agendamento há mais de 90 dias"` (em vez de "Sem agendamento recente"); hint "oportunidade de retorno" no lugar de "últimos 90 dias" (já está no label). Tom warning só se > 0.
+
+6. **Agenda × Financeiro** — flags viraram bloco "Pontos de atenção" com label à esquerda, valor à direita; valor em amarelo (`.flagValueWarn`) quando > 0. Card "Sem cobrança" recebe tom warning só se > 0.
+
+7. **Restricted-card** — tom **ciano-calmo** (`border-left: 3px solid rgba(34,211,238,0.45)` + fundo `rgba(34,211,238,0.04)`) em vez de cinza/erro. Copy: "Sua acesso atual não permite visualizar indicadores financeiros. Os blocos Agenda e Pacientes continuam disponíveis."
+
+8. **Datas** no header de período formatadas em PT-BR (`DD/MM/AAAA`) via novo helper `formatDateBr`.
+
+**Decisão sobre profissional × aba Relatórios:**
+- **Mantida visível** para todo papel administrativo. Frontend **não consegue** distinguir um secretaria puro de um `secretaria + profissional_clinico` no v0.1 — o `GET /me` não devolve grants clínicos e o `GET /clinical/roles` é owner-only. Adicionar endpoint de "meus grants" seria backend novo, fora do escopo de polish.
+- Profissional vê R-A/R-C normais; R-B/R-D viram card "Área financeira restrita" com tom intencional (ciano, não erro).
+- Backend continua sendo a fonte da verdade: `effectiveFinancialAccess='none'` → 403 em R-B/R-D. Sprint 4.5B já valida; 4.5D só melhora a UX no recebimento desse 403.
+
+**QA regressão API (24/24 PASS):**
+- Matriz 5 papéis × 4 endpoints: owner/secretaria/gestor 4× 200; profissional R-A/R-C 200, R-B/R-D 403 `forbidden_role`; admin 4× 403 `no_clinic_context`.
+- Payload PII scan recursivo (chaves proibidas) em todos os 4 endpoints com token de owner: 0 hits.
+- Sem regressão do backend Sprint 4.5B.
+
+**Segurança frontend (greps):**
+- `console.{log,debug,warn,error,info}` no ReportsPanel: 0 (única ocorrência é no comentário de cabeçalho).
+- `localStorage`/`sessionStorage`: 0 (idem).
+- `dangerouslySetInnerHTML`: 0 (idem).
+- `appointment_id` renderizado como texto: 0 (única ocorrência é como `key` de React no map, com comentário explicando).
+- Forbidden field names no `.tsx` (`nome|cpf|email|telefone|endereco|cancel_reason|administrative_notes|description|amount_cents|notes|body|internal_note|prescricao|diagnostico|cid|evolucao`): 0.
+- Token sempre em `Authorization` header via `apiFetch`; nunca em URL/query (sem mudança em `api.ts`).
+
+**QA browser/manual:**
+- Validado anteriormente com `smoke.owner` e `smoke.profissional` (4.5C); regressão de payload validada com tokens persistentes em 4.5D.
+- QA visual completo em browser fica por conta do usuário (subir `pnpm --filter frontend dev` e seguir `docs/testing-checklist.md` §"Smoke Frontend Relatórios v0.1").
+
+**Gates finais:**
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅ (warning de bundle size pré-existente)
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter backend migrate:status` 15/15 (zero pendentes/novas) ✅
+- `git diff --check` rc=0 ✅
+- `git status --short` — 2 frontend modificados + 5 docs modificados ✅
+
+**Ressalvas registradas (encerrando a fase 4.5):**
+- Sem export (CSV/PDF/XLSX) no v0.1 — futuro com ADR própria.
+- Sem gráficos complexos / BI customizável — propositalmente.
+- Sem dados clínicos; sem nomes/CPF/telefone/e-mail de pacientes; sem `appointment_id` renderizado.
+- Relatórios on-demand; sem cache local persistente nem auto-refresh.
+- Profissional **continua vendo a aba** com blocos financeiros restritos (decisão acima).
+- Filtros avançados `professional_id` (R-A/R-D) e `no_appt_days` (R-C) **não expostos como controles na UI** — backend aceita; pode entrar em 4.6/futuro se demanda real aparecer.
+- Convênios continuam fora até Fase 4.6 (ADR 0015 ainda não escrita).
+- Frontend não substitui contabilidade nem emissão fiscal (`disclaimer` no rodapé do painel).
+
+**Próxima sprint natural:** **4.6A** ADR 0015 Convênios/Faturamento básico v0.1 (docs/ADR-only).
+Alternativa razoável antes de 4.6A: polish geral de landing/footer/dashboard se o usuário priorizar visual antes de feature.
+
+---
+
 **Sprint 4.5C** (entregue 2026-05-27) — **Frontend Relatórios Gerenciais v0.1.**
 Consumo dos 4 endpoints implementados na Sprint 4.5B; aba "Relatórios" no Dashboard.
 

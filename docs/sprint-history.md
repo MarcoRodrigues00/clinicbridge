@@ -4437,3 +4437,89 @@ QA visual em browser fica como passo de 4.5D (junto do hardening), conforme o ch
 - Convênios continuam fora até Fase 4.6.
 
 **Próxima sprint natural:** 4.5D (QA/hardening relatórios — smoke browser completo, code review segurança frontend, eventual exposição de `professional_id`/`no_appt_days` se demanda real aparecer).
+
+## Sprint 4.5D — QA/hardening + polish UX Relatórios Gerenciais v0.1
+
+**Entregue:** 2026-05-27
+**Objetivo:** Polish UX no `ReportsPanel` baseado em feedback do usuário ("ok, mas não uau"), QA regressão de segurança/permissões, e fechamento da fase 4.5. Zero backend, zero migration, zero export, sem feature nova.
+
+### Polish UX aplicado
+
+1. **Hero strip "Resumo do período"** — 4 sinais grandes acima dos blocos:
+   - Consultas no período · Recebido · Em aberto (hint com vencido se > 0) · Pacientes novos.
+   - Lê do mesmo cache das seções (queries levantadas ao root; queryKey idêntica).
+   - Recebido/Em aberto ficam mutadas (opacity 0.6) + hint "acesso restrito" quando 403 no R-B.
+2. **Frases interpretativas** (`<p className={styles.caption}>`) por bloco, sem julgamento.
+3. **Agenda** — reordem dos cards; "Canceladas" sem tom (é normal); "Faltas" danger só se > 0; taxa com hint explicativo.
+4. **Financeiro** — Recebido/Em aberto/Vencido primeiro; **Cancelado por último, sem tom**.
+5. **Pacientes** — label vira "Sem agendamento há mais de 90 dias" (no lugar de "Sem agendamento recente"); hint "oportunidade de retorno".
+6. **Agenda × Financeiro** — flags reorganizadas em sub-bloco "Pontos de atenção"; valor em amarelo (`.flagValueWarn`) se > 0; card "Sem cobrança" tom warning só se > 0.
+7. **Restricted-card** — tom ciano-calmo (border-left ciano + fundo `rgba(34,211,238,0.04)`) em vez de cinza/erro; copy reformulada ("Os blocos Agenda e Pacientes continuam disponíveis.").
+8. **Datas** — header de período em PT-BR (`DD/MM/AAAA`).
+
+### Decisão registrada — profissional × aba Relatórios
+
+**Aba mantida visível** para todo papel administrativo (dono_clinica, secretaria).
+**Justificativa:** o frontend não consegue distinguir um secretaria puro de um secretaria + profissional_clinico:
+- `GET /me` não devolve grants clínicos
+- `GET /clinical/roles` é owner-only
+
+Esconder a aba para profissional exigiria backend novo (endpoint `/me/clinical-roles` ou inclusão de grants no `/me`), o que é feature, não polish — fica fora do escopo de 4.5D.
+Profissional continua vendo R-A/R-C normalmente. R-B/R-D viram card "Área financeira restrita" com tom intencional (ciano), não tom de erro.
+Backend continua sendo a fonte da verdade: `effectiveFinancialAccess='none'` → 403.
+
+### Arquivos alterados
+
+- `frontend/src/components/ReportsPanel.tsx` — refator leve (queries no root) + hero + captions + reordens + copy
+- `frontend/src/components/ReportsPanel.module.css` — `.hero*`, `.caption*`, `.flagValueWarn`, `.blocked` com tom ciano-calmo, mobile do hero
+- `CLAUDE.md`, `docs/project-state.md`, `docs/sprint-history.md`, `docs/testing-checklist.md`, `docs/management-reports-v0-scope.md`
+
+**Zero alterações em `api.ts`, backend, migrations, env, schema.**
+
+### QA regressão API (24/24 PASS)
+
+Reusa tokens persistentes (`/tmp/cb-smoke/tokens.json`) dos smoke users.
+
+| Papel | R-A | R-B | R-C | R-D |
+|-------|-----|-----|-----|-----|
+| owner       | 200 | 200 | 200 | 200 |
+| secretaria  | 200 | 200 | 200 | 200 |
+| gestor      | 200 | 200 | 200 | 200 |
+| profissional | 200 | **403 forbidden_role** | 200 | **403 forbidden_role** |
+| admin       | **403 no_clinic_context** × 4 ||||
+
+Payload PII scan recursivo (chaves proibidas em todos os 4 endpoints): 0 hits.
+
+### Segurança frontend (greps no ReportsPanel.tsx)
+
+- `console.{log,debug,warn,error,info}`: 0 (única ocorrência é comentário de cabeçalho)
+- `localStorage` / `sessionStorage`: 0
+- `dangerouslySetInnerHTML`: 0
+- `appointment_id` renderizado como texto: 0 (única ocorrência é como `key` no `.map`, com comentário)
+- Forbidden field names (nome/cpf/email/telefone/endereco/notes/cancel_reason/administrative_notes/description/amount_cents/body/internal_note/prescricao/diagnostico/cid/evolucao): 0
+- Token sempre em `Authorization` header (apiFetch); nunca em URL
+
+### Gates finais
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter backend migrate:status` 15/15 ✅
+- `git diff --check` rc=0 ✅
+- `git status --short` — 2 frontend + 5 docs ✅
+
+### Ressalvas (encerramento da fase 4.5)
+
+- Sem export (CSV/PDF/XLSX) no v0.1.
+- Sem gráficos complexos / BI customizável.
+- Sem dados clínicos, sem PII de paciente.
+- Relatórios on-demand; sem auto-refresh.
+- Profissional **continua vendo a aba** com blocos financeiros restritos (decisão acima).
+- Filtros avançados `professional_id` e `no_appt_days` não expostos como controles na UI v0.1.
+- Convênios continuam fora até Fase 4.6 (ADR 0015 ainda não escrita).
+
+**Próxima sprint natural:** **4.6A** ADR 0015 Convênios/Faturamento básico v0.1 (docs/ADR-only).
+Alternativa: polish geral landing/footer/dashboard antes de iniciar 4.6.
+
+**Relatórios Gerenciais v0.1 → CLOSED na sprint 4.5D.**
