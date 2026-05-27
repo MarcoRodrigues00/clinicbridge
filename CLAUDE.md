@@ -204,8 +204,12 @@ DAOs + services + PDF + 8 endpoints + smoke 47/47 PASS) → **4.3C ✅** fronten
 (aba Documentos no drawer; `ClinicalDocumentsPanel`; tab bar; 7 API funcs) → **4.3D ✅**
 QA/hardening final (smoke 50/50 PASS; audit/logs; cleanup) → **4.4A ✅** ADR 0012 +
 `docs/financial-v0-scope.md` (docs-only; `financial_charges`; pending→paid|canceled;
-roles admin; sem gateway) → **4.4B** implementação backend financeiro → **4.4C** frontend
-financeiro → **4.5** relatórios gerenciais → **4.6** convênios/faturamento básico
+roles admin; sem gateway) → **4.4B** implementação backend financeiro (migration +
+`appointment_id` opcional + filtro `?appointment_id` na listagem) →
+**4.4C** frontend financeiro (aba Financeiro; vinculado a agendamento opcional) →
+**4.4D** QA/hardening financeiro → **4.4E** integração Agenda × Financeiro
+(badge na Agenda; alertas; botão criar cobrança na consulta; sem automação) →
+**4.5** relatórios gerenciais → **4.6** convênios/faturamento básico
 (TISS/TUSS real fora) → **4.7** estoque básico (medicamentos controlados/ANVISA fora).
 Cada **fase nova** exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
@@ -303,7 +307,9 @@ conceitual e audit de leitura). Sequência de fases administrativas:
   QA/hardening final (smoke 50/50 PASS; audit/logs verificados; cleanup; sem código novo) →
   **4.4A ✅** ADR 0012 módulo financeiro v0.1 (docs-only; 1 tabela `financial_charges`;
   ciclo pending→paid|canceled; roles admin; sem gateway; operacional `docs/financial-v0-scope.md`) →
-  **4.4B** implementação backend financeiro → **4.4C** frontend financeiro →
+  **4.4B** implementação backend financeiro (migration + `appointment_id` opcional + smoke) →
+  **4.4C** frontend financeiro → **4.4D** QA/hardening financeiro →
+  **4.4E** integração Agenda × Financeiro (badge; alertas; sem automação) →
   **4.5** relatórios gerenciais v0.1 → **4.6** convênios/faturamento
   básico v0.1 (TISS/TUSS real fora) → **4.7** estoque básico v0.1
   (medicamentos controlados/ANVISA fora).

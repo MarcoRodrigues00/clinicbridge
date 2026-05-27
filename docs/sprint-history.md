@@ -3638,6 +3638,31 @@ Módulo Financeiro v0.1 antes de qualquer código. Autoriza a Sprint 4.4B.
 - Zero migrations ✅
 - Zero env vars ✅
 
+### Ajuste pós-entrega — Nível 3: Integração Agenda × Financeiro (2026-05-27)
+
+Realizado antes do início da Sprint 4.4B. Sem código, sem migration.
+
+**Motivação:** nova decisão de produto — financeiro deve se integrar com a agenda mostrando
+status financeiro da consulta e alertas operacionais, sem automação agressiva.
+
+**Decisões registradas:**
+- Dois estados independentes: status da consulta (scheduling) e status financeiro (financial_charges).
+  Nenhum altera o outro automaticamente no v0.1.
+- `appointment_id` com validação cross-tenant + cross-patient entra na 4.4B.
+- Filtro `?appointment_id` em `GET /financial/charges` entra na 4.4B.
+- Badge financeiro na Agenda e alertas sugestivos ficam para Sprint 4.4E.
+- Invariante documentada: humano decide a confirmação da consulta; alertas são sugestivos,
+  não executivos.
+
+**Arquivos atualizados:**
+- `docs/adr/0012-financial-module-v0.md` — 17 seções; nova §16 "Integração Agenda × Financeiro
+  Nível 3"; 16 riscos; §10.7/10.8 (badge e alertas); §11.9 (decisão sobre endpoint dedicado);
+  §12.1 (roadmap 4.4C/4.4D/4.4E).
+- `docs/financial-v0-scope.md` — checklists 4.4D e 4.4E adicionados; validação `appointment_id`
+  no cheat-sheet; "fora de escopo" com automações explícitas.
+- `CLAUDE.md`, `docs/project-state.md`, `docs/sprint-history.md`, `docs/roadmap-next-phase.md`
+  — sequência de sprints atualizada com 4.4D e 4.4E.
+
 ### Fora de escopo (esta sprint)
 
 - Qualquer código (migration, backend, frontend).

@@ -7,18 +7,29 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.4A** (entregue 2026-05-27) — **ADR Módulo Financeiro v0.1 (docs/ADR-only).**
+**Sprint 4.4A** (entregue 2026-05-27; ajuste docs 2026-05-27) — **ADR Módulo Financeiro v0.1 (docs/ADR-only).**
 ADR 0012 + `docs/financial-v0-scope.md`. Fecha o escopo do módulo financeiro e autoriza a Sprint 4.4B.
 **Sem código, sem migration, sem env vars, sem AWS.**
 
+**Ajuste pós-entrega (2026-05-27 — ainda na 4.4A, antes do início da 4.4B):**
+ADR 0012 e scope doc atualizados com "Nível 3 — Integração Agenda × Financeiro":
+- `appointment_id` validação cross-tenant + cross-patient documentada (entra na 4.4B).
+- Filtro `?appointment_id` em `GET /financial/charges` (entra na 4.4B).
+- Nova §16 (ADR 0012): modelo de dois estados independentes; fluxo operacional v0.1;
+  badge financeiro na Agenda; alertas sugestivos; decisões explícitas de o que entra em cada sprint.
+- Invariante: nenhuma automação agressiva no v0.1 — humano decide sempre.
+- Sprint 4.4E adicionada: integração Agenda × Financeiro (badge, alertas, botão criar cobrança).
+- Riscos adicionados: pagamento confirmar consulta automaticamente; consulta cancelada com cobrança ativa; cobrança cancelada com consulta ativa.
+
 **Componentes entregues:**
-- `docs/adr/0012-financial-module-v0.md` — ADR completa (16 seções, Status: Accepted):
+- `docs/adr/0012-financial-module-v0.md` — ADR completa (17 seções, Status: Accepted):
   1 tabela `financial_charges`; ciclo de vida `pending → paid | canceled`; 8 endpoints;
   matriz de permissões (secretaria/dono full; gestor view+pay+cancel; profissional sem acesso);
   audit de escrita em `audit_logs`; sem audit de leitura dedicado; logger redaction de
-  `description`/`notes`/`cancel_reason`; LGPD postura; diretrizes UX; 9 riscos documentados.
-- `docs/financial-v0-scope.md` — companheiro operacional (checklists 4.4B + 4.4C, matriz,
-  endpoints, catálogo audit, modelo de dados, validações, fora de escopo).
+  `description`/`notes`/`cancel_reason`; LGPD postura; diretrizes UX; 16 riscos documentados;
+  §16 integração Agenda × Financeiro Nível 3.
+- `docs/financial-v0-scope.md` — companheiro operacional (checklists 4.4B + 4.4C + 4.4D + 4.4E,
+  matriz, endpoints, catálogo audit, modelo de dados, validações, fora de escopo).
 
 **`git diff --check`** rc=0 · **`git status --short`** apenas docs novos/modificados.
 

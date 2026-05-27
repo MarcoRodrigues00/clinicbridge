@@ -73,7 +73,10 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **4.3C** ✅ | Frontend de Documentos Médicos v0.1 (`ClinicalDocumentsPanel`, tab bar Atendimentos/Documentos, 7 API funcs + 8 tipos). typecheck/build ✅ |
 | **4.3D** ✅ | QA/hardening final de Documentos Médicos v0.1 (smoke 50/50 PASS, audit/logs verificados, cleanup, zero código novo) |
 | **4.4A** ✅ | ADR 0012 — escopo do Módulo Financeiro v0.1 (1 tabela `financial_charges`, ciclo pending→paid\|canceled, 8 endpoints, roles administrativas, sem gateway). Operacional: `docs/financial-v0-scope.md`. Autoriza 4.4B |
-| **4.4B** ⏳ | Implementação backend do Financeiro v0.1 (migration `financial_charges` + DAOs + services + 8 endpoints + logger redaction + smoke tests). Sem ADR nova |
+| **4.4B** ⏳ | Implementação backend do Financeiro v0.1 (migration `financial_charges` + `appointment_id` opcional + filtro + DAOs + services + 8 endpoints + logger redaction + smoke tests). Sem ADR nova |
+| **4.4C** ⏳ | Frontend do Financeiro v0.1 (aba Financeiro; totalizadores; formulário com `appointment_id` opcional; detalhe com agendamento vinculado). Sem ADR nova |
+| **4.4D** ⏳ | QA/hardening Financeiro v0.1 (smoke N/N PASS; audit/logs; invariantes; cleanup; docs). Zero código novo |
+| **4.4E** ⏳ | Integração Agenda × Financeiro (badge financeiro na Agenda; alertas sugestivos; botão criar cobrança na consulta; sem automação). ADR aditiva ou adendo à ADR 0012 antes do início |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.

@@ -23,6 +23,8 @@
 | **Sprint conceitual** | 4.4A (ADR 0012 — entregue 2026-05-27) |
 | **Sprint de implementação backend** | 4.4B (ainda não iniciada) |
 | **Sprint de implementação frontend** | 4.4C (após 4.4B aprovada) |
+| **Sprint QA/hardening** | 4.4D (após 4.4C aprovada) |
+| **Sprint integração Agenda × Financeiro** | 4.4E (após 4.4D aprovada — badge, alertas, fluxo consulta→cobrança) |
 | **Tabelas novas** | 1 (`financial_charges`) |
 | **Endpoints novos** | 8 (ver §5) |
 | **Roles novas** | Nenhuma — reutiliza `dono_clinica`, `secretaria`, `gestor_clinica` |
@@ -125,7 +127,7 @@ Legenda: ✅ permitido · 👁️ visualização · ❌ bloqueado
 | Método | Path | Role mínima | Audit escrita |
 |---|---|---|---|
 | POST | `/financial/charges` | `dono_clinica` \| `secretaria` | `financial.charge.created.success` |
-| GET | `/financial/charges` | + `gestor_clinica` | — |
+| GET | `/financial/charges` (+ filtro `appointment_id?`) | + `gestor_clinica` | — |
 | GET | `/financial/charges/:id` | + `gestor_clinica` | — |
 | PATCH | `/financial/charges/:id` | `dono_clinica` \| `secretaria` | `financial.charge.updated.success` |
 | POST | `/financial/charges/:id/mark-paid` | + `gestor_clinica` | `financial.charge.paid.success` |
@@ -136,6 +138,11 @@ Legenda: ✅ permitido · 👁️ visualização · ❌ bloqueado
 Todos exigem `patientsRateLimit → requireAuth → requireClinic → requireRole(...)`.
 
 Prefixo: `/financial/`. O endpoint `/patients/:id/charges` fica no router de patients.
+
+**Sobre `GET /appointments/:id/charges` (Sprint 4.4E):**
+Na 4.4B, o filtro `?appointment_id=` em `GET /financial/charges` é suficiente. Um endpoint
+dedicado `/appointments/:id/charges` pode ser adicionado na **Sprint 4.4E** se o produto
+justificar. Decisão consciente para não complicar o router de appointments na 4.4B.
 
 Códigos de erro padrão:
 - 400 `financial_charge_invalid` — payload inválido
@@ -315,6 +322,10 @@ Migration da 4.4B é **estritamente aditiva** (1 tabela + índices).
 - [ ] `gestor_clinica` lista → 200 ✅
 - [ ] `gestor_clinica` tenta criar → 403 ✅
 - [ ] `gestor_clinica` marca como pago → 200 ✅
+- [ ] Criar cobrança com `appointment_id` válido (mesmo `patient_id`) → 201 ✅
+- [ ] `GET /financial/charges?appointment_id=<uuid>` → 200 (só cobranças vinculadas) ✅
+- [ ] Criar cobrança com `appointment_id` de outro paciente → 400 ✅
+- [ ] Criar cobrança com `appointment_id` de outra clínica → 400 genérico ✅
 - [ ] `profissional_clinico` → 403 em todos endpoints ✅
 - [ ] `admin_sistema` → 403/no_clinic_context ✅
 - [ ] `amount_cents = 0` → 400 ✅
@@ -364,8 +375,10 @@ SELECT acao, recurso, recurso_id FROM audit_logs
 - [ ] Lista de cobranças com filtros: Status / Período / Paciente
 - [ ] Botão "+ Nova cobrança" (dono + secretaria; gestor não vê)
 - [ ] Formulário de criação: Paciente (busca), Descrição, Valor, Vencimento?, Observações?
+  - [ ] Campo opcional "Agendamento vinculado" (dropdown de agendamentos recentes do paciente)
   - [ ] Aviso visível: "Não inclua diagnóstico ou informações clínicas em Observações"
 - [ ] Card de cobrança: descrição, valor, status badge, vencimento, ações inline
+- [ ] Detalhe de cobrança: mostrar agendamento vinculado (se `appointment_id` preenchido) com link/referência
 - [ ] Modal "Marcar como pago": método (obrigatório), data (default hoje)
 - [ ] Confirmação antes de cancelar cobrança
 - [ ] Seção "Cobranças do paciente" no cadastro administrativo (lista resumida + "Ver todas")
@@ -373,6 +386,41 @@ SELECT acao, recurso, recurso_id FROM audit_logs
 - [ ] Sem `dangerouslySetInnerHTML`; valores em centavos formatados no frontend (`R$ 250,00`)
 - [ ] 401/403 → mensagem genérica segura
 - [ ] Linguagem conforme ADR 0012 §10.3 ("Cobranças", "Em aberto", "Marcar como pago")
+
+> **Nota:** badge financeiro na Agenda e alertas de integração **não entram na 4.4C**.
+> Ficam para a Sprint 4.4E. A 4.4C é o módulo Financeiro puro.
+
+## 11.5 Checklist Sprint 4.4D (QA/hardening Financeiro v0.1 — após 4.4C)
+
+- [ ] Smoke N/N PASS (reutilizar/expandir script da 4.4B)
+- [ ] Audit `audit_logs`: `financial.charge.created/updated/paid/canceled` presentes
+- [ ] Logger redaction: `description`, `notes`, `cancel_reason` não aparecem nos logs
+- [ ] Permissões validadas: secretaria/dono full; gestor view+pay+cancel; profissional → 403
+- [ ] Invariantes de schema verificados (SQL checks):
+  - `paid` sem `paid_at` → 0 linhas
+  - `canceled` sem `canceled_at` → 0 linhas
+  - `appointment_id` com `patient_id` divergente → 0 linhas (validação service basta)
+- [ ] Dados sintéticos dos smoke tests removidos
+- [ ] Build/typecheck OK: `pnpm --filter backend typecheck` ✅ · `pnpm --filter frontend typecheck` ✅
+- [ ] `git diff --check` rc=0 ✅
+- [ ] Docs atualizados (CLAUDE.md, project-state, sprint-history, testing-checklist)
+
+## 11.6 Checklist Sprint 4.4E (Integração Agenda × Financeiro — após 4.4D)
+
+> Sprint que implementa o "Nível 3" da integração. Exige ADR aditiva ou adendo à ADR 0012
+> antes do início, conforme política Clinic OS (§2 da ADR 0008).
+
+- [ ] Backend: endpoint ou filtro `GET /appointments/:id/charges` (decisão de rota na sprint)
+- [ ] Backend: query de status financeiro agregado por agendamento (JOIN `financial_charges`)
+- [ ] Frontend Agenda: badge financeiro por card de agendamento (pending/pago/vencido/sem cobrança)
+- [ ] Frontend Agenda: botão "Criar cobrança" no card/detalhe de agendamento (abre form financeiro pré-preenchido com `appointment_id`)
+- [ ] Frontend Agenda: botão "Ver cobrança" no card (se cobrança existir)
+- [ ] Frontend: alerta "Pagamento recebido. Deseja confirmar a consulta?" após `mark-paid` com `appointment_id` vinculado
+- [ ] Frontend: alerta "Agendamento cancelado. Revise a cobrança vinculada." após cancelar agendamento com cobrança ativa
+- [ ] Frontend: alerta "Cobrança cancelada. Revise o agendamento vinculado." após cancelar cobrança com agendamento ativo
+- [ ] **Invariante validada:** nenhum alerta executa ação automaticamente — todos são dismissíveis e opcionais
+- [ ] Smoke tests cobrindo os fluxos de alerta
+- [ ] Docs atualizados
 
 ---
 
@@ -383,6 +431,7 @@ SELECT acao, recurso, recurso_id FROM audit_logs
 | `patient_id` ativo + não-mesclado | service | 404 `patient_not_found` |
 | `patient_id` mesma clínica | DAO (filtro tenant) | 404 |
 | `appointment_id` mesma clínica (se presente) | service | 400 `financial_charge_invalid` |
+| `appointment_id` mesmo `patient_id` (se presente) | service | 400 `financial_charge_invalid` |
 | `amount_cents > 0` | DB CHECK + service | 400 `financial_charge_invalid` |
 | `currency = 'BRL'` | DB CHECK | 400 |
 | `description` ∈ [1, 500] chars | DB CHECK + service | 400 |
@@ -416,6 +465,15 @@ SELECT acao, recurso, recurso_id FROM audit_logs
 - Notificações / alertas de inadimplência.
 - `profissional_clinico` com acesso ao financeiro (revisável em v0.2).
 - `financeiro_clinica` role (ADR 0009 §4, não implementada — revisável em v0.2).
+- **Confirmação automática de consulta por pagamento** — invariante v0.1 (fica para 4.4E com alerta sugestivo).
+- **Cancelamento automático de cobrança por cancelamento de consulta** — invariante v0.1.
+- **Cancelamento automático de consulta por cancelamento de cobrança** — invariante v0.1.
+- **Pré-reserva automática até pagamento** — ADR futura.
+- **Webhook de pagamento** — exige gateway; ADR futura.
+- **Política configurável por clínica** (pagamento → confirmar consulta auto) — Sprint 4.4E ou posterior.
+- **Badge financeiro na Agenda** — Sprint 4.4E (não entra em 4.4C).
+- **Alertas Agenda × Financeiro** — Sprint 4.4E (não entra em 4.4C).
+- **Botão "Criar cobrança" na consulta** — Sprint 4.4E (modifica UX de Agenda).
 
 ---
 
