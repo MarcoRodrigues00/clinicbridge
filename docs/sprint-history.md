@@ -3923,3 +3923,70 @@ redação de sentinels nos logs (FIN_DESC_SENTINEL, FIN_NOTES_SENTINEL, FIN_CANC
 - `git status --short` — limpo ✅
 
 **Próxima sprint natural:** 4.4E (Integração Agenda × Financeiro — badge de cobrança pendente, alertas sugestivos, botão "Criar cobrança" a partir de agendamento; ADR própria necessária).
+
+---
+
+## Sprint 4.4D-conv — Planejamento Convênios e Faturamento Básico (docs-only)
+
+**Entregue:** 2026-05-27
+**Objetivo:** Documentar a estratégia de convênios/faturamento básico antes da Sprint 4.4E,
+separando claramente o Financeiro v0.1 particular/manual do módulo de convênios futuro (Fase 4.6).
+**Zero mudanças de código, schema, migration, backend, frontend, env.**
+
+### Decisões registradas
+
+1. **Financeiro v0.1 é e permanece 100% particular/manual** — cobranças manuais,
+   marcar como pago, cancelar, totalizadores. Sem convênio até ADR 0014.
+
+2. **Convênios entram na Fase 4.6**, não na 4.4 nem na 4.5:
+   - 4.4E foca exclusivamente em integração Agenda × Financeiro (badge + alertas + botão criar cobrança).
+   - 4.5 foca em relatórios gerenciais.
+   - 4.6A = ADR 0014 (docs-only), gate para 4.6B.
+
+3. **Entidades conceituais rascunhadas** (não em código; validadas pela ADR 0014):
+   - `insurance_providers(clinica_id, name, active)` — operadoras da clínica.
+   - `patient_insurance_plans(patient_id, provider_id, plan_name, member_number, valid_until)`.
+   - `insurance_authorizations(appointment_id, provider_id, authorization_number, status)`.
+   - Extensão futura de `financial_charges`:
+     `payer_type`, `insurance_provider_id`, `copay_amount_cents`, `insurance_amount_cents`.
+
+4. **Invariantes consolidadas** (aplicáveis desde o planejamento):
+   - Autorização de convênio não confirma consulta automaticamente.
+   - Glosa não apaga cobrança — é evento/nota separado.
+   - Pagamento do paciente ≠ recebimento do convênio.
+   - `notes` nunca contém diagnóstico, CID ou dado clínico.
+   - Tenant isolation por `clinica_id` em todas as novas tabelas.
+   - Humano decide sempre (sem automação agressiva no v0.1/v0.2).
+
+5. **TISS/TUSS real** fica para depois da Fase 4.6 estabilizada:
+   - TISS = padrão ANS XML/SOAP; certificação; homologação por operadora; alto custo.
+   - TUSS = base de terminologia atualizada + licenciamento.
+   - Integração eletrônica com operadoras, autorização prévia eletrônica, batch de faturamento ANS — todos depois da 4.6.
+
+6. **Migração de dados existentes:** `patients.convenio` + `patients.numero_carteirinha`
+   (texto livre atual) podem ser importados para `patient_insurance_plans` na sprint 4.6B.
+   Os campos originais ficam na tabela `patients` por compatibilidade até migration decidida.
+
+7. **UX futura planejada:**
+   - Paciente: seção "Convênios do paciente".
+   - Agendamento: campo "Forma de atendimento" (Particular / Convênio / Misto).
+   - Financeiro: totalizadores separados "A receber do paciente" / "A receber do convênio".
+   - Alertas sugestivos: Autorização pendente, Carteirinha vencida, Pagamento paciente pendente,
+     Recebimento convênio pendente.
+
+### Documentos criados/atualizados
+
+- **CRIADO** `docs/insurance-billing-future-scope.md` — planejamento completo
+  (situação atual, entidades futuras, regras, segurança/LGPD, UX, roadmap, fora de escopo).
+- **Atualizado** `docs/financial-v0-scope.md` — §13 fora de escopo expandida + §14 convênios + §15 referências.
+- **Atualizado** `docs/product-clinic-os-roadmap.md` — Fase 4.6 reescrita com sprints sugeridas e entidades.
+- **Atualizado** `docs/roadmap-next-phase.md` — status 4.4B/C/D corrigidos para ✅; 4.4D-conv e 4.6A adicionados.
+- **Atualizado** `docs/project-state.md` — sprint atual → 4.4D-conv.
+- **Atualizado** `CLAUDE.md` — referência a `insurance-billing-future-scope.md`; trilha Clinic OS atualizada.
+
+### Checks finais
+
+- `git diff --check` rc=0 ✅
+- `git status --short` — apenas docs modificados/criados ✅
+
+**Próxima sprint natural:** 4.4E (Integração Agenda × Financeiro — ADR adendo à ADR 0012 + badge + alertas + botão criar cobrança; sem convênios).

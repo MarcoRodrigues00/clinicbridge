@@ -400,7 +400,8 @@ Migration da 4.4B é **estritamente aditiva** (1 tabela + índices).
 - Contas a pagar (só contas a receber no v0.1).
 - Split de pagamento / repasse médico.
 - Planos/assinaturas de pacientes.
-- Faturamento TISS/TUSS / convênios (Fase 4.6).
+- **Faturamento TISS/TUSS / convênios** — Fase 4.6; planejamento em `docs/insurance-billing-future-scope.md`.
+  Inclui: cadastro de operadoras, carteirinha estruturada, autorização, glosa, repasse, integração eletrônica ANS.
 - Relatórios avançados (Fase 4.5).
 - Reembolso formal / chargeback.
 - Integração com maquininha de cartão.
@@ -423,7 +424,23 @@ Migration da 4.4B é **estritamente aditiva** (1 tabela + índices).
 
 ---
 
-## 14. Referências
+## 14. Convênios e Faturamento — estratégia futura
+
+O Financeiro v0.1 é estritamente particular/manual. Convênios entram na Fase 4.6.
+O planejamento completo está em **`docs/insurance-billing-future-scope.md`**:
+- O que o v0.1 cobre e o que não cobre.
+- Entidades conceituais futuras (`insurance_providers`, `patient_insurance_plans`,
+  `insurance_authorizations`) e extensão futura de `financial_charges`.
+- Regras de negócio, segurança/LGPD e UX futura.
+- Roadmap sugerido: 4.6A (ADR) → 4.6B (backend) → 4.6C (frontend) → 4.6D (QA).
+- O que fica para depois da 4.6 estabilizada: TISS/TUSS real, integração eletrônica.
+
+**Invariante atual:** `financial_charges` não tem `payer_type` nem `insurance_provider_id`.
+Esses campos só entram após a ADR 0014 ser aceita.
+
+---
+
+## 15. Referências
 
 - `docs/adr/0012-financial-module-v0.md` (esta sprint)
 - `docs/adr/0009-clinical-architecture-roles-read-audit.md`
@@ -434,3 +451,4 @@ Migration da 4.4B é **estritamente aditiva** (1 tabela + índices).
 - `docs/security-notes.md`
 - `docs/product-clinic-os-roadmap.md`
 - `docs/roadmap-next-phase.md`
+- `docs/insurance-billing-future-scope.md` (planejamento convênios/faturamento)

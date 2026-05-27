@@ -7,7 +7,12 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.4D** (entregue 2026-05-27) — **QA/Hardening Módulo Financeiro v0.1.**
+**Sprint 4.4D-conv** (entregue 2026-05-27) — **Planejamento Convênios e Faturamento Básico (docs-only).**
+`docs/insurance-billing-future-scope.md` criado · Fase 4.6 detalhada em `product-clinic-os-roadmap.md` ·
+`financial-v0-scope.md` expandido · `roadmap-next-phase.md` atualizado.
+`git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.**
+
+**Sprint anterior: 4.4D** (entregue 2026-05-27) — **QA/Hardening Módulo Financeiro v0.1.**
 Smoke API 60/60 PASS · SQL invariants 9/9 · audit 4 ações · log redaction PASS ·
 frontend security checks PASS · cleanup (0 pending, 19 canceled, 6 paid).
 `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
