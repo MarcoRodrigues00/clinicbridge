@@ -82,10 +82,14 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **4.4E-C** ✅ | Frontend Agenda × Financeiro — badge (5 estados), alertas A1–A4, botão "Criar cobrança", link "Ver cobrança". typecheck/build ✅ |
 | **4.4E-D** ✅ | QA/hardening Agenda × Financeiro — code review 13/13, smoke 24/24, SQL 9/9, audit. Zero código |
 | **4.5A** ✅ | ADR 0014 — Relatórios Gerenciais v0.1 (docs-only). 4 relatórios (R-A/B/C/D), permissões, fontes, API, UX, roadmap. Operacional: `docs/management-reports-v0-scope.md` |
-| **4.5B** ⏳ | Backend Relatórios v0.1 — DAO + service + 4 endpoints (`/reports/*`) + smoke. Gate: ADR 0014 aceita ✅ |
-| **4.5C** ⏳ | Frontend Relatórios v0.1 — aba "Relatórios" + ReportsPanel + filtros + cards. Gate: 4.5B entregue |
-| **4.5D** ⏳ | QA/hardening Relatórios v0.1. Gate: 4.5C entregue |
-| **4.6A** ⏳ | ADR 0015 — Convênios/faturamento básico v0.1 (docs-only). Gate: 4.5 entregue + planejamento em `docs/insurance-billing-future-scope.md` aceito |
+| **4.5B** ✅ | Backend Relatórios v0.1 — `reportsDao`, `reportsService`, 4 endpoints (`/reports/*`), smoke 51/51 PASS |
+| **4.5C** ✅ | Frontend Relatórios v0.1 — aba "Relatórios" + `ReportsPanel` + filtros de período + 4 blocos. typecheck/build ✅ |
+| **4.5D** ✅ | QA/hardening + polish UX Relatórios v0.1 — hero strip, frases interpretativas, regressão API 24/24 PASS. Zero backend |
+| **4.6A** ✅ | ADR 0015 — Catálogo de Serviços v0.1 + Camada Comercial (docs-only). Faseamento: 4.6=Serviços, 4.7=Convênios, 4.8=Estoque. Operacional: `docs/services-catalog-v0-scope.md` |
+| **4.6B** ⏳ | Backend Catálogo de Serviços — migration + DAOs + services + 8+ endpoints. Gate: ADR 0015 aceita ✅ |
+| **4.6C** ⏳ | Frontend Catálogo de Serviços — `ServicesPanel` + seletor na agenda + seletor no financeiro. Gate: 4.6B entregue |
+| **4.6D** ⏳ | QA/hardening Catálogo de Serviços. Gate: 4.6C entregue |
+| **4.7A** ⏳ | ADR 0016 — Convênios manual básico v0.1 (docs-only). Gate: 4.6 entregue + `docs/insurance-billing-future-scope.md` como insumo |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.

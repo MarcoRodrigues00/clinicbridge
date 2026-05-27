@@ -7,6 +7,55 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.6A** (entregue 2026-05-27) — **ADR 0015 Catálogo de Serviços v0.1 + Camada Comercial (docs/ADR-only).**
+Sprint docs/ADR-only. Zero código, zero schema, zero migration, zero env.
+
+**Arquivos criados:**
+- `docs/adr/0015-services-catalog-commercial-layer-v0.md` — ADR umbrella da camada comercial.
+- `docs/services-catalog-v0-scope.md` — escopo operacional com entidades, regras, checklist de implementação.
+
+**Arquivos modificados:**
+- `docs/insurance-billing-future-scope.md` — marcado como pré-planejamento supersedido (banner ADR 0015/0016).
+- `CLAUDE.md` — estado atualizado, trilha Clinic OS renumerada, próximas prioridades.
+- `docs/project-state.md` — esta entrada.
+- `docs/sprint-history.md` — entrada 4.6A.
+- `docs/roadmap-next-phase.md` — sprint 4.6A registrada como entregue; faseamento 4.6/4.7/4.8.
+- `docs/product-clinic-os-roadmap.md` — Fase 4.6 e Fase 4.7 renumeradas/atualizadas.
+
+**Decisões fechadas:**
+
+1. **Faseamento da camada comercial:**
+   - **4.6 = Catálogo de Serviços v0.1** (ADR 0015 — esta).
+   - **4.7 = Convênios manual básico v0.1** (ADR 0016 — Sprint 4.7A futura).
+   - **4.8 = Estoque básico v0.1** (ADR 0017 — Sprint 4.8A futura).
+   - Motivação: split reduz risco e permite QA por módulo; serviços são pré-requisito para convênios.
+
+2. **Invariante de "Serviço":** é etiqueta administrativa/comercial — não é TUSS, não entra no
+   prontuário (ADR 0010), não auto-propaga preço para cobranças.
+
+3. **Entidades do Catálogo de Serviços:**
+   - `clinic_services(clinica_id, name, category, description, duration_minutes, price_cents, active)` + `UNIQUE(clinica_id, name)`.
+   - `professional_services(professional_id, service_id, clinica_id, active)` (many-to-many).
+   - `appointments.service_id uuid NULL` — extensão aditiva, sem migração de dados históricos.
+   - `financial_charges.service_id uuid NULL` — extensão aditiva, sem migração de dados históricos.
+
+4. **`price_cents` é referência visual** — nunca auto-propaga para `amount_cents` da cobrança.
+   Humano sempre decide o valor.
+
+5. **`category` é texto livre** — sem enum no banco; UI sugere valores comuns (Consulta/Sessão/Exame/Procedimento/Outro).
+
+6. **`insurance-billing-future-scope.md` permanece como insumo** para ADR 0016 (Convênios); não é deletado.
+
+**Gates finais:**
+- `git diff --check` rc=0 ✅
+- `git status --short` — 2 arquivos novos + 5 modificados ✅
+- **Zero código, zero migration, zero schema, zero env.**
+
+**Próxima sprint:** **4.6B** backend Catálogo de Serviços (gate: ADR 0015 aceita ✅).
+Detalhes do checklist de implementação: `docs/services-catalog-v0-scope.md` §7.
+
+---
+
 **Sprint 4.5D** (entregue 2026-05-27) — **QA/hardening + polish UX Relatórios Gerenciais v0.1.**
 Sprint de polish + regressão. Fecha a fase 4.5. Zero backend, zero migration, zero schema, zero env.
 
@@ -82,8 +131,7 @@ Sprint de polish + regressão. Fecha a fase 4.5. Zero backend, zero migration, z
 - Convênios continuam fora até Fase 4.6 (ADR 0015 ainda não escrita).
 - Frontend não substitui contabilidade nem emissão fiscal (`disclaimer` no rodapé do painel).
 
-**Próxima sprint natural:** **4.6A** ADR 0015 Convênios/Faturamento básico v0.1 (docs/ADR-only).
-Alternativa razoável antes de 4.6A: polish geral de landing/footer/dashboard se o usuário priorizar visual antes de feature.
+**Próxima sprint natural:** **4.6B** backend Catálogo de Serviços v0.1 (gate: ADR 0015 aceita ✅).
 
 ---
 

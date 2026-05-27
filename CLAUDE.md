@@ -10,7 +10,8 @@
 > - **Módulo Financeiro v0.1:** ADR `docs/adr/0012-financial-module-v0.md` · operacional `docs/financial-v0-scope.md`
 > - **Integração Agenda × Financeiro v0.1:** ADR `docs/adr/0013-agenda-financial-integration-v0.md` · `docs/agenda-financial-integration-v0-scope.md`
 > - **Relatórios Gerenciais v0.1:** ADR `docs/adr/0014-management-reports-v0.md` · `docs/management-reports-v0-scope.md`
-> - **Convênios/faturamento básico (futuro — Fase 4.6):** `docs/insurance-billing-future-scope.md`
+> - **Catálogo de Serviços v0.1 (Fase 4.6):** ADR `docs/adr/0015-services-catalog-commercial-layer-v0.md` · `docs/services-catalog-v0-scope.md`
+> - **Convênios v0.1 (Fase 4.7 — futuro):** pré-planejamento `docs/insurance-billing-future-scope.md`
 > - **Documentos Médicos v0.1:** ADR `docs/adr/0011-medical-documents-prescriptions-v0.md` · `docs/medical-documents-v0-scope.md`
 > - **Prontuário v0.1:** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` · `docs/clinical-encounters-v0-scope.md`
 > - **Arquitetura clínica + roles + audit:** ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` · `docs/clinical-architecture-and-permissions.md`
@@ -20,7 +21,17 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.5D** (entregue) — **QA/hardening + polish UX Relatórios Gerenciais v0.1.**
+**Sprint atual: 4.6A** (entregue) — **ADR 0015 Catálogo de Serviços v0.1 + Camada Comercial (docs/ADR-only).**
+ADR 0015 + `docs/services-catalog-v0-scope.md` criados. Decisão de faseamento: **4.6 = Catálogo de Serviços**
+(esta ADR), **4.7 = Convênios manual básico** (ADR 0016 futura), **4.8 = Estoque** (ADR 0017 futura).
+Entidades definidas: `clinic_services` (catálogo com preço de tabela, duração, categoria), `professional_services`
+(many-to-many professional↔service), extensão de `appointments.service_id` e `financial_charges.service_id`
+(ambos NULL opcionais, sem auto-propagação de preço). Invariante-chave: serviço é etiqueta administrativa —
+não é código TUSS/CBHPM, não entra no prontuário, não dispara automação de preço.
+`docs/insurance-billing-future-scope.md` marcado como pré-planejamento (supersedido pela ADR 0015/0016).
+`git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.** Detalhe: `docs/project-state.md`.
+
+**Sprint anterior: 4.5D** (entregue) — **QA/hardening + polish UX Relatórios Gerenciais v0.1.**
 Fecha a fase 4.5. Polish-only no `ReportsPanel`: hero strip "Resumo do período" (4 sinais via
 queryKeys deduplicadas — sem fetch extra); frases interpretativas por bloco; ordem dos cards do
 Financeiro privilegia Recebido/Em aberto/Vencido (Cancelado por último, sem tom); subtítulo
@@ -84,6 +95,7 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 `GET /reports/appointments` · `GET /reports/financial` · `GET /reports/patients` · `GET /reports/agenda-financial`
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **4.5A** ✅ ADR 0014 Relatórios Gerenciais v0.1 (docs-only)
 - **4.4D-conv** ✅ Planejamento Convênios/Faturamento — `insurance-billing-future-scope.md` criado
 - **4.4D** ✅ QA/Hardening Financeiro — smoke 60/60, SQL 9/9, frontend security PASS, cleanup
 - **4.4C** ✅ Frontend Financeiro — `FinancialPanel` + Dashboard tab "Financeiro" — typecheck/build ✅
@@ -100,8 +112,9 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ (Relatórios Gerenciais v0.1 fechados) →
-**4.6** convênios/faturamento básico (ADR 0015) → **4.7** estoque básico.
+4.0–4.5D ✅ · 4.6A ✅ (ADR 0015 Catálogo de Serviços — docs/ADR-only) →
+**4.6B** backend Catálogo de Serviços → **4.6C** frontend → **4.6D** QA →
+**4.7A** ADR 0016 Convênios → **4.7B–D** implementação → **4.8** Estoque (ADR 0017).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
@@ -119,7 +132,7 @@ interpretativas por bloco; 403 por relatório vira card "Acesso restrito" intenc
 Detalhe: `docs/project-state.md`.
 
 **O que NÃO existe (sprint explícita):** export de relatórios (futuro com ADR própria);
-gráficos complexos / BI customizável; convênios/carteirinha estruturada (4.6A+); delete físico de paciente;
+gráficos complexos / BI customizável; catálogo de serviços implementado (4.6B+); convênios/carteirinha estruturada (4.7B+); delete físico de paciente;
 undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
 
 **Migrações (15 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
@@ -144,8 +157,7 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.6A** ADR 0015 Convênios v0.1 (gate: 4.5 entregue ✅; planejamento em `docs/insurance-billing-future-scope.md`)
-  — alternativa: polish geral landing/footer/visual antes de iniciar 4.6.
+- **4.6B** backend Catálogo de Serviços v0.1 (gate: ADR 0015 aceita ✅; detalhes em `docs/services-catalog-v0-scope.md` §7)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)

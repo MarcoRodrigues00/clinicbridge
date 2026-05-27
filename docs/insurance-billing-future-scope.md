@@ -1,12 +1,26 @@
-# ClinicBridge — Convênios e Faturamento Básico (escopo futuro)
+# ClinicBridge — Convênios e Faturamento Básico (pré-planejamento)
 
-> Documento de planejamento criado na Sprint 4.4D-conv (2026-05-27),
-> antes da Sprint 4.4E.
+> **⚠️ Status: Pré-planejamento supersedido.**
 >
-> **Este documento não autoriza código.** A implementação exige ADR própria
-> (ADR 0014 ou equivalente) aceita pelo dono antes de qualquer sprint de código.
+> Este documento foi criado na Sprint 4.4D-conv (2026-05-27) como rascunho
+> conceitual antes da ADR de convênios.
+>
+> **Após a Sprint 4.6A (2026-05-27):**
+>
+> - **Catálogo de Serviços v0.1** → decidido na **ADR 0015**
+>   (`docs/adr/0015-services-catalog-commercial-layer-v0.md`) +
+>   escopo operacional em `docs/services-catalog-v0-scope.md`.
+>   Implementação: Fase 4.6 (sprints 4.6B/C/D).
+>
+> - **Convênios manual básico v0.1** → será decidido na **ADR 0016** (Sprint 4.7A).
+>   Este documento serve de insumo para a ADR 0016 — não o substitui.
+>
+> **O conteúdo abaixo é histórico e de referência.** Para o planejamento
+> executável e atualizado, ver os documentos acima.
 >
 > **Relacionado:** `docs/financial-v0-scope.md` · `docs/adr/0012-financial-module-v0.md` ·
+> `docs/adr/0015-services-catalog-commercial-layer-v0.md` ·
+> `docs/services-catalog-v0-scope.md` ·
 > `docs/product-clinic-os-roadmap.md` · `docs/security-notes.md`.
 
 ---
