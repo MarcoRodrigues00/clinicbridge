@@ -1,6 +1,7 @@
 import { logger } from '../config/logger';
 import { appointmentDao } from '../dao/appointmentDao';
 import { auditLogDao } from '../dao/auditLogDao';
+import { clinicServiceDao, professionalServiceDao } from '../dao/clinicServiceDao';
 import { financialChargeDao } from '../dao/financialChargeDao';
 import type { FinancialSummary } from '../dao/financialChargeDao';
 import { patientDao } from '../dao/patientDao';
@@ -304,6 +305,52 @@ async function validateAppointmentLink(
   return appt.id;
 }
 
+// Validates service_id (ADR 0015): same clinic, active service.
+// If both service_id and appointment_id are set and the appointment already
+// has a service_id, they must match (prevents inconsistent service labeling).
+// NEVER auto-propagates price_cents to amount_cents.
+async function validateServiceLink(
+  service_id: string | null,
+  clinica_id: string,
+  appointment_id: string | null,
+): Promise<string | null> {
+  if (!service_id) return null;
+  const svc = await clinicServiceDao.findByIdForClinic(service_id, clinica_id);
+  if (!svc) {
+    throw invalid('service_id inválido para esta clínica.');
+  }
+  if (!svc.active) {
+    throw invalid('Serviço inativo. Reative-o antes de usá-lo em uma cobrança.');
+  }
+  if (appointment_id) {
+    const appt = await appointmentDao.findByIdForClinic(appointment_id, clinica_id);
+    if (appt) {
+      if (appt.service_id !== null && appt.service_id !== service_id) {
+        throw new HttpError(
+          400,
+          'service_mismatch_with_appointment',
+          'O serviço informado não coincide com o serviço do agendamento vinculado.',
+        );
+      }
+      if (appt.professional_id) {
+        const binding = await professionalServiceDao.findBinding(
+          clinica_id,
+          appt.professional_id,
+          service_id,
+        );
+        if (!binding || !binding.active) {
+          throw new HttpError(
+            400,
+            'service_not_available_for_appointment_professional',
+            'Este serviço não está vinculado ao profissional do agendamento.',
+          );
+        }
+      }
+    }
+  }
+  return service_id;
+}
+
 // ----- Audit helpers --------------------------------------------------------
 
 async function safeAudit(
@@ -349,6 +396,7 @@ export interface PublicFinancialChargeListItem {
   clinica_id: string;
   patient_id: string;
   appointment_id: string | null;
+  service_id: string | null;
   created_by_user_id: string;
   description: string;
   amount_cents: number;
@@ -375,6 +423,7 @@ function toListItem(row: FinancialChargeRow): PublicFinancialChargeListItem {
     clinica_id: row.clinica_id,
     patient_id: row.patient_id,
     appointment_id: row.appointment_id,
+    service_id: row.service_id,
     created_by_user_id: row.created_by_user_id,
     description: row.description,
     amount_cents: row.amount_cents,
@@ -411,6 +460,7 @@ export const financialChargeService = {
     body: {
       patient_id?: unknown;
       appointment_id?: unknown;
+      service_id?: unknown;
       description?: unknown;
       amount_cents?: unknown;
       due_date?: unknown;
@@ -438,10 +488,19 @@ export const financialChargeService = {
       patient_id,
     );
 
+    // Optional service catalog reference (ADR 0015). NEVER auto-propagates
+    // price_cents to amount_cents — human always decides the charge value.
+    const service_id = await validateServiceLink(
+      parseOptionalUuid(body.service_id, 'service_id'),
+      actor.clinica_id,
+      appointment_id,
+    );
+
     const row = await financialChargeDao.create({
       clinica_id: actor.clinica_id,
       patient_id,
       appointment_id,
+      service_id,
       created_by_user_id: actor.usuario_id,
       description,
       amount_cents,
@@ -519,6 +578,7 @@ export const financialChargeService = {
       due_date?: unknown;
       notes?: unknown;
       appointment_id?: unknown;
+      service_id?: unknown;
     },
     ctx: AuthContext,
   ): Promise<{ charge: PublicFinancialCharge }> {
@@ -539,6 +599,7 @@ export const financialChargeService = {
       due_date?: string | null;
       notes?: string | null;
       appointment_id?: string | null;
+      service_id?: string | null;
     } = {};
 
     if (body.description !== undefined) {
@@ -565,6 +626,16 @@ export const financialChargeService = {
         );
         patch.appointment_id = validated;
       }
+    }
+    if (body.service_id !== undefined) {
+      const targetApptId = patch.appointment_id !== undefined
+        ? patch.appointment_id
+        : existing.appointment_id;
+      patch.service_id = await validateServiceLink(
+        body.service_id === null || body.service_id === '' ? null : parseUuid(body.service_id, 'service_id'),
+        actor.clinica_id,
+        targetApptId,
+      );
     }
 
     const updated = await financialChargeDao.updatePending(

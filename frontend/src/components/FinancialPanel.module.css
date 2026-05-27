@@ -774,6 +774,31 @@
   line-height: 1.45;
 }
 
+.btnUseTablePrice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--cyan-soft);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+.btnUseTablePrice:hover:not(:disabled) {
+  background: rgba(34, 211, 238, 0.18);
+}
+
+.btnUseTablePrice:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Prefixed input (R$ prefix) */
 .inputPrefix {
   display: flex;

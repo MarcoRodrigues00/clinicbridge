@@ -46,6 +46,7 @@ export const appointmentController = {
         starts_at: body.starts_at,
         ends_at: body.ends_at,
         administrative_notes: body.administrative_notes,
+        service_id: body.service_id,
       },
       ctx,
     );

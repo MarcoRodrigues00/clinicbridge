@@ -2,6 +2,7 @@ import { logger } from '../config/logger';
 import { appointmentDao } from '../dao/appointmentDao';
 import { auditLogDao } from '../dao/auditLogDao';
 import { clinicProfessionalDao } from '../dao/clinicProfessionalDao';
+import { clinicServiceDao, professionalServiceDao } from '../dao/clinicServiceDao';
 import { patientDao } from '../dao/patientDao';
 import { HttpError } from '../middlewares/errorHandler';
 import {
@@ -116,6 +117,7 @@ export const appointmentService = {
     body: {
       patient_id?: unknown;
       professional_id?: unknown;
+      service_id?: unknown;
       starts_at?: unknown;
       ends_at?: unknown;
       administrative_notes?: unknown;
@@ -133,6 +135,33 @@ export const appointmentService = {
       professional_id = parseUuid(body.professional_id, 'professional_id');
     }
 
+    // Optional service catalog reference (ADR 0015). NEVER auto-fills starts_at/ends_at.
+    let service_id: string | null = null;
+    if (body.service_id !== undefined && body.service_id !== null && body.service_id !== '') {
+      service_id = parseUuid(body.service_id, 'service_id');
+      const svc = await clinicServiceDao.findByIdForClinic(service_id, actor.clinica_id);
+      if (!svc) {
+        throw new HttpError(400, 'service_not_found', 'Serviço não encontrado nesta clínica.');
+      }
+      if (!svc.active) {
+        throw new HttpError(400, 'service_inactive', 'Serviço inativo. Reative-o antes de usá-lo.');
+      }
+      if (professional_id) {
+        const binding = await professionalServiceDao.findBinding(
+          actor.clinica_id,
+          professional_id,
+          service_id,
+        );
+        if (!binding || !binding.active) {
+          throw new HttpError(
+            400,
+            'service_not_available_for_professional',
+            'Este serviço não está vinculado ao profissional selecionado.',
+          );
+        }
+      }
+    }
+
     await assertPatientInClinic(patient_id, actor.clinica_id);
     if (professional_id) await assertProfessionalInClinic(professional_id, actor.clinica_id);
 
@@ -140,6 +169,7 @@ export const appointmentService = {
       clinica_id: actor.clinica_id,
       patient_id,
       professional_id,
+      service_id,
       starts_at,
       ends_at,
       status: 'scheduled',

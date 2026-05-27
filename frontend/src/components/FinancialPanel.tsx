@@ -39,6 +39,7 @@ import { useAuth } from '../services/AuthProvider';
 import { getToken } from '../services/authStorage';
 import { api, ApiError } from '../services/api';
 import type {
+  ClinicService,
   FinancialChargeStatus,
   FinancialPaymentMethod,
   FinancialChargeListItem,
@@ -430,6 +431,7 @@ function NewChargeForm({
 }: NewChargeFormProps): JSX.Element {
   const queryClient = useQueryClient();
   const [patientId, setPatientId] = useState('');
+  const [serviceId, setServiceId] = useState('');
   const [description, setDescription] = useState('');
   const [amountStr, setAmountStr] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -445,6 +447,17 @@ function NewChargeForm({
         .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
     [patientById],
   );
+
+  const servicesQuery = useQuery({
+    queryKey: ['clinic-services', 'active'],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await api.listClinicServices(token, { active: true, limit: 100 });
+      return res.services;
+    },
+  });
+  const services: ClinicService[] = servicesQuery.data ?? [];
+  const selectedService = services.find((s) => s.id === serviceId) ?? null;
 
   const createMutation = useMutation({
     mutationFn: () => {
@@ -469,6 +482,7 @@ function NewChargeForm({
       }
       return api.createFinancialCharge(token, {
         patient_id: patientId,
+        service_id: serviceId || null,
         description: description.trim(),
         amount_cents: amountCents,
         due_date: dueDate || null,
@@ -534,6 +548,29 @@ function NewChargeForm({
           </div>
 
           <div className={`${styles.fieldGroup} ${styles.fieldFull}`}>
+            <label className={styles.fieldLabel} htmlFor="fin-new-service">
+              Serviço (opcional)
+            </label>
+            <select
+              id="fin-new-service"
+              className={styles.fieldSelect}
+              value={serviceId}
+              onChange={(e) => setServiceId(e.target.value)}
+              disabled={createMutation.isPending}
+            >
+              <option value="">Sem serviço vinculado</option>
+              {services.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.category ? ` — ${s.category}` : ''}
+                  {s.price_cents !== null
+                    ? ` (tabela: ${formatCents(s.price_cents)})`
+                    : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={`${styles.fieldGroup} ${styles.fieldFull}`}>
             <label className={styles.fieldLabel} htmlFor="fin-new-desc">
               Descrição da cobrança<span className={styles.fieldRequired}>*</span>
             </label>
@@ -566,6 +603,22 @@ function NewChargeForm({
                 placeholder="0,00"
               />
             </div>
+            {selectedService?.price_cents !== null && selectedService !== null && (
+              <button
+                type="button"
+                className={styles.btnUseTablePrice}
+                onClick={() =>
+                  setAmountStr(
+                    ((selectedService.price_cents as number) / 100)
+                      .toFixed(2)
+                      .replace('.', ','),
+                  )
+                }
+                disabled={createMutation.isPending}
+              >
+                Usar preço de tabela ({formatCents(selectedService.price_cents)})
+              </button>
+            )}
           </div>
 
           <div className={styles.fieldGroup}>
@@ -660,10 +713,22 @@ function EditChargeForm({
   );
   const [dueDate, setDueDate] = useState(charge.due_date ?? '');
   const [notes, setNotes] = useState(charge.notes ?? '');
+  const [serviceId, setServiceId] = useState(charge.service_id ?? '');
   const [formError, setFormError] = useState('');
 
   const patientName =
     patientById.get(charge.patient_id)?.nome ?? '(Paciente não encontrado)';
+
+  const servicesQuery = useQuery({
+    queryKey: ['clinic-services', 'active'],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await api.listClinicServices(token, { active: true, limit: 100 });
+      return res.services;
+    },
+  });
+  const services: ClinicService[] = servicesQuery.data ?? [];
+  const selectedService = services.find((s) => s.id === serviceId) ?? null;
 
   const updateMutation = useMutation({
     mutationFn: () => {
@@ -686,6 +751,7 @@ function EditChargeForm({
         amount_cents: amountCents,
         due_date: dueDate || null,
         notes: notes.trim() || null,
+        service_id: serviceId || null,
       });
     },
     onSuccess: () => {
@@ -731,6 +797,29 @@ function EditChargeForm({
 
         <div className={styles.formGrid}>
           <div className={`${styles.fieldGroup} ${styles.fieldFull}`}>
+            <label className={styles.fieldLabel} htmlFor="fin-edit-service">
+              Serviço (opcional)
+            </label>
+            <select
+              id="fin-edit-service"
+              className={styles.fieldSelect}
+              value={serviceId}
+              onChange={(e) => setServiceId(e.target.value)}
+              disabled={updateMutation.isPending}
+            >
+              <option value="">Sem serviço vinculado</option>
+              {services.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.category ? ` — ${s.category}` : ''}
+                  {s.price_cents !== null
+                    ? ` (tabela: ${formatCents(s.price_cents)})`
+                    : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={`${styles.fieldGroup} ${styles.fieldFull}`}>
             <label className={styles.fieldLabel} htmlFor="fin-edit-desc">
               Descrição da cobrança<span className={styles.fieldRequired}>*</span>
             </label>
@@ -761,6 +850,22 @@ function EditChargeForm({
                 disabled={updateMutation.isPending}
               />
             </div>
+            {selectedService?.price_cents !== null && selectedService !== null && (
+              <button
+                type="button"
+                className={styles.btnUseTablePrice}
+                onClick={() =>
+                  setAmountStr(
+                    ((selectedService.price_cents as number) / 100)
+                      .toFixed(2)
+                      .replace('.', ','),
+                  )
+                }
+                disabled={updateMutation.isPending}
+              >
+                Usar preço de tabela ({formatCents(selectedService.price_cents)})
+              </button>
+            )}
           </div>
 
           <div className={styles.fieldGroup}>

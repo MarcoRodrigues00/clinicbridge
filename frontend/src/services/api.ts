@@ -513,6 +513,7 @@ export interface PublicAppointment {
   id: string;
   patient_id: string;
   professional_id: string | null;
+  service_id: string | null;
   starts_at: string;
   ends_at: string;
   status: AppointmentStatus;
@@ -548,6 +549,7 @@ export interface AppointmentResponse {
 export interface CreateAppointmentPayload {
   patient_id: string;
   professional_id?: string | null;
+  service_id?: string | null;
   starts_at: string;
   ends_at: string;
   administrative_notes?: string | null;
@@ -769,6 +771,7 @@ export interface FinancialChargeListItem {
   clinica_id: string;
   patient_id: string;
   appointment_id: string | null;
+  service_id: string | null;
   created_by_user_id: string;
   description: string;
   amount_cents: number;
@@ -817,6 +820,7 @@ export interface CreateFinancialChargePayload {
   due_date?: string | null;
   notes?: string | null;
   appointment_id?: string | null;
+  service_id?: string | null;
 }
 
 export interface UpdateFinancialChargePayload {
@@ -825,6 +829,7 @@ export interface UpdateFinancialChargePayload {
   due_date?: string | null;
   notes?: string | null;
   appointment_id?: string | null;
+  service_id?: string | null;
 }
 
 export interface MarkFinancialChargePaidPayload {
@@ -927,6 +932,56 @@ export interface AgendaFinancialReportResponse {
     charge_canceled_appt_active: number;
   };
   generated_at: string;
+}
+
+// --- Catálogo de Serviços v0.1 types (Sprint 4.6C — ADR 0015) ---------------
+// ADMINISTRATIVE / COMMERCIAL label only. NEVER contains clinical content;
+// price_cents is reference-only and is NEVER auto-propagated to amount_cents;
+// duration_minutes is a UI suggestion, NEVER auto-applied to starts_at/ends_at.
+
+export interface ClinicService {
+  id: string;
+  clinica_id: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  duration_minutes: number | null;
+  price_cents: number | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProfessionalServiceLink {
+  professional_id: string;
+  service_id: string;
+  clinica_id: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListClinicServicesParams {
+  active?: boolean;
+  limit?: number;
+  offset?: number;
+  professional_id?: string;
+}
+
+export interface CreateClinicServicePayload {
+  name: string;
+  category?: string | null;
+  description?: string | null;
+  duration_minutes?: number | null;
+  price_cents?: number | null;
+}
+
+export interface UpdateClinicServicePayload {
+  name?: string;
+  category?: string | null;
+  description?: string | null;
+  duration_minutes?: number | null;
+  price_cents?: number | null;
 }
 
 export interface ApiErrorBody {
@@ -1856,5 +1911,102 @@ export const api = {
     const match = /filename="?([^"]+)"?/.exec(disposition);
     const filename = match ? match[1] : `pacientes.${params.format}`;
     return { blob, filename };
+  },
+
+  // --- Catálogo de Serviços v0.1 (Sprint 4.6C — ADR 0015) -------------------
+  // Writes are dono_clinica only; reads available to secretaria too (for
+  // agenda/financial selectors). price_cents is NEVER auto-applied to
+  // amount_cents; duration_minutes is NEVER auto-applied to starts_at/ends_at.
+
+  listClinicServices(
+    token: string,
+    params: ListClinicServicesParams = {},
+  ): Promise<{ services: ClinicService[] }> {
+    const query = new URLSearchParams();
+    if (params.active !== undefined) query.set('active', String(params.active));
+    if (params.limit !== undefined) query.set('limit', String(params.limit));
+    if (params.offset !== undefined) query.set('offset', String(params.offset));
+    if (params.professional_id !== undefined) query.set('professional_id', params.professional_id);
+    const qs = query.toString();
+    return apiFetch<{ services: ClinicService[] }>(
+      `/clinic-services${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  getClinicService(
+    token: string,
+    id: string,
+  ): Promise<{ service: ClinicService }> {
+    return apiFetch<{ service: ClinicService }>(
+      `/clinic-services/${encodeURIComponent(id)}`,
+      { method: 'GET', token },
+    );
+  },
+
+  createClinicService(
+    token: string,
+    payload: CreateClinicServicePayload,
+  ): Promise<{ service: ClinicService }> {
+    return apiFetch<{ service: ClinicService }>('/clinic-services', {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
+  updateClinicService(
+    token: string,
+    id: string,
+    payload: UpdateClinicServicePayload,
+  ): Promise<{ service: ClinicService }> {
+    return apiFetch<{ service: ClinicService }>(
+      `/clinic-services/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: payload, token },
+    );
+  },
+
+  updateClinicServiceStatus(
+    token: string,
+    id: string,
+    active: boolean,
+  ): Promise<{ service: ClinicService }> {
+    return apiFetch<{ service: ClinicService }>(
+      `/clinic-services/${encodeURIComponent(id)}/status`,
+      { method: 'PATCH', body: { active }, token },
+    );
+  },
+
+  listServiceProfessionals(
+    token: string,
+    serviceId: string,
+  ): Promise<{ links: ProfessionalServiceLink[] }> {
+    return apiFetch<{ links: ProfessionalServiceLink[] }>(
+      `/clinic-services/${encodeURIComponent(serviceId)}/professionals`,
+      { method: 'GET', token },
+    );
+  },
+
+  linkServiceProfessional(
+    token: string,
+    serviceId: string,
+    professional_id: string,
+  ): Promise<{ link: ProfessionalServiceLink }> {
+    return apiFetch<{ link: ProfessionalServiceLink }>(
+      `/clinic-services/${encodeURIComponent(serviceId)}/professionals`,
+      { method: 'POST', body: { professional_id }, token },
+    );
+  },
+
+  updateServiceProfessionalStatus(
+    token: string,
+    serviceId: string,
+    professionalId: string,
+    active: boolean,
+  ): Promise<{ link: ProfessionalServiceLink }> {
+    return apiFetch<{ link: ProfessionalServiceLink }>(
+      `/clinic-services/${encodeURIComponent(serviceId)}/professionals/${encodeURIComponent(professionalId)}/status`,
+      { method: 'PATCH', body: { active }, token },
+    );
   },
 };
