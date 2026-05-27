@@ -1604,7 +1604,7 @@ curl -sk -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN_OWNER" 
 | 6 | finalizar sem body → 400 document_body_required | ✅ |
 | 7 | finalizar com body → 200 status=finalized + finalized_at | ✅ |
 | 8 | editar finalized → 400 document_already_finalized | ✅ |
-| 9 | PDF finalized → 200 + magic %PDF + "ICP-Brasil" no rodapé + "prescri" | ✅ |
+| 9 | PDF finalized → 200 + magic %PDF + "ICP-Brasil" + "Gov.br/ITI" + "VALIDAR" no rodapé | ✅ |
 | 10 | cancel finalized → 200 status=canceled | ✅ |
 | 11 | PDF canceled → 400 document_canceled | ✅ |
 | 12 | owner lê documento → 200 + body visível | ✅ |

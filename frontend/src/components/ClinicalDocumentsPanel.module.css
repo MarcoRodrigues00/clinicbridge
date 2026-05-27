@@ -1,0 +1,652 @@
+/* ClinicalDocumentsPanel — Sprint 4.3C. Same design tokens as ClinicalPatientPane. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ─── Back button ───────────────────────────────────────────────────────── */
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--text-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 0.25rem;
+}
+
+.backBtn:hover {
+  color: var(--text-0);
+}
+
+/* ─── List head ─────────────────────────────────────────────────────────── */
+.listHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sectionLabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ─── New button ────────────────────────────────────────────────────────── */
+.newBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--cyan);
+  background: rgba(0, 200, 200, 0.08);
+  border: 1px solid rgba(0, 200, 200, 0.22);
+  border-radius: var(--r-sm);
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.newBtn:hover {
+  background: rgba(0, 200, 200, 0.16);
+}
+
+/* ─── Document list ─────────────────────────────────────────────────────── */
+.docList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.docCard {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+}
+
+.docMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.docTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docSub {
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
+/* ─── Status badges ─────────────────────────────────────────────────────── */
+.statusBadge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  margin-top: 0.15rem;
+  width: fit-content;
+}
+
+.statusDraft {
+  background: rgba(200, 160, 0, 0.12);
+  color: #d4a800;
+  border: 1px solid rgba(200, 160, 0, 0.25);
+}
+
+.statusFinalized {
+  background: rgba(0, 200, 100, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(0, 200, 100, 0.22);
+}
+
+.statusCanceled {
+  background: rgba(200, 60, 60, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(200, 60, 60, 0.2);
+}
+
+/* ─── Detail button ─────────────────────────────────────────────────────── */
+.detailBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-2);
+  background: none;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.detailBtn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+/* ─── Document detail ───────────────────────────────────────────────────── */
+.detailWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.detailTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.detailSub {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  margin-top: 0.2rem;
+}
+
+/* ─── Disclaimer ────────────────────────────────────────────────────────── */
+.disclaimer {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  background: rgba(200, 160, 0, 0.07);
+  border: 1px solid rgba(200, 160, 0, 0.18);
+  border-radius: var(--r-sm);
+  padding: 0.55rem 0.75rem;
+  line-height: 1.45;
+}
+
+/* ─── Body section ──────────────────────────────────────────────────────── */
+.bodySection {
+  min-height: 3rem;
+}
+
+.bodyText {
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: var(--text-1);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  padding: 0.75rem;
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* ─── Actions row ───────────────────────────────────────────────────────── */
+.actionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.editBtn {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-1);
+  background: none;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.editBtn:hover:not(:disabled) {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.editBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.finalizeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--success);
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.finalizeBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cancelDocBtn {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--danger);
+  background: none;
+  border: 1px solid rgba(200, 60, 60, 0.3);
+  border-radius: var(--r-sm);
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: background 0.15s;
+}
+
+.cancelDocBtn:hover:not(:disabled) {
+  background: rgba(200, 60, 60, 0.08);
+}
+
+.cancelDocBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pdfBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--cyan);
+  background: rgba(0, 200, 200, 0.08);
+  border: 1px solid rgba(0, 200, 200, 0.22);
+  border-radius: var(--r-sm);
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pdfBtn:hover:not(:disabled) {
+  background: rgba(0, 200, 200, 0.16);
+}
+
+.pdfBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Edit section ──────────────────────────────────────────────────────── */
+.editSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ─── Form ──────────────────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.formLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: 0.02em;
+}
+
+.formInput {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  color: var(--text-0);
+  font-size: 0.88rem;
+  padding: 0.45rem 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: var(--cyan);
+}
+
+.formInput:disabled {
+  opacity: 0.6;
+}
+
+.formSelect {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  color: var(--text-0);
+  font-size: 0.88rem;
+  padding: 0.45rem 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.formSelect:focus {
+  outline: none;
+  border-color: var(--cyan);
+}
+
+.formSelect:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.formTextarea {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  color: var(--text-0);
+  font-size: 0.88rem;
+  padding: 0.45rem 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+
+.formTextarea:focus {
+  outline: none;
+  border-color: var(--cyan);
+}
+
+.formTextarea:disabled {
+  opacity: 0.6;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--cyan);
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 0.45rem 1.1rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.submitBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cancelFormBtn {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-2);
+  background: none;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.cancelFormBtn:hover:not(:disabled) {
+  border-color: var(--text-2);
+}
+
+.cancelFormBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Cancel form ───────────────────────────────────────────────────────── */
+.cancelForm {
+  background: rgba(200, 60, 60, 0.05);
+  border: 1px solid rgba(200, 60, 60, 0.2);
+  border-radius: var(--r-sm);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.cancelFormTitle {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+/* ─── Cancel info (display after canceled) ──────────────────────────────── */
+.cancelInfo {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  background: rgba(200, 60, 60, 0.05);
+  border: 1px solid rgba(200, 60, 60, 0.15);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.75rem;
+}
+
+.cancelReasonText {
+  margin-top: 0.3rem;
+  font-style: italic;
+}
+
+/* ─── Supersedes note ───────────────────────────────────────────────────── */
+.supersedesNote {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* ─── PDF note row (unsigned note + guide toggle together) ─────────────── */
+.pdfNoteRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* ─── PDF unsigned note ─────────────────────────────────────────────────── */
+.pdfUnsignedNote {
+  font-size: 0.76rem;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* ─── Sign guide toggle ─────────────────────────────────────────────────── */
+.signGuideToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--cyan);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.signGuideToggle:hover {
+  opacity: 0.75;
+}
+
+/* ─── Sign guide panel ──────────────────────────────────────────────────── */
+.signGuide {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--r-sm);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.signGuideHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.signGuideTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.signGuideClose {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  flex-shrink: 0;
+}
+
+.signGuideClose:hover {
+  color: var(--text-0);
+}
+
+.signGuideSteps {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.signGuideSteps li {
+  font-size: 0.82rem;
+  color: var(--text-1);
+  line-height: 1.5;
+}
+
+.signGuideUrl {
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  padding: 0 0.25em;
+}
+
+.signGuideNote {
+  background: rgba(200, 160, 0, 0.06);
+  border: 1px solid rgba(200, 160, 0, 0.18);
+  border-radius: var(--r-sm);
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.signGuideNote p {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.signGuideFuture {
+  font-size: 0.74rem;
+  color: var(--text-3);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ─── State messages ────────────────────────────────────────────────────── */
+.stateMsg {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  color: var(--text-2);
+  padding: 0.5rem 0;
+}
+
+.errorMsg {
+  font-size: 0.85rem;
+  color: var(--danger);
+  padding: 0.4rem 0;
+}
+
+.formError {
+  font-size: 0.82rem;
+  color: var(--danger);
+}
+
+.emptyMsg {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  font-style: italic;
+  padding: 0.25rem 0;
+}
+
+/* ─── Spinner ───────────────────────────────────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}

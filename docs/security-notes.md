@@ -609,10 +609,9 @@
   workflow de emissão/cancelamento e risco jurídico avaliados (Fase 7 do
   `docs/roadmap-next-phase.md`).
 
-## Documentos Médicos v0.1 — guardrails (ADR 0011, Sprint 4.3A)
+## Documentos Médicos v0.1 — guardrails (ADR 0011, Sprint 4.3A–C)
 
-> ADR 0011 autoriza a Sprint 4.3B (implementação backend). Estas regras valem
-> a partir do momento em que a 4.3B começar. Sem código, sem enforcement ainda.
+> Sprint 4.3B (backend) e 4.3C (frontend) entregues. Regras em vigor.
 
 - **`secretaria`/`funcionario_administrativo` sem acesso ao conteúdo de documentos
   médicos.** `body` e `metadata_json` podem conter dados de saúde sensíveis

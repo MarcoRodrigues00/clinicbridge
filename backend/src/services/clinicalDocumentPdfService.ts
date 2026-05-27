@@ -8,29 +8,21 @@ import type {
   ClinicalDocumentType,
 } from '../types/db';
 
-// Clinical document PDF generation service (Sprint 4.3B; ADR 0011 §10).
+// Clinical document PDF generation service (Sprint 4.3B; layout v2 Sprint 4.3C).
+// ADR 0011 §10: mandatory legal footer every page; no ICP-Brasil integration;
+// no logo/image/storage; no QR code; compress:false for smoke-test hex extraction.
 //
-// IMPORTANT — this module is invoked ONLY AFTER:
-//   1. The document has been verified as status='finalized' (caller: service).
-//   2. The PDF-DOWNLOAD audit has been persisted in STRICT mode (caller: service).
-// It receives the document row as-is and must return a stream the controller
-// can pipe to the HTTP response. The module DOES NOT decide authorization,
-// DOES NOT emit audit (caller already did), and DOES NOT persist anything.
-//
-// Output format: A4 portrait, single-pass write, streamed (no buffering of the
-// full PDF in memory before response start). Uses pdfkit standard fonts
-// (Helvetica family — built into the binary, no font file lookups).
-//
-// MANDATORY LEGAL FOOTER — ADR 0011 §10.2. The text is fixed by ADR 0011 and
-// must appear verbatim on every page of every clinical-document PDF. Removing
-// or editing this footer is a regulatory-risk change and requires reopening
-// ADR 0011.
-
+// MANDATORY LEGAL FOOTER — ADR 0011 §10.2.
+// This text is fixed by ADR 0011 and must appear on every page.
+// Removing or editing requires reopening ADR 0011.
+// Smoke tests verify: "ICP-Brasil", "Gov.br/ITI", "VALIDAR".
 const MANDATORY_LEGAL_FOOTER =
-  'Este documento foi gerado pelo ClinicBridge e não possui assinatura digital ' +
-  'ICP-Brasil. A validade jurídica plena pode exigir assinatura física do ' +
-  'profissional responsável ou assinatura digital com certificado válido ' +
-  '(ICP-Brasil/CFM). Não é uma prescrição eletrônica legalmente válida.';
+  'PDF gerado pelo ClinicBridge. Este arquivo ainda não possui assinatura digital ICP-Brasil. ' +
+  'Para validade jurídica plena, o profissional deve assinar externamente com certificado ' +
+  'ICP-Brasil ou ferramenta compatível (ex.: GOV.BR, assinadores CFM). ' +
+  'Após assinado, autentique no serviço VALIDAR oficial Gov.br/ITI (validar.iti.gov.br). ' +
+  'Enquanto não assinado digitalmente, válido para impressão e assinatura manual, ' +
+  'conforme responsabilidade do profissional emitente.';
 
 const DOC_TYPE_LABEL: Record<ClinicalDocumentType, string> = {
   receipt_simple: 'Receita simples',
@@ -41,18 +33,18 @@ const DOC_TYPE_LABEL: Record<ClinicalDocumentType, string> = {
 };
 
 function formatDateBR(date: Date | null): string {
-  if (!date) return '-';
+  if (!date) return '—';
   const d = date instanceof Date ? date : new Date(date);
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = d.getFullYear();
   const hour = String(d.getHours()).padStart(2, '0');
   const min = String(d.getMinutes()).padStart(2, '0');
-  return `${day}/${month}/${year} ${hour}:${min}`;
+  return `${day}/${month}/${year} às ${hour}h${min}`;
 }
 
 function formatDateOnlyBR(value: string | Date | null): string {
-  if (!value) return '-';
+  if (!value) return '—';
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return String(value);
   const day = String(d.getDate()).padStart(2, '0');
@@ -62,15 +54,25 @@ function formatDateOnlyBR(value: string | Date | null): string {
 }
 
 function shortenId(id: string): string {
-  // First 8 chars of the UUID — used in filenames and the encounter linkage line.
   return id.replace(/-/g, '').slice(0, 8);
 }
 
-// Renders structured per-type metadata fields. Only fields that exist in
-// metadata_json are rendered; missing fields are silently skipped — the
-// per-type contract is operator-defined in the UI (no DB CHECK on shape).
+function drawHRule(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  w: number,
+  color: string,
+  weight = 0.5,
+): void {
+  doc.moveTo(x, doc.y).lineTo(x + w, doc.y)
+    .strokeColor(color).lineWidth(weight).stroke();
+  doc.lineWidth(1);
+}
+
 function renderMetadata(
   doc: PDFKit.PDFDocument,
+  x: number,
+  w: number,
   type: ClinicalDocumentType,
   metadata: Record<string, unknown> | null,
 ): void {
@@ -80,9 +82,7 @@ function renderMetadata(
   function asString(value: unknown): string | null {
     if (value === null || value === undefined) return null;
     if (typeof value === 'string') return value;
-    if (typeof value === 'number' || typeof value === 'boolean') {
-      return String(value);
-    }
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
     return null;
   }
   function asArrayOfStrings(value: unknown): string[] | null {
@@ -109,9 +109,7 @@ function renderMetadata(
     if (ed) lines.push(`Data do comparecimento: ${formatDateOnlyBR(ed)}`);
     const st = asString(metadata.start_time);
     const et = asString(metadata.end_time);
-    if (st || et) {
-      lines.push(`Horário: ${st ?? '-'} às ${et ?? '-'}`);
-    }
+    if (st || et) lines.push(`Horário: ${st ?? '—'} às ${et ?? '—'}`);
   } else if (type === 'receipt_simple') {
     const meds = asArrayOfStrings(metadata.medications);
     if (meds) lines.push(`Medicamentos:\n  - ${meds.join('\n  - ')}`);
@@ -127,48 +125,39 @@ function renderMetadata(
     const indication = asString(metadata.clinical_indication);
     if (indication) lines.push(`Indicação clínica: ${indication}`);
   }
-  // 'orientation' has no structured fields by ADR 0011 §3.1; everything goes
-  // into body.
+  // 'orientation' has no structured fields — everything goes into body.
 
   if (lines.length === 0) return;
-  doc.moveDown(0.5);
-  doc.font('Helvetica-Bold').fontSize(11).text('Detalhes');
-  doc.font('Helvetica').fontSize(10);
+  doc.moveDown(0.6);
+  doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#888888');
+  doc.text('DETALHES ESTRUTURADOS', x, doc.y, { width: w });
+  doc.moveDown(0.25);
+  doc.font('Helvetica').fontSize(10.5).fillColor('#111111');
   for (const line of lines) {
-    doc.text(line, { align: 'left' });
+    doc.text(line, x, doc.y, { width: w, align: 'left', lineGap: 1 });
   }
 }
 
-// Adds the mandatory legal footer at the bottom of every page. Called via
-// pdfkit's pageAdded event so it survives multi-page documents.
-function attachLegalFooter(doc: PDFKit.PDFDocument): void {
-  const draw = (): void => {
-    const { bottom } = doc.page.margins;
-    // Save current state so the footer doesn't pollute the cursor of ongoing
-    // text flows on the page.
-    doc.save();
-    doc.fontSize(8).fillColor('#444444').font('Helvetica-Oblique');
-    // Place the footer text block in the bottom margin band.
-    const footerHeight = 50;
-    const y = doc.page.height - bottom - footerHeight + 10;
-    const x = doc.page.margins.left;
-    const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    doc.text(MANDATORY_LEGAL_FOOTER, x, y, { width, align: 'justify' });
-    doc.restore();
-  };
-  doc.on('pageAdded', draw);
-  // pdfkit emits 'pageAdded' only for subsequent pages. Draw on the first page
-  // explicitly after the body is written — done by the caller via finalizeFooter.
+// Draws the mandatory legal footer on the current page.
+// pageAdded fires for pages 2+; page 1 is handled explicitly after body.
+function drawFooterOnPage(doc: PDFKit.PDFDocument): void {
+  const { left, right, bottom } = doc.page.margins;
+  const footerH = 56;
+  const fy = doc.page.height - bottom - footerH + 10;
+  const fw = doc.page.width - left - right;
+  doc.save();
+  doc.moveTo(left, fy - 7).lineTo(left + fw, fy - 7)
+    .strokeColor('#cccccc').lineWidth(0.4).stroke();
+  doc.lineWidth(1);
+  doc.font('Helvetica-Oblique').fontSize(7.5).fillColor('#666666');
+  doc.text(MANDATORY_LEGAL_FOOTER, left, fy, { width: fw, align: 'justify' });
+  doc.restore();
 }
 
-// Build a one-page-or-more PDF for a finalized clinical document. The returned
-// stream is the pdfkit PDFDocument itself (Readable). The caller is responsible
-// for setting HTTP headers and piping to the response.
-//
-// NOTE on streaming: pdfkit begins emitting bytes as you draw. We call
-// `doc.end()` synchronously after all content is written — the consumer of
-// the stream will receive everything and then EOF. There is no buffering of
-// the full PDF in memory.
+function attachLegalFooter(doc: PDFKit.PDFDocument): void {
+  doc.on('pageAdded', () => drawFooterOnPage(doc));
+}
+
 export interface BuildDocumentPdfInput {
   document: ClinicalDocumentRow;
 }
@@ -182,28 +171,20 @@ export const clinicalDocumentPdfService = {
   async build(input: BuildDocumentPdfInput): Promise<BuildDocumentPdfOutput> {
     const { document: row } = input;
 
-    // Resolve administrative metadata for the PDF header — clinic, patient
-    // and author. These ARE administrative reads (no clinical content), so
-    // they do NOT emit clinical_read_audit rows. The PDF-download audit was
-    // already persisted by the caller (clinicalDocumentService.getForPdf).
     const [clinic, patient, author] = await Promise.all([
       clinicDao.findById(row.clinica_id),
       patientDao.findByIdForClinic(row.patient_id, row.clinica_id),
       userDao.findById(row.author_user_id),
     ]);
 
+    const ml = 58;
+    const cw = 595.28 - ml * 2; // content width ≈ 479pt
+
     const doc = new PDFDocument({
       size: 'A4',
-      // Uncompressed streams (v0.1). This makes content streams readable without
-      // a decompressor, allowing smoke-test validation of the mandatory legal
-      // footer (ADR 0011 §10.2) without a poppler/pdftotext dependency.
-      // Tradeoff: slightly larger PDFs. Acceptable for on-demand, non-stored docs.
+      // compress:false — allows smoke-test hex extraction without a poppler dependency.
       compress: false,
-      // Margins leave room for header AND a footer band for the legal notice.
-      margins: { top: 60, bottom: 70, left: 60, right: 60 },
-      // Subject/title go into the PDF metadata. Author intentionally OMITTED
-      // (would leak `nome` of the professional into PDF metadata, which is
-      // not redacted by clients and not necessary for the document itself).
+      margins: { top: 56, bottom: 80, left: ml, right: ml },
       info: {
         Title: row.title,
         Producer: 'ClinicBridge',
@@ -214,123 +195,188 @@ export const clinicalDocumentPdfService = {
 
     attachLegalFooter(doc);
 
-    // ----- Header (clinic identification) ---------------------------------
-    doc.font('Helvetica-Bold').fontSize(14);
-    doc.text(clinic?.nome ?? '—', { align: 'left' });
-    doc.font('Helvetica').fontSize(9).fillColor('#555555');
-    const clinicMeta: string[] = [];
-    if (clinic?.cnpj) clinicMeta.push(`CNPJ: ${clinic.cnpj}`);
-    if (clinicMeta.length) doc.text(clinicMeta.join('  ·  '));
-    doc.moveDown(0.5);
+    // ── 1. Clinic header ──────────────────────────────────────────────────────
+    doc.font('Helvetica-Bold').fontSize(15).fillColor('#111111');
+    doc.text(clinic?.nome ?? '—', ml, doc.y, { width: cw });
+    if (clinic?.cnpj) {
+      doc.font('Helvetica').fontSize(8.5).fillColor('#888888');
+      doc.text(`CNPJ: ${clinic.cnpj}`, ml, doc.y, { width: cw });
+    }
+    doc.moveDown(0.3);
+    drawHRule(doc, ml, cw, '#1a1a1a', 1.2);
+    doc.moveDown(0.7);
 
-    // Separator line.
-    doc.fillColor('#000000');
-    doc
-      .moveTo(doc.page.margins.left, doc.y)
-      .lineTo(doc.page.width - doc.page.margins.right, doc.y)
-      .strokeColor('#cccccc')
-      .stroke();
-    doc.moveDown(0.6);
-
-    // ----- Title block ----------------------------------------------------
-    doc.font('Helvetica-Bold').fontSize(16);
-    doc.text(`${DOC_TYPE_LABEL[row.doc_type]}`, { align: 'center' });
-    doc.font('Helvetica').fontSize(11);
+    // ── 2. Document type title ────────────────────────────────────────────────
+    doc.font('Helvetica-Bold').fontSize(22).fillColor('#1a1a1a');
+    doc.text(DOC_TYPE_LABEL[row.doc_type], ml, doc.y, { width: cw, align: 'center' });
     if (row.title && row.title !== DOC_TYPE_LABEL[row.doc_type]) {
-      doc.text(row.title, { align: 'center' });
+      doc.font('Helvetica-Oblique').fontSize(11).fillColor('#555555');
+      doc.text(row.title, ml, doc.y, { width: cw, align: 'center' });
     }
-    doc.moveDown(0.8);
+    doc.fillColor('#000000').moveDown(0.5);
+    drawHRule(doc, ml, cw, '#cccccc', 0.5);
+    doc.moveDown(0.6);
 
-    // ----- Metadata block (issuance + people) -----------------------------
-    doc.font('Helvetica-Bold').fontSize(10).text('Emissão');
-    doc.font('Helvetica').fontSize(10);
-    doc.text(`Data: ${formatDateBR(row.finalized_at)}`);
-    if (row.encounter_id) {
-      doc.text(`Atendimento vinculado: #${shortenId(row.encounter_id)}`);
-    }
+    // ── 3. Metadata box (shaded, bordered, 2-column) ──────────────────────────
+    const boxPad = 12;
+    const colW = (cw - 20) / 2;
+    const rightX = ml + colW + 20;
+    const metaBoxStartY = doc.y;
+    const metaBoxH = 112;
 
-    doc.moveDown(0.4);
-    doc.font('Helvetica-Bold').text('Paciente');
-    doc.font('Helvetica');
-    doc.text(`Nome: ${patient?.nome ?? '—'}`);
+    doc.rect(ml, metaBoxStartY, cw, metaBoxH).fill('#f1f3f8');
+    doc.rect(ml, metaBoxStartY, cw, metaBoxH).strokeColor('#c5cede').lineWidth(0.6).stroke();
+    doc.lineWidth(1);
+    doc.fillColor('#000000');
+
+    // Left column — Paciente + Profissional
+    let lY = metaBoxStartY + boxPad;
+
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#9090a8');
+    doc.text('PACIENTE', ml + boxPad, lY, { width: colW - boxPad });
+    lY = doc.y + 2;
+    doc.font('Helvetica').fontSize(11).fillColor('#111111');
+    doc.text(patient?.nome ?? '—', ml + boxPad, lY, { width: colW - boxPad });
+    lY = doc.y;
     if (patient?.data_nascimento) {
-      doc.text(`Data de nascimento: ${formatDateOnlyBR(patient.data_nascimento)}`);
+      doc.font('Helvetica').fontSize(8.5).fillColor('#777777');
+      doc.text(
+        `Nasc.: ${formatDateOnlyBR(patient.data_nascimento as unknown as Date)}`,
+        ml + boxPad, lY + 2, { width: colW - boxPad },
+      );
+      lY = doc.y + 2;
     }
-    // CPF intentionally NOT included in v0.1 (ADR 0011 §10.3). Operator may
-    // include it in body if the document type requires.
+    lY += 9;
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#9090a8');
+    doc.text('PROFISSIONAL', ml + boxPad, lY, { width: colW - boxPad });
+    lY = doc.y + 2;
+    doc.font('Helvetica').fontSize(11).fillColor('#111111');
+    doc.text(author?.nome ?? '—', ml + boxPad, lY, { width: colW - boxPad });
 
-    doc.moveDown(0.4);
-    doc.font('Helvetica-Bold').text('Profissional');
-    doc.font('Helvetica');
-    doc.text(`Nome: ${author?.nome ?? '—'}`);
-    // Registro profissional não existe ainda como campo estruturado em
-    // users — a UI futura pode coletar; o profissional pode usar `body`
-    // ou a área de assinatura manual abaixo. Omissão intencional aqui.
+    // Right column — Data de emissão + Tipo + Atendimento
+    let rY = metaBoxStartY + boxPad;
 
-    doc.moveDown(0.6);
-    doc
-      .moveTo(doc.page.margins.left, doc.y)
-      .lineTo(doc.page.width - doc.page.margins.right, doc.y)
-      .strokeColor('#cccccc')
-      .stroke();
-    doc.moveDown(0.6);
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#9090a8');
+    doc.text('DATA DE EMISSÃO', rightX, rY, { width: colW - boxPad });
+    rY = doc.y + 2;
+    doc.font('Helvetica').fontSize(11).fillColor('#111111');
+    doc.text(formatDateBR(row.finalized_at), rightX, rY, { width: colW - boxPad });
+    rY = doc.y + 10;
 
-    // ----- Body (clinical content) ----------------------------------------
-    doc.font('Helvetica-Bold').fontSize(11).text('Conteúdo');
-    doc.moveDown(0.2);
-    doc.font('Helvetica').fontSize(11);
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#9090a8');
+    doc.text('TIPO DE DOCUMENTO', rightX, rY, { width: colW - boxPad });
+    rY = doc.y + 2;
+    doc.font('Helvetica').fontSize(10.5).fillColor('#111111');
+    doc.text(DOC_TYPE_LABEL[row.doc_type], rightX, rY, { width: colW - boxPad });
+
+    if (row.encounter_id) {
+      rY = doc.y + 8;
+      doc.font('Helvetica').fontSize(8.5).fillColor('#999999');
+      doc.text(
+        `Atendimento: #${shortenId(row.encounter_id)}`,
+        rightX, rY, { width: colW - boxPad },
+      );
+    }
+
+    // Advance cursor past metadata box
+    doc.y = metaBoxStartY + metaBoxH + 16;
+    doc.fillColor('#000000');
+
+    // ── 4. Content section ────────────────────────────────────────────────────
+    // Label strip with subtle background — acts as section header
+    const labelStripH = 20;
+    const labelY = doc.y;
+    doc.rect(ml, labelY, cw, labelStripH).fill('#e8ebf2');
+    doc.rect(ml, labelY, cw, labelStripH).strokeColor('#c5cede').lineWidth(0.5).stroke();
+    doc.lineWidth(1);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor('#555570');
+    doc.text('CONTEÚDO DO DOCUMENTO', ml + boxPad, labelY + 6, { width: cw - boxPad * 2 });
+    doc.fillColor('#000000');
+
+    // Body area — min 200pt so short content still fills the page properly
+    const bodyAreaY = labelY + labelStripH + 12;
+    doc.y = bodyAreaY;
+
+    doc.font('Helvetica').fontSize(11).fillColor('#111111');
     if (row.body && row.body.trim().length > 0) {
-      doc.text(row.body, { align: 'left' });
+      doc.text(row.body, ml, doc.y, { width: cw, align: 'left', lineGap: 2 });
     } else {
-      doc.fillColor('#888888').text('(documento sem corpo)');
-      doc.fillColor('#000000');
+      doc.fillColor('#bbbbbb').text('(documento sem conteúdo registrado)', ml, doc.y, { width: cw });
+      doc.fillColor('#111111');
     }
 
-    // ----- Structured per-type fields ------------------------------------
-    renderMetadata(doc, row.doc_type, row.metadata_json);
+    const contentMinEndY = bodyAreaY + 200;
+    if (doc.y < contentMinEndY) doc.y = contentMinEndY;
 
-    // ----- Manual signature block ----------------------------------------
-    doc.moveDown(2);
-    doc.font('Helvetica').fontSize(11);
-    // Signature line + label.
-    const signatureLineWidth = 260;
-    const signatureLineX =
-      (doc.page.width - signatureLineWidth) / 2;
-    doc
-      .moveTo(signatureLineX, doc.y + 30)
-      .lineTo(signatureLineX + signatureLineWidth, doc.y + 30)
-      .strokeColor('#222222')
-      .stroke();
-    doc.moveDown(2);
-    doc.fontSize(10).fillColor('#222222');
-    doc.text(author?.nome ?? '__________________________________', { align: 'center' });
-    doc.text('Assinatura do profissional responsável', { align: 'center' });
     doc.moveDown(0.5);
-    doc.text('Data: ___ / ___ / ______', { align: 'center' });
+    drawHRule(doc, ml, cw, '#dddddd', 0.4);
+    doc.moveDown(0.4);
 
-    // Draw the legal footer on the FIRST page now (pageAdded only fires for
-    // subsequent pages). Save/restore protects current text cursor.
-    {
-      const drawFooterNow = (): void => {
-        const { bottom } = doc.page.margins;
-        doc.save();
-        doc.fontSize(8).fillColor('#444444').font('Helvetica-Oblique');
-        const footerHeight = 50;
-        const y = doc.page.height - bottom - footerHeight + 10;
-        const x = doc.page.margins.left;
-        const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-        doc.text(MANDATORY_LEGAL_FOOTER, x, y, { width, align: 'justify' });
-        doc.restore();
-      };
-      drawFooterNow();
-    }
+    // ── 5. Per-type structured metadata ───────────────────────────────────────
+    renderMetadata(doc, ml, cw, row.doc_type, row.metadata_json);
+
+    // ── 6. Signature block ────────────────────────────────────────────────────
+    // All y-positions are derived from sigY before any rendering, so nothing
+    // can ever cross another element regardless of PDFKit cursor behaviour.
+    //
+    // Visual order:  line → name → label → date
+    //   ──────────────────────────────  (sigLineY)
+    //   Smoke Profissional              (sigNameY  = sigLineY + 10)
+    //   Assinatura do prof. resp.       (sigLabelY = sigLineY + 26)
+    //   Data: ____/____/________        (sigDateY  = sigLineY + 40)
+    //
+    // sigMinY: keep block in the lower third (≥490pt).
+    // sigUpperLimit: leave ≥90pt clear before the footer band.
+    const footerBandY = 841.89 - 80 - 56 + 10; // ≈ 715pt
+    const sigUpperLimit = footerBandY - 90;      // ≈ 625pt
+    const sigMinY = 490;
+    const sigLineY  = Math.min(Math.max(doc.y + 44, sigMinY), sigUpperLimit);
+    const sigNameY  = sigLineY + 10;
+    const sigLabelY = sigLineY + 26;
+    const sigDateY  = sigLineY + 40;
+
+    const sigLineLen = 280;
+    const sigLineX = ml + (cw - sigLineLen) / 2;
+
+    // 1. Line
+    doc
+      .moveTo(sigLineX, sigLineY)
+      .lineTo(sigLineX + sigLineLen, sigLineY)
+      .strokeColor('#555555')
+      .lineWidth(0.6)
+      .stroke();
+    doc.lineWidth(1);
+
+    // 2. Professional's name (below the line)
+    doc.font('Helvetica').fontSize(10.5).fillColor('#111111');
+    doc.text(author?.nome ?? '______________________________', ml, sigNameY, {
+      width: cw,
+      align: 'center',
+      lineBreak: false,
+    });
+
+    // 3. Role label
+    doc.font('Helvetica').fontSize(8.5).fillColor('#666666');
+    doc.text('Assinatura do profissional responsável', ml, sigLabelY, {
+      width: cw,
+      align: 'center',
+      lineBreak: false,
+    });
+
+    // 4. Date
+    doc.text('Data: ____/____/________', ml, sigDateY, {
+      width: cw,
+      align: 'center',
+      lineBreak: false,
+    });
+
+    // ── 7. Legal footer — page 1 ──────────────────────────────────────────────
+    // pageAdded fires only for pages 2+; draw explicitly for page 1.
+    drawFooterOnPage(doc);
 
     doc.end();
 
     const filename = `documento-${shortenId(row.id)}.pdf`;
-    return {
-      stream: doc as unknown as Readable,
-      filename,
-    };
+    return { stream: doc as unknown as Readable, filename };
   },
 };

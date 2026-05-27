@@ -3431,3 +3431,50 @@ PDF footer validado via extração de hex streams — sem poppler.
 - Env vars novas (reutiliza `CLINICAL_READ_AUDIT_STRICT`).
 
 **Próxima sprint natural:** 4.3C (frontend — aba Documentos em `ClinicalPatientPane`).
+
+## Sprint 4.3C (frontend — Documentos Médicos v0.1)
+
+**Data:** 2026-05-26 · **Status:** entregue.
+
+Aba "Documentos" no drawer clínico; `ClinicalDocumentsPanel` auto-contido com state machine
+interna e download de PDF via blob. **Sem migration, sem backend novo, sem AWS, sem ICP-Brasil.**
+
+### Arquivos criados
+| Arquivo | Descrição |
+|---|---|
+| `frontend/src/components/ClinicalDocumentsPanel.tsx` | State machine `list` → `new` \| `detail`; staleTime: 0; PDF blob; aviso jurídico |
+| `frontend/src/components/ClinicalDocumentsPanel.module.css` | CSS module com design tokens |
+
+### Arquivos modificados
+| Arquivo | O que mudou |
+|---|---|
+| `frontend/src/services/api.ts` | 8 tipos + 7 funções (Clinical Documents v0.1 section) |
+| `frontend/src/components/ClinicalPatientPane.tsx` | import `ClinicalDocumentsPanel`; `activeTab` state; tab bar; render condicional |
+| `frontend/src/components/ClinicalPatientPane.module.css` | `.tabBar`, `.tabBtn`, `.tabBtnActive` |
+| `backend/src/services/clinicalDocumentPdfService.ts` | Layout v2: caixa metadados bordada, label strip CONTEÚDO, min-height 200pt, assinatura corrigida (nome acima da linha), limite sup. para não colidir com rodapé; rodapé cita VALIDAR Gov.br/ITI + GOV.BR; `compress:false` mantido |
+
+### Invariantes de segurança respeitados
+- `staleTime: 0` em todas as queries de conteúdo clínico (list + detail).
+- PDF baixado via `Authorization: Bearer` no header; token nunca em URL.
+- Sem `dangerouslySetInnerHTML`.
+- 401/403 → mensagem genérica; backend decide segurança.
+- `body`/`metadata_json` nunca logados, nunca em localStorage/sessionStorage, nunca em URL params.
+- Aviso jurídico ADR 0011 §10.2 exibido em criar (sempre) e detalhe (se não cancelado); orienta assinar externamente + validar no VALIDAR Gov.br/ITI.
+- Botão "Como assinar e validar →" (SignGuide) em criar e em detalhe de finalizados; passo a passo inline com 6 etapas; cita VALIDAR Gov.br/ITI + GOV.BR; sem integração de assinatura; guia visual com prints fica para sprint futura.
+- PDF unsigned note exibido junto ao botão Baixar PDF (pdfNoteRow).
+
+### Verificação
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `git diff --check` rc=0
+
+### Fora de escopo (esta sprint)
+- Testes E2E / smoke de navegação frontend.
+- Internacionalização.
+- QA visual automatizado.
+- Backend/migration novo.
+- AWS/ICP-Brasil.
+
+**Próxima sprint natural:** 4.4 (financeiro v0.1 — ADR própria antes de código).
