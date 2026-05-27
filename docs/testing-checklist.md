@@ -1587,6 +1587,76 @@ curl -sk -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN_OWNER" 
 
 ---
 
+## Documentos Médicos e Receitas — Sprint 4.3D (QA/hardening final)
+
+> Smoke executado em 2026-05-27 via `docker exec clinicbridge-backend node /tmp/smoke_4_3d.js`.
+> Script temporário em `/tmp/smoke_4_3d.js` (não versionado).
+> **Resultado: 50/50 PASS.** Cleanup completo (4 docs cancelados). Sem mudanças de código.
+
+### Nota técnica: validação de keywords no PDF (PDFKit)
+
+PDFKit armazena texto como hex tokens em operadores TJ com kerning intercalado. Por exemplo,
+"ICP-Brasil" aparece como `<4943502d4272> 10 <6173696c2e>`. Para validar keywords:
+
+```javascript
+// Extrai todos tokens <hex> do PDF e concatena
+function extractPdfHexText(pdfLatin1) {
+  const tokens = [];
+  const re = /<([0-9a-f]+)>/gi;
+  let m;
+  while ((m = re.exec(pdfLatin1)) !== null) tokens.push(m[1].toLowerCase());
+  return tokens.join('');
+}
+function kwHex(str) { return Buffer.from(str, 'ascii').toString('hex'); }
+
+const allHex = extractPdfHexText(buf.toString('latin1'));
+allHex.includes(kwHex('ICP-Brasil'))  // true ✅
+allHex.includes(kwHex('GOV.BR'))      // true ✅
+allHex.includes(kwHex('VALIDAR'))     // true ✅
+allHex.includes(kwHex('Gov.br/ITI')) // true ✅
+```
+
+### Smoke tests 50/50 PASS (Sprint 4.3D)
+
+| # | Cenário | Resultado |
+|---|---------|-----------|
+| T01 | sem token → 401 | ✅ |
+| T02/T02b | secretaria list → 403/forbidden_role | ✅ |
+| T03 | secretaria create → 403 | ✅ |
+| T04/T04b | admin_sistema sem clinic → 403/no_clinic_context | ✅ |
+| T05/T05b | profissional cria draft → 201/draft | ✅ |
+| T06/T06b | profissional edita draft → 200/body presente | ✅ |
+| T07/T07b | finalize sem body → 400/document_body_required | ✅ |
+| T08/T08b | finalize com body → 200/finalized | ✅ |
+| T09/T09b | editar finalized → 400/document_already_finalized | ✅ |
+| T10/T10b | gestor lista → 200/array | ✅ |
+| T11/T11b | gestor detail → 200/body presente | ✅ |
+| T12 | gestor create → 403 | ✅ |
+| T12b | gestor finalize → 403 | ✅ |
+| T12c | gestor cancel → 403 | ✅ |
+| T13 | owner lista → 200 | ✅ |
+| T14 | owner detail → 200 | ✅ |
+| T15 | owner create → 403 (sem grant profissional) | ✅ |
+| T16 | secretaria detail → 403 | ✅ |
+| T17–T17e | /patients/:id/documents → 200; sem body/metadata_json/cancel_reason_text | ✅ |
+| T18/T18b | cancel finalized (reason_code: 'error') → 200/canceled | ✅ |
+| T19/T19b | PDF cancelado → 400/document_canceled | ✅ |
+| T20/T20b | PDF finalizado → 200 + começa %PDF | ✅ |
+| T20c | gestor PDF → 200 | ✅ |
+| T20e | owner PDF → 200 | ✅ |
+| T20f | rodapé contém ICP-Brasil (hex extraction) | ✅ |
+| T20g | rodapé contém GOV.BR (hex extraction) | ✅ |
+| T20h | rodapé contém VALIDAR (hex extraction) | ✅ |
+| T20i | rodapé contém Gov.br/ITI (hex extraction) | ✅ |
+| T20j | compress:false → sem /FlateDecode no PDF | ✅ |
+| T21 | UUID inexistente → 404 | ✅ |
+| T22 | doc_type inválido → 400 | ✅ |
+| T23 | body >10000 → 400 | ✅ |
+| T24 | reason_code inválido → 400 | ✅ |
+| T25 | patient inexistente → 404 | ✅ |
+
+---
+
 ## Documentos Médicos e Receitas — Sprint 4.3B (ADR 0011)
 
 > Smoke executado em 2026-05-26. Script temporário em `/tmp/sprint-4.3B-smoke.sh` (não versionado).

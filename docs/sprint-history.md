@@ -3477,4 +3477,92 @@ interna e download de PDF via blob. **Sem migration, sem backend novo, sem AWS, 
 - Backend/migration novo.
 - AWS/ICP-Brasil.
 
+**Próxima sprint natural:** 4.3D (QA/hardening final documentos médicos v0.1) antes de avançar para 4.4.
+
+---
+
+## Sprint 4.3D (QA/hardening — Documentos Médicos v0.1)
+
+**Data:** 2026-05-27 · **Status:** entregue.
+
+QA/hardening final do módulo de Documentos Médicos v0.1 (Sprints 4.3A–C). Zero mudanças de
+produto. **Sem código novo, sem migration, sem AWS, sem ICP-Brasil.**
+
+### Smoke tests — 50/50 PASS
+
+Executado de dentro do container (`docker exec clinicbridge-backend node /tmp/smoke_4_3d.js`),
+chamando `localhost:3001` diretamente para evitar rate limit do Nginx.
+
+**Seção A — Auth & role guards (6/6):**
+T01 sem token → 401 ✅ · T02/T02b secretaria list → 403/forbidden_role ✅ · T03 secretaria
+create → 403 ✅ · T04/T04b admin_sistema sem clinic → 403/no_clinic_context ✅
+
+**Seção B — CRUD lifecycle (10/10):**
+T05/T05b profissional cria draft → 201/draft ✅ · T06/T06b edita draft → 200/body presente ✅ ·
+T07/T07b finalize sem body → 400/document_body_required ✅ · T08/T08b finalize com body →
+200/finalized ✅ · T09/T09b editar finalized → 400/document_already_finalized ✅
+
+**Seção C — Read permissions (11/11):**
+T10/T10b gestor lista → 200/array ✅ · T11/T11b gestor detail → 200/body presente ✅ ·
+T12 gestor create → 403 ✅ · T12b gestor finalize → 403 ✅ · T12c gestor cancel → 403 ✅ ·
+T13 owner lista → 200 ✅ · T14 owner detail → 200 ✅ · T15 owner create → 403 (sem grant) ✅ ·
+T16 secretaria detail → 403 ✅
+
+**Seção D — metadata-only (5/5):**
+T17 GET /patients/:id/documents → 200 ✅ · T17b–d list sem body/metadata_json/cancel_reason_text ✅ ·
+T17e GET /clinical/documents sem body ✅
+
+**Seção E — Cancel (4/4):**
+T18/T18b cancel finalized → 200/canceled (reason_code: 'error') ✅ ·
+T19/T19b PDF cancelado → 400/document_canceled ✅
+
+**Seção F — PDF (9/9):**
+T20 PDF finalizado → 200 ✅ · T20b começa com %PDF ✅ · T20c gestor PDF → 200 ✅ ·
+T20e owner PDF → 200 ✅ · T20f ICP-Brasil no rodapé ✅ · T20g GOV.BR no rodapé ✅ ·
+T20h VALIDAR no rodapé ✅ · T20i Gov.br/ITI no rodapé ✅ · T20j compress:false/sem FlateDecode ✅
+
+**Seção G — Validation errors (5/5):**
+T21 UUID inexistente → 404 ✅ · T22 doc_type inválido → 400 ✅ · T23 body >10000 → 400 ✅ ·
+T24 reason_code inválido → 400 ✅ · T25 patient inexistente → 404 ✅
+
+**Nota técnica PDF:** PDFKit codifica texto como hex tokens em operadores TJ com kerning
+intercalado (ex.: `<4943502d4272> 10 <6173696c2e>`). Validação de keywords via extração
+de todos tokens `<hex>` e concatenação, depois busca pelo hex da keyword. Confirma que
+ICP-Brasil/GOV.BR/VALIDAR/Gov.br/ITI estão no rodapé obrigatório ADR 0011 §10.2.
+
+### Audit/Logs verificados
+
+**clinical_read_audit:** `clinical.document.list` (27), `clinical.document.read` (24),
+`clinical.document.pdf.downloaded` (20) — sem conteúdo clínico nas colunas do schema.
+
+**audit_logs:** `clinical.document.created.success` (30), `clinical.document.updated.success`
+(17), `clinical.document.finalized.success` (16), `clinical.document.canceled.success` (22) —
+schema não tem colunas `body`/`title`/`metadata_json`/`cancel_reason_text`.
+
+**Logger redaction:** `docker logs clinicbridge-backend` — sem `Dipirona`, `ICP-Brasil`, body
+clínico nos logs. Campos `body`, `title`, `metadata_json`, `cancel_reason_text` cobertos em
+4 níveis (top-level, `*.field`, `body/req.body/payload.<field>`, `payload.initial_note.<field>`).
+
+### Cleanup
+
+Todos os documentos criados durante o smoke foram cancelados (4/4 `canceled`). Pacientes
+base, usuários smoke (`*@clinicbridge.local`) e audit_logs/clinical_read_audit preservados.
+
+### Verificação
+
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `pnpm --filter backend migrate:status` → 14 applied / 0 pending ✅
+- `git diff --check` rc=0 ✅
+- `git status --short` → clean ✅
+
+### Fora de escopo (esta sprint)
+
+- Frontend: validação visual navegador pendente (dev server não inicializado neste QA).
+- ICP-Brasil / assinatura digital.
+- Armazenamento persistente de PDF.
+- AWS.
+
 **Próxima sprint natural:** 4.4 (financeiro v0.1 — ADR própria antes de código).
