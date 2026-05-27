@@ -1,633 +1,216 @@
 # CLAUDE.md — ClinicBridge
 
-> Arquivo curto e operacional. Histórico longo e detalhes ficam nos docs:
-> - **Estado detalhado / invariantes:** `docs/project-state.md`
-> - **Histórico das sprints (1.5 → 2.26):** `docs/sprint-history.md`
-> - **Segurança detalhada + ressalvas P1/P2/P3:** `docs/security-notes.md`
-> - **Política de retenção e governança de dados:** `docs/data-retention-policy.md` (+ ADR `docs/adr/0002-data-retention-governance.md`)
-> - **Estratégia de backup/restore (Restic-first):** `docs/backup-restore-strategy.md` (+ ADR `docs/adr/0003-backup-restore-strategy.md`)
-> - **Runbook backup/restore local (scripts em `scripts/`):** `docs/backup-restore-local-runbook.md`
-> - **Runbook backup OFFSITE Restic + S3 (Sprint 3.40; scripts `*-offsite-restic.sh`; IAM mínimo; retenção documentada; restore drill remoto):** `docs/backup-offsite-runbook.md`
-> - **Checklist de deploy seguro / CORS / env prod:** `docs/deploy-security-checklist.md` (+ ADR `docs/adr/0004-deploy-security-baseline.md`)
-> - **Estratégia de borda (Nginx reverse proxy + WAF):** `docs/edge-security-strategy.md` (+ ADR `docs/adr/0005-edge-security-reverse-proxy-waf.md`)
-> - **Plano de produção mínima segura (AWS preferido; gaps P0/P1/P2; sprints 3.37–3.43; decisões pendentes):** `docs/production-minimum-plan.md`
-> - **Plano operacional de infra AWS Sprint 3.41B (EC2+Compose; 7 decisões; checklist 6 fases; custo ~$47-56/mês seguro):** `docs/aws-infra-sprint-3.41-plan.md`
-> - **Runbook de provisionamento AWS real Sprint 3.41B (passo a passo; Console+CLI; billing; SG; RDS; EC2; EBS; SSM; Certbot; smoke tests; drill):** `docs/aws-provisioning-runbook-3.41B.md`
-> - **Runbook DNS/TLS/Nginx para staging+produção (Sprint 3.38; Registro.br → Certbot → testes):** `docs/dns-tls-staging-runbook.md` (templates: `infra/nginx/conf.d/clinicbridge.{production,staging}.conf.example`)
-> - **Runbook de secrets/env de produção (Sprint 3.39; geração de secrets, SSM, injeção, rotação):** `docs/secrets-env-production-runbook.md`
-> - **Agenda Administrativa (backend 3.14 + frontend 3.15; lembrete manual/wa.me 3.18; WhatsApp API futuro; não clínico):** `docs/administrative-scheduling-scope.md` (+ ADR `docs/adr/0006-administrative-scheduling-module.md`)
-> - **Merge seguro de duplicados (B-safe; decidido 3.32, backend 3.33, UX 3.34, validado 3.35; administrativo, sem delete físico, sem undo completo):** ADR `docs/adr/0007-safe-patient-duplicate-resolution.md`
-> - **Expansão para Clinic OS modular (Sprint 4.0; sem telemedicina; migração como diferencial; ADR própria por módulo; trilha AWS pausada estrategicamente):** ADR `docs/adr/0008-clinicbridge-clinic-os-expansion.md` + roadmap `docs/product-clinic-os-roadmap.md`
-> - **Arquitetura clínica + roles granulares + audit de leitura + LGPD clínica (Sprint 4.1, docs/ADR-only; bloqueia 4.2+; gate de retomada AWS atualizado):** ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` + operacional `docs/clinical-architecture-and-permissions.md`
-> - **Prontuário/Atendimento clínico v0.1 — escopo do módulo (Sprint 4.2A, docs/ADR-only; autoriza Sprint 4.2B; sem migration/endpoint ainda; cifra a nível de coluna fora do v0.1 — decisão revisável):** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` + operacional `docs/clinical-encounters-v0-scope.md`
-> - **Documentos Médicos e Receitas v0.1 — escopo do módulo (Sprint 4.3A, docs/ADR-only; autoriza Sprint 4.3B; PDF on-demand; sem ICP-Brasil; cifra de coluna revisável):** ADR `docs/adr/0011-medical-documents-prescriptions-v0.md` + operacional `docs/medical-documents-v0-scope.md`
-> - **Módulo Financeiro v0.1 — escopo do módulo (Sprint 4.4A, docs/ADR-only; autoriza Sprint 4.4B; 1 tabela `financial_charges`; ciclo pending→paid|canceled; roles administrativas; sem gateway; sem audit leitura dedicado):** ADR `docs/adr/0012-financial-module-v0.md` + operacional `docs/financial-v0-scope.md`
-> - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
-> - **Demo/piloto v0.1 (Sprint 3.20; dados fictícios, não clínico):** `docs/demo-data/README.md` (+ `docs/demo-data/pacientes-demo.csv`), `docs/demo-pilot-v0.1-script.md`, `docs/demo-pilot-v0.1-checklist.md` — seed dev-only de agenda: `backend/scripts/seed-demo-scheduling.ts` (`pnpm --filter backend seed:demo` / `seed:demo:clean`)
-> - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
-> - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
+> Guia operacional rápido. Detalhes completos nos docs específicos:
+> - **Estado detalhado + componentes por sprint:** `docs/project-state.md`
+> - **Histórico de sprints:** `docs/sprint-history.md`
+> - **Segurança + ressalvas P1/P2/P3:** `docs/security-notes.md`
+> - **Checklist de testes + smoke users:** `docs/testing-checklist.md`
+> - **Fonte de verdade produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
+> - **Roadmap Clinic OS:** `docs/product-clinic-os-roadmap.md`
+> - **Módulo Financeiro v0.1:** ADR `docs/adr/0012-financial-module-v0.md` · operacional `docs/financial-v0-scope.md`
+> - **Documentos Médicos v0.1:** ADR `docs/adr/0011-medical-documents-prescriptions-v0.md` · `docs/medical-documents-v0-scope.md`
+> - **Prontuário v0.1:** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` · `docs/clinical-encounters-v0-scope.md`
+> - **Arquitetura clínica + roles + audit:** ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` · `docs/clinical-architecture-and-permissions.md`
+> - **Outros ADRs (0001–0009):** `docs/adr/`
+> - **Runbooks (backup/DNS/TLS/Nginx/secrets/AWS):** `docs/backup-restore-local-runbook.md`, `docs/backup-offsite-runbook.md`, `docs/dns-tls-staging-runbook.md`, `docs/secrets-env-production-runbook.md`, `docs/aws-provisioning-runbook-3.41B.md`
+> - **Planos de prod/infra AWS:** `docs/production-minimum-plan.md`, `docs/aws-infra-sprint-3.41-plan.md`
 
-## Estado atual (resumido — atualizado 2026-05-27)
+## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.4B** (entregue) — **Implementação backend do Módulo Financeiro v0.1.**
-Migration `financial_charges` + DAO + Service + Controller + Rotas registradas em `app.ts`.
-Logger redaction estendido com 4 camadas para `description`/`notes`/`cancel_reason`/`amount_cents`.
-`appointment_id` opcional com validação cross-tenant + cross-patient. Smoke **49/49 PASS**.
-**Sem frontend, sem AWS, sem gateway, sem NFS-e.**
+**Sprint atual: 4.4B** (entregue) — **Backend do Módulo Financeiro v0.1.**
+Migration `financial_charges` (11 CHECKs, 5 índices, batch 15) + `financialChargeDao` + `financialChargeService`
+(`effectiveFinancialAccess` full/transact/none; `appointment_id` cross-tenant/cross-patient) + controller + 8 rotas.
+Logger redaction: `description`/`notes`/`cancel_reason`/`amount_cents` × 4 camadas.
+Smoke **49/49 PASS** · SQL invariants 4/4 · typecheck/build ✅ · `git diff --check` rc=0.
+**Sem frontend, sem AWS, sem gateway.** Detalhe: `docs/project-state.md`.
 
-**Componentes entregues:**
-- `backend/migrations/20260604000000_financial_charges_v0.ts` — tabela `financial_charges`
-  (11 CHECK constraints, 4 índices normais + 1 índice parcial `WHERE appointment_id IS NOT NULL`;
-  rollback DROP TABLE; FK: clinica_id CASCADE, patient_id RESTRICT, created_by_user_id RESTRICT,
-  paid_by_user_id SET NULL, canceled_by_user_id SET NULL, appointment_id SET NULL).
-- `backend/src/dao/financialChargeDao.ts` — tenant-scoped sem `listAll()`; CAS em `updatePending`,
-  `markPaid`, `cancel`; sem delete físico; `summarize()` (pending/overdue/paid com janela de data).
-- `backend/src/services/financialChargeService.ts` — `buildFinancialActor` + `effectiveFinancialAccess`
-  (`full`/`transact`/`none`); 7 métodos: `create`, `list`, `findById`, `update`, `markPaid`,
-  `cancel`, `summary`, `listForPatient`; validação `appointment_id` cross-tenant + cross-patient;
-  `loadActivePatient` exige ativo + não-mesclado.
-- `backend/src/controllers/financialChargeController.ts` — thin; 8 handlers.
-- `backend/src/routes/financialCharges.ts` — 8 rotas; pipeline `rateLimit → requireAuth →
-  requireClinic → requireRole(['dono_clinica','secretaria'])`; gestor/profissional bloqueados
-  no service.
-- **Modificados:** `db.d.ts` (tipos `FinancialChargeRow`, `FinancialChargeStatus`,
-  `FinancialPaymentMethod`), `logger.ts` (+4 campos × 4 camadas = 16 redaction paths financeiros),
-  `app.ts` (registra `financialChargesRouter`).
-- **Migration aplicada:** batch 15 — 15 applied/0 pending.
+**Endpoints financeiros registrados:**
+`POST /financial/charges` · `GET /financial/charges` (incl. `?appointment_id`) · `GET /financial/summary` ·
+`GET /financial/charges/:id` · `PATCH /financial/charges/:id` · `POST /financial/charges/:id/mark-paid` ·
+`POST /financial/charges/:id/cancel` · `GET /patients/:id/charges`
 
-**Endpoints registrados:**
-- `POST /financial/charges` — cria cobrança pending (full only)
-- `GET /financial/charges` — lista com filtros (incl. `?appointment_id`) (transact+full)
-- `GET /financial/summary` — totalizadores pending/paid/overdue (transact+full)
-- `GET /financial/charges/:id` — detalhe com `notes` (transact+full)
-- `PATCH /financial/charges/:id` — edita pending (full only)
-- `POST /financial/charges/:id/mark-paid` — pending→paid (transact+full)
-- `POST /financial/charges/:id/cancel` — pending→canceled (transact+full)
-- `GET /patients/:id/charges` — histórico de cobranças do paciente (transact+full)
+**Sprints anteriores (resumo — detalhes em `docs/sprint-history.md`):**
+- **4.4A** ✅ ADR 0012 + `docs/financial-v0-scope.md` (docs-only)
+- **4.3D** ✅ QA/hardening Documentos Médicos — smoke 50/50 PASS
+- **4.3C** ✅ Frontend Documentos Médicos (`ClinicalDocumentsPanel`, tab bar, 7 API funcs, PDF blob)
+- **4.3B** ✅ Backend Documentos Médicos — migration + PDFKit + 8 endpoints — smoke 47/47 PASS
+- **4.3A** ✅ ADR 0011 + `docs/medical-documents-v0-scope.md` (docs-only)
+- **4.2E** ✅ `GET /clinical/read-audit` owner-only (LGPD-art.18) + `ClinicalReadAuditPanel`
+- **4.2D** ✅ QA/hardening Prontuário — 76/76 PASS validados, dados sintéticos limpos
+- **4.2C** ✅ Frontend Prontuário (`ClinicalPatientPane`, `ClinicalRolesPanel`)
+- **4.2B-1/2/3** ✅ Migration 4 tabelas + DAOs + services + rotas clínicas (76/76 PASS)
+- **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
-**Smoke tests executados — 49/49 PASS** (usuários smoke persistentes `*@clinicbridge.local`):
-T1–T2: sem token/admin → 401/403 ✅ · T3–T4: secretaria/owner create → 201 ✅
-T5: gestor create → 403 ✅ · T6: profissional all ops → 403 ✅
-T7: list (notes omitido)/detail (notes presente)/gestor list+detail → 200 ✅
-T8: gestor PATCH → 403 ✅ · T9: secretaria edita pending → 200 ✅
-T10: gestor mark-paid → 200/paid ✅ · T11: edit/pay/cancel paid → 400/charge_not_pending ✅
-T12: cancel pending → 200/canceled + edit canceled → 400 ✅
-T13: gestor cancel → 200 ✅ · T14: amount_cents=0/-100/desc_vazia/patient404/method_inv/miss → 400 ✅
-T15: appointment_id válido→201 / filtro→somente vinculados / outro_patient→400 / ghost→400 ✅
-T16: GET /patients/:id/charges → 200 / inexistente → 404 ✅
-T17: summary shape OK / gestor / bad_date→400 ✅ · T18: charge not found/bad uuid → 404/400 ✅
+**Trilha Clinic OS:**
+4.0–4.4B ✅ → **4.4C** frontend financeiro → **4.4D** QA financeiro →
+**4.4E** integração Agenda × Financeiro (badge; alertas; sem automação) →
+**4.5** relatórios → **4.6** convênios/faturamento básico → **4.7** estoque básico.
+Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
-**SQL invariants — 4/4 PASS:** paid sem paid_at=0 ✅ · canceled sem canceled_at=0 ✅ ·
-pending com paid/canceled fields=0 ✅ · appt_id com patient_id divergente=0 ✅ · 11 CHECKs ✅
+**Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
+**AWS** é o provedor preferido; trilha pausada estrategicamente — ver `docs/production-minimum-plan.md`.
 
-**Audit — 4 acoes registradas:** `financial.charge.created.success` (10) ·
-`financial.charge.updated.success` (2) · `financial.charge.paid.success` (2) ·
-`financial.charge.canceled.success` (4). Sem `description`/`notes`/`cancel_reason`/`amount_cents`
-nos logs (sentinels: FIN_DESC_SENTINEL / FIN_NOTES_SENTINEL / FIN_CANCEL_SENTINEL → 0 ocorrências).
+**O que existe:** auth (JWT, MFA/TOTP, backup codes, rate limit, audit); upload CSV/XLSX (magic bytes, SHA-256);
+import/migração (preview, mapeamento, validação, dry-run, import); listagem/CRUD de pacientes; merge B-safe (ADR 0007);
+export CSV/XLSX; retenção dry-run; equipe (invite, aprovação, membros, desativação); agenda administrativa;
+prontuário v0.1 (encounters, notes, read-audit LGPD); documentos médicos v0.1 (PDF on-demand); financeiro v0.1 (backend).
+Detalhe: `docs/project-state.md`.
 
-**Verificação:** `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
-`pnpm --filter frontend typecheck` ✅ · `migrate:status` 15 applied/0 pending ✅ ·
-`git diff --check` rc=0 · Docker health OK ✅
+**O que NÃO existe (sprint explícita):** frontend financeiro; delete físico de paciente; undo completo de merge;
+limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
 
-**Sprint anterior: 4.4A** (entregue) — **ADR Módulo Financeiro v0.1 (docs/ADR-only).**
-ADR 0012 + `docs/financial-v0-scope.md`. 1 tabela `financial_charges`; ciclo
-`pending → paid | canceled`; 8 endpoints conceituais; roles administrativas (dono+secretaria
-full; gestor view+pay+cancel; profissional sem acesso); audit de escrita em `audit_logs`;
-sem gateway; sem audit de leitura dedicado.
-**Sem código, sem migration, sem env vars, sem AWS.**
-
-**Sprint anterior: 4.3D** (entregue 2026-05-27) — **QA/hardening final de Documentos Médicos v0.1.**
-Smoke 50/50 PASS. Audit/logs verificados. Cleanup de dados sintéticos. Zero código novo.
-**Sem migration, sem AWS, sem ICP-Brasil.**
-
-**Sprint anterior: 4.3C** (entregue 2026-05-26) — **Frontend de Documentos Médicos e Receitas v0.1.**
-Aba "Documentos" no drawer `ClinicalPatientPane`; `ClinicalDocumentsPanel` (lista, criar, detalhe,
-editar rascunho, finalizar, cancelar, download PDF); 7 funções API + 8 tipos adicionados.
-**Sem migration, sem AWS, sem ICP-Brasil, sem armazenamento de PDF.**
-
-**Componentes entregues:**
-- `frontend/src/components/ClinicalDocumentsPanel.tsx` — panel auto-contido com state machine
-  interna: `list` → `new` | `detail`; staleTime: 0 em todas as queries de conteúdo; PDF via
-  blob sem token em URL; sem dangerouslySetInnerHTML; aviso jurídico ADR 0011 §10.2 em
-  criar/detalhe; botão "Como assinar e validar →" com passo a passo inline (`SignGuide`)
-  em criar e detalhe (finalizado); guia cita VALIDAR Gov.br/ITI + GOV.BR; sem integração
-  de assinatura digital; sem QR Code; sem upload de PDF assinado; sem status "assinado".
-- `frontend/src/components/ClinicalDocumentsPanel.module.css` — CSS module com design tokens;
-  classes `.signGuide`, `.signGuideToggle`, `.signGuideSteps`, `.signGuideNote`,
-  `.signGuideFuture`, `.pdfNoteRow` adicionadas.
-- `frontend/src/services/api.ts` — 8 tipos exportados (`ClinicalDocumentType`,
-  `ClinicalDocumentStatus`, `ClinicalDocumentCancelReasonCode`, `PublicClinicalDocumentListItem`,
-  `PublicClinicalDocument`, `CreateClinicalDocumentPayload`, `UpdateClinicalDocumentPayload`,
-  `CancelClinicalDocumentPayload`) + 7 funções (`listPatientDocuments`, `getClinicalDocument`,
-  `createClinicalDocument`, `updateClinicalDocument`, `finalizeClinicalDocument`,
-  `cancelClinicalDocument`, `downloadClinicalDocumentPdf`).
-- `frontend/src/components/ClinicalPatientPane.tsx` — tab bar "Atendimentos | Documentos"
-  adicionada na timeline view; `activeTab` reseta ao abrir o drawer; sem quebra do fluxo
-  de atendimentos.
-- `frontend/src/components/ClinicalPatientPane.module.css` — classes `.tabBar`,
-  `.tabBtn`, `.tabBtnActive` adicionadas.
-
-- `backend/src/services/clinicalDocumentPdfService.ts` — layout v2: cabeçalho clínica +
-  separador bold; título 22pt centrado; caixa de metadados 2 colunas sombreada + bordada;
-  label strip "CONTEÚDO DO DOCUMENTO"; altura mínima de conteúdo 200pt; assinatura corrigida
-  (nome ACIMA da linha → linha → label → data, sem texto atravessado pela linha); limite
-  superior para não colidir com rodapé; rodapé jurídico cita VALIDAR Gov.br/ITI + GOV.BR;
-  `compress:false` mantido; sem logo/QR/armazenamento.
-
-**Verificação:** `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ ·
-`pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
-`git diff --check` rc=0.
-
-**Sprint anterior: 4.3B** (entregue) — **Implementação backend de Documentos Médicos e Receitas v0.1.**
-Migration + DAOs + services + PDF on-demand + 8 endpoints registrados. Smoke 47/47 PASS.
-**Sem frontend, sem AWS, sem ICP-Brasil, sem armazenamento de PDF.**
-
-**Componentes entregues:**
-- `backend/migrations/20260603000000_clinical_documents_v0.ts` — tabela `clinical_documents`
-  (4 CHECK constraints, 5 índices; rollback DROP TABLE).
-- `backend/src/dao/clinicalDocumentDao.ts` — tenant-scoped, sem `listAll()`, `author_user_id_self`
-  como defesa em profundidade, sem DELETE físico, `finalize`/`cancel` como CAS atômico.
-- `backend/src/services/clinicalDocumentService.ts` — 7 métodos; strict-mode audit ANTES de
-  serializar; METADATA-LIST vs. DETAIL separados.
-- `backend/src/services/clinicalDocumentPdfService.ts` — PDF via PDFKit (`compress: false`
-  para validação de rodapé sem poppler); rodapé jurídico obrigatório ADR 0011 §10.2;
-  sem armazenamento.
-- `backend/src/controllers/clinicalDocumentController.ts` — thin; 7 handlers.
-- `backend/src/routes/clinicalDocuments.ts` — 8 rotas.
-- **Modificados:** `db.d.ts`, `logger.ts` (+10 paths: `body`/`title`/`metadata_json`),
-  `clinicalReadAuditService.ts` (+3 eventos document), `app.ts`, `package.json`/`pnpm-lock.yaml`
-  (`pdfkit@0.18.0` + `@types/pdfkit@0.17.6`).
-
-**Smoke tests executados — 47/47 PASS** (usuários smoke persistentes `*@clinicbridge.local`):
-1. sem token → 401 ✅ · 2. secretaria → 403 ✅ · 3. admin → 403/no_clinic_context ✅
-4. profissional cria draft → 201 ✅ · 5. edita draft → 200 ✅
-6. finalize sem body → 400/document_body_required ✅ · 7. finalize com body → 200/finalized ✅
-8. editar finalized → 400/document_already_finalized ✅
-9. PDF → 200 + %PDF + "ICP-Brasil" + "Gov.br/ITI" no rodapé (hex extraction Node.js) ✅
-10. cancel → 200/canceled ✅ · 11. PDF canceled → 400/document_canceled ✅
-12. owner lê → 200 ✅ · 13. gestor lê → 200 ✅ · 14. secretaria não lê → 403 ✅
-15–17. list metadata-only (body/metadata_json/cancel_reason_text ausentes) ✅
-18. GET /patients/:id/documents → 200 ✅ · 19. UUID inexistente → 404 ✅
-20. patient inexistente → 404 ✅ · 21. doc_type inválido → 400 ✅
-22. body >10000 → 400 ✅ · 23. cancel_reason_code inválido → 400 ✅
-24–26. list secretaria/admin → 403 ✅
-
-**Verificação:** `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
-`pnpm --filter frontend typecheck` ✅ · `migrate:status` 14 applied/0 pending ✅ ·
-`git diff --check` rc=0 · Docker rebuild health OK ✅
-
-**Sprint anterior: 4.3A** (entregue) — **ADR Documentos Médicos e Receitas v0.1 (docs/ADR-only).**
-ADR 0011 + `docs/medical-documents-v0-scope.md`. **Sem código, sem migration.**
-
-**Sprint anterior: 4.2E** (entregue) — **Endpoint LGPD-art.18 de auditoria de leitura clínica.**
-`GET /clinical/read-audit` owner-only; lista metadados de acesso ao prontuário sem conteúdo
-clínico; frontend `ClinicalReadAuditPanel` na aba Segurança; sem migrations, sem env vars.
-
-**Componentes entregues:**
-- **DAO:** `clinicalReadAuditDao.list()` — tenant-scoped, LEFT JOIN patients/users para
-  nomes de exibição; `ip`/`user_agent` excluídos do shape público; filtros:
-  `patient_id`, `user_id`, `acao`, `date_from`, `date_to`, `limit`, `offset`.
-- **Service:** `clinicalReadAuditListService` — valida e parse todos os filtros; limites
-  `limit∈[1,100]`, `offset≤10000`; allowlist de `acao`; UUID regex; range de datas;
-  emite audit administrativo `clinical_read_audit.list.success` (best-effort).
-- **Controller:** `clinicalReadAuditController.list` — thin controller, chama service.
-- **Rota:** `GET /clinical/read-audit` — pipeline `patientsRateLimit → requireAuth →
-  requireClinic → requireRole(CLINIC_ADMIN_ROLES)`; só `dono_clinica`.
-- **Frontend:** `ClinicalReadAuditPanel` (owner-only via `user?.papel === 'dono_clinica'`;
-  filtros tipo/data com botão "Buscar"; exibe nome/email do accessor + nome do paciente +
-  papel + data; sem IP/user_agent/conteúdo clínico).
-
-**Smoke tests executados — 10/10 PASS** (usando usuários smoke persistentes `*@clinicbridge.local`):
-1. sem token → 401 ✅
-2. `smoke.owner` (dono_clinica) → 200, `{ audits: [] }` ✅
-3. 9 campos ausentes (7 clínicos + `ip` + `user_agent`) ✅
-4. `smoke.secretaria` → 403 `forbidden_role` ✅
-5. `smoke.profissional` (+ grant `profissional_clinico`) → 403 `forbidden_role` ✅
-6. `smoke.gestor` (+ grant `gestor_clinica`) → 403 `forbidden_role` ✅
-7. `smoke.admin` (`admin_sistema`, sem clinic) → 403 `no_clinic_context` ✅
-8. `?acao=invalid.value` → 400 `clinical_read_audit_filter_invalid` ✅
-9. `?patient_id=not-a-uuid` → 400 `clinical_read_audit_filter_invalid` ✅
-10. `?date_from=nao-e-data` → 400 `clinical_read_audit_filter_invalid` ✅
-
-**Verificação:** `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
-`pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ ·
-`git diff --check` rc=0.
-
-**Sprint anterior: 4.2D** (entregue) — **Hardening/QA clínico final do Prontuário v0.1.**
-QA de segurança, logs, audit e dados sintéticos antes de avançar para Fase 4.3.
-Sem código novo, sem migrations. Validações: logger redaction (7 campos), read audit
-(3 categorias), permissões, frontend sem dados clínicos, dados sintéticos limpos.
-
-**Sprint 4.2C** (entregue) — **Frontend do Prontuário v0.1.**
-`ClinicalPatientPane` (drawer, máquina de estados timeline→detail→new-encounter→new-note),
-`ClinicalRolesPanel` (owner-only grants), botão "Prontuário" no `PatientsList`.
-
-**Sprint 4.2B-3** (entregue) — **controllers + rotas clínicas +
-logger redaction + smoke tests do Prontuário v0.1.** Rotas registradas em
-`app.ts` com pipeline
-`rateLimit → requireAuth → requireClinic → (requireClinicalRole | requireRole)`:
-`POST/GET /clinical/encounters`, `GET /clinical/encounters/:id`,
-`PATCH /clinical/encounters/:id/cancel`, `POST /clinical/encounters/:id/notes`,
-`GET /patients/:id/clinical-timeline`, `GET/POST /clinical/roles[/grant|/revoke]`.
-`logger.ts` estendido com 4 camadas (top-level, `*.field`, `body/req.body/payload.<field>`,
-`body/req.body/payload.initial_note.<field>`). Smoke 76/76 PASS.
-
-**Sprint anterior: 4.2B-2** (entregue) — camada interna: 4 DAOs + 1 middleware
-`requireClinicalRole` + 4 services; separação metadata-list × content-read;
-`clinicalReadAuditService` strict/best-effort via `CLINICAL_READ_AUDIT_STRICT`.
-
-**Sprint anterior: 4.2B-1** (entregue) — migration `20260602000000_clinical_encounters_v0.ts`
-(4 tabelas, 13 CHECK constraints, 14 índices) + tipos `db.d.ts` + env guard
-`CLINICAL_READ_AUDIT_STRICT`.
-
-**Sprint anterior: 4.2A** (entregue — docs/ADR-only) — ADR 0010 + operacional
-`docs/clinical-encounters-v0-scope.md`. Define os 5 campos textuais clínicos,
-4 tabelas, audit de leitura com fail-closed em prod. Autorizou a 4.2B.
-
-**Sprint anterior: 4.1** (entregue — docs/ADR-only) — arquitetura clínica
-conceitual + roles granulares + audit de leitura + LGPD clínica (ADR 0009).
-Sprint 4.1.1 — correção LGPD/segurança no `paciente_id`.
-
-**Sprint anterior: 4.0** (entregue — docs/ADR-only) — expansão estratégica
-para Clinic OS modular (ADR 0008).
-
-**Fases Clinic OS planejadas:** 4.0 ✅ decisão → **4.1 ✅** ADR 0009 →
-**4.2A ✅** ADR 0010 → **4.2B-1 ✅** base técnica → **4.2B-2 ✅** camada
-interna → **4.2B-3 ✅** controllers + rotas + smoke 76/76 PASS → **4.2C ✅**
-frontend (drawer, roles panel, botão Prontuário) → **4.2D ✅** QA/hardening
-(logs, audit, permissões, dados sintéticos, docs) → **4.2E ✅** endpoint
-LGPD-art.18 `GET /clinical/read-audit` (owner-only; metadados de acesso;
-frontend `ClinicalReadAuditPanel`; smoke 8/8 PASS) → **4.3A ✅** ADR 0011 +
-operacional `docs/medical-documents-v0-scope.md` (docs-only; 5 tipos; 1 tabela;
-PDF on-demand; sem ICP-Brasil) → **4.3B ✅** implementação backend (migration +
-DAOs + services + PDF + 8 endpoints + smoke 47/47 PASS) → **4.3C ✅** frontend
-(aba Documentos no drawer; `ClinicalDocumentsPanel`; tab bar; 7 API funcs) → **4.3D ✅**
-QA/hardening final (smoke 50/50 PASS; audit/logs; cleanup) → **4.4A ✅** ADR 0012 +
-`docs/financial-v0-scope.md` (docs-only; `financial_charges`; pending→paid|canceled;
-roles admin; sem gateway) → **4.4B ✅** implementação backend (migration + DAO + service +
-8 endpoints + `appointment_id` opcional + smoke 49/49 PASS) →
-**4.4C** frontend financeiro (aba Financeiro; vinculado a agendamento opcional) →
-**4.4D** QA/hardening financeiro → **4.4E** integração Agenda × Financeiro
-(badge na Agenda; alertas; botão criar cobrança na consulta; sem automação) →
-**4.5** relatórios gerenciais → **4.6** convênios/faturamento básico
-(TISS/TUSS real fora) → **4.7** estoque básico (medicamentos controlados/ANVISA fora).
-Cada **fase nova** exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
-
-**Fase:** Fase 3 (produção/governança). **Este MVP NÃO está pronto para produção** — ver P1 em
-`docs/security-notes.md`. Nunca descrever como "pronto para produção".
-
-**AWS é o provedor preferido** para deploy futuro (decisão 2026-05-24). Sem deploy real até o
-checklist mínimo de produção segura ser cumprido — ver `docs/production-minimum-plan.md`.
-
-**Equipe / Agenda:**
-- **Equipe** = centro de pessoas da clínica: (1) membros com login (acesso ao sistema),
-  (2) profissionais da agenda (cadastro administrativo; podem ou não ter login). Aba owner-only.
-- **Agenda** consome profissionais ativos cadastrados em Equipe via cache `['clinic-professionals']`.
-  Backend/rotas/permissões de `clinic_professionals` **não mudam** ao reorganizar as abas.
-
-**O que existe:** auth (JWT, MFA/TOTP + backup codes, rate limit, audit); upload CSV/XLSX
-(magic bytes, SHA-256); preview/mapeamento/validação full-file; sessões de migração; dry-run /
-mark-ready / import; recibo persistido; listagem de pacientes (CPF mascarado); CRUD
-administrativo de pacientes (criar/editar/arquivar/restaurar, soft-delete — 3.22); tela de
-duplicados acionável (editar/arquivar/restaurar — 3.23); merge B-safe de duplicados (backend
-3.33 + frontend validado 3.34; ADR 0007); export CSV/XLSX (formula injection neutralizada);
-retenção dry-run (backend + painel); responsividade mobile; trilha Equipe completa (3.24–3.31:
-invite, aprovação, copy "funcionário(a)", membros, desativar acesso, regenerar código,
-ConfirmDialog, hardening concorrência); Agenda administrativa (3.14–3.15); Nginx reverse proxy
-local/staging + TLS autoassinado (3.9–3.11); Dockerfile `NODE_ENV=production` runtime (3.38);
-guards de boot env.ts (3.39); scripts + runbook de backup offsite Restic→S3 (3.40, sem
-bucket real). Detalhe e endpoints: `docs/project-state.md`.
-
-**O que NÃO existe (precisa sprint explícita):** prontuário/dados clínicos; delete físico de
-paciente; undo completo do merge (sem snapshot de campos antigos nem de appointments movidos);
-seleção campo-a-campo no merge; contagem de agendamentos por paciente na UI; lookup do nome do
-principal no badge "Mesclado em outro registro"; limpeza real de arquivos; signed URL/download;
-job/cron; gestão de usuários/papéis na UI.
-
-**Migrações (em ordem):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
+**Migrações (15 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
 `20260523_import_sessions` · `20260524_patients` · `20260525_import_sessions_summary` ·
 `20260526_scheduling` · `20260527_user_mfa` · `20260528_user_mfa_backup_codes` ·
-`20260529_clinic_team` · `20260530_clinic_join_requests_revoked` ·
-`20260601_patients_merged_into` · `20260602_clinical_encounters_v0` ·
-`20260603_clinical_documents_v0` · `20260604_financial_charges_v0`.
+`20260529_clinic_team` · `20260530_clinic_join_requests_revoked` · `20260601_patients_merged_into` ·
+`20260602_clinical_encounters_v0` · `20260603_clinical_documents_v0` · `20260604_financial_charges_v0`.
 
-**Invariantes locais (sanity-check):** patients=6 (base, sem demo), import_files=24,
-import_sessions=7. Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac,
-+7 agend, `origem='seed_demo'`); reverter com `seed:demo:clean`.
-Reconfirme via `docs/testing-checklist.md`.
+**Invariantes locais:** patients=6 (base, sem demo), import_files=24, import_sessions=7.
+Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac, +7 agend); reverter: `seed:demo:clean`.
 
-**Usuários smoke persistentes (dev local — Sprint 4.2E):** 5 usuários `*@clinicbridge.local`
-na "Clinica Smoke Dev" para smoke tests de permissão; senha `SmokeDevOnly!23` (dev-only, fake).
-`smoke.profissional` + `smoke.gestor` têm grants clínicos. Não apagar entre sprints.
-Detalhes + script de recriação: `docs/testing-checklist.md` §"Usuários smoke persistentes".
+**Usuários smoke persistentes (dev):** 5 `*@clinicbridge.local` na "Clinica Smoke Dev"; senha `SmokeDevOnly!23`.
+`smoke.profissional` + `smoke.gestor` têm grants clínicos. **Não apagar entre sprints.**
+Detalhes + recriação: `docs/testing-checklist.md` §"Usuários smoke persistentes".
 
-## Direção estratégica (atualizada 2026-05-25)
+## Direção estratégica
 
-**Decisão atual: Clinic OS modular** (ADR 0008, Sprint 4.0) + **arquitetura
-clínica e roles definidas conceitualmente** (ADR 0009, Sprint 4.1). O
-ClinicBridge evolui de "ponte de migração administrativa" para **sistema
-modular de gestão clínica**, mantendo migração como diferencial permanente.
-**Sem telemedicina** no escopo. Cada módulo clínico (prontuário, documentos,
-financeiro, relatórios, convênios, estoque) exige **ADR própria** antes de
-qualquer código.
-
-**Continua válido (não substituído):** base administrativa segura primeiro
-(ADR 0001 Opção C — pré-requisito para Fase 4.1+); critérios de gating clínico
-do ADR 0001 + ADR 0008 + gates adicionais da ADR 0009 §9. **Não codar
-prontuário/prescrição/dados clínicos sem ADR de módulo (0010+) aprovada.**
-
-Detalhe e princípios invariantes: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`,
-`docs/adr/0009-clinical-architecture-roles-read-audit.md`,
-`docs/clinical-architecture-and-permissions.md` (matriz de permissões
-conceitual e audit de leitura). Sequência de fases administrativas:
-`docs/roadmap-next-phase.md`. Sequência de fases Clinic OS:
-`docs/product-clinic-os-roadmap.md`.
+**Clinic OS modular** (ADR 0008). ClinicBridge evolui de migração administrativa para sistema modular de gestão clínica.
+Sem telemedicina. Cada módulo clínico exige **ADR própria** antes de qualquer código.
+Base administrativa segura primeiro (ADR 0001 Opção C). Gates: ADR 0008 + ADR 0009 §9.
+Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clinic-os-roadmap.md`.
 
 ## Próximas prioridades
 
-- **Trilha Clinic OS (Fase 4):** **4.0 ✅** ADR de expansão → **4.1 ✅** ADR 0009
-  + matriz de permissões + audit de leitura + threat model clínico → **4.2A ✅**
-  ADR 0010 escopo Prontuário v0.1 → **4.2B-1 ✅** base técnica (migration +
-  tipos + env guard `CLINICAL_READ_AUDIT_STRICT`) → **4.2B-2 ✅** camada interna
-  (DAOs, middleware `requireClinicalRole`, services base; sem rotas) →
-  **4.2B-3 ✅** controllers + rotas + logger redaction 4 camadas + smoke 76/76 PASS
-  → **4.2C ✅** frontend (drawer `ClinicalPatientPane`, painel `ClinicalRolesPanel`,
-  botão Prontuário em PatientsList; typecheck/build ✅) → **4.2D ✅** QA/hardening
-  (logs validados, audit validado, permissões validadas, dados sintéticos limpos,
-  docs atualizados; zero mudanças de código) → **4.2E ✅** LGPD-art.18
-  `GET /clinical/read-audit` owner-only; `ClinicalReadAuditPanel` na aba Segurança;
-  smoke 8/8 PASS; sem migrations → **4.3A ✅** ADR 0011 documentos médicos/receitas
-  v0.1 (docs-only; 5 tipos; 1 tabela `clinical_documents`; PDF on-demand; sem
-  ICP-Brasil; operacional `docs/medical-documents-v0-scope.md`) → **4.3B ✅**
-  implementação backend (migration + DAOs + services + PDF `compress:false` +
-  8 endpoints + smoke 47/47 PASS) → **4.3C ✅**
-  frontend (`ClinicalDocumentsPanel`; tab bar Atendimentos/Documentos; 7 API funcs +
-  8 tipos; staleTime: 0; PDF blob sem token em URL; aviso jurídico ADR 0011 §10.2;
-  typecheck/build ✅) → **4.3D ✅**
-  QA/hardening final (smoke 50/50 PASS; audit/logs verificados; cleanup; sem código novo) →
-  **4.4A ✅** ADR 0012 módulo financeiro v0.1 (docs-only; 1 tabela `financial_charges`;
-  ciclo pending→paid|canceled; roles admin; sem gateway; operacional `docs/financial-v0-scope.md`) →
-  **4.4B** implementação backend financeiro (migration + `appointment_id` opcional + smoke) →
-  **4.4C** frontend financeiro → **4.4D** QA/hardening financeiro →
-  **4.4E** integração Agenda × Financeiro (badge; alertas; sem automação) →
-  **4.5** relatórios gerenciais v0.1 → **4.6** convênios/faturamento
-  básico v0.1 (TISS/TUSS real fora) → **4.7** estoque básico v0.1
-  (medicamentos controlados/ANVISA fora).
-  **Fases futuras (sem número):** IA clínica assistiva (depois de 4.2 madura),
-  assinatura digital ICP-Brasil (depois de 4.3 madura), TISS/TUSS real (depois
-  de 4.6), SNGPC/ANVISA (depois de 4.7). Cada **fase nova** = ADR própria.
-  Detalhe: `docs/product-clinic-os-roadmap.md`.
-- **Trilha AWS (pausada estrategicamente):** **3.41A ✅** plano operacional →
-  **3.41B-0 ✅** runbook executável → **3.41B** execução real ⏸️ → **3.42** go/no-go ⏸️
-  → **3.43** piloto ⏸️. Gate de retomada: ADR 0010 + ADR 0011 + ADR 0012 aceitas ✅ +
-  reavaliação de dimensionamento RDS/EBS/KMS para dados clínicos + decisão sobre
-  KMS CMK dedicada + região `sa-east-1` preferida por LGPD.
-- **P1 pendentes antes de prod:** bucket S3 + IAM + agendamento + alertas do backup offsite
-  (3.40 entregou scripts/docs; falta provisionar); banco/Redis gerenciados (3.41); WAF;
-  deploy real (3.42); provisionar Redis/proxy reais (`TRUST_PROXY`/`REDIS_URL` em prod);
-  validação jurídica de retenção (ADR 0002).
-- **Trilha pacientes (próximo):** contagem de agendamentos por paciente na UI do merge
-  (endpoint owner-only, tenant-scoped); paginação backend de duplicados; undo/snapshot
-  completo (tabela + ADR).
-- **Trilha equipe (próximo):** saída voluntária da clínica; roles granulares (ADR própria).
-  Troca de dono fora de escopo.
-- **P2:** limpeza real de arquivos (confirmação/quarentena/auditoria/idempotência/lock);
-  paginação de duplicados; export streaming/assíncrono; rate limit dedicado em GETs leves.
-- **P3:** antivírus/sandbox/DLP; validação XLSX OPC/XML completa; observabilidade/métricas.
+- **4.4C** frontend financeiro (aba Financeiro; totalizadores; lista; nova cobrança; vinculado a agendamento)
+- **4.4D** QA/hardening financeiro
+- **4.4E** integração Agenda × Financeiro (badge; alertas sugestivos; botão criar cobrança; sem automação)
+- **4.5** relatórios gerenciais v0.1 (ADR própria)
+- **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
+- **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
+- **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)
+- **Trilha equipe:** saída voluntária; roles granulares (ADR própria)
+- **P2:** limpeza real de arquivos; export streaming; rate limit GETs
+- **P3:** antivírus; validação XLSX OPC/XML; observabilidade
 
 Detalhes: `docs/roadmap-next-phase.md`.
 
 ## Restrições críticas em vigor (NÃO remover)
 
-Detalhe completo em `docs/security-notes.md`. Resumo obrigatório:
+Detalhe completo: `docs/security-notes.md`.
 
-- **Tenant:** sempre filtrar por `clinica_id`; `requireAuth + requireClinic` em
-  todo endpoint tenant-scoped; cross-tenant → 403 (nas escritas de paciente →
-  **404 genérico** `patient_not_found`, sem distinguir inexistente de outro
-  tenant). DAOs sempre filtram tenant, sem `listAll`. `importFileDao`/
-  `importSessionDao` sem update/delete livre. `patientDao`: leitura + escritas
-  **tenant-scoped** (create/update/setStatus, Sprint 3.22), **sem delete físico**
-  (arquivar = `status='archived'`).
-- **PII:** nunca expor CPF bruto (só `cpf_masked`); export usa `cpf_masked`
-  (`include_cpf_raw=true` → 400). Issues/mensagens/audits/logs nunca contêm
-  CPF/telefone/e-mail/nome. Nunca expor `nome_original`/`nome_interno`/path/
-  sha256/conteúdo de arquivo.
-- **Escopo clínico autorizado pela ADR 0010 (Sprint 4.2A) — só Prontuário
-  v0.1, implementado na Sprint 4.2B (B-1 schema → B-2 services → B-3
-  controllers/rotas):** 4 tabelas (`clinical_encounters`,
-  `clinical_encounter_notes`, `clinical_read_audit`, `user_clinical_roles`);
-  5 campos textuais clínicos (`chief_complaint`, `anamnesis`, `evolution`,
-  `plan`, `internal_note`); status `active|canceled` (sem restore); notas
-  append-only com retificação por `revises_note_id`; **sem** delete físico;
-  **sem** mistura de histórico em merge B-safe; **profissional só vê os
-  próprios** (cláusula no DAO `clinicalEncounterDao` via
-  `attending_user_id_self`); dono/gestor leem com audit, não editam alheio;
-  funcionario/financeiro/admin_sistema → 403 em todo endpoint clínico;
-  `internal_note` redacted para não-autor pelo helper único
-  `clinicalEncounterNoteService.applyInternalNoteRedaction`; criar encounter
-  exige paciente ativo + não-mesclado. Rotas registradas: `POST/GET
-  /clinical/encounters`, `GET /clinical/encounters/:id` (CONTENT-READ; audit
-  STRICT antes de carregar notas), `PATCH /clinical/encounters/:id/cancel`,
-  `POST /clinical/encounters/:id/notes`,
-  `GET /patients/:id/clinical-timeline` (METADATA-only),
-  `GET/POST /clinical/roles[/grant|/revoke]` (owner-only via
-  `requireRole(CLINIC_ADMIN_ROLES)`),
-  `GET /clinical/read-audit` (owner-only LGPD-art.18; metadados de acesso;
-  sem conteúdo clínico; `ip`/`user_agent` apenas no DB, não no payload). Logger redact estendido com 4 camadas:
-  top-level, `*.field` (1-level), `body/req.body/payload.<field>` (2-level),
-  `body/req.body/payload.initial_note.<field>` (3-level) — verificado por
-  teste de vazamento 7/7 PASS antes do commit (`config/logger.ts`).
-  **Tudo fora desse escopo continua
-  proibido** sem ADR de módulo nova (CID estruturado, prescrição, exames,
-  anexos, ICP-Brasil, telemedicina, IA clínica, TISS, medicamentos
-  controlados). ADR 0009 (4.1) decide arquitetura conceitual; ADR 0010
-  (4.2A) decide o módulo; cada **fase nova** (4.3+) abre ADR própria.
-  CRUD
-  administrativo de paciente (criar/editar/arquivar/restaurar) existe (Sprint
-  3.22) e é **somente administrativo**. **Merge** de paciente está implementado
-  no backend (Sprint 3.33; ADR 0007 B-safe administrativo): fill-blanks
-  não-destrutivo + mover agendamentos tenant-scoped + arquivar secundário com
-  CAS, **owner-only**, em transação, **audit sem PII**, **CPF nunca bruto**,
-  **sem** seleção campo-a-campo, **sem** undo completo/snapshot, **sem** nada
-  clínico, **sem** delete físico (continua proibido). Frontend: Sprint 3.34, validado 2026-05-24.
-- **audit_logs:** colunas reais = `acao/recurso/recurso_id/usuario_id/clinica_id/
-  ip/user_agent/request_id/criado_em`. **Não existem** `metadata` nem
-  `entidade_tipo`. Append-only no DAO.
-- **Upload:** valida extensão + MIME declarado + conteúdo real (magic bytes;
-  XLSX exige ZIP `PK\x03\x04` + partes OOXML). Storage privado, nome interno
-  aleatório, SHA-256.
-- **Retenção:** ainda é **dry-run** — NÃO apaga nada. Limpeza real é futura e
-  exige confirmação/auditoria/soft-delete/quarentena. O painel não tem botão
-  destrutivo/download. Política técnica em `docs/data-retention-policy.md` (ADR
-  0002); limpeza real continua **fora do escopo atual**.
-- **Export:** read-only; neutraliza formula injection (`= + - @`) em CSV e XLSX;
-  `Content-Disposition` com filename fixo; sem signed URL.
-- **Rate limit:** por grupo, IP-keyed, roda antes de `requireAuth`; 429 genérico.
-  Store configurável (`RATE_LIMIT_STORE=memory|redis`; default memory, redis
-  falha-rápido no boot se não conectar). `TRUST_PROXY` configurável (default
-  `false`; setar atrás de proxy). Padrão de env:
-  `<SCOPE>_RATE_LIMIT_WINDOW_MS`/`<SCOPE>_RATE_LIMIT_MAX`. Ver `docs/security-notes.md`.
-- **errorHandler:** nunca retorna stack/SQL/path; 500 → `internal_error`. Erros
-  de parse → mensagens genéricas (sem ecoar conteúdo da planilha).
-- **requireRole (papel):** `requireRole(CLINIC_ADMIN_ROLES)` roda após
-  `requireClinic` (nunca burla tenant) e gateia os endpoints administrativos
-  sensíveis a `dono_clinica`: `POST /import-sessions/:id/import`, `.../mark-ready`,
-  `GET /patients/export`, `GET /import-files/retention/dry-run`, **`PATCH
-  /patients/:id/archive`** e **`PATCH /patients/:id/restore`** (Sprint 3.22), **e
-  `GET /clinics/invite-code`, `GET /clinic-join-requests/pending`, `POST
-  /clinic-join-requests/:id/approve|reject` (Sprint 3.24)**, **e `GET
-  /clinic-members` + `PATCH /clinic-members/:userId/deactivate` (Sprint 3.25)**,
-  **e `POST /clinics/invite-code/regenerate` (Sprint 3.26)**, **e `POST
-  /patients/:id/merge` (Sprint 3.33 — merge B-safe owner-only)**.
-  `secretaria`
-  (operator) faz upload/preview/validate/create-session/dry-run, leitura de
-  pacientes/duplicados, **criar/editar paciente** (`POST /patients`, `PATCH
-  /patients/:id`) e **solicitar entrada/cancelar a própria** em
-  `clinic-join-requests` quando ainda não tem clínica — mas **não** arquivar/
-  restaurar paciente nem aprovar/recusar solicitações. 403 → `{ error: { code:
-  'forbidden_role', ... } }`. Papel vem do JWT (sem hit no DB); risco de papel
-  stale até o token expirar — aceitável enquanto não há gestão de sessão na UI
-  (ver `docs/security-notes.md`).
+- **Tenant:** sempre filtrar por `clinica_id`; `requireAuth + requireClinic` em todo endpoint tenant-scoped.
+  Cross-tenant → 403; escritas de paciente → **404 genérico** `patient_not_found` (anti-enumeration).
+  DAOs sem `listAll`. Sem delete físico (arquivar = `status='archived'`).
+
+- **PII:** nunca expor CPF bruto (só `cpf_masked`). Logs/audit nunca contêm CPF/telefone/e-mail/nome/sha256/path.
+
+- **Escopo clínico (ADR 0010 + 0011 + 0012):**
+  - Prontuário: 4 tabelas clinicais; 5 campos (`chief_complaint`, `anamnesis`, `evolution`, `plan`, `internal_note`);
+    profissional só vê os próprios; `internal_note` redacted para não-autor; dono/gestor leem com audit STRICT;
+    secretaria/financeiro/admin_sistema → 403; notas append-only; sem delete físico.
+  - Documentos: tabela `clinical_documents`; ciclo draft→finalized→canceled; PDF on-demand sem armazenamento;
+    audit STRICT antes de servir conteúdo; sem ICP-Brasil.
+  - Financeiro: tabela `financial_charges`; ciclo pending→paid|canceled; sem delete físico; módulo administrativo
+    (usa `requireRole`, não `requireClinicalRole`); `notes` nunca contém diagnóstico/CID.
+  - **Tudo fora desses escopos é proibido** sem nova ADR (CID estruturado, prescrição, exames, ICP-Brasil,
+    telemedicina, IA clínica, TISS, medicamentos controlados).
+
+- **audit_logs:** colunas reais = `acao/recurso/recurso_id/usuario_id/clinica_id/ip/user_agent/request_id/criado_em`.
+  Não existem `metadata` nem `entidade_tipo`. Append-only no DAO.
+
+- **Upload:** allowlist extensão + MIME real (magic bytes; XLSX exige ZIP PK + OOXML). Storage privado, nome aleatório, SHA-256.
+
+- **Retenção:** dry-run apenas — **NÃO apaga nada**. Limpeza real é futura (ADR 0002).
+
+- **Export:** read-only; neutraliza formula injection (`= + - @`); sem signed URL.
+
+- **Rate limit:** IP-keyed, antes de `requireAuth`; 429 genérico. `RATE_LIMIT_STORE=memory|redis`.
+  `TRUST_PROXY=false` por padrão (setar atrás de proxy).
+
+- **errorHandler:** nunca retorna stack/SQL/path; 500 → `internal_error`.
+
+- **requireRole:** `requireRole(CLINIC_ADMIN_ROLES)` gateia endpoints admin após `requireClinic`.
+  Owner-only: import, export, archive/restore paciente, invite, aprovar membros, desativar membro,
+  merge B-safe, leitura de audit clínico. Secretaria: upload, preview, criar/editar paciente,
+  solicitar entrada (sem clínica). Papel vem do JWT (stale até expirar — documentado).
+
+- **`requireClinic` faz DB check** (Sprint 3.25): busca `users`, exige `ativo=true` + `clinica_id` match.
+  Desativação é efetiva imediatamente sem rotação de token. `papel` não é re-validado contra DB.
+
+- **Vocabulário:** UI usa "funcionário(a)"/"equipe". Role técnica permanece `secretaria` no backend/JWT/DB.
+  Não trocar sem migration/refactor. Roles granulares (`gestor_clinica`, `profissional_clinico`) conceituadas
+  em ADR 0009, implementadas via `user_clinical_roles` (Sprint 4.2B).
+
+- **Financeiro:** `effectiveFinancialAccess`: dono+secretaria=full; secretaria+gestor_clinica=transact;
+  secretaria+profissional_clinico=none; profissional sempre bloqueado no serviço.
+
 - **Limites MVP:** `IMPORT_MAX_ROWS=100` (intencional).
-- **`requireClinic` faz DB check (Sprint 3.25):** além de validar
-  `req.auth.clinica_id` do JWT, busca `users` por id e exige `ativo=true` e
-  `users.clinica_id === auth.clinica_id`. Inconsistente → 403
-  `clinic_membership_revoked`. Custo: 1 SELECT indexado por request
-  tenant-scoped. Garante que desativação de membro é **efetiva imediatamente**,
-  sem rotação de token. `papel` ainda NÃO é re-validado contra DB (única transição
-  possível seria `dono_clinica → secretaria`, não implementada — documentado em
-  `docs/security-notes.md`).
-- **Vocabulário de produto (3.24.1):** UI fala em "funcionário(a)", "equipe" e
-  "membro da equipe" / "funcionário(a) com acesso administrativo". A role técnica
-  do backend permanece `secretaria` (JWT, DB, `requested_role`, audit acoes) —
-  **não trocar** sem migration/refactor. Evitar termos visíveis como "secretaria"
-  / "sua secretária" / "cadastro de secretaria". Roles granulares novas
-  (`gestor_clinica`, `profissional_clinico`, `financeiro`, `funcionario_administrativo`
-  como sucessor técnico de `secretaria`) estão **conceituadas** na ADR 0009 §4
-  + matriz em `docs/clinical-architecture-and-permissions.md` §2, mas
-  **não implementadas** — implementação técnica fica para ADR 0010 / sprint
-  dedicada antes da Fase 4.2. Não criar agora.
 
 ## Project identity
 
-ClinicBridge é um SaaS de **gestão de clínicas com migração inteligente** —
-em evolução de uma base administrativa segura para um **Clinic OS modular**
-(ADR 0008). Hoje o produto entregue é administrativo; módulos clínicos estão
-no roadmap, cada um exigindo ADR própria antes de qualquer código.
-
-**O que está entregue hoje (Fase 3 administrativa):** dados administrativos
-do paciente; contatos; agendamento; convênio; import CSV/XLSX; mapeamento de
-colunas; validação; detecção de duplicados; merge B-safe administrativo;
-export limpo; equipe; MFA; audit logs. **NÃO é um sistema de prontuário ainda.**
-
-**O que vem no roadmap (Clinic OS, com ADR própria por módulo):** prontuário/
-atendimento (Fase 4.2); documentos médicos/receitas (4.3); financeiro (4.4);
-relatórios gerenciais (4.5); convênios/faturamento básico (4.6); estoque
-básico (4.7). Fases futuras sem número: IA clínica assistiva, ICP-Brasil,
-TISS/TUSS real, SNGPC/ANVISA.
-
-**O que continua fora do escopo:** telemedicina (vídeo/áudio síncrono);
-prescrição eletrônica com força legal (ICP-Brasil); TISS real; medicamentos
-controlados (SNGPC/ANVISA); app mobile nativo; cópia de UI/textos de
-concorrentes (Feegow ou outros). Se uma tarefa tentar entrar nessas áreas
-sem ADR, **pare e peça confirmação.**
+ClinicBridge é um SaaS de **gestão de clínicas com migração inteligente** em evolução para **Clinic OS modular** (ADR 0008).
+Entregue hoje: base administrativa (pacientes, agendamento, equipe, import/export, merge, audit) + prontuário v0.1 + documentos médicos v0.1 + financeiro v0.1 (backend).
+**NÃO é sistema de prontuário completo.** Cada módulo exige ADR própria.
+Fora do escopo permanente: telemedicina; ICP-Brasil com força legal; TISS real; SNGPC/ANVISA; app mobile nativo.
+Se uma tarefa tentar entrar nessas áreas sem ADR, **pare e peça confirmação.**
 
 ## Source of truth
 
-Antes de implementar, leia `docs/ClinicBridge_Documentacao_Mestre.md` (escopo,
-arquitetura, modelo de dados, backlog, segurança, STRIDE, LGPD, MVC+DAO).
-Apoio: `docs/ClinicBridge_Relatorio.pdf`, `docs/ClinicBridge_Apresentacao.pptx`.
-Se implementação e documentação conflitarem, pergunte antes de escolher.
+Antes de implementar, leia `docs/ClinicBridge_Documentacao_Mestre.md`.
+Se implementação e documentação conflitarem, **pergunte antes de escolher.**
 
 ## Preferred stack
 
-- Backend: Node.js + Express + TypeScript
-- Frontend: React + Vite + TypeScript (TanStack Query p/ cache/invalidação;
-  `/app` em abas — Sprint 3.16)
-- DB: PostgreSQL · Infra local: Docker Compose
-- Arquitetura: MVC + DAO com Service layer entre Controller e DAO
-- Package manager: pnpm
+- Backend: Node.js + Express + TypeScript · Frontend: React + Vite + TypeScript (TanStack Query; `/app` em abas)
+- DB: PostgreSQL · Infra: Docker Compose · Package manager: pnpm
 
 ## Architecture rules (MVC + DAO + Service)
 
-- **Controller:** recebe HTTP, valida input no edge, chama Services, retorna
-  resposta. NÃO executa SQL nem contém lógica de negócio pesada.
-- **Service:** lógica de negócio (parse, validação, normalização, dedup,
-  orquestração de export); chama DAOs; testável sem a camada web.
-- **DAO:** acesso a banco; queries parametrizadas/ORM seguro; **enforce
-  `clinica_id`** em dados tenant-scoped; sem UI nem decisões de negócio complexas.
-- **Model:** entidades de domínio e DTOs.
-- **View/Frontend:** apresenta dados, captura input, chama API; **não** toma
-  decisões de segurança nem assume que validação de frontend basta.
+- **Controller:** recebe HTTP, valida input no edge, chama Services. NÃO executa SQL nem lógica pesada.
+- **Service:** lógica de negócio; chama DAOs; testável sem camada web.
+- **DAO:** acesso a banco; queries parametrizadas; **sempre** enforce `clinica_id`; sem delete físico em entidades sensíveis.
+- **Frontend:** apresenta dados; não toma decisões de segurança.
 
 ## Multi-tenant rule
 
-Toda tabela/operação sensível de clínica é escopada por `clinica_id`. Recursos
-sensíveis: patients, import_files, migrations, migration_errors, audit_logs,
-clinic users. Nunca implementar acesso a paciente/import/migração/export sem
-checagem de tenant. Cross-tenant → 403.
+Toda tabela/operação tenant-scoped filtrada por `clinica_id`. Cross-tenant → 403. Nunca implementar acesso sem checagem de tenant.
 
 ## Security baseline
 
-Segurança não é opcional. Detalhe em `docs/security-notes.md`. Sempre considerar:
-autenticação; autorização; isolamento de tenant; upload seguro; validação real de
-MIME; limite de tamanho; nome interno gerado; SHA-256; storage privado; download
-assinado (futuro); audit logs; rate limits; mensagens de erro seguras; sem
-segredos/PII em logs; backup; fluxos LGPD de export/exclusão.
+Segurança não é opcional. Sempre: autenticação; autorização; isolamento de tenant; upload seguro; audit logs; rate limits;
+sem PII/segredos em logs; mensagens de erro seguras. Detalhe: `docs/security-notes.md`.
 
-- Senhas: nunca em texto puro; argon2id ou bcrypt com custo forte.
-- MFA por TOTP (Sprint 3.19): app autenticador, sem SMS/e-mail OTP/serviço externo;
-  secret cifrado em repouso (AES-GCM); login em 2 passos (`mfa_required` →
-  `verify-login`); secret nunca logado/retornado após ativar. Detalhe em
-  `docs/security-notes.md`. Ressalva: chave dedicada/KMS de cifra do secret é futura (P1).
-- MFA backup codes (Sprint 3.21): tabela `user_mfa_backup_codes`, **só hash
-  argon2** (nunca texto puro), **uso único** (`used_at` por CAS), só para usuários
-  com MFA ativo. Gerados no confirm e no `POST /auth/mfa/backup-codes/regenerate`
-  (exige TOTP; invalida os anteriores). `verify-login` aceita TOTP **ou** backup
-  code com erro genérico (`invalid_mfa_code`). Códigos exibidos **uma única vez**;
-  **nunca** em `/auth/me`/status (status só devolve `backup_codes_remaining`);
-  nunca logados. Disable apaga os códigos.
-- DB: nunca concatenar SQL com input; usar ORM/queries parametrizadas.
-- Frontend: evitar `dangerouslySetInnerHTML`; escapar conteúdo; sem stack traces.
-- Secrets: nunca commitar `.env`; `.env.example` só com placeholders.
+- **Senhas:** argon2id. **MFA:** TOTP (secret AES-GCM em repouso); backup codes (argon2, uso único). Detalhe: `docs/security-notes.md`.
+- **DB:** nunca concatenar SQL com input; ORM/queries parametrizadas.
+- **Frontend:** evitar `dangerouslySetInnerHTML`; sem stack traces ao usuário.
+- **Secrets:** nunca commitar `.env`; `.env.example` só com placeholders.
 
 ## Upload rules
 
-Tipos permitidos no MVP: `.csv`, `.xlsx`. Requisitos: allowlist de extensão;
-validação de MIME; limite de tamanho; timeout; SHA-256; storage privado; nome
-interno aleatório; sem bucket público; sem nome original em URL pública. Não
-implementar PDF/ZIP/imagem/exames/documentos clínicos sem pedido explícito.
+Tipos: `.csv`, `.xlsx`. Allowlist extensão + MIME real (magic bytes) + tamanho. Storage privado, nome aleatório, SHA-256.
+Não implementar PDF/ZIP/imagem sem pedido explícito (documentos clínicos têm ADR 0011 própria).
 
-## LGPD and privacy posture
+## LGPD posture
 
-Mesmo sem prontuário, o sistema lida com dados pessoais. Premissas: minimização;
-retenção limitada; aceite explícito de termos; export; exclusão; auditabilidade;
-limitação de finalidade; logging seguro. Prefira "dados pessoais do paciente" /
-"dados administrativos". Evite implicar que o MVP guarda diagnóstico/prescrição/
-prontuário.
+Minimização; retenção limitada; aceite de termos; export; auditabilidade; limitação de finalidade; logging seguro.
+Prefira "dados pessoais do paciente" / "dados administrativos". Evite implicar diagnóstico/prescrição/prontuário.
 
 ## Coding standards
 
-TypeScript strict onde prático. Prefira: estrutura de pastas clara; arquivos
-pequenos; nomes legíveis; DTOs/types explícitos; config centralizada; tratamento
-de erro centralizado; respostas de API consistentes; testes para regras críticas.
-Evite: controllers gigantes; lógica de negócio em rotas; DB em controllers;
-secrets hardcoded; `any` amplo; catches silenciosos; logar dados sensíveis.
+TypeScript strict. Arquivos pequenos; DTOs explícitos; tratamento de erro centralizado; respostas API consistentes.
+Evite: controllers gigantes; lógica em rotas; DB em controllers; `any` amplo; catches silenciosos; logar dados sensíveis.
 
-## Project structure (alvo)
+## Project structure
 
-`/backend/src` → config, models, dao, services, controllers, routes, middlewares,
-utils, jobs, server.ts (+ `/tests`). `/frontend/src` → views, components,
-services, hooks, utils, main.tsx, App.tsx. `/docs`, `/.claude/agents`,
-`docker-compose.yml`, `.env.example`, `README.md`.
+`/backend/src` → config, models, dao, services, controllers, routes, middlewares, utils.
+`/frontend/src` → views, components, services, hooks, utils, main.tsx, App.tsx.
+`/docs`, `/.claude/agents`, `docker-compose.yml`, `.env.example`.
 
 ## Development workflow
 
-Antes de editar: inspecione os arquivos relevantes; explique o plano brevemente;
-mantenha a mudança no escopo pedido. Depois: resuma o que mudou; liste comandos
-para rodar; mencione riscos/TODOs; **não** afirme que testes passaram sem ter
-rodado. Ao gerar código: incremental; sem construir features futuras cedo; sem
-over-engineering; manter escopo MVP.
+Antes de editar: inspecione arquivos relevantes; explique o plano; mantenha escopo.
+Depois: resuma mudanças; liste comandos; mencione riscos/TODOs; **não** afirme que testes passaram sem ter rodado.
+Incremental; sem over-engineering; sem features futuras cedo.
 
 ## Commands
 
@@ -647,40 +230,24 @@ pnpm --filter frontend dev | build | preview | typecheck
 docker compose up -d | down | config
 ```
 
-**Env vars:** fonte de verdade é `.env.example` (cobre todos os scopes de rate
-limit, upload, preview, validation, dry-run, import, patients, export, retention).
-Detalhe por sprint em `docs/sprint-history.md`. Smoke tests / SQL / curl em
-`docs/testing-checklist.md`.
+Env vars: fonte de verdade = `.env.example`. Detalhe por sprint: `docs/sprint-history.md`.
+Smoke tests / SQL / curl: `docs/testing-checklist.md`.
 
 ## Git behavior
 
-Não commitar automaticamente. Quando pedirem commit: mostrar arquivos alterados;
-resumir mudanças; sugerir mensagem.
+Não commitar automaticamente. Quando pedirem commit: mostrar arquivos alterados; resumir mudanças; sugerir mensagem.
 
 ## Communication style
 
-Direto e prático. Prefira: implementado / ainda não / risco / próximo passo /
-bloqueado porque. Evite linguagem inflada (revolucionário, disruptivo, plataforma
-definitiva, solução completa de saúde, compliance total com LGPD/CFM). Descreva
-o ClinicBridge como: sistema de gestão de clínicas com migração inteligente,
-em evolução modular para Clinic OS (ADR 0008); base administrativa segura
-hoje; módulos clínicos no roadmap por ADR; sem telemedicina.
+Direto e prático: implementado / ainda não / risco / próximo passo / bloqueado porque.
+Evite linguagem inflada. Descreva o ClinicBridge como: sistema de gestão de clínicas com migração inteligente,
+Clinic OS modular em evolução (ADR 0008); base administrativa hoje + módulos clínicos por ADR; sem telemedicina.
 
 ## Token and subagent usage policy
 
-Subagents são caros e **não** devem ser usados automaticamente.
+Subagents são caros — **não** usar automaticamente.
 
-- Padrão: não chamar subagents salvo pedido explícito. Para tarefas normais, faça
-  uma revisão interna curta, só dos arquivos alterados; foco em crítico/alto risco;
-  sem scan amplo do repo.
-- **Perguntar antes** de usar subagent quando a tarefa toca: autenticação;
-  autorização; tenant/`clinica_id`; uploads/arquivos; LGPD/PII; schema de banco;
-  middleware de segurança; fronteiras de arquitetura.
-- Usar subagent **sem perguntar** só se o usuário disser explicitamente: "chame
-  os agents" / "rode security-reviewer" / "rode architecture-guardian" / "faça
-  revisão com subagents" / "faça auditoria completa com agents".
-- Edits pequenos: sem agents, sem scan do repo, build/typecheck só se relevante.
-- Formato de revisão leve: 1) arquivos revisados 2) issues críticas 3) issues de
-  alto risco 4) seguro prosseguir? sim/não 5) comandos rodados.
-- Orçamento: revisões de rotina < 3k tokens quando possível; revisão ampla só no
-  fim de sprints importantes.
+- Padrão: revisão interna curta, só arquivos alterados; foco em crítico/alto risco; sem scan amplo.
+- **Perguntar antes** quando a tarefa toca: autenticação; autorização; tenant; uploads; LGPD/PII; schema; middleware de segurança.
+- Usar **sem perguntar** só se o usuário disser explicitamente: "chame os agents" / "rode security-reviewer" / etc.
+- Orçamento: revisões de rotina < 3k tokens; revisão ampla só no fim de sprints importantes.
