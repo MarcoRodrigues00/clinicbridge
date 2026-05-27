@@ -325,6 +325,63 @@ export interface ClinicalDocumentRow {
   updated_at: Date;
 }
 
+// Financial Module v0.1 — Sprint 4.4B (ADR 0012).
+//
+// ADMINISTRATIVE module (not clinical). `financial_charges` rows NEVER carry
+// diagnosis/CID/clinical content; `notes` is administrative free-text capped
+// at 500 chars. See ADR 0012 §2 and §5 for full out-of-scope list.
+//
+// Lifecycle invariants enforced both by DB CHECK and the DAO:
+//   - status: pending → paid | canceled (one-way; no reversal; no restore;
+//     no DELETE in any state).
+//   - paid:     requires paid_at + paid_by_user_id + payment_method.
+//   - canceled: requires canceled_at + canceled_by_user_id.
+//   - pending:  carries no paid_*/canceled_* fields.
+
+export type FinancialChargeStatus = 'pending' | 'paid' | 'canceled';
+
+export type FinancialPaymentMethod =
+  | 'cash'
+  | 'pix'
+  | 'card'
+  | 'bank_transfer'
+  | 'other';
+
+export interface FinancialChargeRow {
+  id: string;
+  clinica_id: string;
+  patient_id: string;
+  // Optional integration link with the agenda (ADR 0012 §16). Service
+  // validates same-clinica + same-patient when set; SET NULL on appointment
+  // delete (deletion is impossible by current invariants, but the FK protects
+  // the row from orphaning if that ever changes).
+  appointment_id: string | null;
+  created_by_user_id: string;
+  // Administrative label of the charge (e.g. "Consulta clínica 27/05").
+  // 1..500 chars (DB CHECK + service). Logger REDACTS this field.
+  description: string;
+  // Integer cents (ADR 0012 §6.1 design note) — avoids floating-point issues.
+  // Must be > 0 (DB CHECK + service). Logger REDACTS this field in v0.1.
+  amount_cents: number;
+  // ISO-4217 currency code. CHECK fixes 'BRL' for v0.1.
+  currency: 'BRL';
+  due_date: string | null;
+  status: FinancialChargeStatus;
+  paid_at: Date | null;
+  paid_by_user_id: string | null;
+  payment_method: FinancialPaymentMethod | null;
+  // Optional free-text cancel reason capped at 200 chars by DB CHECK. Logger
+  // REDACTS this field.
+  cancel_reason: string | null;
+  canceled_at: Date | null;
+  canceled_by_user_id: string | null;
+  // Administrative notes, max 500 chars by DB CHECK. NEVER contains clinical
+  // content (invariant — ADR 0012 §6.1). Logger REDACTS this field.
+  notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // New clinical roles live in their own table (parallel to users.papel) so the
 // legacy 'dono_clinica' / 'secretaria' / 'admin_sistema' enum and the JWT/auth
 // pipeline keep working unchanged. financeiro is reserved for Sprint 4.4 and
@@ -361,5 +418,6 @@ declare module 'knex/types/tables' {
     clinical_read_audit: ClinicalReadAuditRow;
     clinical_documents: ClinicalDocumentRow;
     user_clinical_roles: UserClinicalRoleRow;
+    financial_charges: FinancialChargeRow;
   }
 }

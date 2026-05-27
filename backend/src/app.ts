@@ -17,6 +17,7 @@ import { clinicalEncountersRouter } from './routes/clinicalEncounters';
 import { clinicalRolesRouter } from './routes/clinicalRoles';
 import { clinicalReadAuditRouter } from './routes/clinicalReadAudit';
 import { clinicalDocumentsRouter } from './routes/clinicalDocuments';
+import { financialChargesRouter } from './routes/financialCharges';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -100,6 +101,10 @@ export function createApp(): Express {
   app.use(clinicalDocumentsRouter);
   // LGPD-art.18 transparency (Sprint 4.2E): owner-only read-audit listing.
   app.use(clinicalReadAuditRouter);
+  // Financial Module v0.1 (Sprint 4.4B, ADR 0012). ADMINISTRATIVE — uses
+  // requireRole, not requireClinicalRole. Fine-grained access (profissional
+  // blocked, gestor downgraded to view+transact) lives in the service.
+  app.use(financialChargesRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

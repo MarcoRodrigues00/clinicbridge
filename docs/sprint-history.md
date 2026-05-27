@@ -3673,3 +3673,111 @@ status financeiro da consulta e alertas operacionais, sem automação agressiva.
 **Próxima sprint natural:** 4.4B (implementação backend do Módulo Financeiro v0.1).
 
 **Próxima sprint natural:** 4.4 (financeiro v0.1 — ADR própria antes de código).
+
+---
+
+## Sprint 4.4B (implementação backend do Módulo Financeiro v0.1)
+
+**Data:** 2026-05-27
+**Habilitada por:** ADR 0012 (Sprint 4.4A, aceita) + ajuste Nível 3 de integração Agenda × Financeiro
+
+### Objetivo
+
+Implementar a camada backend completa do Módulo Financeiro v0.1: migration, DAO, service,
+controller, rotas. Incluir `appointment_id` opcional com validação cross-tenant + cross-patient
+e filtro `?appointment_id` na listagem. Validar com smoke 49/49 PASS.
+
+### Componentes entregues
+
+**Criados:**
+- `backend/migrations/20260604000000_financial_charges_v0.ts` — tabela `financial_charges`
+  (11 CHECK constraints defensivos; 4 índices + 1 parcial; 6 FKs com ON DELETE variado).
+  Migration aplicada como batch 15.
+- `backend/src/dao/financialChargeDao.ts` — tenant-scoped sem `listAll()`;
+  `create`, `findByIdForClinic`, `listForClinic`, `listForPatient`;
+  CAS: `updatePending`, `markPaid`, `cancel`; sem DELETE físico; `summarize()`.
+- `backend/src/services/financialChargeService.ts` — `buildFinancialActor` (1 SELECT em
+  `user_clinical_roles`); `effectiveFinancialAccess` → `full`/`transact`/`none`;
+  7 métodos públicos + `listForPatient`; validação `appointment_id` (cross-tenant generic 400
+  anti-enumeration; cross-patient 400); `loadActivePatient` (ativo + não-mesclado); best-effort audit.
+- `backend/src/controllers/financialChargeController.ts` — thin; 8 handlers.
+- `backend/src/routes/financialCharges.ts` — 8 rotas com pipeline
+  `rateLimit → requireAuth → requireClinic → requireRole(['dono_clinica','secretaria'])`.
+
+**Modificados:**
+- `backend/src/types/db.d.ts` — `FinancialChargeRow`, `FinancialChargeStatus`, `FinancialPaymentMethod`.
+- `backend/src/config/logger.ts` — +16 redaction paths para `description`/`notes`/`cancel_reason`/
+  `amount_cents` × 4 camadas.
+- `backend/src/app.ts` — registra `financialChargesRouter`.
+
+### Endpoints
+
+| Método | Path | Acesso | Descrição |
+|--------|------|--------|-----------|
+| POST | `/financial/charges` | full | Cria cobrança pending |
+| GET | `/financial/charges` | transact+full | Lista com filtros incl. `?appointment_id` |
+| GET | `/financial/summary` | transact+full | Totalizadores pending/overdue/paid |
+| GET | `/financial/charges/:id` | transact+full | Detalhe com `notes` |
+| PATCH | `/financial/charges/:id` | full | Edita campos pending |
+| POST | `/financial/charges/:id/mark-paid` | transact+full | pending → paid |
+| POST | `/financial/charges/:id/cancel` | transact+full | pending → canceled |
+| GET | `/patients/:id/charges` | transact+full | Histórico de cobranças do paciente |
+
+### Smoke tests — 49/49 PASS
+
+Script `/tmp/smoke_4_4b.js` (não versionado). Cobriu:
+- T1–T2: sem token/admin → 401/403
+- T3–T4: secretaria/owner create → 201
+- T5: gestor create → 403 (service block)
+- T6: profissional all ops → 403 (service block)
+- T7: list omite notes / detail inclui notes / gestor list+detail
+- T8: gestor PATCH → 403
+- T9: secretaria edita pending → 200
+- T10: gestor mark-paid → 200/paid
+- T11: edit/pay/cancel paid → 400/charge_not_pending (3 casos)
+- T12: cancel pending → 200/canceled + edit canceled → 400
+- T13: gestor cancel → 200
+- T14: amount_cents=0, =-100, desc_vazia, patient_not_found, method_inválido, method_ausente
+- T15: appointment_id válido→201 / filtro somente vinculados / outro patient→400 / ghost→400
+- T16: patient charges / patient inexistente→404
+- T17: summary shape OK / gestor / bad_date→400
+- T18: charge not found / bad uuid
+
+### SQL invariants — 4/4 PASS + 11 CHECKs verificados
+
+- paid sem paid_at = 0
+- canceled sem canceled_at = 0
+- pending com paid/canceled fields = 0
+- appt_id com patient_id divergente = 0
+- 11 CHECKs listados em `pg_constraint`
+
+### Audit / logs
+
+- Audit actions registradas: `financial.charge.created.success` (10) · `financial.charge.updated.success` (2)
+  · `financial.charge.paid.success` (2) · `financial.charge.canceled.success` (4)
+- Sentinels `FIN_DESC_SENTINEL` / `FIN_NOTES_SENTINEL` / `FIN_CANCEL_SENTINEL` → 0 ocorrências nos logs
+- Logger redaction: `description`/`notes`/`cancel_reason`/`amount_cents` × 4 camadas
+
+### Cleanup
+
+- 2 cobranças pending canceladas via SQL com `cancel_reason='smoke_cleanup_4.4B'`
+- 1 patient temporário `Smoke Temp Patient 4.4B-cross` arquivado
+- Usuários smoke e patient base preservados
+- Cobranças already-terminal (paid, canceled) mantidas para auditabilidade
+
+### Verificação final
+
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter frontend typecheck` ✅
+- `migrate:status` 15 applied/0 pending ✅
+- `git diff --check` rc=0 ✅
+
+### Fora de escopo (esta sprint)
+
+- Frontend financeiro (Sprint 4.4C).
+- Badge agenda × financeiro (Sprint 4.4E).
+- Gateway de pagamento; NFS-e; Pix automático; cifra de coluna.
+- AWS.
+
+**Próxima sprint natural:** 4.4C (frontend financeiro — aba Financeiro; vinculado a agendamento opcional).

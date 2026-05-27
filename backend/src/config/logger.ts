@@ -149,6 +149,42 @@ const redactPaths = [
   'payload.initial_note.evolution',
   'payload.initial_note.plan',
   'payload.initial_note.internal_note',
+
+  // Sprint 4.4B — financial charge fields (ADR 0012 §8.3).
+  // Layer 1: top-level.
+  //   - `description` is exclusive to financial_charges in the codebase
+  //     (verified by grep). May contain hints about the service rendered.
+  //   - `notes` is administrative-only by invariant (ADR 0012 §6.1) but
+  //     redacted as a precaution against operator drift.
+  //   - `cancel_reason` is administrative free-text — redact.
+  //   - `amount_cents` is the monetary value — minimization (LGPD posture
+  //     in ADR 0012 §9). Numbers can be redacted by pino-redact paths.
+  'description',
+  'notes',
+  'cancel_reason',
+  'amount_cents',
+
+  // Layer 2: one-level wildcards — catch `body.<field>`, `payload.<field>`, etc.
+  '*.description',
+  '*.notes',
+  '*.cancel_reason',
+  '*.amount_cents',
+
+  // Layer 3: explicit two-level paths for the three most likely logger shapes.
+  'body.description',
+  'body.notes',
+  'body.cancel_reason',
+  'body.amount_cents',
+
+  'req.body.description',
+  'req.body.notes',
+  'req.body.cancel_reason',
+  'req.body.amount_cents',
+
+  'payload.description',
+  'payload.notes',
+  'payload.cancel_reason',
+  'payload.amount_cents',
 ];
 
 export const logger = pino({

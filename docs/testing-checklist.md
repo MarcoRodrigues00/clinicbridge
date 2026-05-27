@@ -1799,3 +1799,108 @@ SELECT acao, recurso FROM clinical_read_audit WHERE recurso='document' ORDER BY 
 | `body` sem cifra de coluna | ADR 0011 §18; audit como compensating control; revisável |
 | Sem delete físico de documento | `canceled` é o estado final; invariante |
 | Sem cancelamento de doc alheio por dono/gestor | Preserva responsabilidade médico-legal |
+
+---
+
+## Módulo Financeiro v0.1 — Sprint 4.4B (ADR 0012)
+
+> Smoke executado em 2026-05-27. Script temporário em `/tmp/smoke_4_4b.js` (não versionado).
+
+### Smoke tests 49/49 PASS
+
+| # | Cenário | Resultado |
+|---|---------|-----------|
+| T1 | sem token → 401 (GET /financial/charges) | ✅ |
+| T1b | sem token → 401 (GET /financial/summary) | ✅ |
+| T2 | admin_sistema GET /financial/charges → 403 no_clinic_context | ✅ |
+| T2 | admin_sistema GET /financial/summary → 403 no_clinic_context | ✅ |
+| T2c | admin_sistema POST → 403 no_clinic_context | ✅ |
+| T3 | secretaria create → 201 + status=pending | ✅ |
+| T4 | owner create (com sentinel notes) → 201 + status=pending | ✅ |
+| T5 | gestor create → 403 forbidden_role (service block) | ✅ |
+| T6 | profissional create → 403 forbidden_role | ✅ |
+| T6b | profissional list → 403 | ✅ |
+| T6c | profissional summary → 403 | ✅ |
+| T6d | profissional detail → 403 | ✅ |
+| T6e | profissional patient charges → 403 | ✅ |
+| T7 | secretaria list → 200 + count >= 2 | ✅ |
+| T7b | list item NÃO tem campo `notes` | ✅ |
+| T7c | detail TEM campo `notes` (sentinel visível) | ✅ |
+| T7d | gestor list → 200 | ✅ |
+| T7e | gestor detail → 200 | ✅ |
+| T8 | gestor PATCH pending → 403 forbidden_role | ✅ |
+| T9 | secretaria PATCH pending → 200 + valor atualizado | ✅ |
+| T10 | gestor mark-paid → 200 + status=paid + payment_method=pix | ✅ |
+| T11 | PATCH paid → 400 charge_not_pending | ✅ |
+| T11b | mark-paid paid → 400 charge_not_pending | ✅ |
+| T11c | cancel paid → 400 charge_not_pending | ✅ |
+| T12 | cancel pending → 200 + status=canceled + cancel_reason=sentinel | ✅ |
+| T12b | PATCH canceled → 400 charge_not_pending | ✅ |
+| T13 | gestor cancel pending → 200 + status=canceled | ✅ |
+| T14 | amount_cents=0 → 400 financial_charge_invalid | ✅ |
+| T14b | amount_cents=-100 → 400 financial_charge_invalid | ✅ |
+| T14c | description="" → 400 financial_charge_invalid | ✅ |
+| T14d | patient_id inexistente → 404 patient_not_found | ✅ |
+| T14e | payment_method inválido → 400 financial_charge_invalid | ✅ |
+| T14f | payment_method ausente → 400 payment_method_required | ✅ |
+| T15 | appointment_id válido (mesmo patient) → 201 + campo presente | ✅ |
+| T15b | GET ?appointment_id= → 200 apenas cobranças vinculadas | ✅ |
+| T15c | appointment_id de outro patient_id → 400 financial_charge_invalid | ✅ |
+| T15d | appointment_id inexistente → 400 financial_charge_invalid | ✅ |
+| T16 | GET /patients/:id/charges → 200 + lista | ✅ |
+| T16b | GET /patients/00000000.../charges → 404 patient_not_found | ✅ |
+| T17 | GET /financial/summary → 200 + shape correto (6 campos numéricos) | ✅ |
+| T17b | gestor GET /financial/summary → 200 | ✅ |
+| T17c | GET /financial/summary?date_from=not-a-date → 400 financial_charge_invalid | ✅ |
+| T18 | GET /financial/charges/00000000... → 404 charge_not_found | ✅ |
+| T18b | GET /financial/charges/not-a-uuid → 400 financial_charge_invalid | ✅ |
+
+### SQL invariants — 4/4 PASS
+
+```sql
+-- paid sem paid_at = 0
+SELECT COUNT(*) FROM financial_charges WHERE status='paid' AND paid_at IS NULL;
+
+-- canceled sem canceled_at = 0
+SELECT COUNT(*) FROM financial_charges WHERE status='canceled' AND canceled_at IS NULL;
+
+-- pending com paid/canceled fields = 0
+SELECT COUNT(*) FROM financial_charges
+WHERE status='pending' AND (paid_at IS NOT NULL OR canceled_at IS NOT NULL OR cancel_reason IS NOT NULL);
+
+-- appointment_id com patient_id divergente = 0
+SELECT COUNT(*) FROM financial_charges fc
+JOIN appointments a ON a.id = fc.appointment_id
+WHERE fc.patient_id != a.patient_id;
+```
+
+### Logger leak — redaction financeiro
+
+```bash
+# Nenhum sentinel financeiro nos logs
+docker logs clinicbridge-backend | grep -E 'FIN_DESC_SENTINEL|FIN_NOTES_SENTINEL|FIN_CANCEL_SENTINEL'
+# esperado: nenhuma linha
+
+# logger.ts cobre description/notes/cancel_reason/amount_cents
+grep -c "description" backend/src/config/logger.ts   # >= 4
+grep -c "'notes'" backend/src/config/logger.ts        # >= 4
+grep -c "cancel_reason" backend/src/config/logger.ts  # >= 4
+grep -c "amount_cents" backend/src/config/logger.ts   # >= 4
+```
+
+### Ressalvas aceitas (Módulo Financeiro v0.1)
+
+| Item | Detalhe |
+|------|---------|
+| Sem cifra de coluna | `description`/`notes`/`amount_cents` em plaintext; logger redaction + audit como compensating controls |
+| Sem delete físico | `canceled` é estado terminal; sem restore |
+| Sem gateway de pagamento | Registro manual de pagamentos no v0.1 |
+| Sem audit de leitura dedicado | Audit de escrita best-effort em `audit_logs`; financeiro não é clínico |
+| `notes` sem validação de conteúdo clínico | Aviso a ser exibido no frontend (4.4C) |
+| appointment_id sem UNIQUE constraint | Uma consulta pode ter 0..N cobranças (retornos, extras) |
+
+### Pré-requisitos para executar (Sprint 4.4B)
+
+- Migration `financial_charges` aplicada: `pnpm --filter backend migrate:latest`
+- Backend rebuild: `docker compose --profile edge up -d --build backend`
+- Usuários smoke persistentes disponíveis (ver §"Usuários smoke persistentes" acima)

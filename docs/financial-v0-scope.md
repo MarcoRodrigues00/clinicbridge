@@ -21,7 +21,7 @@
 | **Módulo** | Financeiro |
 | **Versão** | v0.1 |
 | **Sprint conceitual** | 4.4A (ADR 0012 — entregue 2026-05-27) |
-| **Sprint de implementação backend** | 4.4B (ainda não iniciada) |
+| **Sprint de implementação backend** | 4.4B (entregue 2026-05-27 — smoke 49/49 PASS) |
 | **Sprint de implementação frontend** | 4.4C (após 4.4B aprovada) |
 | **Sprint QA/hardening** | 4.4D (após 4.4C aprovada) |
 | **Sprint integração Agenda × Financeiro** | 4.4E (após 4.4D aprovada — badge, alertas, fluxo consulta→cobrança) |
@@ -254,117 +254,63 @@ Migration da 4.4B é **estritamente aditiva** (1 tabela + índices).
 
 ---
 
-## 10. Checklist Sprint 4.4B (implementação backend)
+## 10. Checklist Sprint 4.4B (implementação backend) — ENTREGUE 2026-05-27
 
 ### 10.1 Migration
 
-- [ ] `20260604000000_financial_charges_v0.ts` (ou timestamp do dia da 4.4B)
-- [ ] Tabela `financial_charges` completa (campos, FKs, CHECK constraints)
-- [ ] 4 índices nomeados `idx_financial_charges_*`
-- [ ] `down` faz `DROP TABLE financial_charges` (reverter limpo)
-- [ ] `pnpm --filter backend migrate:latest` sem erro
-- [ ] `pnpm --filter backend migrate:status` mostra migration como `done`
+- [x] `20260604000000_financial_charges_v0.ts`
+- [x] Tabela `financial_charges` completa (11 CHECKs, 6 FKs)
+- [x] 4 índices normais + 1 parcial `WHERE appointment_id IS NOT NULL`
+- [x] `down` faz `DROP TABLE financial_charges`
+- [x] Migration batch 15 — 15 applied/0 pending
 
 ### 10.2 Tipos
 
-- [ ] `backend/src/types/db.d.ts` — `FinancialChargeRow` com todos os campos
+- [x] `FinancialChargeRow`, `FinancialChargeStatus`, `FinancialPaymentMethod` em `db.d.ts`
 
 ### 10.3 DAO
 
-- [ ] `financialChargeDao.ts`:
-  - [ ] `create(input)` — INSERT com `status='pending'`; `clinica_id` injetado
-  - [ ] `findByIdForClinic(id, clinicaId)` — filtro tenant
-  - [ ] `listForClinic(clinicaId, filters)` — filtros: `patient_id`, `status`, `date_from`, `date_to`, `limit`, `offset`
-  - [ ] `updatePending(id, clinicaId, updates)` — CAS: só `status='pending'`; sem `DELETE`
-  - [ ] `markPaid(id, clinicaId, userId, paymentMethod, paidAt)` — CAS `WHERE status='pending'`
-  - [ ] `cancel(id, clinicaId, userId, reason?)` — CAS `WHERE status='pending'`
-  - [ ] `summarize(clinicaId, dateFrom, dateTo)` — query de totalizadores
-  - [ ] **Sem `DELETE`** — invariante
-  - [ ] **Sem `UPDATE`** em cobranças `paid` ou `canceled`
+- [x] `create`, `findByIdForClinic`, `listForClinic` (com filtro `appointment_id`),
+      `listForPatient`, `updatePending` (CAS), `markPaid` (CAS), `cancel` (CAS), `summarize`
+- [x] Sem DELETE físico
+- [x] Sem UPDATE em paid/canceled
 
 ### 10.4 Service
 
-- [ ] `financialChargeService.ts`:
-  - [ ] `create` — valida `patient_id` ativo+não-mesclado; valida `appointment_id` (mesma clínica, se presente); valida `amount_cents > 0`; valida tamanhos; emite audit
-  - [ ] `list` — delega ao DAO com filtros validados
-  - [ ] `getDetail` — delega ao DAO; retorna cobrança completa com `notes`
-  - [ ] `update` — valida `status='pending'`; emite audit
-  - [ ] `markPaid` — valida `payment_method` ∈ allowlist; emite audit
-  - [ ] `cancel` — valida `status='pending'`; emite audit
-  - [ ] `summary` — delega ao DAO; valida `date_from`/`date_to`
+- [x] `buildFinancialActor` + `effectiveFinancialAccess` (`full`/`transact`/`none`)
+- [x] `create`, `list`, `findById`, `update`, `markPaid`, `cancel`, `summary`, `listForPatient`
+- [x] `loadActivePatient` exige ativo + não-mesclado
+- [x] `validateAppointmentLink` cross-tenant generic 400 + cross-patient 400
+- [x] Best-effort audit em todas operações de escrita
 
 ### 10.5 Controller + rotas
 
-- [ ] `routes/financialCharges.ts` — 8 endpoints (§5 acima); rate limit herdado
-- [ ] Montagem em `app.ts`
-- [ ] Validação de input no edge; service faz lógica
+- [x] `financialChargeController.ts` — 8 handlers thin
+- [x] `financialChargesRouter` montado em `app.ts`
+- [x] Pipeline `rateLimit → requireAuth → requireClinic → requireRole`
 
 ### 10.6 Logger
 
-- [ ] Estender redation com: `description`, `notes`, `cancel_reason`
-- [ ] Confirmar que `payload.description` e `payload.notes` são cobertos
-- [ ] Rodar grep de vazamento pós-smoke; confirmar N/N PASS antes do commit
+- [x] `description`, `notes`, `cancel_reason`, `amount_cents` × 4 camadas (16 paths)
+- [x] Sentinels FIN_*_SENTINEL → 0 ocorrências nos logs
 
-### 10.7 Smoke tests (script em `/tmp/`)
+### 10.7 Smoke tests — 49/49 PASS (ver testing-checklist.md §Módulo Financeiro)
 
-- [ ] Sem token → 401 ✅
-- [ ] `secretaria` cria cobrança → 201/pending ✅
-- [ ] Lista cobranças → 200 ✅
-- [ ] Detalhe → 200 com `notes` ✅
-- [ ] Editar pending (description/amount/due_date) → 200 ✅
-- [ ] Marcar como pago (payment_method: 'pix') → 200/paid ✅
-- [ ] Tentar editar cobrança paga → 400/charge_not_pending ✅
-- [ ] Tentar marcar pago novamente → 400/charge_not_pending ✅
-- [ ] Criar segunda cobrança → cancelar → 200/canceled ✅
-- [ ] Tentar cancelar cobrança já cancelada → 400/charge_not_pending ✅
-- [ ] Totalizadores `GET /financial/summary` → 200 com campos esperados ✅
-- [ ] Cobranças do paciente `GET /patients/:id/charges` → 200 ✅
-- [ ] `gestor_clinica` lista → 200 ✅
-- [ ] `gestor_clinica` tenta criar → 403 ✅
-- [ ] `gestor_clinica` marca como pago → 200 ✅
-- [ ] Criar cobrança com `appointment_id` válido (mesmo `patient_id`) → 201 ✅
-- [ ] `GET /financial/charges?appointment_id=<uuid>` → 200 (só cobranças vinculadas) ✅
-- [ ] Criar cobrança com `appointment_id` de outro paciente → 400 ✅
-- [ ] Criar cobrança com `appointment_id` de outra clínica → 400 genérico ✅
-- [ ] `profissional_clinico` → 403 em todos endpoints ✅
-- [ ] `admin_sistema` → 403/no_clinic_context ✅
-- [ ] `amount_cents = 0` → 400 ✅
-- [ ] `amount_cents < 0` → 400 ✅
-- [ ] `payment_method` inválido → 400 ✅
-- [ ] `patient_id` inexistente → 404 ✅
-- [ ] `patient_id` arquivado → 404 ✅
-- [ ] Cross-tenant → 404 ✅
+### 10.8 SQL checks — 4/4 PASS + 11 CHECKs verificados
 
-### 10.8 SQL checks pós-teste
+### 10.9 Limpeza — FEITA
 
-```sql
--- 0 linhas (paid sem paid_at)
-SELECT count(*) FROM financial_charges WHERE status='paid' AND paid_at IS NULL;
--- 0 linhas (paid sem payment_method)
-SELECT count(*) FROM financial_charges WHERE status='paid' AND payment_method IS NULL;
--- 0 linhas (canceled sem canceled_at)
-SELECT count(*) FROM financial_charges WHERE status='canceled' AND canceled_at IS NULL;
--- audit de escrita presente
-SELECT acao, recurso, recurso_id FROM audit_logs
-  WHERE acao LIKE 'financial.charge.%' ORDER BY criado_em DESC LIMIT 10;
--- sem dados financeiros em logs de aplicação
--- (grep description/notes/cancel_reason nos logs do backend)
-```
+- [x] 2 cobranças pending canceladas via SQL (`cancel_reason='smoke_cleanup_4.4B'`)
+- [x] 1 patient temporário arquivado (`Smoke Temp Patient 4.4B-cross`)
+- [x] Usuários smoke e dados base preservados
 
-### 10.9 Limpeza
+### 10.10 Documentação — FEITA
 
-- [ ] Cobranças sintéticas dos smoke tests removidas (ou marcadas claramente)
-- [ ] `audit_logs` preservados (append-only)
-- [ ] Build/typecheck OK: `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅
-- [ ] Sem commit automático
-
-### 10.10 Documentação (4.4B)
-
-- [ ] `CLAUDE.md` (sprint atual, migration, endpoints, restrições críticas)
-- [ ] `docs/project-state.md`
-- [ ] `docs/sprint-history.md`
-- [ ] `docs/security-notes.md` (estender seção financeira com guardrails)
-- [ ] `docs/testing-checklist.md` (bloco Sprint 4.4B)
+- [x] `CLAUDE.md`
+- [x] `docs/project-state.md`
+- [x] `docs/sprint-history.md`
+- [x] `docs/testing-checklist.md`
+- [x] `docs/financial-v0-scope.md` (este arquivo)
 
 ---
 
