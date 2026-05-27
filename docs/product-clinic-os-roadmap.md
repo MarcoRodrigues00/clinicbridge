@@ -343,21 +343,48 @@ clínica vê só os seus — invariante tenant).
 
 **Natureza:** **operacional+** com risco técnico/jurídico alto.
 
-**Objetivo:** cadastro de convênios, valores acordados, faturamento interno
-(relatório por convênio). **Sem TISS/TUSS real no v0.1** — apenas
-estruturação de dados e cobrança interna.
+**Planejamento detalhado:** `docs/insurance-billing-future-scope.md`.
 
-**Entregáveis esperados:**
-1. **ADR 0014** — escopo de convênios:
-   - Entidades: `health_insurances` (normalizar o atual `convenio` em
-     `patients`), `procedures`, `procedure_prices_per_insurance`.
-   - Fluxo: cadastrar convênio → cadastrar procedimentos → registrar
-     atendimento → gerar relatório de faturamento (estende relatórios da
-     Fase 4.5).
-   - Migração: importar convênios/procedimentos de planilhas (reusa o pipeline
-     CSV/XLSX existente).
-   - Permissões: role **financeiro** + **dono**.
-2. Implementação (sprints próprias).
+**Objetivo:** cadastro manual de convênios, carteirinha do paciente, autorização
+manual, cobrança com split particular × convênio. **Sem TISS/TUSS real no v0.1.**
+
+**Por que separado do Financeiro v0.1 (4.4):**
+- Financeiro v0.1 = cobranças particulares manuais — entregue e validado.
+- Convênios adicionam entidades novas (`insurance_providers`, `patient_insurance_plans`,
+  `insurance_authorizations`) e estendem `financial_charges` com `payer_type` /
+  `copay_amount_cents` / `insurance_amount_cents`.
+- Pagamento do paciente e recebimento do convênio são fluxos distintos.
+- Complexidade e risco justificam ADR própria.
+
+**Sequência de sprints sugerida:**
+
+| Sprint | Escopo |
+|---|---|
+| **4.6A** | ADR 0014 — escopo convênios v0.1 (docs-only) |
+| **4.6B** | Backend: `insurance_providers` + `patient_insurance_plans` + alertas básicos |
+| **4.6C** | Frontend: seção convênios no paciente + badge na agenda + split financeiro |
+| **4.6D** | QA/hardening convênios |
+| **Fase futura** | `insurance_authorizations` + split copay/convênio em `financial_charges` |
+
+**Entidades conceituais (rascunho para ADR 0014):**
+- `insurance_providers(clinica_id, name, active)` — cadastro de operadoras da clínica.
+- `patient_insurance_plans(patient_id, provider_id, plan_name, member_number, valid_until)`.
+- `insurance_authorizations(appointment_id, provider_id, authorization_number, status)`.
+- `financial_charges` ganha: `payer_type`, `insurance_provider_id`, `copay_amount_cents`,
+  `insurance_amount_cents` (na ADR 0014, não agora).
+
+**Migração:** `patients.convenio` + `patients.numero_carteirinha` (texto livre hoje)
+podem ser importados para `patient_insurance_plans` na sprint 4.6B.
+
+**Permissões:** `requireRole` (administrativo, mesmo padrão do Financeiro v0.1);
+`profissional_clinico` sem acesso ao financeiro/convênios por padrão.
+
+**Invariantes imutáveis (desde o planejamento):**
+- Autorização do convênio não confirma consulta automaticamente.
+- Glosa não apaga cobrança — é evento/nota separado.
+- Humano decide sempre no v0.1.
+- `notes` nunca contém diagnóstico/CID/dado clínico.
+- Tenant isolation por `clinica_id` em todas as novas tabelas.
 
 **Não no v0.1 (registrado explicitamente):**
 - **TISS (Troca de Informação em Saúde Suplementar) real** — padrão ANS
@@ -366,7 +393,8 @@ estruturação de dados e cobrança interna.
 - **TUSS real** — Terminologia Unificada da Saúde Suplementar; mapeamento de
   códigos requer base TUSS atualizada e licenciamento → futura.
 - Integração com operadoras; autorização prévia eletrônica; batch de
-  cobrança; conciliação automática.
+  cobrança; conciliação automática; lote de faturamento ANS.
+- NFS-e; gateway de pagamento; Pix automático; repasse automático.
 
 ---
 
