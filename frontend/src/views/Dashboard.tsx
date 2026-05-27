@@ -200,7 +200,7 @@ export function Dashboard(): JSX.Element {
               <strong> Equipe → Profissionais da agenda</strong>. Aqui você só
               consome os profissionais ativos da clínica.
             </p>
-            <AdministrativeSchedulePanel />
+            <AdministrativeSchedulePanel onGoToFinanceiro={() => setTab('financeiro')} />
           </>
         )}
 
