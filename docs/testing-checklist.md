@@ -1904,3 +1904,54 @@ grep -c "amount_cents" backend/src/config/logger.ts   # >= 4
 - Migration `financial_charges` aplicada: `pnpm --filter backend migrate:latest`
 - Backend rebuild: `docker compose --profile edge up -d --build backend`
 - Usuários smoke persistentes disponíveis (ver §"Usuários smoke persistentes" acima)
+
+---
+
+## Sprint 4.4C — Frontend Financeiro v0.1
+
+### Testes visuais/manuais (browser com smoke users)
+
+| # | Ação | Esperado |
+|---|------|---------|
+| 1 | Login smoke.owner → aba "Financeiro" | Tab visível |
+| 2 | Cards resumo | "Em aberto", "Vencido", "Recebido no período" com valores |
+| 3 | Tabela de cobranças | Linha com badges Pendente/Vencido/Pago/Cancelado |
+| 4 | "Nova cobrança" → preencher → "Criar cobrança" | 201 criado; redireciona para detalhe |
+| 5 | Formulário criar — campo Observações | Aviso clínico ⚠️ visível |
+| 6 | Detalhe de cobrança pendente | Botões "Marcar como pago", "Editar", "Cancelar cobrança" |
+| 7 | "Marcar como pago" → modal → confirmar | Cobrança aparece como "Pago" no detalhe |
+| 8 | "Cancelar cobrança" → modal → confirmar | Cobrança aparece como "Cancelado" |
+| 9 | Detalhe de pago/cancelado | Sem botões de ação |
+| 10 | Filtro status=Pago | Apenas cobranças pagas |
+| 11 | Login smoke.profissional (papel=secretaria + grant profissional_clinico) | Tab "Financeiro" visível, mas lista retorna 403 → tela "Acesso não autorizado" |
+| 12 | Notes na listagem | Ausentes (só no detalhe) |
+| 13 | Notes no detalhe | Presente se preenchido, com aviso clínico |
+
+### Checklist de segurança frontend
+
+```bash
+# Sem console.log de dados financeiros
+grep -n "console\." frontend/src/components/FinancialPanel.tsx
+# esperado: sem ocorrências
+
+# Sem localStorage/sessionStorage
+grep -n "localStorage\|sessionStorage" frontend/src/components/FinancialPanel.tsx
+# esperado: sem ocorrências
+
+# Sem dangerouslySetInnerHTML
+grep -n "dangerouslySetInnerHTML" frontend/src/components/FinancialPanel.tsx
+# esperado: sem ocorrências
+
+# notes não em URL/query string
+grep -n "notes.*url\|url.*notes\|URLSearchParams.*notes" frontend/src/components/FinancialPanel.tsx
+# esperado: sem ocorrências
+```
+
+### Verificação de build
+
+```bash
+pnpm --filter frontend typecheck  # deve ser 0 erros
+pnpm --filter frontend build      # deve compilar sem erros
+pnpm --filter backend typecheck   # sem regressão
+git diff --check                  # sem whitespace errors
+```

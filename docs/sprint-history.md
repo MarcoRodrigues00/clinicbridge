@@ -3781,3 +3781,63 @@ Script `/tmp/smoke_4_4b.js` (não versionado). Cobriu:
 - AWS.
 
 **Próxima sprint natural:** 4.4C (frontend financeiro — aba Financeiro; vinculado a agendamento opcional).
+
+---
+
+## Sprint 4.4C — Frontend Financeiro v0.1
+
+**Entregue:** 2026-05-27
+**Objetivo:** Criar a interface do módulo financeiro v0.1 para clínicas pequenas/consultórios, usando o backend financeiro já implementado na Sprint 4.4B.
+
+### Componentes entregues
+
+**`frontend/src/services/api.ts`** — 8 tipos + 8 funções adicionados:
+- Tipos: `FinancialChargeStatus`, `FinancialPaymentMethod`, `FinancialChargeListItem`, `FinancialChargeDetail`, `FinancialSummary`, `FinancialChargeFilters`, `CreateFinancialChargePayload`, `UpdateFinancialChargePayload`, `MarkFinancialChargePaidPayload`, `CancelFinancialChargePayload`
+- Funções: `listFinancialCharges`, `getFinancialSummary`, `getFinancialCharge` (staleTime:0 enforced at call sites), `createFinancialCharge`, `updateFinancialCharge`, `markFinancialChargePaid`, `cancelFinancialCharge`, `listPatientCharges`
+
+**`frontend/src/components/FinancialPanel.tsx`** — panel auto-contido:
+- Views: `list` → `new` | `detail` → `edit`
+- Summary cards: "Em aberto" / "Vencido" (vermelho se > 0) / "Recebido no período" (verde)
+- Filters: status / date_from / date_to; limit=50
+- Tabela: Paciente / Descrição / Valor / Vencimento / Status badge (Pendente/Vencido/Pago/Cancelado)
+- Botão "Nova cobrança" → formulário com aviso clínico nas observações
+- Modal "Marcar como pago": forma de pagamento + data opcional
+- Modal "Cancelar cobrança": motivo opcional; irreversível
+- Detail view: metadados completos + notes + cancel_reason (ambos só no detalhe, nunca na lista)
+- Patient name lookup via `Map<id, nome>` (padrão AdministrativeSchedulePanel)
+- `staleTime: 0` em detalhe; `retry: false` em list/summary
+- 403 detectado via `useEffect` → `onAccessBlocked()` → tela de acesso negado
+- `accessBlocked` state para profissional_clinico que passa pelo papel=secretaria mas é barrado pelo service
+- Sem `console.log` de dados financeiros; sem `localStorage/sessionStorage`; sem `dangerouslySetInnerHTML`
+
+**`frontend/src/components/FinancialPanel.module.css`** — CSS module com design tokens
+
+**`frontend/src/views/Dashboard.tsx`** — modificado:
+- `TabKey` ampliada com `'financeiro'`
+- TABS: `{ key: 'financeiro', label: 'Financeiro', icon: Wallet }` (não ownerOnly)
+- `SECTION_INTRO.financeiro`: subtítulo ressalva que não substitui contabilidade/NFS-e
+- `{tab === 'financeiro' && <FinancialPanel />}`
+
+### Decisões técnicas
+
+- `appointment_id` omitido do formulário de criação (4.4E — nenhuma API de agendamentos por paciente disponível no frontend ainda)
+- `getToken()` do `authStorage` para obter o JWT (mesmo padrão dos outros panels)
+- Tab "Financeiro" visível para `papel === 'dono_clinica' || papel === 'secretaria'`; backend é a fonte de verdade
+- Aviso de observações clínicas exibido no formulário e no detalhe (ADR 0012 §10)
+
+### Verificação final
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `pnpm --filter backend typecheck` ✅
+- `git diff --check` rc=0 ✅
+- Backend smoke: summary 200 + list 200 + no-token 401 ✅
+
+### Fora de escopo (esta sprint)
+
+- QA/hardening financeiro (Sprint 4.4D).
+- Badge agenda × financeiro; fluxo consulta → cobrança (Sprint 4.4E).
+- Gateway de pagamento; NFS-e; Pix automático.
+- AWS.
+
+**Próxima sprint natural:** 4.4D (QA/hardening financeiro — smoke de permissões via browser, validação de logs, cleanup de dados sintéticos).
