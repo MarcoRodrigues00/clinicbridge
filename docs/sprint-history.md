@@ -4351,3 +4351,89 @@ Arquivo modificado:
 - Profissional `effectiveFinancialAccess='none'` → 403 nas trilhas R-B/R-D.
 
 **Próxima sprint natural:** 4.5C (frontend relatórios — aba "Relatórios" no Dashboard com cards e filtros).
+
+## Sprint 4.5C — Frontend Relatórios Gerenciais v0.1
+
+**Entregue:** 2026-05-27
+**Objetivo:** Consumir os 4 endpoints da Sprint 4.5B numa aba "Relatórios" no Dashboard, com visual leve (cards), sem expor PII ou dados clínicos, e tratando 403 por relatório individualmente.
+
+### Arquivos novos
+
+- `frontend/src/components/ReportsPanel.tsx`
+- `frontend/src/components/ReportsPanel.module.css`
+
+### Arquivos modificados
+
+- `frontend/src/services/api.ts`
+  - Tipos: `ReportPeriodPreset`, `ReportsFilters`, `AppointmentReportResponse`, `FinancialReportResponse`, `PatientsReportResponse`, `AgendaFinancialReportResponse`.
+  - Helpers: `buildReportsQuery` (omite filtros vazios; token nunca em URL).
+  - Funções: `getAppointmentReport`, `getFinancialReport`, `getPatientsReport`, `getAgendaFinancialReport`.
+- `frontend/src/views/Dashboard.tsx`
+  - Nova `TabKey` `'relatorios'` (ícone `BarChart3`), entre Financeiro e Equipe.
+  - `SECTION_INTRO` atualizado.
+  - `<ReportsPanel />` montado na aba.
+
+### Estrutura visual
+
+```
+[Cabeçalho: título + subtítulo + aviso "Nenhum dado clínico"]
+[Barra de filtros: Hoje / Últimos 7 dias / Mês atual / Personalizado + Atualizar]
+[Linha "Período: 2026-05-01 a 2026-05-27"]
+
+[Bloco] Agenda           — cards + lista "Em atraso" (até 8, sem UUID)
+[Bloco] Financeiro       — cards + breakdown por método (BRL)
+[Bloco] Pacientes        — 5 cards (90 dias fixo)
+[Bloco] Agenda x Financeiro — 6 cards + 2 sinais
+
+[Disclaimer: on-demand, não substitui contabilidade, sem export]
+```
+
+### Decisões técnicas
+
+1. **TanStack Query por bloco** — cada relatório tem seu próprio `useQuery` (`staleTime: 30s`, `retry: false`). Falha de um não afeta os outros. `refreshKey` é parte da queryKey e é incrementado pelo botão Atualizar.
+2. **Period preset** — `'today' | 'last7' | 'currentMonth' | 'custom'`. Preset resolve para `{date_from, date_to}` em UTC no client (mesmo padrão de Date.UTC do backend) e backend recebe o filtro normal.
+3. **Custom range** — validação visual leve (`date_to >= date_from`). Backend valida formato/intervalo/floor e responde `report_invalid_filters` com mensagem amigável; o painel exibe a mensagem do backend sem reformular.
+4. **403 por relatório** — `is403(err)` detecta e renderiza `SectionBlocked` com texto neutro ("Seu acesso atual não permite…"). Não derruba a tela. Padrão alinhado com a UX do `FinancialPanel`.
+5. **Lista "Em atraso" (R-A)** — renderiza apenas `formatTime(starts_at)` + status traduzido. O `appointment_id` só vai na `key` do React. Mostra os 8 primeiros; resto vira contagem ("+ N adicional(is)").
+6. **Sem UUID na UI** — fixa a regra "não usar UUID como informação principal" (ADR 0014 §6).
+7. **`no_appt_days` fixo em 90** — no v0.1 não há controle dedicado (mantém UI enxuta); pode virar select em 4.5D.
+8. **`professional_id`** — backend aceita, mas v0.1 não expõe seletor (não há picker de profissionais no painel). Decisão consistente com escopo mínimo.
+9. **Vocabulário** — "acesso", "permissão", "área financeira"; nunca "role", "endpoint", "payload", "amount_cents", "UUID".
+
+### Segurança frontend
+
+- Token vai apenas no header `Authorization` (apiFetch). `buildReportsQuery` não aceita `token`.
+- Sem `console.log`, `localStorage`, `sessionStorage`, `dangerouslySetInnerHTML`.
+- Tipos do payload NÃO incluem nenhum campo proibido (nome/CPF/email/telefone/notes/cancel_reason/description/administrative_notes/body/internal_note/diagnostico/cid/prescricao/evolucao).
+- Lista "Em atraso" oculta UUID.
+- Valores em BRL via `Intl.NumberFormat`; nunca renderiza `amount_cents` cru.
+- Sem export / sem cópia.
+
+### Gates
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅ (bundle warning pré-existente, não relacionado)
+- `pnpm --filter backend typecheck` ✅
+- `git diff --check` rc=0 ✅
+- `git status --short` — 2 modificados + 2 novos (todos em `frontend/src`) ✅
+
+### Smoke (reaproveita backend já em execução)
+
+- Owner: 4/4 endpoints 200; chaves de `data` no formato esperado pelo `ReportsPanel`.
+- Profissional: R-A e R-C → 200; R-B e R-D → 403 (`forbidden_role`).
+  → No painel: R-A e R-C renderizam normalmente, R-B e R-D viram card "Acesso restrito" sem derrubar o painel.
+
+QA visual em browser fica como passo de 4.5D (junto do hardening), conforme o checklist da própria sprint.
+
+### Ressalvas
+
+- Sem export no v0.1 (CSV/PDF/XLSX).
+- Sem gráficos complexos / BI customizável.
+- Sem dados clínicos.
+- Sem nomes/CPF/contato de pacientes.
+- Relatórios on-demand; sem auto-refresh.
+- Frontend não substitui contabilidade ou emissão fiscal.
+- `professional_id` e `no_appt_days` ainda não expostos como controles na UI v0.1.
+- Convênios continuam fora até Fase 4.6.
+
+**Próxima sprint natural:** 4.5D (QA/hardening relatórios — smoke browser completo, code review segurança frontend, eventual exposição de `professional_id`/`no_appt_days` se demanda real aparecer).

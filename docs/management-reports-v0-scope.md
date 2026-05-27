@@ -303,43 +303,49 @@ Ver ADR 0014 §4 para lista completa. Resumo:
 
 ---
 
-## 9. Checklist Sprint 4.5C (frontend)
+## 9. Checklist Sprint 4.5C (frontend) — ENTREGUE 2026-05-27
 
 ### 9.1 Estrutura
 
-- [ ] `TabKey += 'relatorios'` em Dashboard
-- [ ] TABS: `{ key: 'relatorios', label: 'Relatórios', icon: BarChart2 }`
-- [ ] SECTION_INTRO para 'relatorios'
-- [ ] `ReportsPanel` component + `ReportsPanel.module.css`
-- [ ] 4 funções de API em `api.ts` (getAppointmentsReport, getFinancialReport, etc.)
+- [x] `TabKey += 'relatorios'` em Dashboard
+- [x] TABS: `{ key: 'relatorios', label: 'Relatórios', icon: BarChart3 }`
+- [x] SECTION_INTRO para 'relatorios'
+- [x] `ReportsPanel` component + `ReportsPanel.module.css`
+- [x] 4 funções de API em `api.ts` (`getAppointmentReport`, `getFinancialReport`, `getPatientsReport`, `getAgendaFinancialReport`) + helper `buildReportsQuery`
 
 ### 9.2 Filtros
 
-- [ ] Atalhos: hoje / 7 dias / mês atual / customizado
-- [ ] Inputs `date_from` / `date_to` para customizado
-- [ ] Validação de intervalo máximo (366 dias) — mensagem de erro amigável
-- [ ] `professional_id` opcional em R-A e R-D
+- [x] Atalhos: Hoje / Últimos 7 dias / Mês atual / Personalizado
+- [x] Inputs `date_from` / `date_to` para Personalizado
+- [x] Validação visual `date_to >= date_from` antes de refetch; backend valida intervalo máximo 366 dias e responde `report_invalid_filters` com mensagem amigável (mostrada como está)
+- [ ] `professional_id` opcional em R-A e R-D — **não exposto na UI v0.1** (backend aceita; pode entrar em 4.5D se necessário)
+- [ ] `no_appt_days` em R-C — **fixo em 90 dias na UI v0.1** (sem controle dedicado)
 
 ### 9.3 Cards de indicadores
 
-- [ ] R-A: total, concluídos, faltas, cancelados, taxa de comparecimento
-- [ ] R-B: recebido, em aberto, vencido, cancelado, por método de pagamento
-- [ ] R-C: ativos, novos, sem agendamento recente
-- [ ] R-D: sem cobrança, cobrança pendente, paga, cancelados com pendência
+- [x] R-A: total, agendadas, confirmadas, realizadas, canceladas, faltas, taxa de comparecimento + lista "Em atraso" (até 8, sem UUID)
+- [x] R-B: recebido, em aberto, vencido, cancelado, cobranças pagas/pendentes, por método de pagamento (Dinheiro/Pix/Cartão/Transferência/Outro)
+- [x] R-C: ativos, novos no período, com agendamento no período, sem agendamento recente, arquivados
+- [x] R-D: appointments_total, sem cobrança, pendente, pago, vencido, cobrança cancelada + 2 sinais ("cancelada com pendente", "cobrança cancelada com consulta ativa")
 
 ### 9.4 Segurança
 
-- [ ] ReportsPanel não renderiza para `profissional_clinico`
-- [ ] Seção financeira (R-B, R-D) ocultada se 403 da API
-- [ ] Aviso gerencial exibido
-- [ ] Sem nome/CPF de paciente na UI
+- [x] `ReportsPanel` gateia `papel ∈ {dono_clinica, secretaria}` (admin já fica no JoinClinicGate)
+- [x] Seções financeira (R-B) e Agenda × Financeiro (R-D) viram `SectionBlocked` se 403 — não derruba o painel
+- [x] Aviso "Nenhum dado clínico é exibido aqui" no cabeçalho
+- [x] Sem nome/CPF/telefone/e-mail/notes/description/cancel_reason/administrative_notes/body/internal_note/clinical/diagnostico/cid/prescricao/evolucao na UI (não estão nos tipos)
+- [x] Sem UUID exibido como informação principal (lista "Em atraso" mostra só horário + status)
+- [x] Token só em header `Authorization` (apiFetch); nunca em URL
+- [x] Sem `console.log`/`localStorage`/`sessionStorage`/`dangerouslySetInnerHTML`
+- [x] Valores em BRL via `Intl.NumberFormat`; nunca `amount_cents` cru
+- [x] Sem export / sem cópia
 
 ### 9.5 Verificação de build
 
-- [ ] `pnpm --filter frontend typecheck`
-- [ ] `pnpm --filter frontend build`
-- [ ] `pnpm --filter backend typecheck` (sem regressão)
-- [ ] `git diff --check` rc=0
+- [x] `pnpm --filter frontend typecheck` ✅
+- [x] `pnpm --filter frontend build` ✅ (warning de bundle pré-existente, não relacionado)
+- [x] `pnpm --filter backend typecheck` ✅
+- [x] `git diff --check` rc=0 ✅
 
 ---
 
