@@ -13,6 +13,7 @@ import {
   Wallet,
   BarChart3,
   Briefcase,
+  HeartHandshake,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { UploadPanel } from '../components/UploadPanel';
@@ -30,6 +31,7 @@ import { ClinicalReadAuditPanel } from '../components/ClinicalReadAuditPanel';
 import { FinancialPanel } from '../components/FinancialPanel';
 import { ReportsPanel } from '../components/ReportsPanel';
 import { ServicesPanel } from '../components/ServicesPanel';
+import { InsurancePanel } from '../components/InsurancePanel';
 import { useAuth } from '../services/AuthProvider';
 import type { SafeUser } from '../services/api';
 import styles from './Dashboard.module.css';
@@ -43,7 +45,7 @@ const ROLE_LABELS: Record<SafeUser['papel'], string> = {
   secretaria: 'Funcionário(a) (acesso administrativo)',
 };
 
-type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'financeiro' | 'relatorios' | 'servicos' | 'equipe' | 'seguranca';
+type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'financeiro' | 'relatorios' | 'servicos' | 'convenios' | 'equipe' | 'seguranca';
 
 const TABS: { key: TabKey; label: string; icon: typeof Home; ownerOnly?: boolean }[] = [
   { key: 'inicio', label: 'Início', icon: Home },
@@ -53,6 +55,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Home; ownerOnly?: boolean
   { key: 'financeiro', label: 'Financeiro', icon: Wallet },
   { key: 'relatorios', label: 'Relatórios', icon: BarChart3 },
   { key: 'servicos', label: 'Serviços', icon: Briefcase },
+  { key: 'convenios', label: 'Convênios', icon: HeartHandshake },
   { key: 'equipe', label: 'Equipe', icon: Users, ownerOnly: true },
   { key: 'seguranca', label: 'Segurança', icon: ShieldCheck },
 ];
@@ -65,6 +68,7 @@ const SECTION_INTRO: Record<TabKey, { title: string; subtitle: string }> = {
   financeiro: { title: 'Financeiro', subtitle: 'Cobranças e recebimentos da clínica. Não substitui contabilidade ou emissão de notas fiscais.' },
   relatorios: { title: 'Relatórios', subtitle: 'Resumos de agenda, financeiro e pacientes. Apenas dados administrativos — sem dados clínicos.' },
   servicos: { title: 'Serviços', subtitle: 'Catálogo de tipos de atendimento da clínica — consultas, retornos, sessões e procedimentos. Aparecem na agenda e nas cobranças.' },
+  convenios: { title: 'Convênios', subtitle: 'Cadastre convênios aceitos pela clínica e use essas informações em pacientes e cobranças. Apenas dados administrativos — sem dados clínicos.' },
   equipe: { title: 'Equipe', subtitle: 'Acesso ao sistema (membros), solicitações pendentes e profissionais usados na agenda.' },
   seguranca: { title: 'Segurança e sessão', subtitle: 'Estado da autenticação e do MVP administrativo.' },
 };
@@ -224,6 +228,10 @@ export function Dashboard(): JSX.Element {
           <ServicesPanel />
         )}
 
+        {tab === 'convenios' && (
+          <InsurancePanel />
+        )}
+
         {tab === 'equipe' && isOwner && (
           <>
             <TeamManagementPanel />
@@ -283,10 +291,11 @@ export function Dashboard(): JSX.Element {
         <div className={styles.footerInner}>
           <span className={styles.footerBrand}>
             <Logo size={20} />
-            ClinicBridge · MVP administrativo
+            ClinicBridge · Clinic OS
           </span>
           <p className={styles.footerNote}>
-            Ferramenta administrativa. Não substitui prontuário ou sistema clínico.
+            Gestão clínica e administrativa para consultórios. Não substitui avaliação
+            profissional, assinatura digital válida ou obrigações legais específicas.
           </p>
           <nav className={styles.footerLinks} aria-label="Links">
             <span>Segurança</span>

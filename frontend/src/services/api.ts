@@ -785,6 +785,12 @@ export interface FinancialChargeListItem {
   canceled_by_user_id: string | null;
   created_at: string;
   updated_at: string;
+  // Convênios v0.1 (Sprint 4.7C — ADR 0016). All nullable — retrocompat.
+  payer_type: 'private' | 'insurance' | 'mixed' | null;
+  insurance_provider_id: string | null;
+  patient_insurance_id: string | null;
+  copay_amount_cents: number | null;
+  insurance_amount_cents: number | null;
 }
 
 // Detail projection: adds notes and cancel_reason.
@@ -813,6 +819,8 @@ export interface FinancialChargeFilters {
   offset?: number;
 }
 
+export type FinancialPayerType = 'private' | 'insurance' | 'mixed';
+
 export interface CreateFinancialChargePayload {
   patient_id: string;
   description: string;
@@ -821,6 +829,12 @@ export interface CreateFinancialChargePayload {
   notes?: string | null;
   appointment_id?: string | null;
   service_id?: string | null;
+  // Convênios v0.1 (Sprint 4.7C — ADR 0016). All optional.
+  payer_type?: FinancialPayerType | null;
+  insurance_provider_id?: string | null;
+  patient_insurance_id?: string | null;
+  copay_amount_cents?: number | null;
+  insurance_amount_cents?: number | null;
 }
 
 export interface UpdateFinancialChargePayload {
@@ -830,6 +844,12 @@ export interface UpdateFinancialChargePayload {
   notes?: string | null;
   appointment_id?: string | null;
   service_id?: string | null;
+  // Convênios v0.1 (Sprint 4.7C — ADR 0016). All optional.
+  payer_type?: FinancialPayerType | null;
+  insurance_provider_id?: string | null;
+  patient_insurance_id?: string | null;
+  copay_amount_cents?: number | null;
+  insurance_amount_cents?: number | null;
 }
 
 export interface MarkFinancialChargePaidPayload {
@@ -982,6 +1002,121 @@ export interface UpdateClinicServicePayload {
   description?: string | null;
   duration_minutes?: number | null;
   price_cents?: number | null;
+}
+
+// --- Convênios v0.1 types (Sprint 4.7C — ADR 0016) ---------------------------
+// SECURITY: member_number and holder_name are PII.
+// - Never log payloads containing these fields.
+// - Never save in localStorage/sessionStorage.
+// - Never include in URL params.
+// - member_number is returned MASKED (****1234) in list; RAW in detail only.
+// - member_number RAW must not be rendered in list cards.
+
+export interface InsuranceProvider {
+  id: string;
+  clinica_id: string;
+  name: string;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsurancePlan {
+  id: string;
+  clinica_id: string;
+  provider_id: string;
+  name: string;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// List projection: member_number_masked only, no notes.
+export interface PatientInsuranceListItem {
+  id: string;
+  clinica_id: string;
+  patient_id: string;
+  provider_id: string | null;
+  plan_id: string | null;
+  member_number_masked: string | null;
+  holder_name: string | null;
+  valid_until: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Detail projection: adds raw member_number and notes.
+export interface PatientInsurance extends PatientInsuranceListItem {
+  member_number: string | null;
+  notes: string | null;
+}
+
+export interface ServiceInsurancePrice {
+  id: string;
+  clinica_id: string;
+  service_id: string;
+  provider_id: string;
+  plan_id: string | null;
+  reference_price_cents: number | null;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateInsuranceProviderPayload {
+  name: string;
+  notes?: string | null;
+}
+
+export interface UpdateInsuranceProviderPayload {
+  name?: string;
+  notes?: string | null;
+}
+
+export interface CreateInsurancePlanPayload {
+  provider_id: string;
+  name: string;
+  notes?: string | null;
+}
+
+export interface UpdateInsurancePlanPayload {
+  name?: string;
+  notes?: string | null;
+}
+
+export interface CreatePatientInsurancePayload {
+  provider_id: string;
+  plan_id?: string | null;
+  member_number?: string | null;
+  holder_name?: string | null;
+  valid_until?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdatePatientInsurancePayload {
+  provider_id?: string;
+  plan_id?: string | null;
+  member_number?: string | null;
+  holder_name?: string | null;
+  valid_until?: string | null;
+  notes?: string | null;
+}
+
+export interface CreateServiceInsurancePricePayload {
+  service_id: string;
+  provider_id: string;
+  plan_id?: string | null;
+  reference_price_cents?: number | null;
+  notes?: string | null;
+}
+
+export interface UpdateServiceInsurancePricePayload {
+  reference_price_cents?: number | null;
+  notes?: string | null;
 }
 
 export interface ApiErrorBody {
@@ -2006,6 +2141,255 @@ export const api = {
   ): Promise<{ link: ProfessionalServiceLink }> {
     return apiFetch<{ link: ProfessionalServiceLink }>(
       `/clinic-services/${encodeURIComponent(serviceId)}/professionals/${encodeURIComponent(professionalId)}/status`,
+      { method: 'PATCH', body: { active }, token },
+    );
+  },
+
+  // --- Convênios v0.1 (Sprint 4.7C — ADR 0016) --------------------------------
+  // SECURITY: Never log payloads from these functions. member_number and
+  // holder_name are PII and must not appear in console, localStorage,
+  // sessionStorage, or URL params. Backend is the authoritative access control.
+
+  // -- Insurance Providers --
+
+  listInsuranceProviders(
+    token: string,
+    params: { active?: boolean; limit?: number } = {},
+  ): Promise<{ providers: InsuranceProvider[] }> {
+    const q = new URLSearchParams();
+    if (params.active !== undefined) q.set('active', String(params.active));
+    if (params.limit !== undefined) q.set('limit', String(params.limit));
+    const qs = q.toString();
+    return apiFetch<{ providers: InsuranceProvider[] }>(
+      `/insurance/providers${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  getInsuranceProvider(
+    token: string,
+    id: string,
+  ): Promise<{ provider: InsuranceProvider }> {
+    return apiFetch<{ provider: InsuranceProvider }>(
+      `/insurance/providers/${encodeURIComponent(id)}`,
+      { method: 'GET', token },
+    );
+  },
+
+  createInsuranceProvider(
+    token: string,
+    payload: CreateInsuranceProviderPayload,
+  ): Promise<{ provider: InsuranceProvider }> {
+    return apiFetch<{ provider: InsuranceProvider }>('/insurance/providers', {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
+  updateInsuranceProvider(
+    token: string,
+    id: string,
+    payload: UpdateInsuranceProviderPayload,
+  ): Promise<{ provider: InsuranceProvider }> {
+    return apiFetch<{ provider: InsuranceProvider }>(
+      `/insurance/providers/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: payload, token },
+    );
+  },
+
+  updateInsuranceProviderStatus(
+    token: string,
+    id: string,
+    active: boolean,
+  ): Promise<{ provider: InsuranceProvider }> {
+    return apiFetch<{ provider: InsuranceProvider }>(
+      `/insurance/providers/${encodeURIComponent(id)}/status`,
+      { method: 'PATCH', body: { active }, token },
+    );
+  },
+
+  // -- Insurance Plans --
+
+  listInsurancePlans(
+    token: string,
+    params: { provider_id?: string; active?: boolean; limit?: number } = {},
+  ): Promise<{ plans: InsurancePlan[] }> {
+    const q = new URLSearchParams();
+    if (params.provider_id) q.set('provider_id', params.provider_id);
+    if (params.active !== undefined) q.set('active', String(params.active));
+    if (params.limit !== undefined) q.set('limit', String(params.limit));
+    const qs = q.toString();
+    return apiFetch<{ plans: InsurancePlan[] }>(
+      `/insurance/plans${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  getInsurancePlan(
+    token: string,
+    id: string,
+  ): Promise<{ plan: InsurancePlan }> {
+    return apiFetch<{ plan: InsurancePlan }>(
+      `/insurance/plans/${encodeURIComponent(id)}`,
+      { method: 'GET', token },
+    );
+  },
+
+  createInsurancePlan(
+    token: string,
+    payload: CreateInsurancePlanPayload,
+  ): Promise<{ plan: InsurancePlan }> {
+    return apiFetch<{ plan: InsurancePlan }>('/insurance/plans', {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
+  updateInsurancePlan(
+    token: string,
+    id: string,
+    payload: UpdateInsurancePlanPayload,
+  ): Promise<{ plan: InsurancePlan }> {
+    return apiFetch<{ plan: InsurancePlan }>(
+      `/insurance/plans/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: payload, token },
+    );
+  },
+
+  updateInsurancePlanStatus(
+    token: string,
+    id: string,
+    active: boolean,
+  ): Promise<{ plan: InsurancePlan }> {
+    return apiFetch<{ plan: InsurancePlan }>(
+      `/insurance/plans/${encodeURIComponent(id)}/status`,
+      { method: 'PATCH', body: { active }, token },
+    );
+  },
+
+  // -- Patient Insurances --
+  // member_number is PII: list returns masked; detail returns raw.
+
+  listPatientInsurances(
+    token: string,
+    patientId: string,
+    params: { active?: boolean } = {},
+  ): Promise<{ insurances: PatientInsuranceListItem[] }> {
+    const q = new URLSearchParams();
+    if (params.active !== undefined) q.set('active', String(params.active));
+    const qs = q.toString();
+    return apiFetch<{ insurances: PatientInsuranceListItem[] }>(
+      `/patients/${encodeURIComponent(patientId)}/insurances${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  getPatientInsurance(
+    token: string,
+    patientId: string,
+    id: string,
+  ): Promise<{ insurance: PatientInsurance }> {
+    return apiFetch<{ insurance: PatientInsurance }>(
+      `/patients/${encodeURIComponent(patientId)}/insurances/${encodeURIComponent(id)}`,
+      { method: 'GET', token },
+    );
+  },
+
+  createPatientInsurance(
+    token: string,
+    patientId: string,
+    payload: CreatePatientInsurancePayload,
+  ): Promise<{ insurance: PatientInsurance }> {
+    return apiFetch<{ insurance: PatientInsurance }>(
+      `/patients/${encodeURIComponent(patientId)}/insurances`,
+      { method: 'POST', body: payload, token },
+    );
+  },
+
+  updatePatientInsurance(
+    token: string,
+    patientId: string,
+    id: string,
+    payload: UpdatePatientInsurancePayload,
+  ): Promise<{ insurance: PatientInsurance }> {
+    return apiFetch<{ insurance: PatientInsurance }>(
+      `/patients/${encodeURIComponent(patientId)}/insurances/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: payload, token },
+    );
+  },
+
+  updatePatientInsuranceStatus(
+    token: string,
+    patientId: string,
+    id: string,
+    active: boolean,
+  ): Promise<{ insurance: PatientInsurance }> {
+    return apiFetch<{ insurance: PatientInsurance }>(
+      `/patients/${encodeURIComponent(patientId)}/insurances/${encodeURIComponent(id)}/status`,
+      { method: 'PATCH', body: { active }, token },
+    );
+  },
+
+  // -- Service Insurance Prices --
+  // reference_price_cents is a visual reference ONLY — never auto-populated.
+
+  listServiceInsurancePrices(
+    token: string,
+    params: { service_id?: string; provider_id?: string; plan_id?: string; active?: boolean } = {},
+  ): Promise<{ prices: ServiceInsurancePrice[] }> {
+    const q = new URLSearchParams();
+    if (params.service_id) q.set('service_id', params.service_id);
+    if (params.provider_id) q.set('provider_id', params.provider_id);
+    if (params.plan_id) q.set('plan_id', params.plan_id);
+    if (params.active !== undefined) q.set('active', String(params.active));
+    const qs = q.toString();
+    return apiFetch<{ prices: ServiceInsurancePrice[] }>(
+      `/insurance/service-prices${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  getServiceInsurancePrice(
+    token: string,
+    id: string,
+  ): Promise<{ price: ServiceInsurancePrice }> {
+    return apiFetch<{ price: ServiceInsurancePrice }>(
+      `/insurance/service-prices/${encodeURIComponent(id)}`,
+      { method: 'GET', token },
+    );
+  },
+
+  createServiceInsurancePrice(
+    token: string,
+    payload: CreateServiceInsurancePricePayload,
+  ): Promise<{ price: ServiceInsurancePrice }> {
+    return apiFetch<{ price: ServiceInsurancePrice }>('/insurance/service-prices', {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
+  updateServiceInsurancePrice(
+    token: string,
+    id: string,
+    payload: UpdateServiceInsurancePricePayload,
+  ): Promise<{ price: ServiceInsurancePrice }> {
+    return apiFetch<{ price: ServiceInsurancePrice }>(
+      `/insurance/service-prices/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: payload, token },
+    );
+  },
+
+  updateServiceInsurancePriceStatus(
+    token: string,
+    id: string,
+    active: boolean,
+  ): Promise<{ price: ServiceInsurancePrice }> {
+    return apiFetch<{ price: ServiceInsurancePrice }>(
+      `/insurance/service-prices/${encodeURIComponent(id)}/status`,
       { method: 'PATCH', body: { active }, token },
     );
   },

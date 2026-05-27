@@ -28,7 +28,7 @@
 - `errorHandler` nunca retorna stack/SQL/path; 500 vira `internal_error` genérico. Erros de parse de arquivo viram mensagens genéricas (nunca ecoam conteúdo da planilha).
 - Nunca expor `nome_original`/`nome_interno`/path/sha256/conteúdo do arquivo na API pública.
 
-## PII de Convênios (Sprint 4.7B)
+## PII de Convênios (Sprint 4.7B + 4.7C)
 
 - **`member_number`** (número de carteirinha) e **`holder_name`** (nome do titular) são PII pessoal — adicionados à lista de redação do `logger.ts` (layers 1/2/3) na Sprint 4.7B.
 - **List endpoints** de `patient_insurances` retornam `member_number` mascarado (`****1234`). **Detail endpoint** retorna o valor raw — só acessível a `dono_clinica` e `secretaria`.
@@ -36,6 +36,17 @@
 - **`notes`** em qualquer entidade de convênio nunca contém dado clínico — verificação de responsabilidade do operador; sem validação automática de conteúdo.
 - **`reference_price_cents`** de `service_insurance_prices` nunca auto-propaga para `amount_cents` — invariante do `financialChargeService` e `validateInsuranceForCharge`.
 - Profissional clínico bloqueado em todos os endpoints de convênio via `assertNotProfissional` (clinical grants check no service, não só no middleware).
+
+**Frontend (Sprint 4.7C + 4.7D) — proteção adicional de PII:**
+
+- **`holder_name` removido da view de lista (Sprint 4.7D):** originalmente exibido no card de listagem como "Titular: X". Detectado em security review como PII sem lazy-fetch gate. Corrigido: agora só aparece no formulário de edição, pré-preenchido a partir do detail query (mesmo padrão do `member_number`).
+- **`canWrite` correto (Sprint 4.7D):** `canWrite={true}` hardcoded corrigido para `canWrite={isOwner || papel === 'secretaria'}`. Evita que profissional_clinico que chegue ao painel (antes do 403 do backend) veja botões de escrita de carteirinhas.
+- **`member_number` raw NUNCA carregado eagerly** no `InsurancePanel`. A query `getPatientInsurance` só é ativada com `enabled: editing && !!token` — disparada exclusivamente quando o usuário abre o formulário de edição de uma carteirinha específica.
+- **`cancelEdit()` limpa o PII imediatamente:** `setRawMemberNumber('')`, `setEditHolder('')` e todos os campos do formulário são zerados antes de fechar o modal/form, sem esperar garbage collection.
+- **Lista de carteirinhas renderiza apenas `member_number_masked`** — a string raw (`member_number`) do detalhe nunca é passada para props de listagem.
+- **Sem PII em estado global:** `member_number` raw vive exclusivamente no estado local do `PatientInsCard` em modo edição; não sobe para o `InsurancePanel` nem para o contexto de auth.
+- **Sem PII em console.log, localStorage, sessionStorage ou parâmetros de URL** no `InsurancePanel`.
+- **`holder_name`** exibido apenas no formulário de edição (não na lista); segue o mesmo padrão de limpeza no `cancelEdit()`.
 
 ## CPF mascarado
 
