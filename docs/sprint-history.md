@@ -3565,4 +3565,86 @@ base, usuários smoke (`*@clinicbridge.local`) e audit_logs/clinical_read_audit 
 - Armazenamento persistente de PDF.
 - AWS.
 
+**Próxima sprint natural:** 4.4A (ADR Módulo Financeiro v0.1).
+
+---
+
+## Sprint 4.4A — ADR Módulo Financeiro v0.1 (docs/ADR-only)
+
+**Data:** 2026-05-27
+**Tipo:** docs/ADR-only (sem código, sem migration, sem env vars, sem AWS)
+**Habilitada por:** ADR 0011 + Sprints 4.3B–4.3D (QA hardening validado)
+
+### Objetivo
+
+Fechar todas as decisões de escopo, modelo de dados, permissões e riscos do
+Módulo Financeiro v0.1 antes de qualquer código. Autoriza a Sprint 4.4B.
+
+### Componentes entregues
+
+**Criados:**
+- `docs/adr/0012-financial-module-v0.md` — ADR completa (16 seções, Status: Accepted):
+  - **§1 Contexto:** clínicas usam planilhas/cadernos fora do sistema; falta rastreabilidade.
+  - **§2 Compromissos (10):** 1 entidade central; ciclo simples; sem delete físico; tenant isolation;
+    financeiro ≠ clínico; permissões por role existente; audit de escrita; logs sem `notes`/valores;
+    sem gateway; UX simples.
+  - **§3 Objetivo:** controle financeiro operacional simples — não ERP.
+  - **§4 Escopo v0.1:** criar/listar/detalhar/editar/pagar/cancelar cobranças; totalizadores;
+    histórico por paciente.
+  - **§5 Fora de escopo:** NFS-e, boleto, Pix automático, gateway, conciliação, TISS, DRE,
+    contas a pagar, cifra de coluna, diagnóstico/CID em `notes`.
+  - **§6 Modelo de dados:** tabela `financial_charges` (20 campos, 3 CHECKs de consistência,
+    4 índices; `amount_cents` em inteiro; `ON DELETE RESTRICT` em patient_id/created_by_user_id).
+  - **§7 Permissões:** dono+secretaria full; gestor view+pay+cancel; profissional sem acesso;
+    admin_sistema bloqueado por `requireClinic`; usa `requireRole` administrativo.
+  - **§8 Audit:** 4 eventos em `audit_logs` sem PII; falha aborta transação; sem audit de
+    leitura dedicado no v0.1.
+  - **§9 LGPD:** minimização em `notes`; finalidade operacional; sem delete físico (auditabilidade
+    contábil); sem conformidade fiscal declarada.
+  - **§10 UX:** aba "Financeiro" no app shell; cards de totalizadores; linguagem acessível
+    ("Cobranças", "Em aberto", "Marcar como pago"); aviso anti-clínico em `notes`.
+  - **§11 Endpoints:** 8 endpoints conceituais (`POST/GET/PATCH /financial/charges`,
+    `POST .../mark-paid`, `POST .../cancel`, `GET /financial/summary`,
+    `GET /patients/:id/charges`).
+  - **§12 Plano 4.4B:** 11 passos (migration → tipos → DAO → service → controller → rotas →
+    logger → smoke → SQL checks → docs → cleanup).
+  - **§13 AWS:** trilha continua pausada; `financial_charges` cresce linearmente sem novo dimensionamento.
+  - **§14 Riscos (9):** `notes` com diagnóstico; expectativa de gateway; inconsistência de status;
+    disputa com paciente; retenção sem política; inferência de situação financeira; cobranças sem
+    follow-up; conversão de moeda; cifra ausente.
+  - **§15 Oportunidades futuras:** NFS-e, Pix automático, gateway, split de pagamento, DRE (4.5),
+    convênios (4.6).
+  - **§16 Notas finais:** invariantes adicionadas; sem conformidade fiscal declarada.
+
+- `docs/financial-v0-scope.md` — companheiro operacional:
+  - Resumo executivo; ciclo de vida (diagrama); campos com imutabilidade; matriz de permissões;
+    endpoints cheat-sheet; catálogo audit; logger redaction; modelo de dados (schema + índices);
+    impacto merge B-safe; checklist 4.4B (migration, DAO, service, controller, smoke, SQL, docs);
+    checklist 4.4C (frontend); validações cheat-sheet; lista de fora de escopo.
+
+**Modificados:**
+- `CLAUDE.md` — sprint atual → 4.4A; ADR 0012 referenciada no cabeçalho; Fases Clinic OS
+  atualizadas com `4.3D ✅ 4.4A ✅`; restrições críticas sem alteração.
+- `docs/project-state.md` — última sprint → 4.4A.
+- `docs/sprint-history.md` — este bloco.
+- `docs/security-notes.md` — seção "Módulo Financeiro v0.1 — guardrails" adicionada.
+- `docs/roadmap-next-phase.md` — sprint table atualizada com 4.3B/4.3C/4.3D/4.4A ✅ + 4.4B ⏳.
+
+### Verificação
+
+- `git diff --check` rc=0 ✅
+- `git status --short` → apenas docs novos/modificados ✅
+- Zero código alterado ✅
+- Zero migrations ✅
+- Zero env vars ✅
+
+### Fora de escopo (esta sprint)
+
+- Qualquer código (migration, backend, frontend).
+- Gateway de pagamento; NFS-e; Pix automático.
+- AWS.
+- ICP-Brasil.
+
+**Próxima sprint natural:** 4.4B (implementação backend do Módulo Financeiro v0.1).
+
 **Próxima sprint natural:** 4.4 (financeiro v0.1 — ADR própria antes de código).

@@ -69,7 +69,11 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **4.2A** ✅ | ADR 0010 — escopo do Prontuário/Atendimento v0.1 (4 tabelas, 5 endpoints, roles em tabela paralela, audit de leitura paralelo, cifra de coluna fora). Operacional: `docs/clinical-encounters-v0-scope.md`. Autoriza 4.2B |
 | **4.2B–4.2E** ✅ | Implementação completa do Prontuário v0.1: migration + DAOs + services + endpoints + logger redaction 4 camadas + smoke 76/76 PASS (4.2B) → frontend drawer + roles panel (4.2C) → QA hardening (4.2D) → endpoint LGPD-art.18 `GET /clinical/read-audit` + `ClinicalReadAuditPanel` smoke 8/8 PASS (4.2E) |
 | **4.3A** ✅ | ADR 0011 — escopo de Documentos Médicos e Receitas v0.1 (5 tipos, 1 tabela `clinical_documents`, PDF on-demand, sem ICP-Brasil, cifra de coluna revisável). Operacional: `docs/medical-documents-v0-scope.md`. Autoriza 4.3B |
-| **4.3B** ⏳ | Implementação backend de Documentos Médicos v0.1 (migration `clinical_documents` + DAOs + services + `clinicalDocumentPdfService` + 8 endpoints + logger redaction estendido + smoke tests). Sem ADR nova |
+| **4.3B** ✅ | Implementação backend de Documentos Médicos v0.1 (migration `clinical_documents` + DAOs + services + `clinicalDocumentPdfService` + 8 endpoints + smoke 47/47 PASS). Sem ADR nova |
+| **4.3C** ✅ | Frontend de Documentos Médicos v0.1 (`ClinicalDocumentsPanel`, tab bar Atendimentos/Documentos, 7 API funcs + 8 tipos). typecheck/build ✅ |
+| **4.3D** ✅ | QA/hardening final de Documentos Médicos v0.1 (smoke 50/50 PASS, audit/logs verificados, cleanup, zero código novo) |
+| **4.4A** ✅ | ADR 0012 — escopo do Módulo Financeiro v0.1 (1 tabela `financial_charges`, ciclo pending→paid\|canceled, 8 endpoints, roles administrativas, sem gateway). Operacional: `docs/financial-v0-scope.md`. Autoriza 4.4B |
+| **4.4B** ⏳ | Implementação backend do Financeiro v0.1 (migration `financial_charges` + DAOs + services + 8 endpoints + logger redaction + smoke tests). Sem ADR nova |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.

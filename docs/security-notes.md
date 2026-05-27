@@ -648,4 +648,46 @@
   prescrição oficial é responsabilidade do profissional. UI alerta explicitamente.
 - **Biblioteca PDF**: avaliar CVEs antes do merge na 4.3B; `pnpm audit` no PR.
 - **Cifra de coluna**: `body` não cifrado no v0.1 (mesma postura da ADR 0010).
+
+## Módulo Financeiro v0.1 — guardrails (ADR 0012, Sprint 4.4A)
+
+> Sprint 4.4A (docs/ADR-only) entregue 2026-05-27. Regras vigentes a partir da Sprint 4.4B.
+
+- **Financeiro é administrativo — não clínico.** `financial_charges` **nunca** armazena
+  diagnóstico, CID, evolução, prescrição ou qualquer dado textual de saúde. Separação de
+  domínios é invariante desta ADR. Módulo usa `requireRole` (administrativo), **não**
+  `requireClinicalRole`.
+- **`profissional_clinico` sem acesso ao financeiro** por padrão no v0.1. Prevenção de
+  inferências cruzadas (profissional ver cobranças de pacientes que não atendeu). Revisável
+  em v0.2 com ADR aditiva.
+- **Sem delete físico em `financial_charges`.** `canceled` é o estado final negativo.
+  Auditabilidade contábil: histórico financeiro tem valor legal/contábil.
+- **`status='paid'` e `status='canceled'` são imutáveis.** Sem PATCH após transição.
+  Sem transição reversa.
+- **`amount_cents > 0` — CHECK constraint.** Sem cobranças zeradas ou negativas.
+- **`notes` é campo administrativo** — nunca deve conter diagnóstico, CID, evolução ou dado
+  clínico. Aviso obrigatório na UI (Sprint 4.4C). Sem validação automática de conteúdo.
+- **Logger redaction** a estender na 4.4B: `description`, `notes`, `cancel_reason` (top-level
+  e wildcards `*.description`, `*.notes`, `body/payload.description`, `body/payload.notes`).
+  `amount_cents` não deve aparecer em logs de produção — apenas em debug local.
+- **Audit de escrita** em `audit_logs` para create/update/mark_paid/cancel. Falha de audit
+  **aborta a transação** — mesmo padrão ADRs 0007, 0010, 0011. Sem PII em audit: só UUIDs.
+  Sem `description`, `amount_cents`, `notes` nos audit_logs.
+- **Sem audit de leitura dedicado** no v0.1 — financeiro é administrativo. `audit_logs`
+  de escrita é suficiente. Revisável em v0.2.
+- **Tenant isolation** obrigatória: `clinica_id` em toda query. Sem `listAll`. Cross-tenant
+  → 404 genérico (anti-enumeração).
+- **Paciente ativo + não-mesclado**: criar cobrança para `status='archived'` ou
+  `merged_into_id IS NOT NULL` → 404 `patient_not_found` (anti-enumeração).
+- **`created_by_user_id` injetado pelo service** a partir do JWT — nunca confia no body.
+  CAS no DAO para mark-paid/cancel: mismatch de status → 400.
+- **ON DELETE RESTRICT** em `patient_id` e `created_by_user_id`: histórico financeiro não
+  pode desaparecer. Arquivar paciente (soft-delete) continua permitido — o RESTRICT bloqueia
+  apenas DELETE físico, que é proibido por invariante.
+- **Sem integração de gateway** no v0.1: sem Pix automático, sem boleto, sem cartão via API.
+  Registro manual de recebimento apenas.
+- **Cifra de coluna**: `amount_cents` e `notes` em plaintext no v0.1. Confia em: RDS
+  encryption at rest + TLS in transit + controles de app. Revisável antes de produção.
+- **Sem conformidade fiscal/contábil/tributária declarada.** Validação jurídica/contábil
+  externa obrigatória antes de qualquer dado financeiro real em produção.
   Revisável antes de produção real se jurídico/regulatório exigir.
