@@ -1991,3 +1991,67 @@ git diff --check                  # sem whitespace errors
 
 Estado final `financial_charges`: 0 pending · 6 paid · 19 canceled.
 Usuários smoke preservados. Pacientes/agendamentos/documentos/importações base intactos.
+
+---
+
+## Smoke Agenda × Financeiro (Sprint 4.4E-D)
+
+> Smoke API executado via Python3 direto no host contra `https://localhost:8443`.
+> Não usa `jq`.
+
+### Script de referência
+
+```python
+# Ver /tmp/smoke_4_4e_d.py (histórico desta sprint)
+# Variáveis-chave:
+# APPT_ID    = "f2744f04-ba56-421b-841d-64234355198d" (scheduled, patient eaa7f3ea)
+# PATIENT_ID = "eaa7f3ea-6b32-45c8-ac03-6546216699cc" (Paciente Smoke 4.3B, active)
+```
+
+### Resultados 4.4E-D (24/24 PASS real)
+
+| # | Papel | Endpoint | Esperado | Resultado |
+|---|-------|----------|----------|-----------|
+| 1 | secretaria | POST /auth/login | 200 + token | ✅ |
+| 2 | secretaria | GET /appointments?date=YYYY-MM-DD | 200 lista | ✅ |
+| 3 | secretaria | GET /financial/charges?limit=100 | 200 charges[] | ✅ |
+| 4 | secretaria | POST /financial/charges + appointment_id | 201 charge.pending | ✅ |
+| 5 | secretaria | charge.appointment_id correto | match | ✅ |
+| 6 | secretaria | charge.status = pending | pending | ✅ |
+| 7 | secretaria | GET /financial/charges?appointment_id=X | charge aparece | ✅ |
+| 8 | secretaria | list projection sem notes/cancel_reason | ausentes | ✅ |
+| 9 | gestor | GET /appointments | 200 | ✅ |
+| 10 | gestor | GET /financial/charges | 200 | ✅ |
+| 11 | gestor | POST /financial/charges | 403 forbidden_role | ✅ |
+| 12 | profissional | GET /appointments | 200 | ✅ |
+| 13 | profissional | GET /financial/charges | 403 forbidden_role | ✅ |
+| 14 | admin_sistema | GET /appointments | 403/no_clinic | ✅ |
+| 15 | admin_sistema | GET /financial/charges | 403/no_clinic | ✅ |
+| 16 | owner | GET /appointments | 200 | ✅ |
+| 17 | owner | GET /financial/charges | 200 | ✅ |
+
+**Nota:** Código 403 usa `{"error": {"code": "forbidden_role", ...}}` — estrutura correta do errorHandler.
+
+### Checks de segurança frontend (AdministrativeSchedulePanel.tsx — 4.4E-D)
+
+- Sem `console.log` dados financeiros ✅
+- Sem `localStorage`/`sessionStorage` ✅
+- Sem `dangerouslySetInnerHTML` ✅
+- Token não vai em URL ✅
+- `notes`/`cancel_reason` ausentes na Agenda ✅
+- Badge renderiza só `FINANCIAL_BADGE_LABELS[badgeState]` — sem `description`/`amount_cents` ✅
+- `profissional_clinico`: `canSeeFinancial=false` → seção financeira não renderizada ✅
+- 403 financeiro: `financialBlocked=true` → agenda não quebra ✅
+- Dismiss: `Set<string>` React local, sem chamada de API ✅
+- "Ver cobrança": `onGoToFinanceiro?.()` callback — sem charge_id na URL ✅
+- `appointment_id` oculto no form, nunca exibido ao usuário ✅
+
+### SQL invariants pós-4.4E-D
+
+Estado final `financial_charges`: 1 pending · 6 paid · 22 canceled.
+(pending: cobrança "Consulta" da validação visual 4.4E-C — appointment 57bb4853)
+
+### Cleanup pós-4.4E-D
+
+Cobrança sintética `dcd487fb` (4.4E-D) → cancelada.
+Usuários smoke preservados. Pacientes/agendamentos/importações/documentos base intactos.

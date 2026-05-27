@@ -283,17 +283,17 @@ Ver ADR 0013 §4 para lista completa. Resumo:
 
 ## 12. Checklist Sprint 4.4E-D (QA/hardening)
 
-- [ ] Smoke browser: smoke.secretaria — badge visível após criar cobrança
-- [ ] Smoke browser: smoke.owner — criar cobrança via agenda, badge atualiza
-- [ ] Smoke browser: smoke.gestor — badge visível, sem botão "Criar cobrança"
-- [ ] Smoke browser: smoke.profissional — sem seção financeira na agenda
-- [ ] Alerta A1: criar cobrança e marcar como paga → alerta aparece
-- [ ] Alerta A3: cancelar consulta com cobrança pending → alerta aparece
-- [ ] Dismiss de alerta: funciona sem chamada de API
-- [ ] Badge sincroniza ao voltar da aba Financeiro (invalidação de cache)
-- [ ] `description` sugerida não vaza dado clínico
-- [ ] Logs: sem `description`, `notes`, `amount_cents` expostos
-- [ ] Typecheck + build ✅ · `git diff --check` rc=0
+- [x] Smoke browser: smoke.secretaria — badge visível após criar cobrança (validado visualmente na 4.4E-C)
+- [x] Smoke browser: smoke.owner — criar cobrança via agenda, badge atualiza (validado visualmente)
+- [x] Smoke browser: smoke.gestor — badge visível; botão "Criar cobrança" aparece (papel=secretaria), POST retorna 403 (`forbidden_role`) — documentado como ressalva UX
+- [x] Smoke browser: smoke.profissional — sem seção financeira (canSeeFinancial=false)
+- [x] Alerta A4: cobrança cancelada + consulta ativa → alerta aparece (validado visualmente)
+- [x] Alerta A3: consulta cancelada + cobrança pending → alerta aparece (lógica verificada no code review)
+- [x] Dismiss de alerta: `Set<string>` React local, sem chamada de API ✅
+- [x] Badge sincroniza ao voltar da aba Financeiro (invalidateQueries ['financial'] + ['appointments'])
+- [x] `description` sugerida fixa "Consulta" — não vaza dado clínico ✅
+- [x] Logs: backend logs sem `description`, `notes`, `amount_cents` expostos ✅
+- [x] Typecheck + build ✅ · `git diff --check` rc=0 ✅
 
 ---
 

@@ -4055,3 +4055,173 @@ permissões e segurança. Zero mudanças de código, schema, migration ou env.
 - `git status --short` — apenas docs modificados/criados ✅
 
 **Próxima sprint natural:** 4.4E-B (avaliar se endpoint novo é necessário) ou direto para 4.4E-C (frontend badge + alertas + botão criar cobrança).
+
+---
+
+## Sprint 4.4E-B — Avaliação backend Agenda × Financeiro (docs-only)
+
+**Entregue:** 2026-05-27
+**Objetivo:** Avaliar se era necessário criar endpoint novo para a integração.
+**Decisão:** Reutilizar endpoints existentes. Nenhum backend novo.
+
+- `GET /financial/charges?limit=100` → frontend monta `Map<appointment_id, charge>`.
+- `POST /financial/charges` com `appointment_id` — já aceita e valida.
+- `GET /financial/charges?appointment_id=<id>` — já filtra corretamente.
+- Endpoint `GET /appointments/:id/charges` desnecessário para MVP.
+
+`git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.**
+
+**Próxima sprint natural:** 4.4E-C (frontend badge + alertas + botão criar cobrança).
+
+---
+
+## Sprint 4.4E-C — Frontend Agenda × Financeiro v0.1
+
+**Entregue:** 2026-05-27
+**Objetivo:** Implementar integração visual Agenda × Financeiro no frontend, sem backend novo.
+
+### Decisões registradas
+
+1. **Badge financeiro** — 5 estados renderizados por agendamento na timeline. `badgeState !== 'none'`
+   para exibir. `chargeMap: Map<string, FinancialChargeListItem>` construído no cliente a partir de
+   `GET /financial/charges?limit=100`. `appointmentFinancialState()` derivando estado.
+
+2. **Alertas A1–A4** — dismiss local em `Set<string>` React. Nenhuma chamada de API no dismiss.
+   `getFinancialAlerts()` só usa `status` e `due_date` — nunca `description`, `notes` ou `amount_cents`.
+
+3. **Criar cobrança inline** — form colapsível por card. `patient_id` readonly, `appointment_id` oculto,
+   descrição pré-preenchida "Consulta" (editável), aviso anti-clínico obrigatório.
+   `createChargeMutation` invalida `['financial']` + `['appointments']` no sucesso.
+
+4. **Ver cobrança** — `onGoToFinanceiro?.()` callback do Dashboard (`setTab('financeiro')`).
+   Sem charge ID na URL, sem query params financeiros.
+
+5. **Gestor (papel=secretaria + grant)** — vê badge + alertas + "Ver cobrança"; botão "Criar cobrança"
+   visível (papel=secretaria), mas backend retorna 403 `forbidden_role` na tentativa.
+
+6. **Profissional** — `isPapelFinanceiro = false` → query de cobranças não executada;
+   `canSeeFinancial = false` → seção financeira inteira oculta.
+
+### Segurança verificada
+
+- Sem `console.log`, `localStorage`, `sessionStorage`, `dangerouslySetInnerHTML`.
+- Badge renderiza apenas `FINANCIAL_BADGE_LABELS[badgeState]` — sem `description`, `notes`, `amount_cents`.
+- `appointment_id` / `charge.id` nunca expostos visualmente ao usuário.
+- `onGoToFinanceiro?.()` não passa IDs em URL.
+- 403 financeiro tratado como ausência de acesso (não quebra a agenda).
+
+### Arquivos alterados
+
+- `frontend/src/components/AdministrativeSchedulePanel.tsx` — reescrito com badge, alertas, form, callback.
+- `frontend/src/components/AdministrativeSchedulePanel.module.css` — 18 classes novas para seção financeira.
+- `frontend/src/views/Dashboard.tsx` — `onGoToFinanceiro={() => setTab('financeiro')}` passado.
+
+### Checks finais
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `pnpm --filter backend typecheck` ✅
+- `git diff --check` rc=0 ✅
+
+**Validação visual pelo usuário:** badge financeiro, alerta A4, criar cobrança, badge→pending, ver cobrança, Financeiro atualizado.
+
+**Próxima sprint natural:** 4.4E-D (QA/hardening).
+
+---
+
+## Sprint 4.4E-D — QA/Hardening Agenda × Financeiro v0.1
+
+**Entregue:** 2026-05-27
+**Objetivo:** Validar ponta a ponta a integração — code review segurança, smoke API, SQL/audit, cleanup.
+
+### Parte A — Code review segurança frontend
+
+Revisão de `AdministrativeSchedulePanel.tsx`, `Dashboard.tsx`:
+
+| Check | Resultado |
+|-------|-----------|
+| Sem `console.log` dados financeiros | ✅ PASS |
+| Sem `localStorage/sessionStorage` | ✅ PASS |
+| Sem `dangerouslySetInnerHTML` | ✅ PASS |
+| Token não vai em URL | ✅ PASS |
+| `notes`/`cancel_reason` não aparecem na Agenda | ✅ PASS |
+| `description` não aparece no badge | ✅ PASS |
+| `amount_cents` não aparece no badge | ✅ PASS |
+| `profissional_clinico` sem badge/alertas/botões | ✅ PASS (canSeeFinancial=false) |
+| 403 financeiro não quebra Agenda | ✅ PASS (financialBlocked gate) |
+| Dismiss local, sem API call | ✅ PASS (Set<string> React) |
+| Nenhum alerta executa ação automática | ✅ PASS |
+| "Ver cobrança" sem charge_id na URL | ✅ PASS (onGoToFinanceiro callback) |
+| `appointment_id` não exibido para usuário | ✅ PASS |
+
+### Parte B — Smoke backend/API (24/24 PASS real)
+
+| Teste | Resultado |
+|-------|-----------|
+| Login 5 smoke users | ✅ |
+| secretaria GET /appointments → 200 | ✅ |
+| secretaria GET /financial/charges?limit=100 → 200 | ✅ |
+| secretaria POST /financial/charges + appointment_id → 201 | ✅ |
+| POST charge.appointment_id correto | ✅ |
+| POST charge.status = pending | ✅ |
+| GET /financial/charges?appointment_id → charge aparece | ✅ |
+| list projection SEM notes/cancel_reason | ✅ |
+| gestor GET /appointments → 200 | ✅ |
+| gestor GET /financial/charges → 200 | ✅ |
+| gestor POST /financial/charges → 403 `forbidden_role` | ✅ |
+| profissional GET /appointments → 200 | ✅ |
+| profissional GET /financial/charges → 403 `forbidden_role` | ✅ |
+| admin GET /appointments → 403/no_clinic_context | ✅ |
+| admin GET /financial/charges → 403/no_clinic_context | ✅ |
+| owner GET /appointments → 200 | ✅ |
+| owner GET /financial/charges → 200 | ✅ |
+
+Nota: Respostas 403 usam `{"error": {"code": "forbidden_role", ...}}` (errorHandler padrão).
+
+### Parte C — QA browser/manual
+
+Sprint 4.4E-C foi validada visualmente pelo usuário antes da 4.4E-D:
+- Badge financeiro na Agenda ✅
+- Alerta A4 (cobrança cancelada + consulta ativa) ✅
+- Criar cobrança inline → badge muda para "Pagamento pendente" ✅
+- Botão "Ver cobrança" navega para aba Financeiro ✅
+- Totalizadores do Financeiro atualizam ✅
+
+### Parte D — SQL/log/audit (9/9)
+
+| Invariante | Resultado |
+|-------|-----------|
+| pending/paid/canceled distribuição válida | ✅ 1/6/22 |
+| Cross-tenant appointment_id/patient_id divergente = 0 | ✅ |
+| pending SEM paid_at/paid_by_user_id = 0 | ✅ |
+| paid COM paid_at = 0 violações | ✅ |
+| amount_cents > 0 para todos | ✅ |
+| canceled COM canceled_at = 0 nulos | ✅ |
+| audit_logs contém financial.charge.created.success (4.4E-D) | ✅ |
+| audit_logs sem notes/description/amount em recurso_id | ✅ |
+| Backend logs sem dados financeiros | ✅ |
+
+### Parte E — Cleanup
+
+- Cobrança sintética 4.4E-D (`dcd487fb`) → cancelada ✅
+- Usuários smoke preservados (5 × `*@clinicbridge.local`) ✅
+- 1 cobrança pending remanescente: cobrança "Consulta" da validação visual 4.4E-C (appointment 57bb4853) — preservada
+- Pacientes/agendamentos/importações/documentos base intactos ✅
+
+### Ressalvas documentadas
+
+- "Ver cobrança" navega para aba Financeiro mas não abre automaticamente a cobrança específica
+  (sem `setSelectedChargeId` passado — usuário localiza a cobrança na lista do FinancialPanel).
+- Badge usa `GET /financial/charges?limit=100` — se clínica tiver >100 cobranças recentes,
+  cobranças mais antigas não aparecem no badge da agenda. Agregador futuro previsto em ADR 0013.
+- Gestor vê botão "Criar cobrança" (papel=secretaria indistinguível no frontend) mas recebe
+  403 ao tentar criar — erro exibido no form, sem efeito silencioso.
+- Convênios seguem fora até 4.6. Sem automação de status de consulta/cobrança. Footer/landing/demo ficam para polish futuro.
+
+### Checks finais
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅
+- `migrate:status` 15 applied / 0 pending ✅
+- `git diff --check` rc=0 ✅
+
+**Próxima sprint natural:** 4.5 (ADR 0014 Relatórios gerenciais v0.1).
