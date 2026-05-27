@@ -21,6 +21,7 @@
 > - **Arquitetura clínica + roles granulares + audit de leitura + LGPD clínica (Sprint 4.1, docs/ADR-only; bloqueia 4.2+; gate de retomada AWS atualizado):** ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` + operacional `docs/clinical-architecture-and-permissions.md`
 > - **Prontuário/Atendimento clínico v0.1 — escopo do módulo (Sprint 4.2A, docs/ADR-only; autoriza Sprint 4.2B; sem migration/endpoint ainda; cifra a nível de coluna fora do v0.1 — decisão revisável):** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` + operacional `docs/clinical-encounters-v0-scope.md`
 > - **Documentos Médicos e Receitas v0.1 — escopo do módulo (Sprint 4.3A, docs/ADR-only; autoriza Sprint 4.3B; PDF on-demand; sem ICP-Brasil; cifra de coluna revisável):** ADR `docs/adr/0011-medical-documents-prescriptions-v0.md` + operacional `docs/medical-documents-v0-scope.md`
+> - **Módulo Financeiro v0.1 — escopo do módulo (Sprint 4.4A, docs/ADR-only; autoriza Sprint 4.4B; 1 tabela `financial_charges`; ciclo pending→paid|canceled; roles administrativas; sem gateway; sem audit leitura dedicado):** ADR `docs/adr/0012-financial-module-v0.md` + operacional `docs/financial-v0-scope.md`
 > - **Runbook Nginx + backend containerizado local/staging (`infra/nginx/`, `backend/Dockerfile`, profile `edge`):** `docs/nginx-local-staging-runbook.md`
 > - **Demo/piloto v0.1 (Sprint 3.20; dados fictícios, não clínico):** `docs/demo-data/README.md` (+ `docs/demo-data/pacientes-demo.csv`), `docs/demo-pilot-v0.1-script.md`, `docs/demo-pilot-v0.1-checklist.md` — seed dev-only de agenda: `backend/scripts/seed-demo-scheduling.ts` (`pnpm --filter backend seed:demo` / `seed:demo:clean`)
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
@@ -28,12 +29,16 @@
 
 ## Estado atual (resumido — atualizado 2026-05-27)
 
-**Sprint atual: 4.3D** (entregue) — **QA/hardening final de Documentos Médicos v0.1.**
-Smoke 50/50 PASS. Audit/logs verificados (clinical_read_audit: list/read/pdf.downloaded;
-audit_logs: created/updated/finalized/canceled). Cleanup de dados sintéticos. Zero código novo.
-**Sem migration, sem AWS, sem ICP-Brasil.** Nota técnica: validação de keywords PDF via hex
-extraction (PDFKit codifica texto como tokens `<hex>` em TJ operators com kerning intercalado;
-buscar raw ASCII falha — usar `extractPdfHexText()` + `kwHex()`).
+**Sprint atual: 4.4A** (entregue) — **ADR Módulo Financeiro v0.1 (docs/ADR-only).**
+ADR 0012 + `docs/financial-v0-scope.md`. 1 tabela `financial_charges`; ciclo
+`pending → paid | canceled`; 8 endpoints conceituais; roles administrativas (dono+secretaria
+full; gestor view+pay+cancel; profissional sem acesso); audit de escrita em `audit_logs`;
+sem gateway; sem audit de leitura dedicado.
+**Sem código, sem migration, sem env vars, sem AWS.**
+
+**Sprint anterior: 4.3D** (entregue 2026-05-27) — **QA/hardening final de Documentos Médicos v0.1.**
+Smoke 50/50 PASS. Audit/logs verificados. Cleanup de dados sintéticos. Zero código novo.
+**Sem migration, sem AWS, sem ICP-Brasil.**
 
 **Sprint anterior: 4.3C** (entregue 2026-05-26) — **Frontend de Documentos Médicos e Receitas v0.1.**
 Aba "Documentos" no drawer `ClinicalPatientPane`; `ClinicalDocumentsPanel` (lista, criar, detalhe,
@@ -197,10 +202,12 @@ operacional `docs/medical-documents-v0-scope.md` (docs-only; 5 tipos; 1 tabela;
 PDF on-demand; sem ICP-Brasil) → **4.3B ✅** implementação backend (migration +
 DAOs + services + PDF + 8 endpoints + smoke 47/47 PASS) → **4.3C ✅** frontend
 (aba Documentos no drawer; `ClinicalDocumentsPanel`; tab bar; 7 API funcs) → **4.3D ✅**
-QA/hardening final (smoke 50/50 PASS; audit/logs verificados; cleanup) → **4.4** financeiro → **4.5** relatórios
-gerenciais → **4.6** convênios/faturamento básico (TISS/TUSS real fora) →
-**4.7** estoque básico (medicamentos controlados/ANVISA fora). Cada **fase
-nova** exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
+QA/hardening final (smoke 50/50 PASS; audit/logs; cleanup) → **4.4A ✅** ADR 0012 +
+`docs/financial-v0-scope.md` (docs-only; `financial_charges`; pending→paid|canceled;
+roles admin; sem gateway) → **4.4B** implementação backend financeiro → **4.4C** frontend
+financeiro → **4.5** relatórios gerenciais → **4.6** convênios/faturamento básico
+(TISS/TUSS real fora) → **4.7** estoque básico (medicamentos controlados/ANVISA fora).
+Cada **fase nova** exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **Este MVP NÃO está pronto para produção** — ver P1 em
 `docs/security-notes.md`. Nunca descrever como "pronto para produção".
@@ -294,8 +301,10 @@ conceitual e audit de leitura). Sequência de fases administrativas:
   8 tipos; staleTime: 0; PDF blob sem token em URL; aviso jurídico ADR 0011 §10.2;
   typecheck/build ✅) → **4.3D ✅**
   QA/hardening final (smoke 50/50 PASS; audit/logs verificados; cleanup; sem código novo) →
-  **4.4** financeiro
-  v0.1 → **4.5** relatórios gerenciais v0.1 → **4.6** convênios/faturamento
+  **4.4A ✅** ADR 0012 módulo financeiro v0.1 (docs-only; 1 tabela `financial_charges`;
+  ciclo pending→paid|canceled; roles admin; sem gateway; operacional `docs/financial-v0-scope.md`) →
+  **4.4B** implementação backend financeiro → **4.4C** frontend financeiro →
+  **4.5** relatórios gerenciais v0.1 → **4.6** convênios/faturamento
   básico v0.1 (TISS/TUSS real fora) → **4.7** estoque básico v0.1
   (medicamentos controlados/ANVISA fora).
   **Fases futuras (sem número):** IA clínica assistiva (depois de 4.2 madura),
@@ -304,7 +313,7 @@ conceitual e audit de leitura). Sequência de fases administrativas:
   Detalhe: `docs/product-clinic-os-roadmap.md`.
 - **Trilha AWS (pausada estrategicamente):** **3.41A ✅** plano operacional →
   **3.41B-0 ✅** runbook executável → **3.41B** execução real ⏸️ → **3.42** go/no-go ⏸️
-  → **3.43** piloto ⏸️. Gate de retomada: ADR 0010 + ADR 0011 aceitas ✅ +
+  → **3.43** piloto ⏸️. Gate de retomada: ADR 0010 + ADR 0011 + ADR 0012 aceitas ✅ +
   reavaliação de dimensionamento RDS/EBS/KMS para dados clínicos + decisão sobre
   KMS CMK dedicada + região `sa-east-1` preferida por LGPD.
 - **P1 pendentes antes de prod:** bucket S3 + IAM + agendamento + alertas do backup offsite

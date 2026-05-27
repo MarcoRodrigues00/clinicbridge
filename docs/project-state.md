@@ -7,7 +7,24 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.3D** (entregue 2026-05-27) — **QA/hardening final de Documentos Médicos v0.1.**
+**Sprint 4.4A** (entregue 2026-05-27) — **ADR Módulo Financeiro v0.1 (docs/ADR-only).**
+ADR 0012 + `docs/financial-v0-scope.md`. Fecha o escopo do módulo financeiro e autoriza a Sprint 4.4B.
+**Sem código, sem migration, sem env vars, sem AWS.**
+
+**Componentes entregues:**
+- `docs/adr/0012-financial-module-v0.md` — ADR completa (16 seções, Status: Accepted):
+  1 tabela `financial_charges`; ciclo de vida `pending → paid | canceled`; 8 endpoints;
+  matriz de permissões (secretaria/dono full; gestor view+pay+cancel; profissional sem acesso);
+  audit de escrita em `audit_logs`; sem audit de leitura dedicado; logger redaction de
+  `description`/`notes`/`cancel_reason`; LGPD postura; diretrizes UX; 9 riscos documentados.
+- `docs/financial-v0-scope.md` — companheiro operacional (checklists 4.4B + 4.4C, matriz,
+  endpoints, catálogo audit, modelo de dados, validações, fora de escopo).
+
+**`git diff --check`** rc=0 · **`git status --short`** apenas docs novos/modificados.
+
+---
+
+**Sprint anterior: 4.3D** (entregue 2026-05-27) — **QA/hardening final de Documentos Médicos v0.1.**
 Smoke 50/50 PASS. Audit/logs verificados. Cleanup de dados sintéticos. Zero mudanças de código.
 **Sem migration, sem AWS, sem ICP-Brasil.**
 
