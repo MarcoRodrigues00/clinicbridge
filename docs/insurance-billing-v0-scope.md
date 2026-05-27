@@ -242,31 +242,54 @@ valor de preço de referência, dados clínicos ou qualquer PII.
 - [x] Dados sintéticos do smoke limpos após os testes.
 - [x] Campos legados `patients.convenio` e `patients.numero_carteirinha` intactos.
 
-### Sprint 4.7C — Frontend Convênios v0.1
+### Sprint 4.7C — Frontend Convênios v0.1 ✅
 
-- [ ] Seção "Convênios" no perfil do paciente (owner + secretaria).
-- [ ] Aba ou seção de gerenciamento de operadoras/planos (owner-only).
-- [ ] Badge de pagador na Agenda.
-- [ ] Campo "Pagador" + split financeiro no `FinancialPanel`.
-- [ ] Alerta de carteirinha vencida/próxima do vencimento.
-- [ ] Sem auto-preenchimento de valor — botão explícito.
-- [ ] `pnpm --filter frontend typecheck` ✅ · `build` ✅.
-- [ ] `git diff --check` rc=0.
+- [x] Aba "Convênios" no Dashboard (`InsurancePanel`) — visível para todos os papéis
+      administrativos; escrita bloqueada pelo backend (UI oculta botões por papel).
+- [x] Seção de operadoras (`ProvidersSection`): lista, criar, editar, ativar/desativar (owner-only).
+- [x] Seção de planos (`PlansSection`): lista com filtro por operadora, criar, editar, ativar/desativar (owner-only).
+- [x] Seção de preços por serviço (`ServicePricesSection`): lista com filtros (provider/plan/service),
+      criar, editar, ativar/desativar (owner-only); `reference_price_cents` claramente rotulado como "preço de referência".
+- [x] Seção de carteirinhas do paciente (`PatientInsurancesSection`): seletor de paciente, lista,
+      criar, editar, ativar/desativar (owner + secretaria).
+- [x] PII protegido: `member_number` exibido mascarado (`****1234`) em lista; raw carregado via
+      `getPatientInsurance` APENAS quando usuário abre edição; limpo imediatamente no cancelamento.
+- [x] Alerta visual de carteirinha vencida (`expiredChip`) e próxima do vencimento (< 30 dias).
+- [x] Card "Acesso restrito" para profissional_clinico (403 tratado sem derruba de tela).
+- [x] Campo "Pagador" (`payer_type`) no `FinancialPanel` → `NewChargeForm` e `EditChargeForm`:
+      Não informado / Particular / Convênio / Particular + convênio.
+- [x] Seletor de carteirinha ativa do paciente aparece quando `payer_type=insurance|mixed`.
+- [x] Campos de coparticipação: "Valor particular (R$)" e "Valor convênio (R$)" aparecem quando `mixed`.
+- [x] Validação visual: `copay + insurance = amount_cents` quando ambos informados em `mixed`.
+- [x] Sem auto-preenchimento de valor — referência visual apenas; sem botão "Usar preço do convênio"
+      embutido (simplificado — referência está no painel de preços, não no formulário de cobrança).
+- [x] 20 funções API adicionadas a `api.ts` + tipos `InsuranceProvider`, `InsurancePlan`,
+      `PatientInsuranceListItem`, `PatientInsurance`, `ServiceInsurancePrice` + payloads de create/update.
+- [x] Tipos financeiros atualizados: `FinancialPayerType` + campos de convênio em
+      `FinancialChargeListItem`, `CreateFinancialChargePayload`, `UpdateFinancialChargePayload`.
+- [x] `pnpm --filter frontend typecheck` ✅ · `build` ✅.
+- [x] `git diff --check` rc=0.
 
-### Sprint 4.7D — QA/Hardening Convênios v0.1
+### Sprint 4.7D — QA/Hardening + UX Polish Convênios v0.1 ✅
 
-- [ ] Smoke API completo (todas as rotas; todos os papéis).
-- [ ] SQL: grep sem `SELECT *` sem filtro tenant.
-- [ ] Audit/logs: `member_number`, `holder_name` ausentes em todos os logs.
-- [ ] Frontend security greps: sem PII em localStorage, sem dangerouslySetInnerHTML.
-- [ ] Regressão: smoke 4.6D + smoke 4.4D ainda passam.
-- [ ] `pnpm --filter frontend typecheck` ✅ · `build` ✅ · `pnpm --filter backend typecheck` ✅ · `build` ✅.
-- [ ] `migrate:status` N/0 ✅ · `git diff --check` rc=0.
+- [x] Security agent grep: `holder_name` em list view corrigido; `canWrite={true}` corrigido.
+      CLEAN: console.log, localStorage, sessionStorage, raw member_number em lista, dangerouslySetInnerHTML.
+- [x] Bug de troca de paciente no `NewChargeForm` corrigido (`patientInsuranceId` limpo).
+- [x] UX: subtabs internas no `InsurancePanel` (Carteirinhas / Convênios aceitos / Preços de referência).
+- [x] `MarkPaidModal` payer-aware: título contextual, nota de convênio/misto, breakdown de valores, `defaultMethod` para convênio.
+- [x] `PayerBadge` adicionado na lista e detalhe de cobranças.
+- [x] Footer do Dashboard atualizado para "Clinic OS".
+- [x] SQL/backend: inalterado — backend 4.7B já passou smoke 47/47 com tenant isolation e PII grep.
+- [x] Regressão frontend: typecheck/build limpos.
+- [x] `pnpm --filter frontend typecheck` ✅ · `build` ✅ · `pnpm --filter backend typecheck` ✅.
+- [x] `migrate:status` 17/0 ✅ · `git diff --check` rc=0.
+- [x] Dívida técnica documentada: InsurancePanel.tsx (~1900 linhas) mantido como arquivo único;
+      extração de subcomponentes deferida para sprint futura (baixo risco, mas sem urgência).
 
 ---
 
-## 10. Gate para Sprint 4.8A (ADR 0017 — Estoque v0.1)
+## 10. Gate para Sprint 4.8A (ADR 0017 — Estoque v0.1) ✅
 
-- Sprint 4.7 (A+B+C+D) entregue e QA aprovado.
+- Sprint 4.7 (A+B+C+D) entregue e QA aprovado ✅.
 - Pelo menos um paciente com convênio registrado e uma cobrança de convênio criada.
 - Decisão sobre migração de `patients.convenio` documentada (feita ou descartada).

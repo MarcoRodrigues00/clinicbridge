@@ -971,3 +971,80 @@
     justify-content: center;
   }
 }
+
+/* ── Payer badge (Convênios v0.1 — Sprint 4.7D) ── */
+
+.payerBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.payerNull {
+  color: var(--text-3, var(--text-2));
+  font-size: 0.82rem;
+}
+
+.payerPrivate {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-2);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.payerInsurance {
+  background: rgba(34, 211, 238, 0.08);
+  color: var(--cyan-soft);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+}
+
+.payerMixed {
+  background: rgba(251, 191, 36, 0.08);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.22);
+}
+
+.tdPayer {
+  white-space: nowrap;
+}
+
+/* ── Mark Paid Modal — payer context ── */
+
+.modalPayerNote {
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--r-sm);
+  font-size: 0.83rem;
+  line-height: 1.5;
+  color: var(--cyan-soft);
+  background: rgba(34, 211, 238, 0.06);
+  border: 1px solid rgba(34, 211, 238, 0.18);
+}
+
+.modalPayerNoteMixed {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.06);
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
+.modalPayerBreakdown {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.82rem;
+  color: var(--text-1);
+}
+
+.modalPayerRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.modalPayerLabel {
+  color: var(--text-2);
+}

@@ -5074,3 +5074,193 @@ de adicionar colunas nullable a `financial_charges`.
 **Sprint 4.7B entregue.** Gate para 4.7C aberto.
 
 **Próxima sprint:** **4.7C** Frontend Convênios v0.1.
+
+---
+
+## Sprint 4.7C — Frontend Convênios v0.1 (2026-05-27)
+
+### Objetivo
+
+Implementar o frontend completo de Convênios v0.1: aba "Convênios" no Dashboard
+(`InsurancePanel`), integração de `payer_type` no `FinancialPanel`, tipos e funções API
+em `api.ts`. Zero backend novo, zero migration, zero nova tabela.
+
+### Invariantes mantidos
+
+- `reference_price_cents` é referência visual — nunca auto-popula `amount_cents`.
+- `member_number` exibido mascarado em lista; raw carregado APENAS na abertura do edit;
+  limpo imediatamente no cancelamento/fechamento do formulário de edição.
+- Sem TISS/TUSS, sem dado clínico, sem PII em `console.log`/`localStorage`/URL.
+- Sem auto-propagação de valor no formulário de cobrança — humano decide.
+- Backend é a defesa real; UI oculta botões por papel como UX (não segurança).
+
+### Arquivos criados
+
+- `frontend/src/components/InsurancePanel.tsx` — componente principal (~1904 linhas):
+  - `ProviderCard` + `ProvidersSection` — CRUD operadoras, owner-only write.
+  - `PlanCard` + `PlansSection` — CRUD planos com filtro por operadora, owner-only write.
+  - `PatientInsCard` + `PatientInsurancesSection` — CRUD carteirinhas com seletor de paciente,
+    owner+secretaria; membro mascarado na lista, raw só em edit (lazy fetch por `getPatientInsurance`).
+  - `PriceCard` + `ServicePricesSection` — CRUD preços de referência, owner-only; referência visual.
+  - `InsurancePanel` — shell principal com queries compartilhadas de providers/plans/patients;
+    card "Acesso restrito" para profissional_clinico (403 sem derruba de tela).
+- `frontend/src/components/InsurancePanel.module.css` — CSS dark-theme seguindo padrão dos
+  módulos existentes; classes `.maskedNum`, `.expiredChip`, `.piiBanner`, `.restrictedCard`,
+  `.validUntil`, botões, grids, responsividade mobile.
+
+### Arquivos modificados
+
+- `frontend/src/services/api.ts` — Novos tipos:
+  - `InsuranceProvider`, `InsurancePlan`, `PatientInsuranceListItem`, `PatientInsurance`
+    (estende ListItem com `member_number` raw + `notes`), `ServiceInsurancePrice`.
+  - Payloads: `CreateInsuranceProviderPayload`, `UpdateInsuranceProviderPayload`,
+    `CreateInsurancePlanPayload`, `UpdateInsurancePlanPayload`,
+    `CreatePatientInsurancePayload`, `UpdatePatientInsurancePayload`,
+    `CreateServiceInsurancePricePayload`, `UpdateServiceInsurancePricePayload`.
+  - `FinancialPayerType = 'private' | 'insurance' | 'mixed'`.
+  - `FinancialChargeListItem` estendido: `payer_type`, `insurance_provider_id`,
+    `patient_insurance_id`, `copay_amount_cents`, `insurance_amount_cents`.
+  - `CreateFinancialChargePayload` e `UpdateFinancialChargePayload` estendidos com os mesmos campos.
+  - 20 novas funções no objeto `api`:
+    `listInsuranceProviders`, `getInsuranceProvider`, `createInsuranceProvider`,
+    `updateInsuranceProvider`, `updateInsuranceProviderStatus`,
+    `listInsurancePlans`, `getInsurancePlan`, `createInsurancePlan`,
+    `updateInsurancePlan`, `updateInsurancePlanStatus`,
+    `listPatientInsurances`, `getPatientInsurance`, `createPatientInsurance`,
+    `updatePatientInsurance`, `updatePatientInsuranceStatus`,
+    `listServiceInsurancePrices`, `getServiceInsurancePrice`, `createServiceInsurancePrice`,
+    `updateServiceInsurancePrice`, `updateServiceInsurancePriceStatus`.
+
+- `frontend/src/views/Dashboard.tsx` — Adicionados:
+  - `HeartHandshake` ao import de lucide-react.
+  - `import { InsurancePanel }` de `InsurancePanel`.
+  - `'convenios'` ao tipo `TabKey`.
+  - `{ key: 'convenios', label: 'Convênios', icon: HeartHandshake }` no array `TABS` (sem `ownerOnly`).
+  - Entrada `convenios` em `SECTION_INTRO`.
+  - Bloco `{tab === 'convenios' && <InsurancePanel />}` no render.
+
+- `frontend/src/components/FinancialPanel.tsx` — Adicionados:
+  - Import de `FinancialPayerType`, `PatientInsuranceListItem`, `InsuranceProvider`.
+  - Em `NewChargeForm`: estado `payerType`, `patientInsuranceId`, `copayStr`, `insuranceAmtStr`;
+    queries `patientInsurancesQuery` (enabled quando `needsInsurance`) e `providersQuery`;
+    helper `buildInsuranceFields` para montar payload; validação visual mixed;
+    JSX: select de pagador, select de carteirinha (condicional), inputs copay/insurance (condicional).
+  - Em `EditChargeForm`: mesmo padrão com estado inicializado da cobrança existente.
+
+### Permissões na UI
+
+| Seção | dono_clinica | secretaria | profissional |
+|---|---|---|---|
+| Painel Convênios (visível) | ✅ | ✅ | Card "Acesso restrito" (403) |
+| Criar/editar operadoras/planos | ✅ | ❌ (botões ocultos) | ❌ |
+| Criar/editar preços de serviço | ✅ | ❌ | ❌ |
+| Criar/editar carteirinhas paciente | ✅ | ✅ | ❌ |
+| Campo payer_type no Financeiro | ✅ | ✅ | N/A (sem acesso ao Financeiro) |
+
+### PII na UI
+
+- `member_number_masked` (`****1234`) exibido na lista — nunca o raw.
+- Raw `member_number` carregado lazily via `useQuery` com `enabled: editing && !!token`.
+  O query key inclui `'detail'` e `staleTime: 0` para sempre buscar fresco ao abrir edição.
+- `cancelEdit()` chama `setRawMemberNumber('')` e limpa todos os campos PII antes de retornar.
+- `holder_name` não exibido na lista — apenas em edit form (pré-preenchido do detail query).
+- `valid_until` exibido como data formatada com chip "Vencida" vermelho se expirada,
+  chip laranja se vence em ≤ 30 dias.
+- Sem PII em `console.log`, `localStorage`, `sessionStorage` ou parâmetros de URL.
+
+### React Query keys
+
+| Recurso | Query key |
+|---|---|
+| Providers list | `['insurance', 'providers']` |
+| Provider detail | `['insurance', 'providers', id]` |
+| Plans list | `['insurance', 'plans']` (ou com `provider_id`) |
+| Patient insurances list | `['patients', patientId, 'insurances']` |
+| Patient insurance detail (edit) | `['patients', patientId, 'insurances', id, 'detail']` |
+| Service prices list | `['insurance', 'service-prices']` |
+
+### Gates finais (4.7C)
+
+- `pnpm --filter frontend typecheck` ✅ · `build` ✅.
+- `pnpm --filter backend typecheck` ✅ (backend inalterado).
+- `git diff --check` rc=0 ✅.
+
+**Sprint 4.7C entregue.** Gate para 4.7D aberto.
+
+**Próxima sprint:** **4.7D** QA/Hardening Convênios v0.1.
+
+---
+
+## Sprint 4.7D — QA/Hardening + UX Polish Convênios v0.1 (2026-05-27)
+
+### Objetivo
+
+QA/hardening transversal de Convênios v0.1: correção de bugs de PII, UX simplificada para
+público de clínica pequena, payer_type consciente no Financeiro, e correções de segurança.
+Zero migration, zero novo endpoint.
+
+### Agents usados
+
+- **security-reviewer:** grep de PII em `InsurancePanel.tsx` e `FinancialPanel.tsx`.
+  Achados: `holder_name` em list view (MED), `canWrite={true}` hardcoded (HIGH). Resto CLEAN.
+- **Explore (InsurancePanel mid-sections):** leitura de PatientInsCard, PatientInsurancesSection,
+  ServicePricesSection para planejamento dos subtabs.
+- **Explore (MarkPaidModal + ChargeDetail):** confirmou que `MarkPaidModal` não recebia `payer_type`,
+  que `ChargeDetailView` não exibia pagador, que a lista não tinha badge, e identificou o bug de
+  troca de paciente não limpar `patientInsuranceId`.
+
+### Bugs corrigidos
+
+- **canWrite hardcoded** (`InsurancePanel.tsx:1890`): `canWrite={true}` → `canWrite={isOwner || papel === 'secretaria'}`.
+  Antes, profissional_clinico que chegasse ao painel via 403 bypass teria botões de escrita visíveis.
+- **holder_name em lista** (`InsurancePanel.tsx:~912`): `holder_name` exposto como PII em card de
+  listagem. Removido — agora aparece apenas no formulário de edição (lazy-fetched via detail).
+- **Bug de paciente** (`FinancialPanel.tsx:NewChargeForm`): trocar paciente no select de nova
+  cobrança não limpava `patientInsuranceId`. Corrigido com `setPatientInsuranceId('')` no onChange.
+
+### UX de Convênios
+
+`InsurancePanel` reorganizado com 3 subtabs internas:
+- **"Carteirinhas dos pacientes"** (tab default): fluxo mais frequente para secretária/dono.
+- **"Convênios aceitos"**: operadoras + planos (configuração inicial, menos frequente).
+- **"Preços de referência"**: preços serviço × operadora (configuração avançada, com banner
+  "Nunca preenchidos automaticamente — valor sempre confirmado manualmente").
+
+Subtabs implementadas com CSS no `InsurancePanel.module.css` (`.tabBar`, `.tabBtn`, `.tabBtnActive`,
+`.tabContent`). Sem extração de subcomponentes — estrutura funcional mantida, risco de regressão evitado.
+
+### Financeiro — payer_type awareness
+
+**Charge list table:** nova coluna "Pagador" com `PayerBadge` (Particular / Convênio / Misto).
+**Charge detail meta grid:** campo "Pagador" com `PayerBadge` + breakdown "(R$ X particular + R$ Y convênio)" quando mixed.
+**MarkPaidModal:** recebe `payerType`, `copayAmountCents`, `insuranceAmountCents` via `MarkPaidModalLoader`
+(que já busca o detalhe). Mudanças por tipo:
+- `insurance`: título "Registrar recebimento do convênio"; nota azul "Use quando o valor tiver sido repassado pelo convênio"; `defaultMethod = bank_transfer`.
+- `mixed`: título "Confirmar recebimento misto"; nota amarela com breakdown de valores + aviso "Financeiro v0.1 marca a cobrança inteira como recebida. Controle parcial fica para sprint futura."
+- `private`/`null`: comportamento anterior mantido.
+
+### Footer do Dashboard
+
+- `"ClinicBridge · MVP administrativo"` → `"ClinicBridge · Clinic OS"`.
+- `"Ferramenta administrativa. Não substitui prontuário ou sistema clínico."` →
+  `"Gestão clínica e administrativa para consultórios. Não substitui avaliação profissional,
+  assinatura digital válida ou obrigações legais específicas."`
+
+### Arquivos modificados
+
+- `frontend/src/components/InsurancePanel.tsx` — subtabs, canWrite fix, holder_name removido da lista
+- `frontend/src/components/InsurancePanel.module.css` — `.tabBar/.tabBtn/.tabBtnActive/.tabContent` + estilos de pager badge (para uso futuro)
+- `frontend/src/components/FinancialPanel.tsx` — PayerBadge, coluna na lista, detalhe, MarkPaidModal payer-aware, bug paciente
+- `frontend/src/components/FinancialPanel.module.css` — estilos `.payerBadge/.payerPrivate/.payerInsurance/.payerMixed/.modalPayerNote/.modalPayerNoteMixed/.modalPayerBreakdown`
+- `frontend/src/views/Dashboard.tsx` — footer copy
+
+### Gates finais (4.7D)
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅ (2.65s)
+- `pnpm --filter backend typecheck` ✅ (backend inalterado)
+- `git diff --check` rc=0 ✅
+
+**Sprint 4.7D entregue.** Fase 4.7 (Convênios v0.1) completa. Gate para 4.8A aberto.
+
+**Próxima sprint:** **4.8A** ADR 0017 Estoque v0.1.

@@ -2652,3 +2652,123 @@ grep -n "member_number\|holder_name" backend/src/config/logger.ts  # → present
 grep -n "member_number\|holder_name\|nome\|name" backend/src/services/insuranceService.ts \
   | grep -i "audit"  # → 0 ocorrências com dados pessoais
 ```
+
+---
+
+## Convênios — Sprint 4.7C (Frontend Convênios v0.1)
+
+> Frontend smoke visual + sanity greps. Executar após `pnpm --filter frontend dev` estar rodando.
+
+### Sanity greps (código)
+
+```bash
+# member_number raw nunca em lista — só mascarado
+grep -n "member_number[^_]" frontend/src/components/InsurancePanel.tsx | grep -v "masked\|raw\|detail\|getPatient\|setRaw\|rawMember\|member_number_masked\|//\|member_number:"
+# → 0 ocorrências de exposição acidental
+
+# member_number_masked usado na lista
+grep -n "member_number_masked" frontend/src/components/InsurancePanel.tsx
+# → presente na renderização da lista de carteirinhas
+
+# cancelEdit limpa rawMemberNumber
+grep -n "setRawMemberNumber\|rawMemberNumber" frontend/src/components/InsurancePanel.tsx
+# → setRawMemberNumber('') presente no cancelEdit e no clearCreateForm
+
+# Sem PII em console.log
+grep -n "console\." frontend/src/components/InsurancePanel.tsx  # → 0 ocorrências
+
+# Sem localStorage/sessionStorage
+grep -rn "localStorage\|sessionStorage" frontend/src/components/InsurancePanel.tsx  # → 0
+
+# reference_price_cents nunca auto-popula amount_cents
+grep -n "reference_price_cents" frontend/src/components/InsurancePanel.tsx | grep -v "//\|label\|hint\|display\|render\|sectionHint\|nota"
+# → apenas referências visuais (label/display), nunca atribuído a amount_cents
+
+# payer_type no FinancialPanel
+grep -n "payerType\|payer_type" frontend/src/components/FinancialPanel.tsx | head -20
+# → presente em NewChargeForm e EditChargeForm
+
+# aba convenios no Dashboard
+grep -n "convenios\|HeartHandshake\|InsurancePanel" frontend/src/views/Dashboard.tsx
+# → { key: 'convenios', label: 'Convênios', icon: HeartHandshake } + InsurancePanel import + render
+```
+
+### Checklist de validação visual (manual)
+
+| # | Cenário | Esperado |
+|---|---------|---------|
+| 1 | Owner acessa aba Convênios | Painel carrega; seções Operadoras, Planos, Preços, Carteirinhas visíveis |
+| 2 | Owner cria operadora | POST bem-sucedido; item aparece na lista |
+| 3 | Owner cria plano para a operadora | POST bem-sucedido; plano aparece com filtro por operadora |
+| 4 | Owner cria preço de serviço × operadora | POST bem-sucedido; reference_price_cents visível como referência |
+| 5 | Owner adiciona carteirinha a paciente | POST bem-sucedido; `member_number` visível mascarado na lista |
+| 6 | Owner abre edição da carteirinha | Raw `member_number` aparece no campo; `holder_name` pré-preenchido |
+| 7 | Owner cancela edição da carteirinha | Campos PII limpos; lista volta a mostrar mascarado |
+| 8 | Secretaria lê Convênios | Lista operadoras/planos/preços: 200; botões de criação ocultos |
+| 9 | Secretaria adiciona carteirinha | POST bem-sucedido (escrita liberada para secretaria) |
+| 10 | Profissional acessa aba Convênios | Card "Acesso restrito" exibido; sem dados expostos |
+| 11 | Carteirinha vencida | Chip vermelho "Vencida" ao lado da data |
+| 12 | Financeiro → Nova cobrança com Convênio | Select de pagador aparece; ao escolher "Convênio", seletor de carteirinha aparece |
+| 13 | Financeiro → Nova cobrança mista | Campos "Valor particular" e "Valor convênio" aparecem |
+| 14 | Mixed com soma errada | Erro visual "Particular + convênio (R$ X,XX) deve ser igual ao valor total" |
+| 15 | Mixed com soma correta | Cobrança criada com sucesso; payer_type=mixed gravado |
+| 16 | Edição de cobrança com payer_type existente | Estado inicial carregado corretamente (private/insurance/mixed) |
+
+---
+
+## Convênios — Sprint 4.7D (QA/Hardening + UX Polish)
+
+> Security review por agents. Checks de regressão frontend. Visual manual esperado.
+
+### Security greps (PASS)
+
+```bash
+# holder_name não aparece em list view — só em edit
+grep -n "holder_name" frontend/src/components/InsurancePanel.tsx | grep -v "edit\|Edit\|new\|New\|create\|Create\|form\|Form\|setEdit\|setNew\|update\|Update\|state\|State\|payload\|Payload\|//\|holder_name_\|holder_name:"
+# → apenas referências dentro de formulários de edição/criação
+
+# canWrite não hardcoded
+grep -n "canWrite" frontend/src/components/InsurancePanel.tsx
+# → canWrite={canWriteCards} onde canWriteCards = isOwner || papel === 'secretaria'
+
+# bug paciente corrigido
+grep -n "setPatientInsuranceId" frontend/src/components/FinancialPanel.tsx
+# → presente no onChange do select de paciente em NewChargeForm
+
+# PayerBadge presente na lista e detalhe
+grep -n "PayerBadge" frontend/src/components/FinancialPanel.tsx
+# → 2+ ocorrências (lista + detalhe)
+
+# MarkPaidModal recebe payerType
+grep -n "payerType\|payer_type" frontend/src/components/FinancialPanel.tsx | grep "MarkPaid"
+# → payerType={...} nos props
+
+# subtabs no InsurancePanel
+grep -n "tabBar\|tabBtn\|tabContent\|activeTab" frontend/src/components/InsurancePanel.tsx | head -10
+# → presentes no main panel
+
+# footer atualizado
+grep -n "Clinic OS\|MVP administrativo" frontend/src/views/Dashboard.tsx
+# → "ClinicBridge · Clinic OS" (sem "MVP administrativo")
+```
+
+### Checklist de validação visual (manual — 4.7D)
+
+| # | Cenário | Esperado |
+|---|---------|---------|
+| 1 | Aba Convênios abre | Tab "Carteirinhas dos pacientes" ativa por default |
+| 2 | Tab "Convênios aceitos" | Operadoras + Planos visíveis no mesmo painel |
+| 3 | Tab "Preços de referência" | Banner "nunca preenchido automaticamente" + lista de preços |
+| 4 | Secretaria abre tab Carteirinhas | Botões "Registrar carteirinha" e editar visíveis |
+| 5 | Secretaria tenta criar operadora | Botão "Nova operadora" ausente na tab "Convênios aceitos" |
+| 6 | Carteirinha na lista | `member_number` mascarado · holder_name **não aparece** na lista |
+| 7 | Abre edição de carteirinha | holder_name aparece pré-preenchido no campo de edição |
+| 8 | Cancela edição | holder_name sumido do estado; lista volta sem ele |
+| 9 | Nova cobrança: seleciona paciente A, convênio X; troca para paciente B | Campo de carteirinha reset (sem carteirinha do paciente A pré-selecionada) |
+| 10 | Lista de cobranças | Coluna "Pagador" visível: Particular / Convênio / Misto / — |
+| 11 | Detalhe de cobrança com convênio | Meta "Pagador: Convênio" visível |
+| 12 | Detalhe de cobrança mista | "Pagador: Misto" + breakdown "(R$ X particular + R$ Y convênio)" |
+| 13 | "Marcar como pago" em cobrança particular | Modal: "Confirmar recebimento", método default Pix |
+| 14 | "Marcar como pago" em cobrança convênio | Título: "Registrar recebimento do convênio"; nota azul; método default Transferência |
+| 15 | "Marcar como pago" em cobrança mista | Título: "Confirmar recebimento misto"; nota amarela com breakdown; aviso v0.1 |
+| 16 | Footer do Dashboard | "ClinicBridge · Clinic OS" (sem "MVP administrativo") |

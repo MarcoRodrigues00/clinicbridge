@@ -41,11 +41,14 @@ import { api, ApiError } from '../services/api';
 import type {
   ClinicService,
   FinancialChargeStatus,
+  FinancialPayerType,
   FinancialPaymentMethod,
   FinancialChargeListItem,
   FinancialChargeDetail,
   FinancialSummary,
   PublicPatient,
+  PatientInsuranceListItem,
+  InsuranceProvider,
 } from '../services/api';
 import styles from './FinancialPanel.module.css';
 
@@ -132,6 +135,26 @@ function StatusBadge({ charge }: { charge: FinancialChargeListItem }): JSX.Eleme
       Pendente
     </span>
   );
+}
+
+// ── Payer Badge ───────────────────────────────────────────────────────────────
+
+const PAYER_LABELS: Record<string, string> = {
+  private: 'Particular',
+  insurance: 'Convênio',
+  mixed: 'Misto',
+};
+
+function PayerBadge({ payer_type }: { payer_type: string | null }): JSX.Element {
+  if (!payer_type) return <span className={styles.payerNull}>—</span>;
+  const label = PAYER_LABELS[payer_type] ?? payer_type;
+  const cls =
+    payer_type === 'insurance'
+      ? styles.payerInsurance
+      : payer_type === 'mixed'
+        ? styles.payerMixed
+        : styles.payerPrivate;
+  return <span className={`${styles.payerBadge} ${cls}`}>{label}</span>;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -355,6 +378,7 @@ function ChargeListView({
                 <th>Descrição</th>
                 <th className={styles.colAmount}>Valor</th>
                 <th>Vencimento</th>
+                <th>Pagador</th>
                 <th>Situação</th>
                 <th className={styles.colActions}></th>
               </tr>
@@ -362,14 +386,14 @@ function ChargeListView({
             <tbody>
               {listQuery.isLoading && (
                 <tr>
-                  <td colSpan={6} className={styles.empty}>
+                  <td colSpan={7} className={styles.empty}>
                     Carregando cobranças…
                   </td>
                 </tr>
               )}
               {!listQuery.isLoading && charges.length === 0 && (
                 <tr>
-                  <td colSpan={6} className={styles.empty}>
+                  <td colSpan={7} className={styles.empty}>
                     {hasActiveFilters
                       ? 'Nenhuma cobrança encontrada com os filtros selecionados.'
                       : 'Nenhuma cobrança registrada ainda. Clique em "Nova cobrança" para começar.'}
@@ -389,6 +413,9 @@ function ChargeListView({
                     {formatCents(c.amount_cents)}
                   </td>
                   <td className={styles.tdDate}>{formatDate(c.due_date)}</td>
+                  <td className={styles.tdPayer}>
+                    <PayerBadge payer_type={c.payer_type} />
+                  </td>
                   <td>
                     <StatusBadge charge={c} />
                   </td>
@@ -437,6 +464,11 @@ function NewChargeForm({
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState('');
+  // Convênios v0.1 (Sprint 4.7C)
+  const [payerType, setPayerType] = useState<FinancialPayerType | ''>('');
+  const [patientInsuranceId, setPatientInsuranceId] = useState('');
+  const [copayStr, setCopayStr] = useState('');
+  const [insuranceAmtStr, setInsuranceAmtStr] = useState('');
 
   // BUG FIX: only show ACTIVE patients in the create dropdown
   // (backend will reject archived/merged patients anyway; this improves UX)
@@ -459,6 +491,57 @@ function NewChargeForm({
   const services: ClinicService[] = servicesQuery.data ?? [];
   const selectedService = services.find((s) => s.id === serviceId) ?? null;
 
+  const needsInsurance = payerType === 'insurance' || payerType === 'mixed';
+
+  const patientInsurancesQuery = useQuery({
+    queryKey: ['patients', patientId, 'insurances', 'active'],
+    enabled: !!token && !!patientId && needsInsurance,
+    queryFn: async () => {
+      const res = await api.listPatientInsurances(token, patientId, { active: true });
+      return res.insurances;
+    },
+  });
+  const patientInsurances: PatientInsuranceListItem[] = patientInsurancesQuery.data ?? [];
+
+  const providersQuery = useQuery({
+    queryKey: ['insurance', 'providers', 'for-financial'],
+    enabled: !!token && needsInsurance,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await api.listInsuranceProviders(token, { active: true, limit: 100 });
+      return res.providers;
+    },
+  });
+  const providers: InsuranceProvider[] = providersQuery.data ?? [];
+
+  function providerName(providerId: string | null): string {
+    if (!providerId) return '(Operadora)';
+    return providers.find((p) => p.id === providerId)?.name ?? providerId.slice(0, 8);
+  }
+
+  function buildInsuranceFields(): {
+    payer_type?: FinancialPayerType | null;
+    patient_insurance_id?: string | null;
+    copay_amount_cents?: number | null;
+    insurance_amount_cents?: number | null;
+  } {
+    if (!payerType) return {};
+    if (payerType === 'private') return { payer_type: 'private' };
+    const insId = patientInsuranceId || null;
+    if (payerType === 'insurance') {
+      return { payer_type: 'insurance', patient_insurance_id: insId };
+    }
+    // mixed
+    const copay = copayStr.trim() ? Math.round(parseFloat(copayStr.replace(',', '.')) * 100) : null;
+    const insAmt = insuranceAmtStr.trim() ? Math.round(parseFloat(insuranceAmtStr.replace(',', '.')) * 100) : null;
+    return {
+      payer_type: 'mixed',
+      patient_insurance_id: insId,
+      copay_amount_cents: copay,
+      insurance_amount_cents: insAmt,
+    };
+  }
+
   const createMutation = useMutation({
     mutationFn: () => {
       const amountCents = Math.round(
@@ -480,6 +563,17 @@ function NewChargeForm({
           message: 'Informe um valor válido, maior que zero.',
         });
       }
+      // Visual validation for mixed: copay + insurance should equal total
+      if (payerType === 'mixed' && copayStr.trim() && insuranceAmtStr.trim()) {
+        const copay = Math.round(parseFloat(copayStr.replace(',', '.')) * 100);
+        const insAmt = Math.round(parseFloat(insuranceAmtStr.replace(',', '.')) * 100);
+        if (!isNaN(copay) && !isNaN(insAmt) && copay + insAmt !== amountCents) {
+          throw new ApiError(400, {
+            code: 'validation',
+            message: `Particular + convênio (${formatCents(copay + insAmt)}) deve ser igual ao valor total (${formatCents(amountCents)}).`,
+          });
+        }
+      }
       return api.createFinancialCharge(token, {
         patient_id: patientId,
         service_id: serviceId || null,
@@ -487,6 +581,7 @@ function NewChargeForm({
         amount_cents: amountCents,
         due_date: dueDate || null,
         notes: notes.trim() || null,
+        ...buildInsuranceFields(),
       });
     },
     onSuccess: (data) => {
@@ -529,7 +624,10 @@ function NewChargeForm({
               id="fin-new-patient"
               className={styles.fieldSelect}
               value={patientId}
-              onChange={(e) => setPatientId(e.target.value)}
+              onChange={(e) => {
+                setPatientId(e.target.value);
+                setPatientInsuranceId('');
+              }}
               disabled={createMutation.isPending}
             >
               <option value="">Selecione o paciente…</option>
@@ -569,6 +667,108 @@ function NewChargeForm({
               ))}
             </select>
           </div>
+
+          {/* ── Pagador (Convênios v0.1 — Sprint 4.7C) ── */}
+          <div className={`${styles.fieldGroup} ${styles.fieldFull}`}>
+            <label className={styles.fieldLabel} htmlFor="fin-new-payer">
+              Pagador (opcional)
+            </label>
+            <select
+              id="fin-new-payer"
+              className={styles.fieldSelect}
+              value={payerType}
+              onChange={(e) => {
+                setPayerType(e.target.value as FinancialPayerType | '');
+                setPatientInsuranceId('');
+                setCopayStr('');
+                setInsuranceAmtStr('');
+              }}
+              disabled={createMutation.isPending}
+            >
+              <option value="">Não informado</option>
+              <option value="private">Particular</option>
+              <option value="insurance">Convênio</option>
+              <option value="mixed">Particular + convênio</option>
+            </select>
+          </div>
+
+          {needsInsurance && (
+            <div className={`${styles.fieldGroup} ${styles.fieldFull}`}>
+              <label className={styles.fieldLabel} htmlFor="fin-new-ins">
+                Carteirinha do paciente
+              </label>
+              {patientInsurancesQuery.isLoading && (
+                <span className={styles.fieldHint}>Carregando convênios…</span>
+              )}
+              {!patientInsurancesQuery.isLoading && patientInsurances.length === 0 && patientId && (
+                <span className={styles.fieldHint}>
+                  Este paciente ainda não tem convênio cadastrado. Cadastre em{' '}
+                  <strong>Convênios</strong>.
+                </span>
+              )}
+              {patientInsurances.length > 0 && (
+                <select
+                  id="fin-new-ins"
+                  className={styles.fieldSelect}
+                  value={patientInsuranceId}
+                  onChange={(e) => setPatientInsuranceId(e.target.value)}
+                  disabled={createMutation.isPending}
+                >
+                  <option value="">Selecione a carteirinha…</option>
+                  {patientInsurances.map((ins) => (
+                    <option key={ins.id} value={ins.id}>
+                      {providerName(ins.provider_id)}
+                      {ins.member_number_masked ? ` — ${ins.member_number_masked}` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {payerType === 'mixed' && (
+            <>
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel} htmlFor="fin-new-copay">
+                  Parte particular (R$)
+                </label>
+                <div className={styles.inputPrefix}>
+                  <span className={styles.inputPrefixText}>R$</span>
+                  <input
+                    id="fin-new-copay"
+                    type="text"
+                    inputMode="decimal"
+                    className={styles.fieldInputWithPrefix}
+                    value={copayStr}
+                    onChange={(e) => setCopayStr(e.target.value)}
+                    disabled={createMutation.isPending}
+                    placeholder="0,00"
+                  />
+                </div>
+              </div>
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel} htmlFor="fin-new-insamt">
+                  Parte convênio (R$)
+                </label>
+                <div className={styles.inputPrefix}>
+                  <span className={styles.inputPrefixText}>R$</span>
+                  <input
+                    id="fin-new-insamt"
+                    type="text"
+                    inputMode="decimal"
+                    className={styles.fieldInputWithPrefix}
+                    value={insuranceAmtStr}
+                    onChange={(e) => setInsuranceAmtStr(e.target.value)}
+                    disabled={createMutation.isPending}
+                    placeholder="0,00"
+                  />
+                </div>
+                <span className={styles.fieldHint}>
+                  Particular + convênio deve ser igual ao valor total.
+                </span>
+              </div>
+            </>
+          )}
 
           <div className={`${styles.fieldGroup} ${styles.fieldFull}`}>
             <label className={styles.fieldLabel} htmlFor="fin-new-desc">
@@ -715,6 +915,15 @@ function EditChargeForm({
   const [notes, setNotes] = useState(charge.notes ?? '');
   const [serviceId, setServiceId] = useState(charge.service_id ?? '');
   const [formError, setFormError] = useState('');
+  // Convênios v0.1 (Sprint 4.7C)
+  const [payerType, setPayerType] = useState<FinancialPayerType | ''>(charge.payer_type ?? '');
+  const [patientInsuranceId, setPatientInsuranceId] = useState(charge.patient_insurance_id ?? '');
+  const [copayStr, setCopayStr] = useState(
+    charge.copay_amount_cents !== null ? (charge.copay_amount_cents / 100).toFixed(2).replace('.', ',') : '',
+  );
+  const [insuranceAmtStr, setInsuranceAmtStr] = useState(
+    charge.insurance_amount_cents !== null ? (charge.insurance_amount_cents / 100).toFixed(2).replace('.', ',') : '',
+  );
 
   const patientName =
     patientById.get(charge.patient_id)?.nome ?? '(Paciente não encontrado)';
@@ -729,6 +938,56 @@ function EditChargeForm({
   });
   const services: ClinicService[] = servicesQuery.data ?? [];
   const selectedService = services.find((s) => s.id === serviceId) ?? null;
+
+  const needsInsurance = payerType === 'insurance' || payerType === 'mixed';
+
+  const patientInsurancesQuery = useQuery({
+    queryKey: ['patients', charge.patient_id, 'insurances', 'active'],
+    enabled: !!token && needsInsurance,
+    queryFn: async () => {
+      const res = await api.listPatientInsurances(token, charge.patient_id, { active: true });
+      return res.insurances;
+    },
+  });
+  const patientInsurances: PatientInsuranceListItem[] = patientInsurancesQuery.data ?? [];
+
+  const providersQuery = useQuery({
+    queryKey: ['insurance', 'providers', 'for-financial-edit'],
+    enabled: !!token && needsInsurance,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await api.listInsuranceProviders(token, { active: true, limit: 100 });
+      return res.providers;
+    },
+  });
+  const providers: InsuranceProvider[] = providersQuery.data ?? [];
+
+  function providerName(providerId: string | null): string {
+    if (!providerId) return '(Operadora)';
+    return providers.find((p) => p.id === providerId)?.name ?? providerId.slice(0, 8);
+  }
+
+  function buildInsuranceFields(): {
+    payer_type?: FinancialPayerType | null;
+    patient_insurance_id?: string | null;
+    copay_amount_cents?: number | null;
+    insurance_amount_cents?: number | null;
+  } {
+    if (!payerType) return { payer_type: null, patient_insurance_id: null, copay_amount_cents: null, insurance_amount_cents: null };
+    if (payerType === 'private') return { payer_type: 'private', patient_insurance_id: null, copay_amount_cents: null, insurance_amount_cents: null };
+    const insId = patientInsuranceId || null;
+    if (payerType === 'insurance') {
+      return { payer_type: 'insurance', patient_insurance_id: insId, copay_amount_cents: null, insurance_amount_cents: null };
+    }
+    const copay = copayStr.trim() ? Math.round(parseFloat(copayStr.replace(',', '.')) * 100) : null;
+    const insAmt = insuranceAmtStr.trim() ? Math.round(parseFloat(insuranceAmtStr.replace(',', '.')) * 100) : null;
+    return {
+      payer_type: 'mixed',
+      patient_insurance_id: insId,
+      copay_amount_cents: copay,
+      insurance_amount_cents: insAmt,
+    };
+  }
 
   const updateMutation = useMutation({
     mutationFn: () => {
@@ -746,12 +1005,23 @@ function EditChargeForm({
           message: 'Informe um valor válido, maior que zero.',
         });
       }
+      if (payerType === 'mixed' && copayStr.trim() && insuranceAmtStr.trim()) {
+        const copay = Math.round(parseFloat(copayStr.replace(',', '.')) * 100);
+        const insAmt = Math.round(parseFloat(insuranceAmtStr.replace(',', '.')) * 100);
+        if (!isNaN(copay) && !isNaN(insAmt) && copay + insAmt !== amountCents) {
+          throw new ApiError(400, {
+            code: 'validation',
+            message: `Particular + convênio (${formatCents(copay + insAmt)}) deve ser igual ao valor total (${formatCents(amountCents)}).`,
+          });
+        }
+      }
       return api.updateFinancialCharge(token, charge.id, {
         description: description.trim(),
         amount_cents: amountCents,
         due_date: dueDate || null,
         notes: notes.trim() || null,
         service_id: serviceId || null,
+        ...buildInsuranceFields(),
       });
     },
     onSuccess: () => {
@@ -818,6 +1088,108 @@ function EditChargeForm({
               ))}
             </select>
           </div>
+
+          {/* ── Pagador (Convênios v0.1 — Sprint 4.7C) ── */}
+          <div className={`${styles.fieldGroup} ${styles.fieldFull}`}>
+            <label className={styles.fieldLabel} htmlFor="fin-edit-payer">
+              Pagador
+            </label>
+            <select
+              id="fin-edit-payer"
+              className={styles.fieldSelect}
+              value={payerType}
+              onChange={(e) => {
+                setPayerType(e.target.value as FinancialPayerType | '');
+                setPatientInsuranceId('');
+                setCopayStr('');
+                setInsuranceAmtStr('');
+              }}
+              disabled={updateMutation.isPending}
+            >
+              <option value="">Não informado</option>
+              <option value="private">Particular</option>
+              <option value="insurance">Convênio</option>
+              <option value="mixed">Particular + convênio</option>
+            </select>
+          </div>
+
+          {needsInsurance && (
+            <div className={`${styles.fieldGroup} ${styles.fieldFull}`}>
+              <label className={styles.fieldLabel} htmlFor="fin-edit-ins">
+                Carteirinha do paciente
+              </label>
+              {patientInsurancesQuery.isLoading && (
+                <span className={styles.fieldHint}>Carregando convênios…</span>
+              )}
+              {!patientInsurancesQuery.isLoading && patientInsurances.length === 0 && (
+                <span className={styles.fieldHint}>
+                  Este paciente ainda não tem convênio cadastrado. Cadastre em{' '}
+                  <strong>Convênios</strong>.
+                </span>
+              )}
+              {patientInsurances.length > 0 && (
+                <select
+                  id="fin-edit-ins"
+                  className={styles.fieldSelect}
+                  value={patientInsuranceId}
+                  onChange={(e) => setPatientInsuranceId(e.target.value)}
+                  disabled={updateMutation.isPending}
+                >
+                  <option value="">Selecione a carteirinha…</option>
+                  {patientInsurances.map((ins) => (
+                    <option key={ins.id} value={ins.id}>
+                      {providerName(ins.provider_id)}
+                      {ins.member_number_masked ? ` — ${ins.member_number_masked}` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {payerType === 'mixed' && (
+            <>
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel} htmlFor="fin-edit-copay">
+                  Parte particular (R$)
+                </label>
+                <div className={styles.inputPrefix}>
+                  <span className={styles.inputPrefixText}>R$</span>
+                  <input
+                    id="fin-edit-copay"
+                    type="text"
+                    inputMode="decimal"
+                    className={styles.fieldInputWithPrefix}
+                    value={copayStr}
+                    onChange={(e) => setCopayStr(e.target.value)}
+                    disabled={updateMutation.isPending}
+                    placeholder="0,00"
+                  />
+                </div>
+              </div>
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel} htmlFor="fin-edit-insamt">
+                  Parte convênio (R$)
+                </label>
+                <div className={styles.inputPrefix}>
+                  <span className={styles.inputPrefixText}>R$</span>
+                  <input
+                    id="fin-edit-insamt"
+                    type="text"
+                    inputMode="decimal"
+                    className={styles.fieldInputWithPrefix}
+                    value={insuranceAmtStr}
+                    onChange={(e) => setInsuranceAmtStr(e.target.value)}
+                    disabled={updateMutation.isPending}
+                    placeholder="0,00"
+                  />
+                </div>
+                <span className={styles.fieldHint}>
+                  Particular + convênio deve ser igual ao valor total.
+                </span>
+              </div>
+            </>
+          )}
 
           <div className={`${styles.fieldGroup} ${styles.fieldFull}`}>
             <label className={styles.fieldLabel} htmlFor="fin-edit-desc">
@@ -938,6 +1310,9 @@ interface MarkPaidModalProps {
   token: string;
   chargeId: string;
   amount: number;
+  payerType: string | null;
+  copayAmountCents: number | null;
+  insuranceAmountCents: number | null;
   onClose: () => void;
   onPaid: () => void;
 }
@@ -946,13 +1321,25 @@ function MarkPaidModal({
   token,
   chargeId,
   amount,
+  payerType,
+  copayAmountCents,
+  insuranceAmountCents,
   onClose,
   onPaid,
 }: MarkPaidModalProps): JSX.Element {
   const queryClient = useQueryClient();
-  const [method, setMethod] = useState<FinancialPaymentMethod>('pix');
+  const isInsurance = payerType === 'insurance';
+  const isMixed = payerType === 'mixed';
+  const defaultMethod: FinancialPaymentMethod = isInsurance ? 'bank_transfer' : 'pix';
+  const [method, setMethod] = useState<FinancialPaymentMethod>(defaultMethod);
   const [paidAt, setPaidAt] = useState('');
   const [modalError, setModalError] = useState('');
+
+  const modalTitle = isInsurance
+    ? 'Registrar recebimento do convênio'
+    : isMixed
+      ? 'Confirmar recebimento misto'
+      : 'Confirmar recebimento';
 
   const markPaidMutation = useMutation({
     mutationFn: () =>
@@ -974,13 +1361,50 @@ function MarkPaidModal({
       <div className={styles.modal}>
         <div className={styles.modalHeader}>
           <CheckCircle2 size={22} className={styles.modalHeaderIconSuccess} aria-hidden="true" />
-          <h3 className={styles.modalTitle}>Confirmar recebimento</h3>
+          <h3 className={styles.modalTitle}>{modalTitle}</h3>
         </div>
 
         <p className={styles.modalDesc}>
           Confirme o recebimento de{' '}
           <strong className={styles.modalAmount}>{formatCents(amount)}</strong>.
         </p>
+
+        {isInsurance && (
+          <div className={styles.modalPayerNote}>
+            <strong>Pagador: Convênio.</strong> Use este registro quando o valor tiver sido
+            recebido ou repassado pelo convênio.
+          </div>
+        )}
+
+        {isMixed && (
+          <div className={`${styles.modalPayerNote} ${styles.modalPayerNoteMixed}`}>
+            <strong>Pagador: Particular + convênio.</strong>
+            {(copayAmountCents !== null || insuranceAmountCents !== null) && (
+              <div className={styles.modalPayerBreakdown}>
+                {copayAmountCents !== null && (
+                  <div className={styles.modalPayerRow}>
+                    <span className={styles.modalPayerLabel}>Parte particular:</span>
+                    <span>{formatCents(copayAmountCents)}</span>
+                  </div>
+                )}
+                {insuranceAmountCents !== null && (
+                  <div className={styles.modalPayerRow}>
+                    <span className={styles.modalPayerLabel}>Parte convênio:</span>
+                    <span>{formatCents(insuranceAmountCents)}</span>
+                  </div>
+                )}
+                <div className={styles.modalPayerRow}>
+                  <span className={styles.modalPayerLabel}>Total:</span>
+                  <span>{formatCents(amount)}</span>
+                </div>
+              </div>
+            )}
+            <div style={{ marginTop: '0.4rem', fontSize: '0.78rem', opacity: 0.85 }}>
+              O Financeiro v0.1 marca a cobrança inteira como recebida.
+              Controle de recebimento parcial fica para sprint futura.
+            </div>
+          </div>
+        )}
 
         {modalError && (
           <div className={styles.errorBanner}>
@@ -1011,6 +1435,11 @@ function MarkPaidModal({
               </option>
             ))}
           </select>
+          {isInsurance && (
+            <span className={styles.fieldHint}>
+              Para convênios, use Transferência bancária ou Outro conforme o repasse recebido.
+            </span>
+          )}
         </div>
 
         <div className={styles.fieldGroup}>
@@ -1049,7 +1478,7 @@ function MarkPaidModal({
             disabled={markPaidMutation.isPending}
           >
             <CheckCircle2 size={15} aria-hidden="true" />
-            {markPaidMutation.isPending ? 'Registrando…' : 'Confirmar recebimento'}
+            {markPaidMutation.isPending ? 'Registrando…' : modalTitle}
           </button>
         </div>
       </div>
@@ -1259,6 +1688,20 @@ function ChargeDetailView({
             <span className={styles.metaValue}>{formatDate(charge.created_at)}</span>
           </div>
 
+          {charge.payer_type && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Pagador</span>
+              <span className={styles.metaValue}>
+                <PayerBadge payer_type={charge.payer_type} />
+                {charge.payer_type === 'mixed' && charge.copay_amount_cents !== null && charge.insurance_amount_cents !== null && (
+                  <span style={{ marginLeft: '0.4rem', fontSize: '0.82rem', color: 'var(--text-2)' }}>
+                    ({formatCents(charge.copay_amount_cents)} particular + {formatCents(charge.insurance_amount_cents)} convênio)
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+
           {charge.status === 'paid' && (
             <>
               <div className={styles.metaItem}>
@@ -1438,13 +1881,17 @@ function MarkPaidModalLoader({
     staleTime: 0,
   });
 
-  const amount = detailQuery.data?.charge?.amount_cents ?? 0;
+  const charge = detailQuery.data?.charge;
+  const amount = charge?.amount_cents ?? 0;
 
   return (
     <MarkPaidModal
       token={token}
       chargeId={chargeId}
       amount={amount}
+      payerType={charge?.payer_type ?? null}
+      copayAmountCents={charge?.copay_amount_cents ?? null}
+      insuranceAmountCents={charge?.insurance_amount_cents ?? null}
       onClose={onClose}
       onPaid={onPaid}
     />
