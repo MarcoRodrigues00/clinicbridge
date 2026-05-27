@@ -20,7 +20,17 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.5B** (entregue) — **Backend Relatórios Gerenciais v0.1.**
+**Sprint atual: 4.5C** (entregue) — **Frontend Relatórios Gerenciais v0.1.**
+Nova aba "Relatórios" no Dashboard; `ReportsPanel` consome os 4 endpoints da Sprint 4.5B.
+Filtros de período: Hoje · Últimos 7 dias · Mês atual · Personalizado (date_from/date_to);
+botão "Atualizar" invalida via `refreshKey`. 4 blocos: Agenda, Financeiro, Pacientes,
+Agenda × Financeiro. Valores em BRL via `Intl.NumberFormat`. 403 por relatório vira card
+"Acesso restrito" — não derruba a tela. Lista "Em atraso" (R-A) mostra horário + status
+traduzido; **nunca renderiza UUID** de appointment. Sem PII, sem dados clínicos, sem export.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `pnpm --filter backend typecheck` ✅ ·
+`git diff --check` rc=0.
+
+**Sprint anterior: 4.5B** (entregue) — **Backend Relatórios Gerenciais v0.1.**
 4 endpoints read-only, sem migration, sem nova tabela, sem dados clínicos, sem PII.
 `GET /reports/appointments` · `GET /reports/financial` · `GET /reports/patients` · `GET /reports/agenda-financial`.
 Filtros: `date_from`/`date_to` (YYYY-MM-DD, padrão = mês corrente, intervalo ≤ 366 dias,
@@ -28,9 +38,7 @@ floor ~2 anos), `professional_id` (R-A e R-D), `no_appt_days` (R-C, 1..365).
 Permissões: `requireAuth + requireClinic + requireRole(['dono_clinica','secretaria'])`;
 R-B/R-D adicionalmente exigem `effectiveFinancialAccess !== 'none'` (profissional → 403).
 Audit metadata-only: `report.<type>.view.success` com `recurso_id=<type>:<from>:<to>` (sem valores).
-Reusa `patientsRateLimit`. `pnpm --filter backend typecheck` ✅ · build ✅ ·
-`pnpm --filter frontend typecheck` ✅ · `migrate:status` 15/0 ✅ · `git diff --check` rc=0.
-Smoke 24/24 (auth/permissão) + 27/27 (filtros inválidos / payload safety / shape) PASS.
+Reusa `patientsRateLimit`. Smoke 24/24 (auth/permissão) + 27/27 (filtros / payload / shape) PASS.
 
 **Sprint anterior: 4.5A** (entregue) — **ADR 0014 Relatórios Gerenciais v0.1 (docs/ADR-only).**
 ADR 0014 + `docs/management-reports-v0-scope.md` criados.
@@ -79,7 +87,7 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5B ✅ → **4.5C** frontend relatórios → **4.5D** QA →
+4.0–4.5C ✅ → **4.5D** QA/hardening relatórios →
 **4.6** convênios/faturamento básico (ADR 0015) → **4.7** estoque básico.
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
@@ -91,12 +99,14 @@ import/migração (preview, mapeamento, validação, dry-run, import); listagem/
 export CSV/XLSX; retenção dry-run; equipe (invite, aprovação, membros, desativação); agenda administrativa;
 prontuário v0.1 (encounters, notes, read-audit LGPD); documentos médicos v0.1 (PDF on-demand);
 financeiro v0.1 backend + frontend (aba Financeiro; lista + cards resumo; criar/editar/detalhe; marcar pago; cancelar);
-badge financeiro na agenda (5 estados), alertas A1–A4, botão "Criar cobrança" inline, link "Ver cobrança".
+badge financeiro na agenda (5 estados), alertas A1–A4, botão "Criar cobrança" inline, link "Ver cobrança";
+relatórios gerenciais v0.1 backend + frontend (aba Relatórios; 4 blocos: Agenda, Financeiro, Pacientes,
+Agenda × Financeiro; filtros Hoje/7d/Mês/Personalizado; 403 por relatório vira card "Acesso restrito").
 Detalhe: `docs/project-state.md`.
 
-**O que NÃO existe (sprint explícita):** frontend de relatórios (4.5C+); export de relatórios (futuro);
-convênios/carteirinha estruturada (4.6A+); delete físico de paciente; undo completo de merge;
-limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
+**O que NÃO existe (sprint explícita):** export de relatórios (futuro com ADR própria);
+gráficos complexos / BI customizável; convênios/carteirinha estruturada (4.6A+); delete físico de paciente;
+undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
 
 **Migrações (15 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
 `20260523_import_sessions` · `20260524_patients` · `20260525_import_sessions_summary` ·
@@ -120,7 +130,7 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.5C** frontend relatórios gerenciais v0.1 (gate: backend 4.5B entregue ✅)
+- **4.5D** QA/hardening relatórios gerenciais v0.1 (gate: 4.5C entregue ✅)
 - **4.6A** ADR 0015 Convênios v0.1 (gate: 4.5 entregue; planejamento em `docs/insurance-billing-future-scope.md`)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod

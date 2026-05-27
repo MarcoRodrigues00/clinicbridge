@@ -836,6 +836,99 @@ export interface CancelFinancialChargePayload {
   cancel_reason?: string | null;
 }
 
+// --- Management Reports v0.1 types (Sprint 4.5C — ADR 0014) -----------------
+// Backend é a fonte da verdade; estes tipos refletem exatamente o payload de
+// `backend/src/services/reportsService.ts`. Por desenho, NENHUM relatório
+// retorna PII (nome, CPF, e-mail, telefone, endereço, notes, cancel_reason,
+// description, administrative_notes, dados clínicos).
+
+export type ReportPeriodPreset = 'today' | 'last7' | 'currentMonth' | 'custom';
+
+export interface ReportsFilters {
+  date_from?: string;
+  date_to?: string;
+  professional_id?: string; // R-A e R-D
+  no_appt_days?: number;     // R-C
+}
+
+export interface AppointmentReportResponse {
+  report: 'appointments';
+  date_from: string;
+  date_to: string;
+  professional_id: string | null;
+  data: {
+    total: number;
+    scheduled: number;
+    confirmed: number;
+    completed: number;
+    cancelled: number;
+    rescheduled: number;
+    no_show: number;
+    attendance_rate: number;
+  };
+  attention: Array<{
+    appointment_id: string;
+    starts_at: string;
+    status: string;
+  }>;
+  generated_at: string;
+}
+
+export interface FinancialReportResponse {
+  report: 'financial';
+  date_from: string;
+  date_to: string;
+  data: {
+    received_cents: number;
+    pending_cents: number;
+    overdue_cents: number;
+    canceled_cents: number;
+    count_paid: number;
+    count_pending: number;
+    count_overdue: number;
+    count_canceled: number;
+    by_payment_method: Array<{
+      method: FinancialPaymentMethod;
+      total_cents: number;
+      count: number;
+    }>;
+  };
+  generated_at: string;
+}
+
+export interface PatientsReportResponse {
+  report: 'patients';
+  date_from: string;
+  date_to: string;
+  no_appt_days: number;
+  data: {
+    total_active: number;
+    total_archived: number;
+    new_in_period: number;
+    with_appointment_in_period: number;
+    without_recent_appointment: number;
+  };
+  generated_at: string;
+}
+
+export interface AgendaFinancialReportResponse {
+  report: 'agenda-financial';
+  date_from: string;
+  date_to: string;
+  professional_id: string | null;
+  data: {
+    appointments_total: number;
+    with_pending_charge: number;
+    with_paid_charge: number;
+    with_overdue_charge: number;
+    with_canceled_charge: number;
+    without_charge: number;
+    cancelled_with_pending: number;
+    charge_canceled_appt_active: number;
+  };
+  generated_at: string;
+}
+
 export interface ApiErrorBody {
   code: string;
   message: string;
@@ -859,6 +952,21 @@ interface FetchOptions {
   method: 'GET' | 'POST' | 'PATCH';
   body?: unknown;
   token?: string;
+}
+
+// Compact querystring builder for the reports endpoints — omits empty/undefined
+// values so the backend defaults apply. Token never goes in URL.
+function buildReportsQuery(
+  params: Record<string, string | number | undefined | null>,
+): string {
+  const usp = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) continue;
+    const str = typeof value === 'string' ? value : String(value);
+    if (str.length === 0) continue;
+    usp.set(key, str);
+  }
+  return usp.toString();
 }
 
 async function apiFetch<T>(path: string, opts: FetchOptions): Promise<T> {
@@ -1608,6 +1716,79 @@ export const api = {
     const qs = query.toString();
     return apiFetch<{ charges: FinancialChargeListItem[] }>(
       `/patients/${encodeURIComponent(patientId)}/charges${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  // --- Management Reports v0.1 (Sprint 4.5C; ADR 0014) ----------------------
+  //
+  // Token vai SEMPRE no header Authorization — nunca em URL/query.
+  // Filtros vazios são omitidos para deixar o backend aplicar o default
+  // (mês corrente). Strings vazias seriam tratadas como ausentes no service
+  // mas seriam visíveis na URL — manter omissão é mais limpo.
+
+  // GET /reports/appointments — R-A (totais + lista de "em atraso").
+  getAppointmentReport(
+    token: string,
+    filters: ReportsFilters = {},
+  ): Promise<AppointmentReportResponse> {
+    const qs = buildReportsQuery({
+      date_from: filters.date_from,
+      date_to: filters.date_to,
+      professional_id: filters.professional_id,
+    });
+    return apiFetch<AppointmentReportResponse>(
+      `/reports/appointments${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  // GET /reports/financial — R-B (recebido / em aberto / vencido / cancelado).
+  // Backend nega com 403 quando effectiveFinancialAccess === 'none'.
+  getFinancialReport(
+    token: string,
+    filters: ReportsFilters = {},
+  ): Promise<FinancialReportResponse> {
+    const qs = buildReportsQuery({
+      date_from: filters.date_from,
+      date_to: filters.date_to,
+    });
+    return apiFetch<FinancialReportResponse>(
+      `/reports/financial${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  // GET /reports/patients — R-C (ativos / arquivados / novos / sem retorno).
+  getPatientsReport(
+    token: string,
+    filters: ReportsFilters = {},
+  ): Promise<PatientsReportResponse> {
+    const qs = buildReportsQuery({
+      date_from: filters.date_from,
+      date_to: filters.date_to,
+      no_appt_days:
+        filters.no_appt_days !== undefined ? String(filters.no_appt_days) : undefined,
+    });
+    return apiFetch<PatientsReportResponse>(
+      `/reports/patients${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  // GET /reports/agenda-financial — R-D (consultas × cobranças, 8 contadores).
+  // Backend nega com 403 quando effectiveFinancialAccess === 'none'.
+  getAgendaFinancialReport(
+    token: string,
+    filters: ReportsFilters = {},
+  ): Promise<AgendaFinancialReportResponse> {
+    const qs = buildReportsQuery({
+      date_from: filters.date_from,
+      date_to: filters.date_to,
+      professional_id: filters.professional_id,
+    });
+    return apiFetch<AgendaFinancialReportResponse>(
+      `/reports/agenda-financial${qs ? `?${qs}` : ''}`,
       { method: 'GET', token },
     );
   },

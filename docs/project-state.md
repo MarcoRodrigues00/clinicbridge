@@ -7,6 +7,71 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.5C** (entregue 2026-05-27) — **Frontend Relatórios Gerenciais v0.1.**
+Consumo dos 4 endpoints implementados na Sprint 4.5B; aba "Relatórios" no Dashboard.
+
+**Arquivos novos:**
+- `frontend/src/components/ReportsPanel.tsx`
+- `frontend/src/components/ReportsPanel.module.css`
+
+**Arquivos modificados:**
+- `frontend/src/services/api.ts` — tipos (`ReportPeriodPreset`, `ReportsFilters`, 4 response types)
+  + 4 funções (`getAppointmentReport`, `getFinancialReport`, `getPatientsReport`,
+  `getAgendaFinancialReport`) + helper `buildReportsQuery` (omite filtros vazios).
+- `frontend/src/views/Dashboard.tsx` — nova aba "Relatórios" (ícone `BarChart3`), entre Financeiro e Equipe.
+
+**Estrutura visual:**
+- Cabeçalho com título, subtítulo e aviso "Nenhum dado clínico é exibido aqui".
+- Barra de filtros: presets Hoje · Últimos 7 dias · Mês atual · Personalizado (com inputs `date`); botão Atualizar.
+- 4 blocos (cada um com seu próprio `useQuery`, `staleTime: 30s`, `refreshKey` invalidador):
+  - **Agenda** — cards de total + status + taxa de comparecimento + lista "Em atraso" (até 8 visíveis, horário + status traduzido; **nunca renderiza UUID**).
+  - **Financeiro** — cards Recebido/Em aberto/Vencido/Cancelado + contagens + breakdown por método de pagamento (Dinheiro/Pix/Cartão/Transferência/Outro).
+  - **Pacientes** — Ativos/Novos/Com agendamento/Sem agendamento recente (90 dias)/Arquivados.
+  - **Agenda × Financeiro** — 6 cards + 2 sinais ("cancelada com cobrança pendente", "cobrança cancelada com consulta ativa").
+
+**Permissões/UX:**
+- Painel gateia `papel ∈ {dono_clinica, secretaria}` (admin_sistema não chega — bloqueado por `requireClinic` no backend).
+- 403 por relatório vira `SectionBlocked` com texto "Seu acesso atual não permite…" — **não derruba o painel inteiro**.
+- `report_invalid_filters` exibe a mensagem amigável do backend; validação visual de `date_to >= date_from` antes do refetch.
+- Vocabulário UI: "acesso", "permissão", "área financeira" (sem "role").
+
+**Segurança frontend:**
+- Token apenas no header `Authorization` via `apiFetch`; nunca em URL/query.
+- Sem `console.log` / `localStorage` / `sessionStorage` / `dangerouslySetInnerHTML`.
+- Tipos do payload NÃO incluem `nome`/`cpf`/`email`/`telefone`/`notes`/`cancel_reason`/`description`/`administrative_notes`/`body`/`internal_note`/etc.
+- Lista "Em atraso" renderiza só `formatTime(starts_at)` + status; o `appointment_id` só vai na key React.
+- Valores monetários em BRL via `Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })`; nunca exibe `amount_cents` cru.
+- Sem botão de export, sem cópia para clipboard.
+
+**Responsividade:**
+- Cards em grid `auto-fill minmax(170px, 1fr)` (≥640px) ou `1fr 1fr` (mobile).
+- Barra de filtros empilha; inputs `date` ocupam 100% no mobile.
+
+**Gates finais:**
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `pnpm --filter backend typecheck` ✅
+- `git diff --check` rc=0 ✅
+
+**Smoke API (reaproveitado de 4.5B + check contra UI):**
+- Owner: 4/4 endpoints 200 com payload no formato esperado pelos tipos do `ReportsPanel`.
+- Profissional: R-A e R-C 200; R-B e R-D 403 (forbidden_role) → painel renderiza `SectionBlocked`.
+
+**Ressalvas registradas:**
+- Sem export (CSV/PDF/XLSX) no v0.1 — futuro com ADR própria.
+- Sem gráficos complexos no v0.1 (só cards/lista).
+- Relatórios on-demand (refetch manual); sem materialização nem auto-refresh.
+- Sem dados clínicos; sem nomes/CPF/contato de pacientes.
+- Frontend não substitui contabilidade ou emissão fiscal (`disclaimer` no rodapé do painel).
+- Filtro `professional_id` exposto pelo backend mas ainda **não exposto na UI** (v0.1) — pode ser exposto em 4.5D se necessário.
+- `no_appt_days` fixo em 90 dias no v0.1 (sem controle dedicado na UI).
+- Convênios continuam fora até Fase 4.6.
+
+**QA visual/manual:** validado contra os endpoints reais via tokens de smoke (`smoke.owner` e `smoke.profissional`).
+Verificação completa no browser pelo usuário fica como tarefa de 4.5D (junto com hardening).
+
+---
+
 **Sprint 4.5B** (entregue 2026-05-27) — **Backend Relatórios Gerenciais v0.1.**
 Implementação dos 4 endpoints read-only definidos pela ADR 0014.
 Arquivos novos: `backend/src/dao/reportsDao.ts`, `backend/src/services/reportsService.ts`,

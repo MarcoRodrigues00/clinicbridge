@@ -1,0 +1,529 @@
+/* ReportsPanel.module.css — Sprint 4.5C (ADR 0014)
+ *
+ * Tema escuro do ClinicBridge. Tokens em /src/index.css.
+ * Padrão de referência: FinancialPanel.module.css.
+ * Sem visual "BI corporativo" — cards leves, leitura rápida.
+ */
+
+/* ── Root ─────────────────────────────────────────────────────────────────── */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 0 2.25rem;
+}
+
+/* ── Access blocked (fallback de tela inteira) ───────────────────────────── */
+.accessBlocked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-md);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.accessBlockedIcon {
+  color: var(--text-3);
+}
+
+.accessBlockedTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.accessBlockedDesc {
+  font-size: 0.875rem;
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-0);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-2);
+  margin: 0.25rem 0 0;
+  line-height: 1.5;
+  max-width: 56ch;
+}
+
+.notice {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  background: rgba(0, 200, 200, 0.06);
+  border: 1px solid rgba(0, 200, 200, 0.18);
+  border-radius: var(--r-sm);
+  padding: 0.55rem 0.75rem;
+  line-height: 1.4;
+  max-width: 360px;
+}
+
+/* ── Filters bar ──────────────────────────────────────────────────────────── */
+.filtersBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+}
+
+.presetGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.presetBtn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--surface-border);
+  color: var(--text-1);
+  border-radius: var(--r-sm);
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.presetBtn:hover {
+  border-color: var(--surface-border-strong);
+  color: var(--text-0);
+}
+
+.presetBtnActive {
+  background: rgba(34, 211, 238, 0.10);
+  border-color: rgba(34, 211, 238, 0.35);
+  color: var(--cyan-soft);
+}
+
+.customRange {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rangeField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--text-2);
+}
+
+.rangeField input {
+  background: rgba(16, 25, 44, 0.65);
+  border: 1px solid var(--surface-border);
+  color: var(--text-0);
+  border-radius: var(--r-sm);
+  padding: 0.35rem 0.55rem;
+  font-size: 0.85rem;
+  color-scheme: dark;
+  min-width: 8.5rem;
+}
+
+.rangeField input:focus {
+  outline: none;
+  border-color: var(--cyan);
+}
+
+.refreshBtn {
+  margin-left: auto;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(20, 184, 166, 0.18);
+  border: 1px solid rgba(20, 184, 166, 0.35);
+  color: var(--cyan-soft);
+  border-radius: var(--r-sm);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.refreshBtn:hover {
+  background: rgba(20, 184, 166, 0.30);
+  border-color: rgba(20, 184, 166, 0.55);
+}
+
+.filterError {
+  margin: -0.5rem 0 0;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.82rem;
+  color: var(--danger);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.30);
+  border-radius: var(--r-sm);
+}
+
+.periodLine {
+  margin: -0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
+.periodLine strong {
+  color: var(--text-0);
+}
+
+/* ── Report block ─────────────────────────────────────────────────────────── */
+.reportBlock {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-md);
+  padding: 1.1rem 1.15rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.blockTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-0);
+  margin: 0;
+}
+
+/* ── Metric grid ──────────────────────────────────────────────────────────── */
+.metricRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.65rem;
+}
+
+.metric {
+  background: rgba(16, 25, 44, 0.55);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.metric_success { border-color: rgba(52, 211, 153, 0.28); }
+.metric_warning { border-color: rgba(251, 191, 36, 0.28); }
+.metric_danger  { border-color: rgba(248, 113, 113, 0.28); }
+.metric_info    { border-color: rgba(34, 211, 238, 0.30); }
+
+.metricLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+}
+
+.metricValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-0);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+}
+
+.metricValue_success { color: var(--success); }
+.metricValue_warning { color: var(--warning); }
+.metricValue_danger  { color: var(--danger); }
+.metricValue_info    { color: var(--cyan-soft); }
+
+.metricHint {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  margin-top: 0.1rem;
+}
+
+/* ── Attention list (R-A) ─────────────────────────────────────────────────── */
+.attention {
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: var(--r-sm);
+  padding: 0.85rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.attentionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--warning);
+  font-size: 0.88rem;
+}
+
+.attentionDesc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.attentionList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.attentionItem {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--text-1);
+  padding: 0.25rem 0;
+}
+
+.attentionWhen {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-0);
+}
+
+.attentionStatus {
+  margin-left: auto;
+  font-size: 0.74rem;
+  color: var(--text-2);
+}
+
+.attentionMore {
+  font-size: 0.76rem;
+  color: var(--text-3);
+  padding-top: 0.2rem;
+}
+
+/* ── Sub block (R-B by_payment_method) ───────────────────────────────────── */
+.subBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.subTitle {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-1);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.methodList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.methodItem {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) auto auto;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.45rem 0.65rem;
+  background: rgba(16, 25, 44, 0.45);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  font-size: 0.85rem;
+}
+
+.methodLabel {
+  color: var(--text-0);
+  font-weight: 500;
+}
+
+.methodTotal {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.methodCount {
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+/* ── Agenda x Financeiro flags list ──────────────────────────────────────── */
+.flagsList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.flagItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(16, 25, 44, 0.45);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  font-size: 0.85rem;
+  color: var(--text-1);
+}
+
+.flagItem strong {
+  color: var(--text-0);
+  font-weight: 500;
+}
+
+.flagItem span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+/* ── Per-section feedback ─────────────────────────────────────────────────── */
+.loading {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  margin: 0;
+}
+
+.empty {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  margin: 0;
+  font-style: italic;
+}
+
+.errorBox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--danger);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.30);
+  border-radius: var(--r-sm);
+}
+
+.blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 0.95rem;
+  background: rgba(125, 138, 161, 0.08);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+}
+
+.blockedIcon {
+  color: var(--text-2);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.blockedTitle {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.blockedDesc {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.disclaimer {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-3);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ── Responsivo ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .notice {
+    max-width: 100%;
+  }
+
+  .filtersBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .refreshBtn {
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  .presetGroup {
+    justify-content: stretch;
+  }
+
+  .presetBtn {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .customRange {
+    flex-direction: column;
+  }
+
+  .rangeField input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .metricRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .flagItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}

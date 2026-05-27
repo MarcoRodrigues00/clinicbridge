@@ -2190,3 +2190,81 @@ Esperado: `acao='report.<type>.view.success'`, `recurso='report'`,
 - Intervalo máximo 366 dias por desenho.
 - Sem dados clínicos; sem nomes/CPF/contato.
 - Profissional → 403 em R-B/R-D (mesma matriz do Financeiro v0.1).
+
+## Smoke Frontend Relatórios Gerenciais v0.1 — Sprint 4.5C (ADR 0014)
+
+> Aba "Relatórios" no Dashboard. 4 blocos consumindo os endpoints da Sprint 4.5B.
+> Manual em browser. Sem export, sem PII, sem dados clínicos.
+
+### Pré-requisitos
+
+```bash
+docker compose --profile edge up -d --build backend nginx
+VITE_API_BASE_URL=https://localhost:8443 pnpm --filter frontend dev --host 0.0.0.0
+# abrir https://localhost:5173 (aceitar self-signed se necessário)
+```
+
+### Roteiro — `smoke.owner` (dono_clinica)
+
+| # | Passo | Esperado |
+|---|-------|----------|
+| 1 | Login com `smoke.owner@clinicbridge.local` | Dashboard abre |
+| 2 | Clicar aba **Relatórios** | Painel monta; cabeçalho com aviso "Nenhum dado clínico" |
+| 3 | Default = **Mês atual** | Período mostrado: `1º do mês atual → hoje` |
+| 4 | Bloco **Agenda** carrega | Cards Total/Agendadas/Confirmadas/Realizadas/Canceladas/Faltas/Taxa; nenhum nome de paciente; sem UUID visível |
+| 5 | Se houver atrasos: aviso amarelo aparece | Lista mostra apenas horário `DD/MM HH:MM` + status traduzido; sem UUID; "+ N adicional(is)" se >8 |
+| 6 | Bloco **Financeiro** carrega | Cards Recebido/Em aberto/Vencido/Cancelado/Cobranças (pagas/pendentes); breakdown por método em BRL |
+| 7 | Bloco **Pacientes** carrega | Ativos/Novos/Com agendamento/Sem agendamento recente (90d)/Arquivados |
+| 8 | Bloco **Agenda × Financeiro** carrega | 6 cards + 2 sinais ("cancelada com cobrança pendente", "cobrança cancelada com consulta ativa") |
+| 9 | Trocar para **Hoje** | Período = hoje/hoje; dados recarregam |
+| 10 | Trocar para **Últimos 7 dias** | Período = hoje-6/hoje |
+| 11 | Trocar para **Personalizado** + datas válidas + **Atualizar** | Período aplicado; dados recarregam |
+| 12 | Personalizado com `date_to < date_from` + **Atualizar** | Mensagem vermelha "A data final deve ser maior ou igual à data inicial." |
+| 13 | Personalizado com intervalo > 366 dias | Backend retorna `report_invalid_filters`; UI exibe a mensagem do backend |
+| 14 | Network tab (DevTools) | Token vai em `Authorization: Bearer …` (header); nenhum request com token na URL |
+| 15 | Console | Sem `console.log` de payload; sem stack trace |
+
+### Roteiro — `smoke.secretaria` (papel=secretaria, sem grants)
+
+- Mesmo fluxo do owner; backend retorna 200 nos 4 endpoints (`effectiveFinancialAccess='full'`).
+
+### Roteiro — `smoke.gestor` (secretaria + gestor_clinica)
+
+- Mesmo fluxo do owner; backend retorna 200 nos 4 endpoints (`effectiveFinancialAccess='transact'`).
+- Painel não diferencia visualmente — só leitura.
+
+### Roteiro — `smoke.profissional` (secretaria + profissional_clinico)
+
+| # | Passo | Esperado |
+|---|-------|----------|
+| 1 | Login com `smoke.profissional@clinicbridge.local` → aba **Relatórios** | Painel monta |
+| 2 | Bloco **Agenda** | 200 OK — cards normais |
+| 3 | Bloco **Financeiro** | Card cinza "Área financeira restrita" — não derruba painel |
+| 4 | Bloco **Pacientes** | 200 OK — cards normais |
+| 5 | Bloco **Agenda × Financeiro** | Card cinza "Área financeira restrita" |
+| 6 | Console | Sem stack trace; mensagens não vazam código técnico |
+
+### Roteiro — `smoke.admin` (admin_sistema, sem clínica)
+
+- Login direciona para `JoinClinicGate` (sem `clinica_id`); aba Relatórios não é alcançada.
+- Se forçar request manual: backend responde 403 `no_clinic_context`.
+
+### Segurança visual (todos os usuários)
+
+- [ ] Nenhum nome de paciente aparece em qualquer card/lista
+- [ ] Nenhum CPF/e-mail/telefone aparece
+- [ ] Nenhum `notes`/`description`/`cancel_reason` aparece
+- [ ] Nenhum dado clínico (diagnóstico/CID/prescrição/evolução)
+- [ ] Nenhum UUID exibido como informação principal (lista "Em atraso" mostra só horário + status)
+- [ ] Valores monetários em BRL (R$ 1.234,56) — não `amount_cents`
+- [ ] Status traduzidos em PT ("Realizadas", "Faltas", "Cancelada") — não em inglês
+- [ ] Sem `console.log` de payload no DevTools
+- [ ] Sem `localStorage`/`sessionStorage` com dados de relatório (apenas o token de auth padrão da sessão)
+
+### Responsividade (devtools mobile)
+
+- [ ] Cabeçalho empilha em telas estreitas
+- [ ] Barra de filtros vira coluna; inputs date 100% width
+- [ ] Cards viram grid 2 colunas (`<640px`)
+- [ ] Botão **Atualizar** ocupa largura total
+- [ ] Sem scroll horizontal estranho
