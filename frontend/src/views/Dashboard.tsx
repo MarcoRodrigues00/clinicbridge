@@ -10,6 +10,7 @@ import {
   Home,
   Users,
   CalendarDays,
+  Wallet,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { UploadPanel } from '../components/UploadPanel';
@@ -24,6 +25,7 @@ import { JoinClinicGate } from '../components/JoinClinicGate';
 import { TeamManagementPanel } from '../components/TeamManagementPanel';
 import { ClinicalRolesPanel } from '../components/ClinicalRolesPanel';
 import { ClinicalReadAuditPanel } from '../components/ClinicalReadAuditPanel';
+import { FinancialPanel } from '../components/FinancialPanel';
 import { useAuth } from '../services/AuthProvider';
 import type { SafeUser } from '../services/api';
 import styles from './Dashboard.module.css';
@@ -37,13 +39,14 @@ const ROLE_LABELS: Record<SafeUser['papel'], string> = {
   secretaria: 'Funcionário(a) (acesso administrativo)',
 };
 
-type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'equipe' | 'seguranca';
+type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'financeiro' | 'equipe' | 'seguranca';
 
 const TABS: { key: TabKey; label: string; icon: typeof Home; ownerOnly?: boolean }[] = [
   { key: 'inicio', label: 'Início', icon: Home },
   { key: 'importacoes', label: 'Importações', icon: UploadCloud },
   { key: 'pacientes', label: 'Pacientes', icon: Users },
   { key: 'agenda', label: 'Agenda', icon: CalendarDays },
+  { key: 'financeiro', label: 'Financeiro', icon: Wallet },
   { key: 'equipe', label: 'Equipe', icon: Users, ownerOnly: true },
   { key: 'seguranca', label: 'Segurança', icon: ShieldCheck },
 ];
@@ -53,6 +56,7 @@ const SECTION_INTRO: Record<TabKey, { title: string; subtitle: string }> = {
   importacoes: { title: 'Importações', subtitle: 'Envie, valide e revise migrações de dados administrativos.' },
   pacientes: { title: 'Pacientes', subtitle: 'Pacientes administrativos importados, duplicados e exportações.' },
   agenda: { title: 'Agenda administrativa', subtitle: 'Agendamentos administrativos. Não é prontuário nem dado clínico.' },
+  financeiro: { title: 'Financeiro', subtitle: 'Cobranças e recebimentos da clínica. Não substitui contabilidade ou emissão de notas fiscais.' },
   equipe: { title: 'Equipe', subtitle: 'Acesso ao sistema (membros), solicitações pendentes e profissionais usados na agenda.' },
   seguranca: { title: 'Segurança e sessão', subtitle: 'Estado da autenticação e do MVP administrativo.' },
 };
@@ -198,6 +202,10 @@ export function Dashboard(): JSX.Element {
             </p>
             <AdministrativeSchedulePanel />
           </>
+        )}
+
+        {tab === 'financeiro' && (
+          <FinancialPanel />
         )}
 
         {tab === 'equipe' && isOwner && (

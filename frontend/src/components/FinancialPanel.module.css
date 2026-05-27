@@ -1,0 +1,948 @@
+/* FinancialPanel.module.css — Sprint 4.4C (corr. 4.4C-fix-v2)
+ *
+ * Tema escuro do ClinicBridge. Tokens em /src/index.css.
+ * Padrão de referência: ClinicalDocumentsPanel.module.css.
+ *
+ * Princípios:
+ * - Superfícies escuras semi-transparentes (var(--surface) sobre body azul-marinho).
+ * - Bordas discretas (var(--surface-border)) ao invés de sombras.
+ * - Accents em ciano/teal; success/danger em rgba muted, não saturado.
+ * - Texto sempre legível: text-0 (ênfase), text-1 (padrão), text-2 (labels), text-3 (hints).
+ * - Sem white puro, sem indigo, sem cinzas claros.
+ */
+
+/* ── Root ─────────────────────────────────────────────────────────────────── */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 0 2.25rem;
+}
+
+/* ── Loading / Access states ──────────────────────────────────────────────── */
+.loadingState {
+  text-align: center;
+  color: var(--text-3);
+  padding: 2.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.accessBlocked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-md);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.accessBlockedIcon {
+  color: var(--text-3);
+}
+
+.accessBlockedTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.accessBlockedDesc {
+  font-size: 0.875rem;
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* ── Summary cards ────────────────────────────────────────────────────────── */
+.summaryRow {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.summaryCard {
+  flex: 1 1 180px;
+  min-width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  transition: border-color 0.15s;
+}
+
+.summaryCard:hover {
+  border-color: var(--surface-border-strong);
+}
+
+.summaryCardIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  background: rgba(0, 200, 200, 0.10);
+  color: var(--cyan);
+  border: 1px solid rgba(0, 200, 200, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.overdueCard {
+  border-color: rgba(200, 60, 60, 0.28);
+}
+
+.overdueIcon {
+  background: rgba(200, 60, 60, 0.10);
+  color: var(--danger);
+  border: 1px solid rgba(200, 60, 60, 0.20);
+}
+
+.paidCard {
+  border-color: rgba(0, 200, 100, 0.28);
+}
+
+.paidIcon {
+  background: rgba(0, 200, 100, 0.10);
+  color: var(--success);
+  border: 1px solid rgba(0, 200, 100, 0.20);
+}
+
+.summaryCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.summaryLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.summaryAmount {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-0);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.overdueAmount {
+  color: var(--danger);
+}
+
+.paidAmount {
+  color: var(--success);
+}
+
+.summaryCount {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  margin-top: 0.1rem;
+}
+
+/* ── Toolbar ──────────────────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.filterLabel {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.filterInput,
+.filterSelect {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  padding: 0.45rem 0.7rem;
+  font-size: 0.875rem;
+  color: var(--text-0);
+  height: 2.25rem;
+  min-width: 150px;
+  transition: border-color 0.15s;
+}
+
+.filterInput:focus,
+.filterSelect:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.18);
+}
+
+.toolbarSpacer {
+  flex: 1;
+}
+
+/* ── Buttons (padrão ClinicalDocumentsPanel) ───────────────────────────────── */
+
+/* Cyan-tinted primary — "Nova cobrança", "Criar cobrança", "Salvar" */
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 200, 200, 0.08);
+  color: var(--cyan);
+  border: 1px solid rgba(0, 200, 200, 0.22);
+  border-radius: var(--r-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  height: 2.25rem;
+  transition: background 0.15s;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: rgba(0, 200, 200, 0.16);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Solid green for confirmation actions — "Marcar como pago", "Confirmar recebimento" */
+.btnSuccess {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  background: var(--success);
+  color: #05121a;
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btnSuccess:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.btnSuccess:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Outline danger — "Cancelar cobrança", "Confirmar cancelamento" */
+.btnDanger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: none;
+  color: var(--danger);
+  border: 1px solid rgba(200, 60, 60, 0.30);
+  border-radius: var(--r-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btnDanger:hover:not(:disabled) {
+  background: rgba(200, 60, 60, 0.08);
+  border-color: var(--danger);
+}
+
+.btnDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Outlined secondary — "Cancelar", "Voltar", "Editar cobrança" */
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: none;
+  color: var(--text-1);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btnSecondary:hover:not(:disabled) {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.btnSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Subtle ghost — "Limpar filtros" */
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  background: none;
+  color: var(--text-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font-size: 0.83rem;
+  font-weight: 500;
+  cursor: pointer;
+  height: 2.25rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btnGhost:hover {
+  background: rgba(120, 200, 230, 0.06);
+  color: var(--text-0);
+}
+
+/* Back link — "Voltar para a lista" */
+.btnBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  background: none;
+  color: var(--text-2);
+  border: none;
+  border-radius: var(--r-xs);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s;
+  margin-bottom: 0.25rem;
+}
+
+.btnBack:hover {
+  color: var(--cyan);
+}
+
+/* Row-level details button */
+.btnDetails {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.75rem;
+  background: none;
+  color: var(--text-2);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btnDetails:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+/* ── Table ────────────────────────────────────────────────────────────────── */
+.tableWrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th {
+  background: rgba(16, 25, 44, 0.45);
+  color: var(--text-2);
+  font-size: 0.71rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--surface-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.8rem 1rem;
+  color: var(--text-0);
+  border-bottom: 1px solid rgba(120, 200, 230, 0.08);
+  vertical-align: middle;
+}
+
+.tableRow {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.tableRow:hover td {
+  background: rgba(120, 200, 230, 0.05);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Column sizing */
+.colAmount { text-align: right; }
+.colActions { width: 100px; text-align: right; }
+
+.tdPatient {
+  font-weight: 600;
+  color: var(--text-0);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tdDescription {
+  color: var(--text-1);
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tdAmount {
+  font-weight: 700;
+  font-size: 0.92rem;
+  text-align: right;
+  color: var(--text-0);
+  white-space: nowrap;
+}
+
+.tdAmountOverdue {
+  color: var(--danger);
+}
+
+.tdDate {
+  white-space: nowrap;
+  color: var(--text-1);
+}
+
+.tdActionsCol {
+  text-align: right;
+}
+
+/* ── Status badges (semi-transparent muted tints) ─────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.badgePending {
+  background: rgba(200, 160, 0, 0.12);
+  color: #e0b400;
+  border: 1px solid rgba(200, 160, 0, 0.25);
+}
+
+.badgeOverdue {
+  background: rgba(200, 60, 60, 0.12);
+  color: var(--danger);
+  border: 1px solid rgba(200, 60, 60, 0.25);
+}
+
+.badgePaid {
+  background: rgba(0, 200, 100, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(0, 200, 100, 0.22);
+}
+
+.badgeCanceled {
+  background: rgba(120, 140, 170, 0.10);
+  color: var(--text-2);
+  border: 1px solid var(--surface-border);
+}
+
+/* ── Empty / Error states ─────────────────────────────────────────────────── */
+.empty {
+  text-align: center;
+  color: var(--text-3);
+  padding: 2.5rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.errorBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: rgba(200, 60, 60, 0.08);
+  border: 1px solid rgba(200, 60, 60, 0.28);
+  border-radius: var(--r-sm);
+  padding: 0.6rem 0.85rem;
+  color: var(--danger);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+/* ── Back row ─────────────────────────────────────────────────────────────── */
+.backRow {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Detail card ──────────────────────────────────────────────────────────── */
+.detailCard {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.detailCardHeader {
+  padding: 1.35rem 1.6rem 1.15rem;
+  border-bottom: 1px solid var(--surface-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.detailTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.detailTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-0);
+  margin: 0;
+}
+
+.detailAmountRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.detailAmount {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--text-0);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.detailAmountLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.detailMeta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem 1.5rem;
+  padding: 1.2rem 1.6rem;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.metaLabel {
+  font-size: 0.71rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+}
+
+.metaValue {
+  font-size: 0.9rem;
+  color: var(--text-0);
+  font-weight: 500;
+}
+
+.metaValueDanger {
+  color: var(--danger);
+}
+
+.overdueTag {
+  font-size: 0.78rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* Notes section inside detail — the readability-critical area */
+.notesSection {
+  padding: 1.1rem 1.6rem;
+  border-top: 1px solid var(--surface-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.notesSectionLabel {
+  font-size: 0.71rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+}
+
+/* Observações administrativas — dark blueish surface, light text, cyan accent */
+.notesBox {
+  background: rgba(16, 25, 44, 0.55);
+  border: 1px solid var(--surface-border);
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--r-sm);
+  padding: 0.85rem 1rem;
+  font-size: 0.88rem;
+  color: var(--text-1);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+}
+
+/* Anti-clinical-data disclaimer — calmo amber */
+.notesWarning {
+  background: rgba(200, 160, 0, 0.07);
+  border: 1px solid rgba(200, 160, 0, 0.18);
+  border-radius: var(--r-sm);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-3);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Detail actions (pending only) */
+.detailActions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 1.1rem 1.6rem;
+  border-top: 1px solid var(--surface-border);
+  background: rgba(16, 25, 44, 0.35);
+}
+
+/* ── Form card ────────────────────────────────────────────────────────────── */
+.formCard {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  padding: 1.4rem 1.6rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  max-width: 660px;
+}
+
+.formHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.formHeaderIcon {
+  color: var(--cyan);
+}
+
+.formTitle {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-0);
+  margin: 0;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.fieldLabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.fieldRequired {
+  color: var(--danger);
+  margin-left: 0.15rem;
+}
+
+.fieldOptional {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.fieldInput,
+.fieldSelect,
+.fieldTextarea {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  color: var(--text-0);
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.fieldInput:focus,
+.fieldSelect:focus,
+.fieldTextarea:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.18);
+}
+
+.fieldInput:disabled,
+.fieldSelect:disabled,
+.fieldTextarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.fieldTextarea {
+  min-height: 90px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.fieldHint {
+  font-size: 0.76rem;
+  color: var(--text-3);
+  line-height: 1.45;
+}
+
+/* Prefixed input (R$ prefix) */
+.inputPrefix {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.inputPrefix:focus-within {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.18);
+}
+
+.inputPrefixText {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.7rem;
+  background: rgba(16, 25, 44, 0.65);
+  color: var(--text-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-right: 1px solid var(--surface-border);
+  white-space: nowrap;
+}
+
+.fieldInputWithPrefix {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  color: var(--text-0);
+  background: transparent;
+  min-width: 0;
+  font-family: inherit;
+}
+
+.fieldInputWithPrefix:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding-top: 0.25rem;
+}
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+  backdrop-filter: blur(3px);
+}
+
+.modal {
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+  border-radius: var(--r-md);
+  padding: 1.6rem 1.8rem;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.modalHeaderIconSuccess {
+  color: var(--success);
+}
+
+.modalHeaderIconDanger {
+  color: var(--danger);
+}
+
+.modalTitle {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-0);
+  margin: 0;
+}
+
+.modalDesc {
+  font-size: 0.88rem;
+  color: var(--text-1);
+  margin: 0;
+  line-height: 1.55;
+}
+
+.modalAmount {
+  color: var(--text-0);
+  font-size: 1rem;
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .summaryRow {
+    flex-direction: column;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbarSpacer {
+    display: none;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldFull {
+    grid-column: 1;
+  }
+
+  .detailMeta {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .detailCardHeader {
+    flex-direction: column;
+  }
+
+  .detailAmountRow {
+    align-items: flex-start;
+  }
+
+  .detailActions {
+    flex-direction: column;
+  }
+
+  .detailActions .btnSuccess,
+  .detailActions .btnSecondary,
+  .detailActions .btnDanger {
+    justify-content: center;
+  }
+
+  .modalActions {
+    flex-direction: column-reverse;
+  }
+
+  .modalActions button {
+    width: 100%;
+    justify-content: center;
+  }
+}

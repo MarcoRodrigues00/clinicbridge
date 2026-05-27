@@ -7,7 +7,33 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.4B** (entregue 2026-05-27) — **Implementação backend do Módulo Financeiro v0.1.**
+**Sprint 4.4C** (entregue 2026-05-27) — **Frontend do Módulo Financeiro v0.1.**
+Aba "Financeiro" no Dashboard; `FinancialPanel` auto-contido; 8 tipos + 8 funções API.
+`pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ · `pnpm --filter backend typecheck` ✅ · `git diff --check` rc=0.
+**Sem migration, sem backend novo, sem gateway, sem badge na Agenda.**
+
+**Componentes entregues:**
+- `frontend/src/services/api.ts` — 8 tipos exportados (`FinancialChargeStatus`, `FinancialPaymentMethod`,
+  `FinancialChargeListItem`, `FinancialChargeDetail`, `FinancialSummary`, `FinancialChargeFilters`,
+  `CreateFinancialChargePayload`, `UpdateFinancialChargePayload`, `MarkFinancialChargePaidPayload`,
+  `CancelFinancialChargePayload`) + 8 funções (`listFinancialCharges`, `getFinancialSummary`,
+  `getFinancialCharge`, `createFinancialCharge`, `updateFinancialCharge`, `markFinancialChargePaid`,
+  `cancelFinancialCharge`, `listPatientCharges`).
+- `frontend/src/components/FinancialPanel.tsx` — panel auto-contido com state machine `list → new | detail → edit`;
+  summary cards (em aberto / vencido / recebido); filtros status/data; tabela de cobranças com badge de status
+  (Pendente/Vencido/Pago/Cancelado); formulário criar/editar; detalhe com notes + cancel_reason
+  (ambos só no detalhe, nunca na listagem — segurança); modal "Marcar como pago" (forma + data);
+  modal "Cancelar" (motivo opcional; irreversível); aviso clínico nas observações (ADR 0012 §10);
+  `staleTime: 0` em detalhe; 403 via `useEffect` → `onAccessBlocked()`; sem `console.log` de dados financeiros;
+  sem `localStorage/sessionStorage`; sem `dangerouslySetInnerHTML`; `appointment_id` omitido do
+  formulário (4.4E — API de agendamentos por paciente ainda não disponível).
+- `frontend/src/components/FinancialPanel.module.css` — CSS module com design tokens.
+- `frontend/src/views/Dashboard.tsx` — `TabKey` +`'financeiro'`; TABS +`Wallet` icon;
+  `SECTION_INTRO.financeiro`; `{tab === 'financeiro' && <FinancialPanel />}`.
+
+---
+
+**Sprint anterior: 4.4B** (entregue 2026-05-27) — **Implementação backend do Módulo Financeiro v0.1.**
 Migration `financial_charges` + DAO + Service + Controller + Rotas. Smoke **49/49 PASS**.
 Logger redaction estendido para campos financeiros. `appointment_id` opcional com validação
 cross-tenant + cross-patient. **Sem frontend, sem AWS, sem gateway.**

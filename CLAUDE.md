@@ -17,7 +17,13 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.4B** (entregue) — **Backend do Módulo Financeiro v0.1.**
+**Sprint atual: 4.4C** (entregue) — **Frontend do Módulo Financeiro v0.1.**
+Aba "Financeiro" no Dashboard; `FinancialPanel` (lista + cards resumo; formulário criar; detalhe; editar; marcar pago;
+cancelar com confirmação em modal); 8 tipos + 8 funções API adicionados.
+`pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ · `pnpm --filter backend typecheck` ✅ · `git diff --check` rc=0.
+**Sem migration, sem backend novo, sem gateway, sem badge na Agenda, sem commit.** Detalhe: `docs/project-state.md`.
+
+**Sprint anterior: 4.4B** (entregue) — **Backend do Módulo Financeiro v0.1.**
 Migration `financial_charges` (11 CHECKs, 5 índices, batch 15) + `financialChargeDao` + `financialChargeService`
 (`effectiveFinancialAccess` full/transact/none; `appointment_id` cross-tenant/cross-patient) + controller + 8 rotas.
 Logger redaction: `description`/`notes`/`cancel_reason`/`amount_cents` × 4 camadas.
@@ -30,6 +36,7 @@ Smoke **49/49 PASS** · SQL invariants 4/4 · typecheck/build ✅ · `git diff -
 `POST /financial/charges/:id/cancel` · `GET /patients/:id/charges`
 
 **Sprints anteriores (resumo — detalhes em `docs/sprint-history.md`):**
+- **4.4B** ✅ Backend Financeiro — migration + DAOs + services + 8 endpoints — smoke 49/49 PASS
 - **4.4A** ✅ ADR 0012 + `docs/financial-v0-scope.md` (docs-only)
 - **4.3D** ✅ QA/hardening Documentos Médicos — smoke 50/50 PASS
 - **4.3C** ✅ Frontend Documentos Médicos (`ClinicalDocumentsPanel`, tab bar, 7 API funcs, PDF blob)
@@ -42,7 +49,7 @@ Smoke **49/49 PASS** · SQL invariants 4/4 · typecheck/build ✅ · `git diff -
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.4B ✅ → **4.4C** frontend financeiro → **4.4D** QA financeiro →
+4.0–4.4C ✅ → **4.4D** QA financeiro →
 **4.4E** integração Agenda × Financeiro (badge; alertas; sem automação) →
 **4.5** relatórios → **4.6** convênios/faturamento básico → **4.7** estoque básico.
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
@@ -53,11 +60,12 @@ Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 **O que existe:** auth (JWT, MFA/TOTP, backup codes, rate limit, audit); upload CSV/XLSX (magic bytes, SHA-256);
 import/migração (preview, mapeamento, validação, dry-run, import); listagem/CRUD de pacientes; merge B-safe (ADR 0007);
 export CSV/XLSX; retenção dry-run; equipe (invite, aprovação, membros, desativação); agenda administrativa;
-prontuário v0.1 (encounters, notes, read-audit LGPD); documentos médicos v0.1 (PDF on-demand); financeiro v0.1 (backend).
+prontuário v0.1 (encounters, notes, read-audit LGPD); documentos médicos v0.1 (PDF on-demand);
+financeiro v0.1 backend + frontend (aba Financeiro; lista + cards resumo; criar/editar/detalhe; marcar pago; cancelar).
 Detalhe: `docs/project-state.md`.
 
-**O que NÃO existe (sprint explícita):** frontend financeiro; delete físico de paciente; undo completo de merge;
-limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
+**O que NÃO existe (sprint explícita):** QA/hardening financeiro (4.4D); badge Agenda × Financeiro (4.4E);
+delete físico de paciente; undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
 
 **Migrações (15 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
 `20260523_import_sessions` · `20260524_patients` · `20260525_import_sessions_summary` ·

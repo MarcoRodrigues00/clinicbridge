@@ -22,7 +22,7 @@
 | **Versão** | v0.1 |
 | **Sprint conceitual** | 4.4A (ADR 0012 — entregue 2026-05-27) |
 | **Sprint de implementação backend** | 4.4B (entregue 2026-05-27 — smoke 49/49 PASS) |
-| **Sprint de implementação frontend** | 4.4C (após 4.4B aprovada) |
+| **Sprint de implementação frontend** | 4.4C (entregue 2026-05-27 — typecheck/build ✅) |
 | **Sprint QA/hardening** | 4.4D (após 4.4C aprovada) |
 | **Sprint integração Agenda × Financeiro** | 4.4E (após 4.4D aprovada — badge, alertas, fluxo consulta→cobrança) |
 | **Tabelas novas** | 1 (`financial_charges`) |

@@ -748,6 +748,94 @@ export interface CancelClinicalDocumentPayload {
   reason_text?: string | null;
 }
 
+// --- Financial Module v0.1 types (Sprint 4.4C — ADR 0012) -------------------
+// SECURITY: notes and cancel_reason carry free-text. Never pass FinancialChargeDetail
+// instances to console.log, localStorage, sessionStorage, or URL params.
+// Notes WARNING enforced in UI: no clinical content (diagnosis, complaint,
+// prescription, clinical procedure) in financial notes (ADR 0012 §10).
+
+export type FinancialChargeStatus = 'pending' | 'paid' | 'canceled';
+
+export type FinancialPaymentMethod =
+  | 'cash'
+  | 'pix'
+  | 'card'
+  | 'bank_transfer'
+  | 'other';
+
+// List projection: no notes, no cancel_reason (security — notes in detail only).
+export interface FinancialChargeListItem {
+  id: string;
+  clinica_id: string;
+  patient_id: string;
+  appointment_id: string | null;
+  created_by_user_id: string;
+  description: string;
+  amount_cents: number;
+  currency: 'BRL';
+  due_date: string | null;
+  status: FinancialChargeStatus;
+  paid_at: string | null;
+  paid_by_user_id: string | null;
+  payment_method: FinancialPaymentMethod | null;
+  canceled_at: string | null;
+  canceled_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Detail projection: adds notes and cancel_reason.
+// Only returned by POST (create), GET /:id, PATCH, /mark-paid, /cancel.
+export interface FinancialChargeDetail extends FinancialChargeListItem {
+  notes: string | null;
+  cancel_reason: string | null;
+}
+
+export interface FinancialSummary {
+  pending_amount_cents: number;
+  pending_count: number;
+  overdue_amount_cents: number;
+  overdue_count: number;
+  paid_amount_cents: number;
+  paid_count: number;
+}
+
+export interface FinancialChargeFilters {
+  patient_id?: string;
+  appointment_id?: string;
+  status?: FinancialChargeStatus;
+  date_from?: string;
+  date_to?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CreateFinancialChargePayload {
+  patient_id: string;
+  description: string;
+  amount_cents: number;
+  due_date?: string | null;
+  notes?: string | null;
+  appointment_id?: string | null;
+}
+
+export interface UpdateFinancialChargePayload {
+  description?: string;
+  amount_cents?: number;
+  due_date?: string | null;
+  notes?: string | null;
+  appointment_id?: string | null;
+}
+
+export interface MarkFinancialChargePaidPayload {
+  payment_method: FinancialPaymentMethod;
+  paid_at?: string | null;
+}
+
+export interface CancelFinancialChargePayload {
+  cancel_reason?: string | null;
+}
+
 export interface ApiErrorBody {
   code: string;
   message: string;
@@ -1409,6 +1497,119 @@ export const api = {
     const match = /filename="?([^"]+)"?/.exec(disposition);
     const filename = match ? match[1] : 'documento-clinico.pdf';
     return { blob, filename };
+  },
+
+  // --- Financial Module v0.1 (Sprint 4.4C; ADR 0012) --------------------------
+
+  // GET /financial/charges — list with optional filters.
+  listFinancialCharges(
+    token: string,
+    filters: FinancialChargeFilters = {},
+  ): Promise<{ charges: FinancialChargeListItem[] }> {
+    const query = new URLSearchParams();
+    if (filters.patient_id) query.set('patient_id', filters.patient_id);
+    if (filters.appointment_id) query.set('appointment_id', filters.appointment_id);
+    if (filters.status) query.set('status', filters.status);
+    if (filters.date_from) query.set('date_from', filters.date_from);
+    if (filters.date_to) query.set('date_to', filters.date_to);
+    if (filters.limit !== undefined) query.set('limit', String(filters.limit));
+    if (filters.offset !== undefined) query.set('offset', String(filters.offset));
+    const qs = query.toString();
+    return apiFetch<{ charges: FinancialChargeListItem[] }>(
+      `/financial/charges${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  // GET /financial/summary — totalizadores (pending / overdue / paid).
+  getFinancialSummary(
+    token: string,
+    params: { date_from?: string; date_to?: string } = {},
+  ): Promise<{ summary: FinancialSummary }> {
+    const query = new URLSearchParams();
+    if (params.date_from) query.set('date_from', params.date_from);
+    if (params.date_to) query.set('date_to', params.date_to);
+    const qs = query.toString();
+    return apiFetch<{ summary: FinancialSummary }>(
+      `/financial/summary${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  // GET /financial/charges/:id — detail (includes notes).
+  // staleTime: 0 enforced at call sites — notes are sensitive.
+  getFinancialCharge(
+    token: string,
+    chargeId: string,
+  ): Promise<{ charge: FinancialChargeDetail }> {
+    return apiFetch<{ charge: FinancialChargeDetail }>(
+      `/financial/charges/${encodeURIComponent(chargeId)}`,
+      { method: 'GET', token },
+    );
+  },
+
+  // POST /financial/charges — create pending charge.
+  createFinancialCharge(
+    token: string,
+    payload: CreateFinancialChargePayload,
+  ): Promise<{ charge: FinancialChargeDetail }> {
+    return apiFetch<{ charge: FinancialChargeDetail }>('/financial/charges', {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
+  // PATCH /financial/charges/:id — update pending charge.
+  updateFinancialCharge(
+    token: string,
+    chargeId: string,
+    payload: UpdateFinancialChargePayload,
+  ): Promise<{ charge: FinancialChargeDetail }> {
+    return apiFetch<{ charge: FinancialChargeDetail }>(
+      `/financial/charges/${encodeURIComponent(chargeId)}`,
+      { method: 'PATCH', body: payload, token },
+    );
+  },
+
+  // POST /financial/charges/:id/mark-paid — pending → paid.
+  markFinancialChargePaid(
+    token: string,
+    chargeId: string,
+    payload: MarkFinancialChargePaidPayload,
+  ): Promise<{ charge: FinancialChargeDetail }> {
+    return apiFetch<{ charge: FinancialChargeDetail }>(
+      `/financial/charges/${encodeURIComponent(chargeId)}/mark-paid`,
+      { method: 'POST', body: payload, token },
+    );
+  },
+
+  // POST /financial/charges/:id/cancel — pending → canceled.
+  cancelFinancialCharge(
+    token: string,
+    chargeId: string,
+    payload: CancelFinancialChargePayload,
+  ): Promise<{ charge: FinancialChargeDetail }> {
+    return apiFetch<{ charge: FinancialChargeDetail }>(
+      `/financial/charges/${encodeURIComponent(chargeId)}/cancel`,
+      { method: 'POST', body: payload, token },
+    );
+  },
+
+  // GET /patients/:id/charges — single-patient charge list.
+  listPatientCharges(
+    token: string,
+    patientId: string,
+    params: { limit?: number; offset?: number } = {},
+  ): Promise<{ charges: FinancialChargeListItem[] }> {
+    const query = new URLSearchParams();
+    if (params.limit !== undefined) query.set('limit', String(params.limit));
+    if (params.offset !== undefined) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return apiFetch<{ charges: FinancialChargeListItem[] }>(
+      `/patients/${encodeURIComponent(patientId)}/charges${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
   },
 
   getImportFileRetentionDryRun(
