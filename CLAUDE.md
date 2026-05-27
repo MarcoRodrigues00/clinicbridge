@@ -11,7 +11,7 @@
 > - **Integração Agenda × Financeiro v0.1:** ADR `docs/adr/0013-agenda-financial-integration-v0.md` · `docs/agenda-financial-integration-v0-scope.md`
 > - **Relatórios Gerenciais v0.1:** ADR `docs/adr/0014-management-reports-v0.md` · `docs/management-reports-v0-scope.md`
 > - **Catálogo de Serviços v0.1 (Fase 4.6):** ADR `docs/adr/0015-services-catalog-commercial-layer-v0.md` · `docs/services-catalog-v0-scope.md`
-> - **Convênios v0.1 (Fase 4.7 — futuro):** pré-planejamento `docs/insurance-billing-future-scope.md`
+> - **Convênios v0.1 (Fase 4.7):** ADR `docs/adr/0016-insurance-billing-v0.md` · operacional `docs/insurance-billing-v0-scope.md` · pré-planejamento `docs/insurance-billing-future-scope.md`
 > - **Documentos Médicos v0.1:** ADR `docs/adr/0011-medical-documents-prescriptions-v0.md` · `docs/medical-documents-v0-scope.md`
 > - **Prontuário v0.1:** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` · `docs/clinical-encounters-v0-scope.md`
 > - **Arquitetura clínica + roles + audit:** ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` · `docs/clinical-architecture-and-permissions.md`
@@ -21,7 +21,20 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.6D** (entregue) — **QA/Hardening Catálogo de Serviços v0.1.**
+**Sprint atual: 4.7A** (entregue) — **ADR 0016 Convênios v0.1 (docs/ADR-only).**
+ADR 0016 + `docs/insurance-billing-v0-scope.md` criados. Convênios v0.1 = camada
+administrativa/comercial manual. 4 entidades conceituais: `insurance_providers`,
+`insurance_plans`, `patient_insurances`, `service_insurance_prices`. Extensão futura de
+`financial_charges` com `payer_type`, `insurance_provider_id`, `patient_insurance_id`,
+`copay_amount_cents`, `insurance_amount_cents`. Invariantes: preço de referência
+**nunca** auto-propaga para `amount_cents`; sem TISS/TUSS real; sem dado clínico em
+campos de convênio; `member_number`/`holder_name` → redação em logs; soft-delete em
+tudo; tenant isolation por `clinica_id`; campos legados `patients.convenio` e
+`patients.numero_carteirinha` intactos até decisão 4.7B. Permissões: operadoras/regras =
+owner-only; `patient_insurances` = owner + secretaria; profissional_clinico bloqueado.
+`git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.**
+
+**Sprint anterior: 4.6D** (entregue) — **QA/Hardening Catálogo de Serviços v0.1.**
 Smoke API 41/41 PASS (auth, CRUD, limites, permissões, links, Agenda+service_id, Financeiro+service_id).
 Bug crítico corrigido em 4.6C.2: `appointmentController.create` e `financialChargeController.create`/`update`
 não repassavam `service_id` do body para o service — validações de
@@ -166,6 +179,7 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 `PATCH /clinic-services/:id/professionals/:professional_id/status`
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **4.7A** ✅ ADR 0016 Convênios v0.1 (docs-only) — 4 entidades, permissões, LGPD, gate 4.7B aberto
 - **4.6D** ✅ QA/Hardening Catálogo de Serviços — smoke 41/41; bug controller corrigido (4.6C.2)
 - **4.6C** ✅ Frontend Catálogo de Serviços v0.1 — `ServicesPanel` + seletores Agenda/Financeiro
 - **4.6B** ✅ Backend Catálogo de Serviços v0.1 — migration + 8 endpoints — smoke 51/51 PASS
@@ -187,8 +201,8 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A ✅ · 4.6B ✅ · 4.6C ✅ · 4.6D ✅ (QA/hardening; bug controller corrigido) →
-**4.7A** ADR 0016 Convênios → **4.7B–D** implementação → **4.8** Estoque (ADR 0017).
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A ✅ (ADR 0016 Convênios) →
+**4.7B** backend Convênios → **4.7C** frontend → **4.7D** QA → **4.8A** ADR Estoque (ADR 0017).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
@@ -238,7 +252,7 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.7A** ADR 0016 Convênios v0.1 (docs/ADR-only; gate: 4.6D ✅; detalhes em `docs/insurance-billing-future-scope.md`)
+- **4.7B** Backend Convênios v0.1 (gate: ADR 0016 ✅; detalhes em `docs/insurance-billing-v0-scope.md` §9)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)

@@ -7,6 +7,36 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.7A** (entregue 2026-05-27) — **ADR 0016 Convênios v0.1 (docs/ADR-only).**
+Convênios v0.1 = camada administrativa/comercial manual. Sem TISS, sem integração com
+operadora, sem dado clínico nos campos de convênio.
+
+**Documentos criados:**
+- `docs/adr/0016-insurance-billing-v0.md` — ADR aceita, 14 seções.
+- `docs/insurance-billing-v0-scope.md` — escopo operacional, checklist por sprint.
+
+**Decisões fechadas:**
+- 4 entidades conceituais (implementação 4.7B+): `insurance_providers`, `insurance_plans`,
+  `patient_insurances`, `service_insurance_prices`.
+- Extensão de `financial_charges`: `payer_type`, `insurance_provider_id`,
+  `patient_insurance_id`, `copay_amount_cents`, `insurance_amount_cents`.
+- Permissões: operadoras/regras = `dono_clinica` only; `patient_insurances` = owner + secretaria;
+  profissional clínico bloqueado em tudo de convênio/financeiro.
+- LGPD: `member_number` e `holder_name` → redação obrigatória em logs; export LGPD
+  art. 18 deve incluir `patient_insurances` quando implementado.
+- Campos legados `patients.convenio` e `patients.numero_carteirinha` mantidos intactos
+  até decisão explícita na Sprint 4.7B.
+- Invariante central: preço de referência do convênio **nunca** auto-propaga para
+  `amount_cents`. Humano decide o valor final.
+
+**Gates finais:**
+- `git diff --check` rc=0 ✅.
+- Zero código, schema, migration ou env alterados.
+
+**Próxima sprint:** **4.7B** backend Convênios v0.1.
+
+---
+
 **Sprint 4.6D** (entregue 2026-05-27) — **QA/Hardening Catálogo de Serviços v0.1.**
 Smoke API 41/41 PASS. Bug crítico corrigido (4.6C.2): controllers não repassavam `service_id`.
 
