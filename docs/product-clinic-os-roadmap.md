@@ -21,8 +21,11 @@
   Backup local + offsite (docs/scripts). Plano e runbook AWS prontos.
 - **Fases 4.0–4.5D ✅** — Prontuário v0.1, Documentos Médicos v0.1, Financeiro v0.1,
   Agenda × Financeiro, Relatórios Gerenciais v0.1 — todos entregues e QA aprovados.
-- **Fase 4.6A ✅** (2026-05-27) — ADR 0015 Catálogo de Serviços v0.1 (docs/ADR-only).
-  Próximo: **4.6B** backend Catálogo de Serviços.
+- **Fases 4.6A–4.6D ✅** (2026-05-27) — Catálogo de Serviços v0.1 completo: ADR 0015 ✅ +
+  backend (8 endpoints, 2 tabelas, extensão appointments/financial_charges) + frontend
+  (ServicesPanel, seletores Agenda/Financeiro) + QA 41/41 PASS + bug 4.6C.2 corrigido.
+- **Fase 4.7A ✅** (2026-05-27) — ADR 0016 Convênios v0.1 aceita (docs/ADR-only).
+  Próximo: **4.7B** backend Convênios v0.1.
 - **Trilha AWS real:** **pausada estrategicamente** (ADR 0008 §6 + ADR 0009 §10).
   Gate de retomada: ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS.
 - **Pré-requisito vivo:** governança da Fase 3 (`requireRole`, rate limit Redis,
@@ -42,8 +45,8 @@
 | **4.3** | Clínico — documentos | Pendente | ADR 0011 (futura) | Documentos médicos/receitas v0.1 (sem ICP-Brasil) |
 | **4.4** | Operacional — financeiro | Pendente | ADR 0012 (futura) | Financeiro v0.1 (contas a pagar/receber, fluxo de caixa) |
 | **4.5** | Operacional — relatórios | ✅ 4.5A–D entregues | ADR 0014 ✅ | Relatórios gerenciais v0.1 · `docs/management-reports-v0-scope.md` |
-| **4.6** | Operacional — serviços | 4.6A ✅ docs/ADR · 4.6B–D ⏳ | ADR 0015 ✅ | Catálogo de Serviços v0.1 · `docs/services-catalog-v0-scope.md` |
-| **4.7** | Operacional — convênios | Pendente | ADR 0016 (futura) | Convênios manual básico v0.1 (TISS/TUSS real fora) |
+| **4.6** | Operacional — serviços | ✅ 4.6A–D entregues | ADR 0015 ✅ | Catálogo de Serviços v0.1 · `docs/services-catalog-v0-scope.md` |
+| **4.7** | Operacional — convênios | 4.7A ✅ docs/ADR · 4.7B–D ⏳ | ADR 0016 ✅ | Convênios manual básico v0.1 · `docs/insurance-billing-v0-scope.md` |
 | **4.8** | Operacional — estoque | Pendente | ADR 0017 (futura) | Estoque básico v0.1 (medicamentos controlados/ANVISA fora) |
 
 **Fases futuras planejadas (sem número ainda, exigem ADR própria):**
@@ -336,11 +339,11 @@ clínica vê só os seus — invariante tenant).
 
 ---
 
-## Fase 4.6 — Catálogo de Serviços v0.1
+## Fase 4.6 — Catálogo de Serviços v0.1 ✅
 
 **Natureza:** **operacional**.
 
-**Status:** 4.6A ✅ (ADR 0015 aceita, 2026-05-27) · 4.6B–D ⏳ (implementação pendente).
+**Status:** ✅ 4.6A–D entregues (2026-05-27).
 
 **ADR:** `docs/adr/0015-services-catalog-commercial-layer-v0.md` · Operacional: `docs/services-catalog-v0-scope.md`.
 
@@ -348,23 +351,24 @@ clínica vê só os seus — invariante tenant).
 preço de tabela), vínculo profissional × serviço, associação opcional com agendamentos
 e cobranças. Base para Relatórios por tipo de serviço e pré-requisito para Convênios.
 
-**Entidades (decididas na ADR 0015):**
+**Entidades implementadas:**
 - `clinic_services(clinica_id, name, category[texto livre], description, duration_minutes, price_cents, active)`.
 - `professional_services(professional_id, service_id, clinica_id, active)` — many-to-many.
-- `appointments.service_id uuid NULL` — extensão aditiva, opcional, sem auto-propagação.
-- `financial_charges.service_id uuid NULL` — extensão aditiva, opcional, sem auto-propagação de preço.
+- `appointments.service_id uuid NULL` — opcional; validação `service_not_available_for_professional`.
+- `financial_charges.service_id uuid NULL` — opcional; validação `service_mismatch_with_appointment`.
 
 **Invariante central:** `price_cents` é referência visual; nunca auto-propaga para
 `amount_cents` da cobrança. Serviço **não entra no prontuário** (ADR 0010).
 
-**Sequência de sprints:**
+**Sequência de sprints (todas entregues):**
 
 | Sprint | Escopo |
 |---|---|
 | **4.6A** ✅ | ADR 0015 + docs operacional (docs/ADR-only) |
-| **4.6B** ⏳ | Backend: migration + DAOs + services + 8+ endpoints |
-| **4.6C** ⏳ | Frontend: `ServicesPanel` + seletor na agenda + seletor no financeiro |
-| **4.6D** ⏳ | QA/hardening Catálogo de Serviços |
+| **4.6B** ✅ | Backend: migration + DAOs + services + 8 endpoints — smoke 51/51 PASS |
+| **4.6C** ✅ | Frontend: `ServicesPanel` + seletor na agenda + seletor no financeiro |
+| **4.6C.2** ✅ | Correção: controllers não repassavam `service_id`; CSS; isError guard; aba Serviços separada |
+| **4.6D** ✅ | QA/hardening — smoke 41/41 PASS |
 
 **Não no v0.1 (registrado explicitamente):**
 - TUSS/CBHPM/ANS — sem código normativo.
@@ -378,36 +382,39 @@ e cobranças. Base para Relatórios por tipo de serviço e pré-requisito para C
 
 **Natureza:** **operacional+** com risco técnico/jurídico moderado.
 
-**Status:** Pendente — gate: Fase 4.6 entregue e estabilizada.
+**Status:** 4.7A ✅ (ADR 0016 aceita, 2026-05-27) · 4.7B–D ⏳ (implementação pendente).
 
-**ADR:** ADR 0016 (Sprint 4.7A, futura). Insumo em `docs/insurance-billing-future-scope.md`.
+**ADR:** `docs/adr/0016-insurance-billing-v0.md` ✅ · Operacional: `docs/insurance-billing-v0-scope.md`.
+Insumo histórico: `docs/insurance-billing-future-scope.md`.
 
-**Objetivo:** cadastro manual de convênios, carteirinha do paciente, autorização manual,
-cobrança com split particular × convênio. **Sem TISS/TUSS real no v0.1.**
+**Objetivo:** cadastro manual de convênios, carteirinha do paciente, preço de referência
+por serviço × operadora, cobrança com indicação de pagador (particular/convênio/misto).
+**Sem TISS/TUSS real no v0.1.** Humano decide o valor final em toda operação.
 
-**Entidades conceituais (para ADR 0016):**
-- `insurance_providers(clinica_id, name, active)` — operadoras aceitas pela clínica.
-- `patient_insurance_plans(patient_id, provider_id, plan_name, member_number, valid_until)`.
-- `appointment_insurance_authorizations(appointment_id, provider_id, authorization_number, status)`.
-- `financial_charges` ganha: `payer_type`, `insurance_provider_id`, `copay_amount_cents`,
-  `insurance_amount_cents`.
+**Entidades conceituais (decididas na ADR 0016):**
+- `insurance_providers(clinica_id, name, active, notes)` — operadoras da clínica.
+- `insurance_plans(clinica_id, provider_id, name, active)` — planos por operadora (opcional).
+- `patient_insurances(clinica_id, patient_id, provider_id, plan_id, member_number, valid_until, holder_name, active)` — carteirinha do paciente. PII: `member_number`, `holder_name`.
+- `service_insurance_prices(clinica_id, service_id, provider_id, plan_id, reference_price_cents)` — referência; nunca auto-propaga.
+- `financial_charges` ganha: `payer_type`, `insurance_provider_id`, `patient_insurance_id`,
+  `copay_amount_cents`, `insurance_amount_cents`.
 
-**Migração:** `patients.convenio` + `patients.numero_carteirinha` (texto livre hoje)
-podem ser importados para `patient_insurance_plans` na sprint 4.7B.
+**Migração legada:** `patients.convenio` + `patients.numero_carteirinha` mantidos intactos.
+Migração assistida (não automática) para `patient_insurances` decidida em 4.7B.
 
-**Sequência de sprints (sugestão para ADR 0016):**
+**Sequência de sprints:**
 
 | Sprint | Escopo |
 |---|---|
-| **4.7A** ⏳ | ADR 0016 — Convênios v0.1 (docs-only) |
-| **4.7B** ⏳ | Backend: `insurance_providers` + `patient_insurance_plans` |
+| **4.7A** ✅ | ADR 0016 — Convênios v0.1 (docs-only) |
+| **4.7B** ⏳ | Backend: 4 tabelas novas + extensão `financial_charges` + DAOs + endpoints |
 | **4.7C** ⏳ | Frontend: seção convênios no paciente + badge na agenda + split financeiro |
 | **4.7D** ⏳ | QA/hardening convênios |
-| **Fase futura** | `insurance_authorizations` + split copay × convênio em `financial_charges` |
+| **Fase futura** | `appointment_insurance_authorizations` + estados separados patient_paid/insurance_received |
 
 **Não no v0.1:**
 - TISS/TUSS real; integração eletrônica com operadoras; batch de cobrança; lote ANS.
-- NFS-e; gateway de pagamento; repasse automático.
+- NFS-e; gateway de pagamento; repasse automático; autorização eletrônica.
 
 ---
 

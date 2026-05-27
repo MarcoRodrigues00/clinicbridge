@@ -4881,4 +4881,71 @@ não autopropaga) ✅; cobrança sem service_id → 201 (opcional) ✅.
 
 **Sprint 4.6 (A+B+C+C.2+D) entregue.** Gate para 4.7A aberto.
 
-**Próxima sprint:** **4.7A** ADR 0016 Convênios v0.1 (docs/ADR-only).
+**Próxima sprint:** **4.7B** backend Convênios v0.1.
+
+---
+
+## Sprint 4.7A — ADR 0016 Convênios v0.1 (docs/ADR-only) (2026-05-27)
+
+### Objetivo
+
+Definir o escopo e a arquitetura de Convênios v0.1 como camada administrativa/comercial
+manual. Gate: Fase 4.6 entregue e estabilizada ✅.
+
+### Decisão central
+
+**Convênios v0.1 = camada administrativa/comercial manual, não faturamento TISS.**
+Sem geração de XML, sem integração com operadora, sem dado clínico nos campos de convênio.
+Humano decide o valor final em toda operação financeira.
+
+### Entidades conceituais (implementação 4.7B+)
+
+1. **`insurance_providers`** — operadoras aceitas pela clínica. Scoped por `clinica_id`.
+   UNIQUE INDEX `(clinica_id, lower(btrim(name)))`. Soft-delete. Sem código ANS no v0.1.
+
+2. **`insurance_plans`** — planos de uma operadora. Entidade opcional — clínicas sem
+   distinção de planos usam `plan_id = NULL`. UNIQUE INDEX por clínica + provider + nome.
+
+3. **`patient_insurances`** — carteirinha/plano do paciente. PII: `member_number` e
+   `holder_name` → redação obrigatória em logs. Um paciente pode ter múltiplos planos.
+   Export LGPD art. 18 deve incluir esta tabela quando implementada.
+
+4. **`service_insurance_prices`** — preço de referência por serviço × operadora (×plano
+   opcional). **Nunca auto-propaga** para `amount_cents`. Requer `clinic_services` (ADR 0015).
+
+5. **Extensão de `financial_charges`** (migration em 4.7B): `payer_type`,
+   `insurance_provider_id`, `patient_insurance_id`, `copay_amount_cents`,
+   `insurance_amount_cents`. Todos `NULL` por padrão — retrocompatibilidade total.
+
+### Permissões
+
+- Operadoras, planos, `service_insurance_prices`: `dono_clinica` only.
+- `patient_insurances`: owner + secretaria (rotina administrativa).
+- Profissional clínico: bloqueado em todos os endpoints de convênio e financeiro.
+- Leitura geral: owner + secretaria.
+
+### LGPD
+
+- `member_number`, `holder_name` → PII pessoal; redação em `logger.ts` na Sprint 4.7B.
+- Audit metadata-only; nunca número de carteirinha ou nome do titular no audit.
+- Export art. 18 deve incluir `patient_insurances`.
+- `notes` de qualquer entidade nunca contém dado clínico.
+
+### Campos legados
+
+- `patients.convenio` e `patients.numero_carteirinha` permanecem intactos.
+- Migração assistida (não automática) será decidida na Sprint 4.7B.
+
+### Fora do escopo v0.1
+
+TISS/TUSS/ANS real; autorização eletrônica; glosa; lote de faturamento; elegibilidade
+online; gateway de pagamento; repasse automático; NFS-e; ICP-Brasil; dado clínico.
+
+### Gates finais (4.7A)
+
+- `git diff --check` rc=0 ✅.
+- Zero código, schema, migration ou env alterados.
+
+**Sprint 4.7A entregue.** Gate para 4.7B aberto.
+
+**Próxima sprint:** **4.7B** backend Convênios v0.1 (migration + DAOs + services + endpoints).

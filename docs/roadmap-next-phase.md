@@ -86,10 +86,12 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **4.5C** ✅ | Frontend Relatórios v0.1 — aba "Relatórios" + `ReportsPanel` + filtros de período + 4 blocos. typecheck/build ✅ |
 | **4.5D** ✅ | QA/hardening + polish UX Relatórios v0.1 — hero strip, frases interpretativas, regressão API 24/24 PASS. Zero backend |
 | **4.6A** ✅ | ADR 0015 — Catálogo de Serviços v0.1 + Camada Comercial (docs-only). Faseamento: 4.6=Serviços, 4.7=Convênios, 4.8=Estoque. Operacional: `docs/services-catalog-v0-scope.md` |
-| **4.6B** ⏳ | Backend Catálogo de Serviços — migration + DAOs + services + 8+ endpoints. Gate: ADR 0015 aceita ✅ |
-| **4.6C** ⏳ | Frontend Catálogo de Serviços — `ServicesPanel` + seletor na agenda + seletor no financeiro. Gate: 4.6B entregue |
-| **4.6D** ⏳ | QA/hardening Catálogo de Serviços. Gate: 4.6C entregue |
-| **4.7A** ⏳ | ADR 0016 — Convênios manual básico v0.1 (docs-only). Gate: 4.6 entregue + `docs/insurance-billing-future-scope.md` como insumo |
+| **4.6B** ✅ | Backend Catálogo de Serviços — migration + DAOs + services + 8 endpoints — smoke 51/51 PASS |
+| **4.6C** ✅ | Frontend Catálogo de Serviços — `ServicesPanel` + seletor na agenda + seletor no financeiro |
+| **4.6C.2** ✅ | Correção: controllers não repassavam `service_id`; CSS; isError guard; aba Serviços separada |
+| **4.6D** ✅ | QA/hardening Catálogo de Serviços — smoke 41/41 PASS |
+| **4.7A** ✅ | ADR 0016 — Convênios v0.1 (docs-only). 4 entidades, permissões, LGPD, invariantes. Gate: ADR 0016 aceita ✅ |
+| **4.7B** ⏳ | Backend Convênios v0.1 — 4 tabelas novas + extensão `financial_charges` + endpoints. Gate: ADR 0016 ✅ |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.

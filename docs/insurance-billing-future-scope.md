@@ -1,19 +1,28 @@
 # ClinicBridge — Convênios e Faturamento Básico (pré-planejamento)
 
-> **⚠️ Status: Pré-planejamento supersedido.**
+> **⚠️ Documento histórico — pré-planejamento supersedido.**
 >
 > Este documento foi criado na Sprint 4.4D-conv (2026-05-27) como rascunho
-> conceitual antes da ADR de convênios.
+> conceitual antes da ADR de convênios. Foi usado como insumo para a ADR 0016.
+>
+> **A fonte de verdade atual para Convênios v0.1 é:**
+>
+> - `docs/adr/0016-insurance-billing-v0.md` (ADR 0016, aceita 2026-05-27)
+> - `docs/insurance-billing-v0-scope.md` (escopo operacional da Sprint 4.7)
+>
+> Em caso de conflito entre este documento e a ADR 0016, seguir a ADR 0016.
+>
+> ---
 >
 > **Após a Sprint 4.6A (2026-05-27):**
 >
 > - **Catálogo de Serviços v0.1** → decidido na **ADR 0015**
 >   (`docs/adr/0015-services-catalog-commercial-layer-v0.md`) +
 >   escopo operacional em `docs/services-catalog-v0-scope.md`.
->   Implementação: Fase 4.6 (sprints 4.6B/C/D).
+>   Implementação: Fase 4.6 (sprints 4.6B/C/D) — entregue ✅.
 >
-> - **Convênios manual básico v0.1** → será decidido na **ADR 0016** (Sprint 4.7A).
->   Este documento serve de insumo para a ADR 0016 — não o substitui.
+> - **Convênios manual básico v0.1** → decidido na **ADR 0016** (Sprint 4.7A ✅).
+>   Este documento serviu de insumo para a ADR 0016 — não a substitui.
 >
 > **O conteúdo abaixo é histórico e de referência.** Para o planejamento
 > executável e atualizado, ver os documentos acima.
