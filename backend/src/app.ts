@@ -18,6 +18,7 @@ import { clinicalRolesRouter } from './routes/clinicalRoles';
 import { clinicalReadAuditRouter } from './routes/clinicalReadAudit';
 import { clinicalDocumentsRouter } from './routes/clinicalDocuments';
 import { financialChargesRouter } from './routes/financialCharges';
+import { reportsRouter } from './routes/reports';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -105,6 +106,9 @@ export function createApp(): Express {
   // requireRole, not requireClinicalRole. Fine-grained access (profissional
   // blocked, gestor downgraded to view+transact) lives in the service.
   app.use(financialChargesRouter);
+  // Management Reports v0.1 (Sprint 4.5B, ADR 0014). Read-only administrative
+  // aggregates. No clinical data, no PII in payloads.
+  app.use(reportsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

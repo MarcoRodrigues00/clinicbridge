@@ -249,32 +249,57 @@ Ver ADR 0014 §4 para lista completa. Resumo:
 
 ---
 
-## 8. Checklist Sprint 4.5B (backend)
+## 8. Checklist Sprint 4.5B (backend) — ENTREGUE 2026-05-27
 
 ### 8.1 DAO / Service
 
-- [ ] `ReportDao` (ou queries inline no service) — tenant-scoped, sem `listAll`
-- [ ] `ReportService` — 4 métodos: `appointmentsReport`, `financialReport`,
-  `patientsReport`, `agendaFinancialReport`
-- [ ] Validação de intervalo de datas (max 366 dias, não anterior a 2 anos)
-- [ ] `effectiveFinancialAccess` verificado em `financialReport` e `agendaFinancialReport`
-- [ ] Audit `report.view.success` registrado em todos os relatórios
+- [x] `reportsDao` (`backend/src/dao/reportsDao.ts`) — tenant-scoped (29 ocorrências `clinica_id`), sem `listAll`
+- [x] `reportsService` (`backend/src/services/reportsService.ts`) — 4 métodos:
+  `appointments`, `financial`, `patients`, `agendaFinancial`
+- [x] Validação de intervalo de datas (max 366 dias, floor ~2 anos, round-trip ISO anti `feb 30`)
+- [x] `effectiveFinancialAccess` verificado em `financial` e `agendaFinancial` (profissional → 403)
+- [x] Audit `report.<type>.view.success` registrado nos 4 relatórios (metadata-only; `recurso_id=<type>:<from>:<to>`)
 
 ### 8.2 Controller + Rotas
 
-- [ ] `ReportController` thin — 4 handlers
-- [ ] Rota `GET /reports/appointments`
-- [ ] Rota `GET /reports/financial`
-- [ ] Rota `GET /reports/patients`
-- [ ] Rota `GET /reports/agenda-financial`
-- [ ] Pipeline: `rateLimit → requireAuth → requireClinic → requireRole`
+- [x] `reportsController` (`backend/src/controllers/reportsController.ts`) thin — 4 handlers
+- [x] Rota `GET /reports/appointments`
+- [x] Rota `GET /reports/financial`
+- [x] Rota `GET /reports/patients`
+- [x] Rota `GET /reports/agenda-financial`
+- [x] Pipeline: `patientsRateLimit → requireAuth → requireClinic → requireRole(['dono_clinica','secretaria'])`
+- [x] Registro: `app.use(reportsRouter)` em `backend/src/app.ts` após `financialChargesRouter`
 
 ### 8.3 Verificação de build
 
-- [ ] `pnpm --filter backend typecheck`
-- [ ] `pnpm --filter backend build`
-- [ ] `pnpm --filter frontend typecheck` (sem regressão)
-- [ ] `git diff --check` rc=0
+- [x] `pnpm --filter backend typecheck` ✅
+- [x] `pnpm --filter backend build` ✅
+- [x] `pnpm --filter frontend typecheck` ✅
+- [x] `git diff --check` rc=0 ✅
+- [x] `pnpm --filter backend migrate:status` — 15/15 aplicadas, zero pendentes, zero novas ✅
+
+### 8.4 Smoke tests (24 + 27 = 51/51 PASS)
+
+- [x] Auth/permissão: 24/24 — matriz 6 usuários × 4 endpoints (incluindo sem token).
+- [x] Filtros inválidos: 10/10 (`date_*` formato/impossível/ordem/intervalo, `professional_id` mal-formado/cross-tenant, `no_appt_days` non-numeric/0/999).
+- [x] Payload safety: 12/12 (varredura de chaves + substring scan; sem PII/clinical).
+- [x] Content shape: 5/5 (chaves obrigatórias em `data` + `attention`).
+- [x] Audit DB: 22 linhas `report.*.view.success` com `recurso_id` no formato esperado.
+
+### 8.5 Decisão técnica registrada
+
+- Reuso de `patientsRateLimit` (read-style) para os 4 endpoints — mesma cadência dos GETs de pacientes/financeiro.
+- R-D usa raw SQL parametrizado com `DISTINCT ON (fc.appointment_id) ... ORDER BY fc.created_at DESC` (Postgres-only) para resolver "latest charge per appointment" sem materializar IDs no service.
+- R-B `pending`/`overdue` ignoram a janela (saldo aberto atual) por desenho — ADR 0014 §3.3.
+
+### 8.6 Ressalvas aceitas (Sprint 4.5B)
+
+- Sem frontend até 4.5C.
+- Sem export (CSV/PDF/XLSX) — futuro com ADR própria.
+- Relatórios on-demand; sem cache, sem materialização.
+- Intervalo máximo 366 dias por desenho.
+- Sem dados clínicos; sem nomes/CPF/contato de pacientes (apenas `appointment_id` na lista de atenção R-A).
+- Profissional `effectiveFinancialAccess='none'` → 403 nas trilhas R-B/R-D.
 
 ---
 
