@@ -19,6 +19,7 @@ import { clinicalReadAuditRouter } from './routes/clinicalReadAudit';
 import { clinicalDocumentsRouter } from './routes/clinicalDocuments';
 import { financialChargesRouter } from './routes/financialCharges';
 import { reportsRouter } from './routes/reports';
+import { clinicServicesRouter } from './routes/clinicServices';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -109,6 +110,11 @@ export function createApp(): Express {
   // Management Reports v0.1 (Sprint 4.5B, ADR 0014). Read-only administrative
   // aggregates. No clinical data, no PII in payloads.
   app.use(reportsRouter);
+  // Catálogo de Serviços v0.1 (Sprint 4.6B, ADR 0015). ADMINISTRATIVE /
+  // COMMERCIAL — uses requireRole, not requireClinicalRole. Owner-only writes;
+  // reads open to dono_clinica + secretaria (agenda selector). NEVER auto-
+  // propagates price or duration; NEVER carries clinical content.
+  app.use(clinicServicesRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

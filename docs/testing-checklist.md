@@ -2330,3 +2330,102 @@ A aba **Relatórios continua visível para todo papel administrativo** (dono + s
 Profissional recebe blocos financeiros como "acesso restrito" intencional, com tom calmo.
 
 **Relatórios Gerenciais v0.1 → CLOSED na sprint 4.5D.**
+
+---
+
+## Sprint 4.6B — Backend Catálogo de Serviços v0.1 (smoke API)
+
+Reusa smoke users persistentes (`*@clinicbridge.local`).
+
+**Pipeline:** `patientsRateLimit → requireAuth → requireClinic → requireRole(...)`.
+
+```bash
+PASS="SmokeDevOnly!23"
+get_token() {
+  curl -sk -X POST https://localhost:8443/auth/login \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"${1}\",\"senha\":\"${PASS}\"}" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin).get('token','LOGIN_FAILED'))"
+}
+TOK_OWNER=$(get_token "smoke.owner@clinicbridge.local")
+TOK_SEC=$(get_token "smoke.secretaria@clinicbridge.local")
+TOK_PROF=$(get_token "smoke.profissional@clinicbridge.local")
+TOK_GESTOR=$(get_token "smoke.gestor@clinicbridge.local")
+TOK_ADMIN=$(get_token "smoke.admin@clinicbridge.local")
+```
+
+### Cobertura mínima
+
+- [ ] `GET /clinic-services` sem token → 401 `unauthorized`.
+- [ ] `POST /clinic-services` com `TOK_ADMIN` → 403 `no_clinic_context`.
+- [ ] `POST /clinic-services` com `TOK_OWNER` body `{name, category, description, duration_minutes, price_cents}` → 201.
+- [ ] `POST /clinic-services` body com `name` duplicado → 409 `service_name_duplicated`.
+- [ ] Variações case-insensitive (`consulta médica` vs `Consulta médica`) → 409 normalizado.
+- [ ] Variações com espaços (`  Consulta médica  `) → 409 normalizado.
+- [ ] `name` só com espaços (`"   "`) → 400 `clinic_service_invalid`.
+- [ ] PATCH renomeando um serviço para o nome normalizado de outro → 409; PATCH self com casing
+      diferente → 200 (sem falso colisão).
+- [ ] `POST /clinic-services` `name=""` → 400 `clinic_service_invalid`.
+- [ ] `POST /clinic-services` `duration_minutes=4` ou `=721` → 400 `clinic_service_invalid`.
+- [ ] `POST /clinic-services` `price_cents=-1` ou `=100000000` → 400 `clinic_service_invalid`.
+- [ ] `POST /clinic-services` com `TOK_SEC|TOK_GESTOR|TOK_PROF` → 403 `forbidden_role`.
+- [ ] `GET /clinic-services` com `TOK_SEC|TOK_GESTOR|TOK_PROF` → 200 (seletor de agenda).
+- [ ] `GET /clinic-services/:id` cross-tenant ou UUID inexistente → 404 `service_not_found`.
+- [ ] `GET /clinic-services/not-a-uuid` → 400 `clinic_service_invalid`.
+- [ ] `PATCH /clinic-services/:id` com `TOK_OWNER` → 200 + campos aplicados.
+- [ ] `PATCH /clinic-services/:id/status` `{active:false}` → 200 (soft-delete).
+- [ ] `GET /clinic-services?active=true` exclui soft-deletados; `?active=false` mostra só desativados.
+- [ ] `POST /clinic-services/:id/professionals` com `TOK_OWNER` body `{professional_id}` → 201.
+- [ ] Re-link mesmo par → 201 idempotente (mesma linha, `active=true`; sem duplicata).
+- [ ] `PATCH /clinic-services/:id/professionals/:professional_id/status` → 200.
+- [ ] Re-link após desativação reativa o vínculo.
+- [ ] `POST /clinic-services/:id/professionals` com `professional_id` inexistente → 404 `professional_not_found`.
+
+### Audit verification
+
+```sql
+SELECT acao, COUNT(*) FROM audit_logs
+WHERE recurso='clinic_service' AND criado_em > now() - interval '5 minutes'
+GROUP BY acao ORDER BY acao;
+```
+
+Deve listar apenas: `clinic_service.create.success`, `.update.success`, `.status.update.success`,
+`.professional.link.success`, `.professional.status.update.success`. Nenhuma audit ação de **leitura**
+(catálogo é administrativo, mesmo padrão do financeiro).
+
+### Payload safety
+
+```bash
+curl -sk -H "Authorization: Bearer $TOK_OWNER" https://localhost:8443/clinic-services \
+  | python3 -c "import sys,json; t=json.dumps(json.load(sys.stdin)).lower(); \
+    forbid=['cid','diagnos','anamnes','evolution','internal_note','chief_complaint','cpf','telefone']; \
+    leaks=[k for k in forbid if k in t]; print('LEAKS' if leaks else 'CLEAN', leaks)"
+```
+
+Esperado: `CLEAN []`.
+
+### SQL — schema
+
+```sql
+\d clinic_services
+\d professional_services
+SELECT table_name, column_name, is_nullable
+FROM information_schema.columns
+WHERE column_name='service_id' AND table_schema='public';
+```
+
+Esperado: `appointments.service_id` e `financial_charges.service_id` ambos `YES` (nullable).
+
+### Limpeza de dados sintéticos
+
+Política de smoke users persistentes em §"Usuários smoke persistentes" no topo do arquivo
+(usuários ficam; dados sintéticos podem ser apagados). Para limpar serviços criados em testes:
+
+```sql
+-- Em desenvolvimento local apenas. Bindings em professional_services somem em CASCADE.
+DELETE FROM clinic_services
+WHERE clinica_id = (SELECT id FROM clinics WHERE nome = 'Clinica Smoke Dev')
+  AND name IN ('Consulta médica', 'Sessão de fisio');
+```
+
+**Catálogo de Serviços v0.1 → backend entregue na Sprint 4.6B. Frontend + wiring `service_id` na 4.6C.**

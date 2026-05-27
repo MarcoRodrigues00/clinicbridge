@@ -49,7 +49,11 @@ active            boolean     NOT NULL DEFAULT true
 created_at        timestamptz
 updated_at        timestamptz
 
-UNIQUE (clinica_id, name)
+-- Implementado em 4.6B como UNIQUE INDEX normalizado:
+-- idx_clinic_services_clinica_name_normalized_unique
+--   ON clinic_services (clinica_id, lower(btrim(name)))
+-- Rejeita variações case-insensitive e tolerantes a espaços com 409.
+-- CHECK do name usa char_length(btrim(name)) >= 1.
 ```
 
 ### 2.2 `professional_services`
@@ -164,22 +168,44 @@ listar serviços ao criar agendamento. Ajuste de `requireRole` documentado na AD
 - [ ] Docs atualizados (CLAUDE.md, project-state, sprint-history, roadmap).
 - [ ] **Zero código.**
 
-### Sprint 4.6B — Backend Catálogo de Serviços
+### Sprint 4.6B ✅ — Backend Catálogo de Serviços (entregue 2026-05-27)
 
-- [ ] Migration única aditiva: `clinic_services` + `professional_services` +
-      `appointments.service_id` + `financial_charges.service_id`.
-- [ ] Tipos em `db.d.ts` e DTOs.
-- [ ] `servicesDao.ts` — CRUD com tenant isolation; sem delete físico.
-- [ ] `servicesService.ts` — validação de tenant cruzado, regras de negócio.
-- [ ] `servicesController.ts` — thin controller.
-- [ ] `routes/services.ts` — pipeline de autenticação.
-- [ ] Registro em `app.ts`.
-- [ ] Smoke tests (curl): CRUD serviço, vinculação profissional, cross-tenant
-      (403/404), desativação, histórico preservado.
-- [ ] SQL checks: sem `select *` de dado de outra clínica; audit entries.
-- [ ] `pnpm --filter backend typecheck` ✅ · `build` ✅.
-- [ ] `pnpm --filter backend migrate:status` sem pending.
-- [ ] Documentação (CLAUDE.md, project-state, testing-checklist).
+- [x] Migration única aditiva: `clinic_services` + `professional_services` +
+      `appointments.service_id` + `financial_charges.service_id`
+      (`20260605000000_clinic_services_v0`). UNIQUE normalizado
+      `(clinica_id, lower(btrim(name)))`; CHECK name usa `char_length(btrim(name)) >= 1`;
+      índices parciais tenant-scoped `(clinica_id, service_id) WHERE service_id IS NOT NULL`
+      em `appointments` e `financial_charges`.
+- [x] Tipos em `db.d.ts` (`ClinicServiceRow`, `ProfessionalServiceRow`, extensão de
+      `AppointmentRow`/`FinancialChargeRow`).
+- [x] `clinicServiceDao.ts` — DAOs gêmeos (`clinicServiceDao` + `professionalServiceDao`);
+      CRUD tenant-scoped; sem `listAll`; sem delete físico.
+- [x] `clinicServiceService.ts` — validações (1..120 / ≤80 / ≤500 / 5..720 / 0..99_999_999);
+      duplicate-name pré-check + 23505 handler; re-link idempotente; audit metadata-only.
+- [x] `clinicServiceController.ts` — thin controller.
+- [x] `routes/clinicServices.ts` — pipeline `patientsRateLimit + requireAuth + requireClinic +
+      requireRole(...)`; URL `/clinic-services` (não `/services`) para evitar colisão
+      com escopo clínico futuro.
+- [x] Registro em `app.ts`.
+- [x] Smoke tests (Python urllib, sem jq): 51/51 PASS após revisão de normalização — inclui
+      duplicate case-insensitive + whitespace-pad, whitespace-only 400, rename normalizado, mais
+      CRUD, link idempotente, cross-tenant 404, validações negativas, permissões 5 papéis,
+      payload-safety.
+- [x] SQL checks: 16/0 migrations; CHECK + UNIQUE + FK SET NULL; índices criados; sem
+      `SELECT *`; sem SQL concatenado; greps zero clinical_* nos arquivos novos.
+- [x] `pnpm --filter backend typecheck` ✅ · `build` ✅.
+- [x] `pnpm --filter backend migrate:status` 16/0.
+- [x] Documentação (CLAUDE.md, project-state, sprint-history, testing-checklist).
+
+**Decisão de escopo:** wiring de `service_id` nos endpoints existentes de `appointments` e
+`financial_charges` foi **deferido para 4.6C** (frontend). A coluna está pronta (nullable +
+FK SET NULL) e o payload pode evoluir aditivamente sem breaking change.
+
+**Endpoints entregues:**
+- `GET /clinic-services` · `POST /clinic-services`
+- `GET /clinic-services/:id` · `PATCH /clinic-services/:id` · `PATCH /clinic-services/:id/status`
+- `GET /clinic-services/:id/professionals` · `POST /clinic-services/:id/professionals`
+- `PATCH /clinic-services/:id/professionals/:professional_id/status`
 
 ### Sprint 4.6C — Frontend Catálogo de Serviços
 
