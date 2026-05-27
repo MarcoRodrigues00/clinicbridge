@@ -678,6 +678,76 @@ export interface AddClinicalNotePayload {
   rectification_reason_code?: ClinicalNoteRectifyCode | null;
 }
 
+// --- Clinical Documents v0.1 types (Sprint 4.3C — ADR 0011) -----------------
+// SECURITY: body and metadata_json carry clinical content. Never pass document
+// detail instances to console.log, localStorage, sessionStorage, or URL params.
+
+export type ClinicalDocumentType =
+  | 'receipt_simple'
+  | 'attestation'
+  | 'declaration'
+  | 'exam_request'
+  | 'orientation';
+
+export type ClinicalDocumentStatus = 'draft' | 'finalized' | 'canceled';
+
+export type ClinicalDocumentCancelReasonCode =
+  | 'error'
+  | 'duplicate'
+  | 'patient_request'
+  | 'other';
+
+// Metadata-only projection: no body, no metadata_json, no cancel_reason_text.
+// Returned by GET /clinical/documents and GET /patients/:id/documents.
+export interface PublicClinicalDocumentListItem {
+  id: string;
+  clinica_id: string;
+  patient_id: string;
+  encounter_id: string | null;
+  author_user_id: string;
+  doc_type: ClinicalDocumentType;
+  title: string;
+  status: ClinicalDocumentStatus;
+  finalized_at: string | null;
+  finalized_by_user_id: string | null;
+  canceled_at: string | null;
+  canceled_by_user_id: string | null;
+  cancel_reason_code: ClinicalDocumentCancelReasonCode | null;
+  supersedes_document_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Full detail: adds body, metadata_json, cancel_reason_text.
+// Returned by POST (create), GET /:id (detail), PATCH (update), /finalize, /cancel.
+export interface PublicClinicalDocument extends PublicClinicalDocumentListItem {
+  body: string | null;
+  metadata_json: Record<string, unknown> | null;
+  cancel_reason_text: string | null;
+}
+
+export interface CreateClinicalDocumentPayload {
+  patient_id: string;
+  encounter_id?: string | null;
+  doc_type: ClinicalDocumentType;
+  title?: string;
+  body?: string | null;
+  metadata_json?: Record<string, unknown> | null;
+  supersedes_document_id?: string | null;
+}
+
+export interface UpdateClinicalDocumentPayload {
+  title?: string;
+  body?: string | null;
+  metadata_json?: Record<string, unknown> | null;
+  encounter_id?: string | null;
+}
+
+export interface CancelClinicalDocumentPayload {
+  reason_code: ClinicalDocumentCancelReasonCode;
+  reason_text?: string | null;
+}
+
 export interface ApiErrorBody {
   code: string;
   message: string;
@@ -1250,6 +1320,95 @@ export const api = {
     if (filters.offset !== undefined) q.set('offset', String(filters.offset));
     const qs = q.toString();
     return apiFetch(`/clinical/read-audit${qs ? `?${qs}` : ''}`, { method: 'GET', token });
+  },
+
+  // --- Clinical Documents v0.1 (Sprint 4.3C; ADR 0011) -----------------------
+
+  listPatientDocuments(
+    token: string,
+    patientId: string,
+  ): Promise<{ documents: PublicClinicalDocumentListItem[] }> {
+    return apiFetch(`/patients/${patientId}/documents`, { method: 'GET', token });
+  },
+
+  getClinicalDocument(
+    token: string,
+    docId: string,
+  ): Promise<{ document: PublicClinicalDocument }> {
+    return apiFetch(`/clinical/documents/${docId}`, { method: 'GET', token });
+  },
+
+  createClinicalDocument(
+    token: string,
+    payload: CreateClinicalDocumentPayload,
+  ): Promise<{ document: PublicClinicalDocument }> {
+    return apiFetch('/clinical/documents', { method: 'POST', token, body: payload });
+  },
+
+  updateClinicalDocument(
+    token: string,
+    docId: string,
+    payload: UpdateClinicalDocumentPayload,
+  ): Promise<{ document: PublicClinicalDocument }> {
+    return apiFetch(`/clinical/documents/${docId}`, { method: 'PATCH', token, body: payload });
+  },
+
+  finalizeClinicalDocument(
+    token: string,
+    docId: string,
+  ): Promise<{ document: PublicClinicalDocument }> {
+    return apiFetch(`/clinical/documents/${docId}/finalize`, { method: 'POST', token });
+  },
+
+  cancelClinicalDocument(
+    token: string,
+    docId: string,
+    payload: CancelClinicalDocumentPayload,
+  ): Promise<{ document: PublicClinicalDocument }> {
+    return apiFetch(`/clinical/documents/${docId}/cancel`, { method: 'POST', token, body: payload });
+  },
+
+  // Downloads the document PDF. Returns a Blob (not JSON), so it does not use
+  // apiFetch. Authorization is via Bearer header — token is never placed in the URL.
+  async downloadClinicalDocumentPdf(
+    token: string,
+    docId: string,
+  ): Promise<{ blob: Blob; filename: string }> {
+    let response: Response;
+    try {
+      response = await fetch(`${BASE_URL}/clinical/documents/${docId}/pdf`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      throw new ApiError(0, {
+        code: 'network_error',
+        message: 'Não foi possível conectar ao servidor. Tente novamente em instantes.',
+      });
+    }
+
+    if (!response.ok) {
+      let body: ApiErrorBody | undefined;
+      try {
+        const parsed = (await response.json()) as { error?: ApiErrorBody };
+        body = parsed.error;
+      } catch {
+        // non-JSON body — fall through to generic
+      }
+      if (body && typeof body.code === 'string' && typeof body.message === 'string') {
+        throw new ApiError(response.status, body);
+      }
+      throw new ApiError(response.status, {
+        code: 'unknown_error',
+        message: 'Não foi possível gerar o PDF.',
+      });
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const match = /filename="?([^"]+)"?/.exec(disposition);
+    const filename = match ? match[1] : 'documento-clinico.pdf';
+    return { blob, filename };
   },
 
   getImportFileRetentionDryRun(

@@ -28,9 +28,47 @@
 
 ## Estado atual (resumido — atualizado 2026-05-26)
 
-**Sprint atual: 4.3B** (entregue) — **Implementação backend de Documentos Médicos e Receitas v0.1.**
+**Sprint atual: 4.3C** (entregue) — **Frontend de Documentos Médicos e Receitas v0.1.**
+Aba "Documentos" no drawer `ClinicalPatientPane`; `ClinicalDocumentsPanel` (lista, criar, detalhe,
+editar rascunho, finalizar, cancelar, download PDF); 7 funções API + 8 tipos adicionados.
+**Sem migration, sem AWS, sem ICP-Brasil, sem armazenamento de PDF.**
+
+**Componentes entregues:**
+- `frontend/src/components/ClinicalDocumentsPanel.tsx` — panel auto-contido com state machine
+  interna: `list` → `new` | `detail`; staleTime: 0 em todas as queries de conteúdo; PDF via
+  blob sem token em URL; sem dangerouslySetInnerHTML; aviso jurídico ADR 0011 §10.2 em
+  criar/detalhe; botão "Como assinar e validar →" com passo a passo inline (`SignGuide`)
+  em criar e detalhe (finalizado); guia cita VALIDAR Gov.br/ITI + GOV.BR; sem integração
+  de assinatura digital; sem QR Code; sem upload de PDF assinado; sem status "assinado".
+- `frontend/src/components/ClinicalDocumentsPanel.module.css` — CSS module com design tokens;
+  classes `.signGuide`, `.signGuideToggle`, `.signGuideSteps`, `.signGuideNote`,
+  `.signGuideFuture`, `.pdfNoteRow` adicionadas.
+- `frontend/src/services/api.ts` — 8 tipos exportados (`ClinicalDocumentType`,
+  `ClinicalDocumentStatus`, `ClinicalDocumentCancelReasonCode`, `PublicClinicalDocumentListItem`,
+  `PublicClinicalDocument`, `CreateClinicalDocumentPayload`, `UpdateClinicalDocumentPayload`,
+  `CancelClinicalDocumentPayload`) + 7 funções (`listPatientDocuments`, `getClinicalDocument`,
+  `createClinicalDocument`, `updateClinicalDocument`, `finalizeClinicalDocument`,
+  `cancelClinicalDocument`, `downloadClinicalDocumentPdf`).
+- `frontend/src/components/ClinicalPatientPane.tsx` — tab bar "Atendimentos | Documentos"
+  adicionada na timeline view; `activeTab` reseta ao abrir o drawer; sem quebra do fluxo
+  de atendimentos.
+- `frontend/src/components/ClinicalPatientPane.module.css` — classes `.tabBar`,
+  `.tabBtn`, `.tabBtnActive` adicionadas.
+
+- `backend/src/services/clinicalDocumentPdfService.ts` — layout v2: cabeçalho clínica +
+  separador bold; título 22pt centrado; caixa de metadados 2 colunas sombreada + bordada;
+  label strip "CONTEÚDO DO DOCUMENTO"; altura mínima de conteúdo 200pt; assinatura corrigida
+  (nome ACIMA da linha → linha → label → data, sem texto atravessado pela linha); limite
+  superior para não colidir com rodapé; rodapé jurídico cita VALIDAR Gov.br/ITI + GOV.BR;
+  `compress:false` mantido; sem logo/QR/armazenamento.
+
+**Verificação:** `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ ·
+`pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
+`git diff --check` rc=0.
+
+**Sprint anterior: 4.3B** (entregue) — **Implementação backend de Documentos Médicos e Receitas v0.1.**
 Migration + DAOs + services + PDF on-demand + 8 endpoints registrados. Smoke 47/47 PASS.
-**Sem frontend (4.3C), sem AWS, sem ICP-Brasil, sem armazenamento de PDF.**
+**Sem frontend, sem AWS, sem ICP-Brasil, sem armazenamento de PDF.**
 
 **Componentes entregues:**
 - `backend/migrations/20260603000000_clinical_documents_v0.ts` — tabela `clinical_documents`
@@ -53,7 +91,7 @@ Migration + DAOs + services + PDF on-demand + 8 endpoints registrados. Smoke 47/
 4. profissional cria draft → 201 ✅ · 5. edita draft → 200 ✅
 6. finalize sem body → 400/document_body_required ✅ · 7. finalize com body → 200/finalized ✅
 8. editar finalized → 400/document_already_finalized ✅
-9. PDF → 200 + %PDF + "ICP-Brasil" + "prescri" no rodapé (hex extraction Node.js) ✅
+9. PDF → 200 + %PDF + "ICP-Brasil" + "Gov.br/ITI" no rodapé (hex extraction Node.js) ✅
 10. cancel → 200/canceled ✅ · 11. PDF canceled → 400/document_canceled ✅
 12. owner lê → 200 ✅ · 13. gestor lê → 200 ✅ · 14. secretaria não lê → 403 ✅
 15–17. list metadata-only (body/metadata_json/cancel_reason_text ausentes) ✅
@@ -150,8 +188,8 @@ LGPD-art.18 `GET /clinical/read-audit` (owner-only; metadados de acesso;
 frontend `ClinicalReadAuditPanel`; smoke 8/8 PASS) → **4.3A ✅** ADR 0011 +
 operacional `docs/medical-documents-v0-scope.md` (docs-only; 5 tipos; 1 tabela;
 PDF on-demand; sem ICP-Brasil) → **4.3B ✅** implementação backend (migration +
-DAOs + services + PDF + 8 endpoints + smoke 47/47 PASS) → **4.3C** frontend
-(aba Documentos no drawer) → **4.4** financeiro → **4.5** relatórios
+DAOs + services + PDF + 8 endpoints + smoke 47/47 PASS) → **4.3C ✅** frontend
+(aba Documentos no drawer; `ClinicalDocumentsPanel`; tab bar; 7 API funcs) → **4.4** financeiro → **4.5** relatórios
 gerenciais → **4.6** convênios/faturamento básico (TISS/TUSS real fora) →
 **4.7** estoque básico (medicamentos controlados/ANVISA fora). Cada **fase
 nova** exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
@@ -243,8 +281,10 @@ conceitual e audit de leitura). Sequência de fases administrativas:
   v0.1 (docs-only; 5 tipos; 1 tabela `clinical_documents`; PDF on-demand; sem
   ICP-Brasil; operacional `docs/medical-documents-v0-scope.md`) → **4.3B ✅**
   implementação backend (migration + DAOs + services + PDF `compress:false` +
-  8 endpoints + smoke 47/47 PASS) → **4.3C**
-  frontend (aba Documentos no drawer `ClinicalPatientPane`) → **4.4** financeiro
+  8 endpoints + smoke 47/47 PASS) → **4.3C ✅**
+  frontend (`ClinicalDocumentsPanel`; tab bar Atendimentos/Documentos; 7 API funcs +
+  8 tipos; staleTime: 0; PDF blob sem token em URL; aviso jurídico ADR 0011 §10.2;
+  typecheck/build ✅) → **4.4** financeiro
   v0.1 → **4.5** relatórios gerenciais v0.1 → **4.6** convênios/faturamento
   básico v0.1 (TISS/TUSS real fora) → **4.7** estoque básico v0.1
   (medicamentos controlados/ANVISA fora).

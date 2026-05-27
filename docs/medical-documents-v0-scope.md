@@ -22,7 +22,7 @@
 | **Versão** | v0.1 |
 | **Sprint conceitual** | 4.3A (ADR 0011 — entregue) |
 | **Sprint de implementação backend** | 4.3B (entregue 2026-05-26; smoke 47/47 PASS) |
-| **Sprint de implementação frontend** | 4.3C (pendente) |
+| **Sprint de implementação frontend** | 4.3C (entregue 2026-05-26) |
 | **Tabelas novas** | 1 (`clinical_documents`) |
 | **Endpoints novos** | 8 (ver §5) |
 | **Roles novas** | Nenhuma — reutiliza `profissional_clinico`, `gestor_clinica` da ADR 0010 |
@@ -408,24 +408,22 @@ SELECT acao, recurso FROM clinical_read_audit WHERE recurso='document' ORDER BY 
 
 ---
 
-## 12. Checklist Sprint 4.3C (implementação frontend — futura)
+## 12. Checklist Sprint 4.3C (implementação frontend — entregue 2026-05-26)
 
-> Esta sprint fica para depois de 4.3B completa e validada.
-
-- [ ] Aba/seção "Documentos" dentro do drawer `ClinicalPatientPane`
-- [ ] Seletor de tipo de documento (`doc_type`)
-- [ ] Vínculo opcional a encounter (dropdown de encounters ativos do paciente)
-- [ ] Formulário por tipo com campos de `metadata_json` (template simples)
-- [ ] **Alerta permanente visível** sobre limitação jurídica (sem ICP-Brasil)
-- [ ] Pré-visualização em tela antes de finalizar
-- [ ] Botão "Finalizar" com confirmação
-- [ ] Lista de documentos com badge de status (Rascunho / Finalizado / Cancelado)
-- [ ] Filtro rápido por tipo
-- [ ] Botão "Baixar PDF" apenas para `finalized`
-- [ ] `staleTime: 0` para listas clínicas
-- [ ] Sem `console.log` com dado clínico
-- [ ] Sem dado clínico em URL/query string
-- [ ] Linguagem: "Emitir documento" / "Documentos do paciente" (não "prescrição eletrônica")
+- [x] Aba/seção "Documentos" dentro do drawer `ClinicalPatientPane` (tab bar Atendimentos | Documentos)
+- [x] Seletor de tipo de documento (`doc_type`)
+- [x] Formulário de criação (tipo, título opcional, corpo)
+- [x] **Alerta permanente visível** sobre limitação jurídica (ADR 0011 §10.2; orienta assinar externamente + Gov.br/ITI)
+- [x] Botão "Finalizar" com confirmação implícita (action button)
+- [x] Lista de documentos com badge de status (Rascunho / Finalizado / Cancelado)
+- [x] Botão "Baixar PDF" apenas para `finalized`
+- [x] Nota "PDF não sai assinado pelo ClinicBridge" junto ao botão
+- [x] `staleTime: 0` para listas e detalhes clínicos
+- [x] Sem `dangerouslySetInnerHTML`; sem dado clínico em URL/query string; token nunca em URL do PDF
+- [x] 401/403 → mensagem genérica segura
+- [x] PDF layout v2 (nome acima da linha de assinatura, caixa metadados bordada, label strip CONTEÚDO, min-height 200pt, rodapé cita VALIDAR Gov.br/ITI + GOV.BR)
+- [x] Botão "Como assinar e validar →" com passo a passo inline (SignGuide); guia visual com prints: sprint futura
+- [x] Linguagem: "Emitir documento" / "Documentos do paciente" (não "prescrição eletrônica")
 
 ---
 

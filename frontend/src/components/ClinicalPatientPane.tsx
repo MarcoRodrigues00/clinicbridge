@@ -35,6 +35,7 @@ import {
 } from '../services/api';
 import { getToken } from '../services/authStorage';
 import { useAuth } from '../services/AuthProvider';
+import { ClinicalDocumentsPanel } from './ClinicalDocumentsPanel';
 import styles from './ClinicalPatientPane.module.css';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -769,6 +770,7 @@ export function ClinicalPatientPane({ patient, open, onClose }: ClinicalPatientP
   const token = getToken();
 
   const [view, setView] = useState<PaneView>({ kind: 'timeline' });
+  const [activeTab, setActiveTab] = useState<'encounters' | 'documents'>('encounters');
 
   // Sync open state with the native <dialog>
   useEffect(() => {
@@ -777,6 +779,7 @@ export function ClinicalPatientPane({ patient, open, onClose }: ClinicalPatientP
     if (open && !el.open) {
       el.showModal();
       setView({ kind: 'timeline' });
+      setActiveTab('encounters');
     }
     if (!open && el.open) {
       el.close();
@@ -860,7 +863,27 @@ export function ClinicalPatientPane({ patient, open, onClose }: ClinicalPatientP
             Acessos ao prontuário são registrados para conformidade com a LGPD.
           </p>
 
+          {/* Tab switcher — only visible in the top-level (timeline) view */}
           {view.kind === 'timeline' && (
+            <div className={styles.tabBar}>
+              <button
+                type="button"
+                className={`${styles.tabBtn} ${activeTab === 'encounters' ? styles.tabBtnActive : ''}`}
+                onClick={() => setActiveTab('encounters')}
+              >
+                Atendimentos
+              </button>
+              <button
+                type="button"
+                className={`${styles.tabBtn} ${activeTab === 'documents' ? styles.tabBtnActive : ''}`}
+                onClick={() => setActiveTab('documents')}
+              >
+                Documentos
+              </button>
+            </div>
+          )}
+
+          {view.kind === 'timeline' && activeTab === 'encounters' && (
             <TimelineView
               encounters={timelineQuery.data?.encounters ?? []}
               isLoading={timelineQuery.isLoading}
@@ -868,6 +891,10 @@ export function ClinicalPatientPane({ patient, open, onClose }: ClinicalPatientP
               onOpenDetail={(id) => setView({ kind: 'detail', encounterId: id })}
               onNewEncounter={() => setView({ kind: 'new-encounter' })}
             />
+          )}
+
+          {view.kind === 'timeline' && activeTab === 'documents' && (
+            <ClinicalDocumentsPanel patientId={patient.id} />
           )}
 
           {view.kind === 'new-encounter' && (
