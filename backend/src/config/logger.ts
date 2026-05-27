@@ -185,6 +185,32 @@ const redactPaths = [
   'payload.notes',
   'payload.cancel_reason',
   'payload.amount_cents',
+
+  // Sprint 4.7B — Convênios v0.1 PII (ADR 0016 §5.2).
+  //   - `member_number` (carteirinha) — pessoal sensível operacional.
+  //   - `holder_name`  (titular do plano) — pessoal.
+  // Both fields live in `patient_insurances`. NEVER appear in audit_logs.acao
+  // or any other audit textual field (audit is metadata-only by ADR 0016 §5.2).
+  // The logger redaction is the defense-in-depth safety net for accidental
+  // `logger.info({ body })` / `logger.error({ err, body })` in future code.
+  //
+  // Layer 1: top-level.
+  'member_number',
+  'holder_name',
+
+  // Layer 2: one-level wildcards — catch `body.<field>`, `payload.<field>`, etc.
+  '*.member_number',
+  '*.holder_name',
+
+  // Layer 3: explicit two-level paths for the three most likely logger shapes.
+  'body.member_number',
+  'body.holder_name',
+
+  'req.body.member_number',
+  'req.body.holder_name',
+
+  'payload.member_number',
+  'payload.holder_name',
 ];
 
 export const logger = pino({

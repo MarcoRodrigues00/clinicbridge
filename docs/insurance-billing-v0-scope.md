@@ -221,22 +221,26 @@ valor de preço de referência, dados clínicos ou qualquer PII.
 - [x] `git diff --check` rc=0.
 - [x] Zero código, schema, migration ou env alterados.
 
-### Sprint 4.7B — Backend Convênios v0.1
+### Sprint 4.7B — Backend Convênios v0.1 ✅
 
-- [ ] Migration única aditiva: `insurance_providers`, `insurance_plans`,
+- [x] Migration única aditiva: `insurance_providers`, `insurance_plans`,
       `patient_insurances`, `service_insurance_prices`.
-- [ ] Migration de extensão: `financial_charges` ganha `payer_type`,
+- [x] Migration de extensão: `financial_charges` ganha `payer_type`,
       `insurance_provider_id`, `patient_insurance_id`, `copay_amount_cents`,
       `insurance_amount_cents`.
-- [ ] DAOs: `insuranceProviderDao`, `insurancePlanDao`, `patientInsuranceDao`,
+- [x] DAOs: `insuranceProviderDao`, `insurancePlanDao`, `patientInsuranceDao`,
       `serviceInsurancePriceDao`.
-- [ ] Services: `insuranceProviderService`, `patientInsuranceService`.
-- [ ] Controllers + rotas (endpoints §4).
-- [ ] Logger estendido: `member_number` e `holder_name` na lista de redação.
-- [ ] Export LGPD estendido com `patient_insurances`.
-- [ ] Smoke API: auth/permissão, CRUD, limites, tenant, PII.
-- [ ] `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` N/0 ✅.
-- [ ] `git diff --check` rc=0.
+- [x] Services: `insuranceProviderService`, `insurancePlanService`, `patientInsuranceService`,
+      `serviceInsurancePriceService` + helpers `parseInsuranceFieldsForCharge`/`validateInsuranceForCharge`.
+- [x] Controllers + rotas: 17 endpoints (§4) + wiring em `app.ts`.
+- [x] Logger estendido: `member_number` e `holder_name` na lista de redação (layers 1/2/3).
+- [x] Export LGPD: `patient_insurances` identificada para inclusão futura (sem export automático nesta sprint — deferido).
+- [x] Smoke API 47/47 PASS: auth/permissão, CRUD providers/plans/service-prices/patient_insurances, PII mascarado em list × raw em detail, payer_type private/insurance/mixed, audit sem PII.
+- [x] `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 17/0 ✅.
+- [x] `pnpm --filter frontend typecheck` ✅.
+- [x] `git diff --check` rc=0.
+- [x] Dados sintéticos do smoke limpos após os testes.
+- [x] Campos legados `patients.convenio` e `patients.numero_carteirinha` intactos.
 
 ### Sprint 4.7C — Frontend Convênios v0.1
 

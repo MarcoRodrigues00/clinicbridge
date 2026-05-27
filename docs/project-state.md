@@ -7,33 +7,57 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.7A** (entregue 2026-05-27) — **ADR 0016 Convênios v0.1 (docs/ADR-only).**
-Convênios v0.1 = camada administrativa/comercial manual. Sem TISS, sem integração com
-operadora, sem dado clínico nos campos de convênio.
+**Sprint 4.7B** (entregue 2026-05-27) — **Backend Convênios v0.1.**
 
-**Documentos criados:**
-- `docs/adr/0016-insurance-billing-v0.md` — ADR aceita, 14 seções.
-- `docs/insurance-billing-v0-scope.md` — escopo operacional, checklist por sprint.
+**Migration única aditiva** `20260606_insurance_billing_v0` — 4 tabelas novas:
+- `insurance_providers` — operadoras da clínica; UNIQUE INDEX `(clinica_id, lower(btrim(name)))`.
+- `insurance_plans` — planos de uma operadora; UNIQUE INDEX por clínica + provider + nome.
+- `patient_insurances` — carteirinha do paciente; PII: `member_number`, `holder_name`.
+- `service_insurance_prices` — preço de referência por serviço × operadora × plano (COALESCE sentinel).
+- Extensão de `financial_charges`: 5 colunas nullable (`payer_type` CHECK `'private'|'insurance'|'mixed'`,
+  `insurance_provider_id`, `patient_insurance_id`, `copay_amount_cents`, `insurance_amount_cents`).
 
-**Decisões fechadas:**
-- 4 entidades conceituais (implementação 4.7B+): `insurance_providers`, `insurance_plans`,
-  `patient_insurances`, `service_insurance_prices`.
-- Extensão de `financial_charges`: `payer_type`, `insurance_provider_id`,
-  `patient_insurance_id`, `copay_amount_cents`, `insurance_amount_cents`.
-- Permissões: operadoras/regras = `dono_clinica` only; `patient_insurances` = owner + secretaria;
-  profissional clínico bloqueado em tudo de convênio/financeiro.
-- LGPD: `member_number` e `holder_name` → redação obrigatória em logs; export LGPD
-  art. 18 deve incluir `patient_insurances` quando implementado.
-- Campos legados `patients.convenio` e `patients.numero_carteirinha` mantidos intactos
-  até decisão explícita na Sprint 4.7B.
-- Invariante central: preço de referência do convênio **nunca** auto-propaga para
-  `amount_cents`. Humano decide o valor final.
+**Arquivos novos/modificados:**
+- `backend/migrations/20260606000000_insurance_billing_v0.ts` — migration aditiva.
+- `backend/src/dao/insuranceProviderDao.ts` · `insurancePlanDao.ts` · `patientInsuranceDao.ts` · `serviceInsurancePriceDao.ts` — 4 DAOs.
+- `backend/src/services/insuranceService.ts` — service único com 4 sub-services + helpers `parseInsuranceFieldsForCharge`/`validateInsuranceForCharge`.
+- `backend/src/controllers/insuranceController.ts` · `backend/src/routes/insurance.ts` — controller + 17 endpoints.
+- `backend/src/app.ts` — monta `insuranceRouter` em `/api`.
+- `backend/src/config/logger.ts` — `member_number` e `holder_name` adicionados à lista de redação (layers 1/2/3).
+- `backend/src/types/db.d.ts` — tipos das 4 tabelas novas + extensão de `financial_charges`.
+- `backend/src/dao/financialChargeDao.ts` · `backend/src/services/financialChargeService.ts` · `backend/src/controllers/financialChargeController.ts` — campos de convênio integrados.
+
+**17 endpoints novos:**
+- `/insurance/providers` (5): GET list · POST create · GET :id · PATCH :id · PATCH :id/status
+- `/insurance/plans` (5): GET list (filtro `provider_id`) · POST create · GET :id · PATCH :id · PATCH :id/status
+- `/insurance/service-prices` (5): GET list (filtros `service_id`/`provider_id`/`plan_id`) · POST · GET :id · PATCH :id · PATCH :id/status
+- `/patients/:patient_id/insurances` (5+1 separado): GET list · POST · GET :id · PATCH :id · PATCH :id/status
+
+**Permissões:**
+- Pipeline: `patientsRateLimit + requireAuth + requireClinic + requireRole`.
+- Reads providers/plans/service-prices/patient_insurances → `dono_clinica + secretaria`.
+- Profissional_clinico: bloqueado no service via clinical grants (`assertNotProfissional`).
+- Writes providers/plans/service-prices → `CLINIC_ADMIN_ROLES` (`dono_clinica`).
+- Writes patient_insurances → `dono_clinica + secretaria`.
+- `admin_sistema` → 403 `no_clinic_context` em todos.
+
+**PII e audit:**
+- `member_number` retornado mascarado (`****1234`) em list; raw apenas em detail.
+- `holder_name` e `member_number` na lista de redação do `logger.ts`.
+- Audit metadata-only: `insurance.provider.*`, `insurance.plan.*`, `insurance.patient.*`, `insurance.service_price.*` — sem nome, sem PII, sem valor.
+
+**Invariantes mantidos:**
+- `service_insurance_prices.reference_price_cents` **nunca** auto-popula `amount_cents`.
+- `validateInsuranceForCharge` exige `patient_insurance_id` para `insurance`/`mixed`; rejeita campos de convênio em `private`; valida `copay + insurance = amount_cents` quando `mixed` com ambos presentes.
+- Campos legados `patients.convenio` e `patients.numero_carteirinha` intactos.
 
 **Gates finais:**
+- `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 17/0 ✅.
+- `pnpm --filter frontend typecheck` ✅.
 - `git diff --check` rc=0 ✅.
-- Zero código, schema, migration ou env alterados.
+- Smoke 47/47 PASS.
 
-**Próxima sprint:** **4.7B** backend Convênios v0.1.
+**Próxima sprint:** **4.7C** Frontend Convênios v0.1.
 
 ---
 

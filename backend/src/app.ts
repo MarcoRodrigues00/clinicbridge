@@ -20,6 +20,7 @@ import { clinicalDocumentsRouter } from './routes/clinicalDocuments';
 import { financialChargesRouter } from './routes/financialCharges';
 import { reportsRouter } from './routes/reports';
 import { clinicServicesRouter } from './routes/clinicServices';
+import { insuranceRouter } from './routes/insurance';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -115,6 +116,14 @@ export function createApp(): Express {
   // reads open to dono_clinica + secretaria (agenda selector). NEVER auto-
   // propagates price or duration; NEVER carries clinical content.
   app.use(clinicServicesRouter);
+  // Convênios v0.1 (Sprint 4.7B, ADR 0016). ADMINISTRATIVE / COMMERCIAL —
+  // operadoras, planos, carteirinhas do paciente e preço de referência por
+  // serviço × operadora. Owner-only writes para providers/plans/service_prices;
+  // owner + secretaria para patient_insurances. NEVER carries clinical
+  // content; reference_price_cents NEVER auto-propagates para
+  // financial_charges.amount_cents. member_number/holder_name são PII com
+  // redação ativa em config/logger.ts e ausentes em audit_logs.
+  app.use(insuranceRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

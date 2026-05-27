@@ -4,6 +4,7 @@ import type {
   FinancialChargeRow,
   FinancialChargeStatus,
   FinancialPaymentMethod,
+  FinancialPayerType,
 } from '../types/db';
 
 // financial_charges DAO (Sprint 4.4B; ADR 0012).
@@ -36,6 +37,12 @@ export interface CreateFinancialChargeInput {
   amount_cents: number;
   due_date: string | null;
   notes: string | null;
+  // Sprint 4.7B — insurance fields (all optional; default NULL = particular).
+  payer_type: FinancialPayerType | null;
+  insurance_provider_id: string | null;
+  patient_insurance_id: string | null;
+  copay_amount_cents: number | null;
+  insurance_amount_cents: number | null;
 }
 
 export interface UpdatePendingFields {
@@ -45,6 +52,12 @@ export interface UpdatePendingFields {
   notes?: string | null;
   appointment_id?: string | null;
   service_id?: string | null;
+  // Sprint 4.7B — insurance fields (all optional; default NULL = particular).
+  payer_type?: FinancialPayerType | null;
+  insurance_provider_id?: string | null;
+  patient_insurance_id?: string | null;
+  copay_amount_cents?: number | null;
+  insurance_amount_cents?: number | null;
 }
 
 export interface ListFinancialChargesFilters {
@@ -84,6 +97,11 @@ export const financialChargeDao = {
         due_date: input.due_date,
         status: 'pending',
         notes: input.notes,
+        payer_type: input.payer_type,
+        insurance_provider_id: input.insurance_provider_id,
+        patient_insurance_id: input.patient_insurance_id,
+        copay_amount_cents: input.copay_amount_cents,
+        insurance_amount_cents: input.insurance_amount_cents,
       })
       .returning('*');
     if (!row) {
@@ -156,6 +174,19 @@ export const financialChargeDao = {
     if (patch.notes !== undefined) updates.notes = patch.notes;
     if (patch.appointment_id !== undefined) updates.appointment_id = patch.appointment_id;
     if (patch.service_id !== undefined) updates.service_id = patch.service_id;
+    if (patch.payer_type !== undefined) updates.payer_type = patch.payer_type;
+    if (patch.insurance_provider_id !== undefined) {
+      updates.insurance_provider_id = patch.insurance_provider_id;
+    }
+    if (patch.patient_insurance_id !== undefined) {
+      updates.patient_insurance_id = patch.patient_insurance_id;
+    }
+    if (patch.copay_amount_cents !== undefined) {
+      updates.copay_amount_cents = patch.copay_amount_cents;
+    }
+    if (patch.insurance_amount_cents !== undefined) {
+      updates.insurance_amount_cents = patch.insurance_amount_cents;
+    }
 
     const [row] = await conn<FinancialChargeRow>('financial_charges')
       .where({ id, clinica_id, status: 'pending' })

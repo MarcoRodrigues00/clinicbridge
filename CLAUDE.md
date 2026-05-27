@@ -21,17 +21,48 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.7A** (entregue) — **ADR 0016 Convênios v0.1 (docs/ADR-only).**
+**Sprint atual: 4.7B** (entregue) — **Backend Convênios v0.1.**
+Migration única aditiva `20260606_insurance_billing_v0`: 4 tabelas novas
+(`insurance_providers`, `insurance_plans`, `patient_insurances`, `service_insurance_prices`)
++ extensão de `financial_charges` com 5 colunas nullable (`payer_type`,
+`insurance_provider_id`, `patient_insurance_id`, `copay_amount_cents`,
+`insurance_amount_cents`). Todas as tabelas com `id uuid`, `clinica_id` FK CASCADE, `active`
+boolean, `created_at`/`updated_at`. UNIQUE INDEX normalizado em `insurance_providers`
+(case+space-insensitive) e em `insurance_plans` (por `provider_id`); `service_insurance_prices`
+UNIQUE em `(clinica, service, provider, COALESCE(plan, sentinel))`. `payer_type` CHECK
+`('private','insurance','mixed')`; copay/insurance amounts CHECK `0..99_999_999`.
+4 DAOs novos + 1 service único (`insuranceService.ts`) que exporta os 4 sub-services
+(`insuranceProviderService`, `insurancePlanService`, `patientInsuranceService`,
+`serviceInsurancePriceService`) + helpers `parseInsuranceFieldsForCharge`/
+`validateInsuranceForCharge` reusados por `financialChargeService`. Controller +
+rotas em `routes/insurance.ts` montados em `app.ts`.
+17 endpoints novos: 5 em `/insurance/providers`, 5 em `/insurance/plans`, 5 em
+`/insurance/service-prices`, 5 em `/patients/:id/insurances` (PATCH `/status` separado).
+Pipeline `patientsRateLimit + requireAuth + requireClinic + requireRole + assertNotProfissional` (service).
+**Reads** providers/plans/service-prices/patient_insurances → `dono_clinica + secretaria`
+(profissional_clinico bloqueado no service por clinical grant). **Writes** providers/plans/service-prices
+→ `CLINIC_ADMIN_ROLES` (`dono_clinica`); patient_insurances writes → `dono_clinica + secretaria`.
+Admin_sistema → 403 `no_clinic_context` em todos.
+`financialChargeService.create`/`update` aceita os 5 campos; `validateInsuranceForCharge`
+exige `patient_insurance_id` para `insurance`/`mixed`, rejeita campos de convênio em `private`,
+valida `copay + insurance = amount_cents` quando `mixed` com ambos presentes,
+e **NUNCA** lê `service_insurance_prices.reference_price_cents` para auto-popular `amount_cents`.
+**PII protegido:** `member_number` retornado mascarado (`****1234`) em list; raw apenas em
+detail. `holder_name` e `member_number` adicionados à lista de redação em `config/logger.ts`
+(layers 1/2/3). Audit metadata-only em todos os eventos
+(`insurance.provider.*`, `insurance.plan.*`, `insurance.patient.*`, `insurance.service_price.*`):
+sem nome, sem PII, sem valor, sem CID.
+**Smoke 47/47 PASS** (auth, admin, CRUD providers/plans/service_prices, permissões secretaria/
+profissional/gestor, PII masked em list × raw em detail, payer_type private/insurance/mixed
+incluindo soma errada, audit_logs sem PII).
+Campos legados `patients.convenio` e `patients.numero_carteirinha` **intactos** (zero migração de dados).
+`pnpm --filter backend typecheck` ✅ · build ✅ · `pnpm --filter frontend typecheck` ✅ ·
+`migrate:status` 17/0 ✅ · `git diff --check` rc=0.
+
+**Sprint anterior: 4.7A** (entregue) — **ADR 0016 Convênios v0.1 (docs/ADR-only).**
 ADR 0016 + `docs/insurance-billing-v0-scope.md` criados. Convênios v0.1 = camada
-administrativa/comercial manual. 4 entidades conceituais: `insurance_providers`,
-`insurance_plans`, `patient_insurances`, `service_insurance_prices`. Extensão futura de
-`financial_charges` com `payer_type`, `insurance_provider_id`, `patient_insurance_id`,
-`copay_amount_cents`, `insurance_amount_cents`. Invariantes: preço de referência
-**nunca** auto-propaga para `amount_cents`; sem TISS/TUSS real; sem dado clínico em
-campos de convênio; `member_number`/`holder_name` → redação em logs; soft-delete em
-tudo; tenant isolation por `clinica_id`; campos legados `patients.convenio` e
-`patients.numero_carteirinha` intactos até decisão 4.7B. Permissões: operadoras/regras =
-owner-only; `patient_insurances` = owner + secretaria; profissional_clinico bloqueado.
+administrativa/comercial manual. Permissões: operadoras/regras = owner-only;
+`patient_insurances` = owner + secretaria; profissional_clinico bloqueado.
 `git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.**
 
 **Sprint anterior: 4.6D** (entregue) — **QA/Hardening Catálogo de Serviços v0.1.**
@@ -178,7 +209,23 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 `GET /clinic-services/:id/professionals` · `POST /clinic-services/:id/professionals` ·
 `PATCH /clinic-services/:id/professionals/:professional_id/status`
 
+**Endpoints de Convênios registrados (Sprint 4.7B):**
+`GET /insurance/providers` · `POST /insurance/providers` · `GET /insurance/providers/:id` ·
+`PATCH /insurance/providers/:id` · `PATCH /insurance/providers/:id/status` ·
+`GET /insurance/plans` (filtros: `provider_id`) · `POST /insurance/plans` ·
+`GET /insurance/plans/:id` · `PATCH /insurance/plans/:id` · `PATCH /insurance/plans/:id/status` ·
+`GET /insurance/service-prices` (filtros: `service_id`/`provider_id`/`plan_id`) ·
+`POST /insurance/service-prices` · `GET /insurance/service-prices/:id` ·
+`PATCH /insurance/service-prices/:id` · `PATCH /insurance/service-prices/:id/status` ·
+`GET /patients/:patient_id/insurances` · `POST /patients/:patient_id/insurances` ·
+`GET /patients/:patient_id/insurances/:id` · `PATCH /patients/:patient_id/insurances/:id` ·
+`PATCH /patients/:patient_id/insurances/:id/status`. Extensão `financial_charges`:
+`payer_type` (`private`|`insurance`|`mixed`|`null`), `insurance_provider_id`,
+`patient_insurance_id`, `copay_amount_cents`, `insurance_amount_cents` (todos nullable,
+retrocompat com cobranças existentes).
+
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **4.7B** ✅ Backend Convênios v0.1 — migration 17 + 4 DAOs + insuranceService + 17 endpoints — smoke 47/47 PASS
 - **4.7A** ✅ ADR 0016 Convênios v0.1 (docs-only) — 4 entidades, permissões, LGPD, gate 4.7B aberto
 - **4.6D** ✅ QA/Hardening Catálogo de Serviços — smoke 41/41; bug controller corrigido (4.6C.2)
 - **4.6C** ✅ Frontend Catálogo de Serviços v0.1 — `ServicesPanel` + seletores Agenda/Financeiro
@@ -201,8 +248,8 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A ✅ (ADR 0016 Convênios) →
-**4.7B** backend Convênios → **4.7C** frontend → **4.7D** QA → **4.8A** ADR Estoque (ADR 0017).
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A ✅ · 4.7B ✅ (Backend Convênios) →
+**4.7C** frontend Convênios → **4.7D** QA Convênios → **4.8A** ADR Estoque (ADR 0017).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
@@ -221,20 +268,28 @@ catálogo de serviços v0.1 backend + frontend (clinic_services + professional_s
 leitura aberta para seletor de agenda; soft-delete; re-link idempotente; aba "Serviços" no Dashboard
 visível a todos os papéis; seletor na Agenda filtra por profissional; seletor no Financeiro com botão
 "Usar preço de tabela" explícito; `service_id` wired em appointments e financial_charges com validação
-`service_not_available_for_professional` e `service_mismatch_with_appointment`).
+`service_not_available_for_professional` e `service_mismatch_with_appointment`);
+convênios v0.1 backend (insurance_providers, insurance_plans, patient_insurances,
+service_insurance_prices; extensão de financial_charges com payer_type/insurance_provider_id/
+patient_insurance_id/copay_amount_cents/insurance_amount_cents; CRUD owner-only para
+providers/plans/service_prices, owner+secretaria para patient_insurances; profissional_clinico
+bloqueado no service; PII member_number mascarado em list, raw em detail; holder_name +
+member_number na redação do logger; reference_price_cents NUNCA auto-popula amount_cents;
+campos legados patients.convenio/numero_carteirinha intactos).
 Detalhe: `docs/project-state.md`.
 
-**O que NÃO existe (sprint explícita):** frontend de catálogo de serviços (4.6C); wiring de
-`service_id` em endpoints de appointments/financial (4.6C); export de relatórios (futuro com ADR própria);
-gráficos complexos / BI customizável; convênios/carteirinha estruturada (4.7B+); delete físico de paciente;
-undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
+**O que NÃO existe (sprint explícita):** frontend de convênios (4.7C); export de relatórios
+(futuro com ADR própria); gráficos complexos / BI customizável; migração automática de
+patients.convenio→patient_insurances (decisão deferida); estoque (4.8A+); delete físico de paciente;
+undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina;
+NFS-e; TISS/TUSS real.
 
-**Migrações (16 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
+**Migrações (17 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
 `20260523_import_sessions` · `20260524_patients` · `20260525_import_sessions_summary` ·
 `20260526_scheduling` · `20260527_user_mfa` · `20260528_user_mfa_backup_codes` ·
 `20260529_clinic_team` · `20260530_clinic_join_requests_revoked` · `20260601_patients_merged_into` ·
 `20260602_clinical_encounters_v0` · `20260603_clinical_documents_v0` · `20260604_financial_charges_v0` ·
-`20260605_clinic_services_v0`.
+`20260605_clinic_services_v0` · `20260606_insurance_billing_v0`.
 
 **Invariantes locais:** patients=6 (base, sem demo), import_files=24, import_sessions=7.
 Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac, +7 agend); reverter: `seed:demo:clean`.
@@ -252,7 +307,7 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.7B** Backend Convênios v0.1 (gate: ADR 0016 ✅; detalhes em `docs/insurance-billing-v0-scope.md` §9)
+- **4.7C** Frontend Convênios v0.1 (gate: 4.7B ✅; detalhes em `docs/insurance-billing-v0-scope.md` §7 e §9)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)
