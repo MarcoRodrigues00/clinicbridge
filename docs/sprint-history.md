@@ -4523,3 +4523,61 @@ Payload PII scan recursivo (chaves proibidas em todos os 4 endpoints): 0 hits.
 Alternativa: polish geral landing/footer/dashboard antes de iniciar 4.6.
 
 **Relatórios Gerenciais v0.1 → CLOSED na sprint 4.5D.**
+
+---
+
+## Sprint 4.6A — ADR 0015 Catálogo de Serviços v0.1 + Camada Comercial (docs/ADR-only)
+
+**Data:** 2026-05-27
+**Natureza:** docs/ADR-only — zero código, zero schema, zero migration, zero env.
+
+### Objetivo
+
+Criar ADR 0015 para o Catálogo de Serviços v0.1, registrar a decisão de faseamento da
+camada comercial (4.6 Serviços / 4.7 Convênios / 4.8 Estoque), e atualizar a documentação.
+
+### Decisões fechadas
+
+1. **Faseamento:** 4.6 = Catálogo de Serviços (ADR 0015), 4.7 = Convênios (ADR 0016),
+   4.8 = Estoque (ADR 0017). Motivação: split reduz risco; serviços são pré-requisito
+   lógico para convênios.
+
+2. **Invariante do "Serviço":** etiqueta administrativa/comercial. Não é TUSS, não entra
+   no prontuário, não auto-propaga preço para cobranças.
+
+3. **`clinic_services`:** `(clinica_id, name, category[texto livre], description,
+   duration_minutes, price_cents[referência], active)` + `UNIQUE(clinica_id, name)`.
+
+4. **`professional_services`:** many-to-many `(professional_id, service_id, clinica_id, active)`.
+
+5. **`appointments.service_id uuid NULL`:** extensão aditiva; sem migração de histórico.
+
+6. **`financial_charges.service_id uuid NULL`:** extensão aditiva; sem migração de histórico.
+
+7. **`price_cents` é referência visual** — humano sempre decide o valor da cobrança.
+
+8. **`category` como texto livre** — sem enum no banco; UI sugere valores comuns.
+
+9. **`insurance-billing-future-scope.md` marcado como pré-planejamento** — banco de insumos
+   para ADR 0016; não deletado.
+
+### Arquivos criados
+
+- `docs/adr/0015-services-catalog-commercial-layer-v0.md`
+- `docs/services-catalog-v0-scope.md`
+
+### Arquivos modificados
+
+- `docs/insurance-billing-future-scope.md` — banner de pré-planejamento/supersedido
+- `CLAUDE.md` — estado, trilha, próximas prioridades, referência ADR 0015
+- `docs/project-state.md` — entrada Sprint 4.6A
+- `docs/sprint-history.md` — esta entrada
+- `docs/roadmap-next-phase.md` — Sprint 4.6A registrada como entregue
+- `docs/product-clinic-os-roadmap.md` — Fase 4.6/4.7/4.8 atualizadas
+
+### Gates finais
+
+- `git diff --check` rc=0 ✅
+- **Zero código, zero migration, zero schema, zero env.**
+
+**Próxima sprint:** **4.6B** backend Catálogo de Serviços v0.1 (gate: ADR 0015 aceita ✅).
