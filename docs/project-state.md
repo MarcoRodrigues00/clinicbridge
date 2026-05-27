@@ -7,6 +7,21 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.4E-D** (entregue 2026-05-27) — **QA/Hardening Agenda × Financeiro v0.1.**
+Code review segurança frontend: 13/13 PASS.
+Smoke API 24/24 PASS real: secretaria (login + GET appointments + GET charges + POST charge + GET ?appointment_id + list sem notes/cancel_reason),
+gestor (GET appointments + GET charges + POST → 403 forbidden_role),
+profissional (GET appointments + GET charges → 403 forbidden_role),
+admin_sistema (GET appointments + GET charges → 403 no_clinic_context), owner (GET básicos).
+SQL invariants: 9/9 (pending/paid/canceled, cross-tenant=0, invariants paid/pending/canceled, amount>0).
+Audit logs: `financial.charge.created.success` + `financial.charge.canceled.success` registrados; sem PII em recurso_id.
+Backend logs: sem dados financeiros.
+Cleanup: cobrança sintética `dcd487fb` cancelada; usuários smoke preservados.
+Ressalvas: "Ver cobrança" navega para aba sem selecionar cobrança específica; badge limit=100; gestor vê botão mas recebe 403.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `pnpm --filter backend typecheck` ✅ · build ✅ · `migrate:status` 15/0 ✅ · `git diff --check` rc=0.
+
+---
+
 **Sprint 4.4E-C** (entregue 2026-05-27) — **Frontend Agenda × Financeiro v0.1.**
 Badge financeiro (5 estados: none/pending/overdue/paid/charge_canceled) por agendamento na timeline da agenda.
 Alertas A1–A4 (informativos, descartáveis via estado React, sem chamada de API).
