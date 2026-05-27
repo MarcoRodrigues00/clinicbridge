@@ -584,3 +584,193 @@
     width: 100%;
   }
 }
+
+/* ── Financial integration (ADR 0013) ──────────────────────────────────────── */
+
+.cardBadges {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+/* Financial badge pill — appended next to the appointment status badge */
+.financialBadge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--surface-strong);
+  color: var(--text-2);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.fb_pending {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.fb_overdue {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.fb_paid {
+  color: var(--success);
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.fb_charge_canceled {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+/* Financial section inside each card */
+.financialSection {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--surface-border-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.financialRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.financialLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text-2);
+}
+
+.financialBtns {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.financialBtn,
+.financialBtnCreate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--surface-border-strong);
+  background: var(--surface-strong);
+  color: var(--text-1);
+}
+
+.financialBtn:hover {
+  border-color: var(--cyan);
+  color: var(--text-0);
+}
+
+.financialBtnCreate {
+  background: rgba(34, 211, 238, 0.07);
+  color: var(--cyan-soft);
+  border-color: rgba(34, 211, 238, 0.3);
+}
+
+.financialBtnCreate:hover {
+  background: rgba(34, 211, 238, 0.14);
+  border-color: rgba(34, 211, 238, 0.55);
+}
+
+/* Inline alert rows A1–A4 */
+.financialAlert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--r-sm);
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  font-size: 0.82rem;
+  color: var(--text-1);
+  line-height: 1.4;
+}
+
+.financialAlertIcon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: var(--warning);
+}
+
+.financialAlertDismiss {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+}
+
+.financialAlertDismiss:hover {
+  color: var(--text-1);
+}
+
+/* Inline "Criar cobrança" form */
+.chargeForm {
+  margin-top: 0.5rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+}
+
+.chargeFormHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.55rem;
+}
+
+.chargeFormTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.chargeFormPatient {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-2);
+  margin-bottom: 0.55rem;
+}
+
+.chargeFormActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+
+.required {
+  color: var(--danger);
+}

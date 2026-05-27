@@ -7,12 +7,44 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.4E-C** (entregue 2026-05-27) — **Frontend Agenda × Financeiro v0.1.**
+Badge financeiro (5 estados: none/pending/overdue/paid/charge_canceled) por agendamento na timeline da agenda.
+Alertas A1–A4 (informativos, descartáveis via estado React, sem chamada de API).
+Botão "Criar cobrança" inline com form (patient readonly, appointment_id oculto, descrição pré-preenchida "Consulta",
+aviso anti-clínico, invalidação de cache em `['financial']` + `['appointments']` após sucesso).
+Botão "Ver cobrança" navega para aba Financeiro via `onGoToFinanceiro` callback.
+Profissional: seção financeira oculta (403 → `financialBlocked`). Gestor: badge + ver cobrança; criar cobrança
+mostra 403 se backend bloquear (papel=secretaria+gestor_clinica).
+Sem backend novo, sem migration, sem endpoint novo.
+`pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ · `pnpm --filter backend typecheck` ✅ · `git diff --check` rc=0.
+
+**Componentes modificados:**
+- `frontend/src/components/AdministrativeSchedulePanel.tsx` — badge financeiro; alertas A1–A4; form "Criar cobrança";
+  botão "Ver cobrança"; `useQuery(['financial','charges','agenda-badge',token])`; `chargeMap: Map<string,FinancialChargeListItem>`;
+  `appointmentFinancialState()`; `getFinancialAlerts()`; `createChargeMutation`; prop `onGoToFinanceiro?`.
+- `frontend/src/components/AdministrativeSchedulePanel.module.css` — classes `.cardBadges`, `.financialBadge`,
+  `.fb_pending/overdue/paid/charge_canceled`, `.financialSection`, `.financialRow`, `.financialLabel`,
+  `.financialBtns`, `.financialBtn`, `.financialBtnCreate`, `.financialAlert`, `.financialAlertIcon`,
+  `.financialAlertDismiss`, `.chargeForm`, `.chargeFormHead`, `.chargeFormTitle`, `.chargeFormPatient`,
+  `.chargeFormActions`, `.required`.
+- `frontend/src/views/Dashboard.tsx` — `<AdministrativeSchedulePanel onGoToFinanceiro={() => setTab('financeiro')} />`.
+
+---
+
+**Sprint 4.4E-B** (entregue 2026-05-27) — **Avaliação backend Agenda × Financeiro (docs-only).**
+Decisão: `GET /financial/charges?limit=100` cobre o badge. `?appointment_id=` já existe. Sem endpoint novo.
+`git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.**
+
+---
+
 **Sprint 4.4E-A** (entregue 2026-05-27) — **ADR 0013 Integração Agenda × Financeiro v0.1 (docs/ADR-only).**
 `docs/adr/0013-agenda-financial-integration-v0.md` + `docs/agenda-financial-integration-v0-scope.md` criados.
 Definidos: badge financeiro (5 estados), alertas sugestivos (A1–A4), fluxo "Criar cobrança" via agenda,
 estratégia de endpoints (reutilizar existentes), permissões por role, segurança/LGPD, invalidação de cache.
 ADR 0013 aceita. Gate para 4.4E-B/C aberto.
 `git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.**
+
+---
 
 **Sprint anterior: 4.4D-conv** (entregue 2026-05-27) — **Planejamento Convênios e Faturamento Básico (docs-only).**
 `docs/insurance-billing-future-scope.md` criado · Fase 4.6 detalhada em `product-clinic-os-roadmap.md` ·

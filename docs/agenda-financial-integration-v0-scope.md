@@ -234,50 +234,50 @@ Ver ADR 0013 §4 para lista completa. Resumo:
 
 > Avaliar na sprint se 4.4E-B é necessária ou se 4.4E-C reutiliza 100% os endpoints existentes.
 
-- [ ] Decisão documentada: criar `GET /appointments/:id/charges` ou reutilizar `?appointment_id=` filter
-- [ ] Se criar endpoint novo: `rateLimit → requireAuth → requireClinic → requireRole`
-- [ ] Smoke tests para permissões (profissional → 403, gestor → charges do agendamento)
-- [ ] Typecheck + build ✅
+- [x] Decisão documentada: reutilizar `GET /financial/charges?limit=100` — nenhum endpoint novo (Sprint 4.4E-B)
+- [x] Sem endpoint novo: middleware chain existente cobre tudo
+- [x] Permissões cobertas por `effectiveFinancialAccess` existente (profissional → 403, gestor → transact)
+- [x] Typecheck + build ✅ (verificado na 4.4E-C)
 
 ---
 
 ## 11. Checklist Sprint 4.4E-C (frontend)
 
 ### 11.1 Badge
-- [ ] `useQuery(['financial', 'charges', 'agenda-badge', token])` com `limit=100`
-- [ ] `chargeMap: Map<string, FinancialChargeListItem>` construído no cliente
-- [ ] Função `appointmentFinancialState()` em utils/hooks (testável isoladamente)
-- [ ] Badge renderizado no card/linha de agendamento
-- [ ] Badge não renderizado para `profissional_clinico`
-- [ ] Labels e estilos conforme §3 desta ADR
+- [x] `useQuery(['financial', 'charges', 'agenda-badge', token])` com `limit=100`
+- [x] `chargeMap: Map<string, FinancialChargeListItem>` construído no cliente
+- [x] Função `appointmentFinancialState()` em utils/hooks (testável isoladamente)
+- [x] Badge renderizado no card/linha de agendamento
+- [x] Badge não renderizado para `profissional_clinico` (403 → `financialBlocked`)
+- [x] Labels e estilos conforme §3 desta ADR
 
 ### 11.2 Alertas
-- [ ] Alertas A1–A4 exibidos no detalhe do agendamento
-- [ ] Dismiss local (estado React, sem chamada de API)
-- [ ] Nenhum alerta executa ação automaticamente
-- [ ] Alertas não renderizados para `profissional_clinico`
+- [x] Alertas A1–A4 exibidos no detalhe do agendamento
+- [x] Dismiss local (estado React, sem chamada de API)
+- [x] Nenhum alerta executa ação automaticamente
+- [x] Alertas não renderizados para `profissional_clinico`
 
 ### 11.3 Botão "Criar cobrança"
-- [ ] Visível apenas para `dono_clinica` e `secretaria`
-- [ ] `appointment_id` pré-preenchido (readonly/hidden)
-- [ ] `patient_id` pré-selecionado (readonly)
-- [ ] Descrição sugerida "Consulta" (editável)
-- [ ] Aviso anti-clínico nas observações
-- [ ] Após criar: `invalidateQueries(['financial'])` + `invalidateQueries(['appointments'])`
-- [ ] Badge atualizado automaticamente após criação
+- [x] Visível apenas para `dono_clinica` e `secretaria`
+- [x] `appointment_id` pré-preenchido (readonly/hidden)
+- [x] `patient_id` pré-selecionado (readonly)
+- [x] Descrição sugerida "Consulta" (editável)
+- [x] Aviso anti-clínico nas observações
+- [x] Após criar: `invalidateQueries(['financial'])` + `invalidateQueries(['appointments'])`
+- [x] Badge atualizado automaticamente após criação
 
 ### 11.4 Link "Ver cobrança"
-- [ ] Visível para dono, secretaria, gestor (quando cobrança existe)
-- [ ] Navega para aba Financeiro com detalhe da cobrança
+- [x] Visível para dono, secretaria, gestor (quando cobrança existe)
+- [x] Navega para aba Financeiro via `onGoToFinanceiro` callback (usuário localiza cobrança na aba)
 
 ### 11.5 Segurança
-- [ ] Todos os checks da §8 deste doc
+- [x] Todos os checks da §8 deste doc (verificados na implementação 4.4E-C)
 
 ### 11.6 Verificação de build
-- [ ] `pnpm --filter frontend typecheck`
-- [ ] `pnpm --filter frontend build`
-- [ ] `pnpm --filter backend typecheck` (sem regressão)
-- [ ] `git diff --check` rc=0
+- [x] `pnpm --filter frontend typecheck` ✅
+- [x] `pnpm --filter frontend build` ✅
+- [x] `pnpm --filter backend typecheck` ✅ (sem regressão)
+- [x] `git diff --check` rc=0
 
 ---
 
