@@ -7,7 +7,70 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.4A** (entregue 2026-05-27; ajuste docs 2026-05-27) — **ADR Módulo Financeiro v0.1 (docs/ADR-only).**
+**Sprint 4.4B** (entregue 2026-05-27) — **Implementação backend do Módulo Financeiro v0.1.**
+Migration `financial_charges` + DAO + Service + Controller + Rotas. Smoke **49/49 PASS**.
+Logger redaction estendido para campos financeiros. `appointment_id` opcional com validação
+cross-tenant + cross-patient. **Sem frontend, sem AWS, sem gateway.**
+
+**Componentes entregues:**
+- `backend/migrations/20260604000000_financial_charges_v0.ts` — tabela `financial_charges`
+  (11 CHECK constraints defensivos: amount>0, currency=BRL, status allowlist,
+  payment_method allowlist, paid/canceled consistency triplets, pending-clean invariants;
+  4 índices normais + 1 índice parcial WHERE appointment_id IS NOT NULL;
+  FKs: clinica_id CASCADE, patient_id RESTRICT, created_by RESTRICT, paid_by SET NULL,
+  canceled_by SET NULL, appointment_id SET NULL). Migration batch 15.
+- `backend/src/dao/financialChargeDao.ts` — tenant-scoped sem `listAll()`;
+  `create`, `findByIdForClinic`, `listForClinic`, `listForPatient`;
+  CAS atomics: `updatePending`, `markPaid`, `cancel`; sem delete físico;
+  `summarize()` (pending/overdue/paid com janela de data configurável).
+- `backend/src/services/financialChargeService.ts` — `buildFinancialActor` carrega grants
+  de `user_clinical_roles` (1 SELECT); `effectiveFinancialAccess` → `full`/`transact`/`none`;
+  7 métodos + `listForPatient`; `loadActivePatient` exige `status=active AND merged_into_id IS NULL`;
+  `validateAppointmentLink` cross-tenant via generic 400 (anti-enumeration); best-effort audit.
+- `backend/src/controllers/financialChargeController.ts` — thin; 8 handlers.
+- `backend/src/routes/financialCharges.ts` — 8 rotas; pipeline
+  `rateLimit → requireAuth → requireClinic → requireRole(['dono_clinica','secretaria'])`;
+  gestor/profissional bloqueados no service (clinical_roles lookup).
+- **Modificados:**
+  - `backend/src/types/db.d.ts` — `FinancialChargeRow`, `FinancialChargeStatus`, `FinancialPaymentMethod`.
+  - `backend/src/config/logger.ts` — +16 redaction paths: `description`/`notes`/`cancel_reason`/
+    `amount_cents` × 4 camadas (top-level, `*.field`, `body.*`, `req.body.*`, `payload.*`).
+  - `backend/src/app.ts` — registra `financialChargesRouter`.
+
+**Endpoints registrados:**
+| Método | Path | Acesso |
+|--------|------|--------|
+| POST | `/financial/charges` | full |
+| GET | `/financial/charges` | transact+full |
+| GET | `/financial/summary` | transact+full |
+| GET | `/financial/charges/:id` | transact+full |
+| PATCH | `/financial/charges/:id` | full |
+| POST | `/financial/charges/:id/mark-paid` | transact+full |
+| POST | `/financial/charges/:id/cancel` | transact+full |
+| GET | `/patients/:id/charges` | transact+full |
+
+**Smoke tests — 49/49 PASS** (usuários smoke `*@clinicbridge.local`).
+Cobertos: sem token/admin 401/403; secretaria/owner create 201; gestor create 403;
+profissional all ops 403; list (notes omitido)/detail (notes presente); gestor list/detail;
+gestor PATCH 403; secretaria edita pending; gestor mark-paid; edit/pay/cancel paid 400;
+cancel pending + edit canceled 400; gestor cancel; validações (amount=0/-100, desc_vazia,
+patient_not_found, method_invalido/ausente); appointment_id válido/filtro/outro_patient/ghost;
+patient charges/inexistente; summary shape/gestor/bad_date; charge not found/bad uuid.
+
+**SQL invariants — 4/4 PASS + 11 CHECKs verificados.**
+**Audit — 4 acoes; sentinels FIN_*_SENTINEL → 0 ocorrências nos logs.**
+
+**Cleanup:** 2 cobranças pending canceladas via SQL (`cancel_reason='smoke_cleanup_4.4B'`);
+1 cobrança paid mantida; 3 cobranças canceled mantidas; 1 patient temporário arquivado
+(`Smoke Temp Patient 4.4B-cross`). Usuários smoke preservados.
+
+**`pnpm --filter backend typecheck`** ✅ · **`pnpm --filter backend build`** ✅ ·
+**`pnpm --filter frontend typecheck`** ✅ · **`migrate:status`** 15 applied/0 pending ✅ ·
+**`git diff --check`** rc=0.
+
+---
+
+**Sprint anterior: 4.4A** (entregue 2026-05-27; ajuste docs 2026-05-27) — **ADR Módulo Financeiro v0.1 (docs/ADR-only).**
 ADR 0012 + `docs/financial-v0-scope.md`. Fecha o escopo do módulo financeiro e autoriza a Sprint 4.4B.
 **Sem código, sem migration, sem env vars, sem AWS.**
 

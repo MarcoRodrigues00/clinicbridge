@@ -29,7 +29,67 @@
 
 ## Estado atual (resumido — atualizado 2026-05-27)
 
-**Sprint atual: 4.4A** (entregue) — **ADR Módulo Financeiro v0.1 (docs/ADR-only).**
+**Sprint atual: 4.4B** (entregue) — **Implementação backend do Módulo Financeiro v0.1.**
+Migration `financial_charges` + DAO + Service + Controller + Rotas registradas em `app.ts`.
+Logger redaction estendido com 4 camadas para `description`/`notes`/`cancel_reason`/`amount_cents`.
+`appointment_id` opcional com validação cross-tenant + cross-patient. Smoke **49/49 PASS**.
+**Sem frontend, sem AWS, sem gateway, sem NFS-e.**
+
+**Componentes entregues:**
+- `backend/migrations/20260604000000_financial_charges_v0.ts` — tabela `financial_charges`
+  (11 CHECK constraints, 4 índices normais + 1 índice parcial `WHERE appointment_id IS NOT NULL`;
+  rollback DROP TABLE; FK: clinica_id CASCADE, patient_id RESTRICT, created_by_user_id RESTRICT,
+  paid_by_user_id SET NULL, canceled_by_user_id SET NULL, appointment_id SET NULL).
+- `backend/src/dao/financialChargeDao.ts` — tenant-scoped sem `listAll()`; CAS em `updatePending`,
+  `markPaid`, `cancel`; sem delete físico; `summarize()` (pending/overdue/paid com janela de data).
+- `backend/src/services/financialChargeService.ts` — `buildFinancialActor` + `effectiveFinancialAccess`
+  (`full`/`transact`/`none`); 7 métodos: `create`, `list`, `findById`, `update`, `markPaid`,
+  `cancel`, `summary`, `listForPatient`; validação `appointment_id` cross-tenant + cross-patient;
+  `loadActivePatient` exige ativo + não-mesclado.
+- `backend/src/controllers/financialChargeController.ts` — thin; 8 handlers.
+- `backend/src/routes/financialCharges.ts` — 8 rotas; pipeline `rateLimit → requireAuth →
+  requireClinic → requireRole(['dono_clinica','secretaria'])`; gestor/profissional bloqueados
+  no service.
+- **Modificados:** `db.d.ts` (tipos `FinancialChargeRow`, `FinancialChargeStatus`,
+  `FinancialPaymentMethod`), `logger.ts` (+4 campos × 4 camadas = 16 redaction paths financeiros),
+  `app.ts` (registra `financialChargesRouter`).
+- **Migration aplicada:** batch 15 — 15 applied/0 pending.
+
+**Endpoints registrados:**
+- `POST /financial/charges` — cria cobrança pending (full only)
+- `GET /financial/charges` — lista com filtros (incl. `?appointment_id`) (transact+full)
+- `GET /financial/summary` — totalizadores pending/paid/overdue (transact+full)
+- `GET /financial/charges/:id` — detalhe com `notes` (transact+full)
+- `PATCH /financial/charges/:id` — edita pending (full only)
+- `POST /financial/charges/:id/mark-paid` — pending→paid (transact+full)
+- `POST /financial/charges/:id/cancel` — pending→canceled (transact+full)
+- `GET /patients/:id/charges` — histórico de cobranças do paciente (transact+full)
+
+**Smoke tests executados — 49/49 PASS** (usuários smoke persistentes `*@clinicbridge.local`):
+T1–T2: sem token/admin → 401/403 ✅ · T3–T4: secretaria/owner create → 201 ✅
+T5: gestor create → 403 ✅ · T6: profissional all ops → 403 ✅
+T7: list (notes omitido)/detail (notes presente)/gestor list+detail → 200 ✅
+T8: gestor PATCH → 403 ✅ · T9: secretaria edita pending → 200 ✅
+T10: gestor mark-paid → 200/paid ✅ · T11: edit/pay/cancel paid → 400/charge_not_pending ✅
+T12: cancel pending → 200/canceled + edit canceled → 400 ✅
+T13: gestor cancel → 200 ✅ · T14: amount_cents=0/-100/desc_vazia/patient404/method_inv/miss → 400 ✅
+T15: appointment_id válido→201 / filtro→somente vinculados / outro_patient→400 / ghost→400 ✅
+T16: GET /patients/:id/charges → 200 / inexistente → 404 ✅
+T17: summary shape OK / gestor / bad_date→400 ✅ · T18: charge not found/bad uuid → 404/400 ✅
+
+**SQL invariants — 4/4 PASS:** paid sem paid_at=0 ✅ · canceled sem canceled_at=0 ✅ ·
+pending com paid/canceled fields=0 ✅ · appt_id com patient_id divergente=0 ✅ · 11 CHECKs ✅
+
+**Audit — 4 acoes registradas:** `financial.charge.created.success` (10) ·
+`financial.charge.updated.success` (2) · `financial.charge.paid.success` (2) ·
+`financial.charge.canceled.success` (4). Sem `description`/`notes`/`cancel_reason`/`amount_cents`
+nos logs (sentinels: FIN_DESC_SENTINEL / FIN_NOTES_SENTINEL / FIN_CANCEL_SENTINEL → 0 ocorrências).
+
+**Verificação:** `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ ·
+`pnpm --filter frontend typecheck` ✅ · `migrate:status` 15 applied/0 pending ✅ ·
+`git diff --check` rc=0 · Docker health OK ✅
+
+**Sprint anterior: 4.4A** (entregue) — **ADR Módulo Financeiro v0.1 (docs/ADR-only).**
 ADR 0012 + `docs/financial-v0-scope.md`. 1 tabela `financial_charges`; ciclo
 `pending → paid | canceled`; 8 endpoints conceituais; roles administrativas (dono+secretaria
 full; gestor view+pay+cancel; profissional sem acesso); audit de escrita em `audit_logs`;
@@ -204,8 +264,8 @@ DAOs + services + PDF + 8 endpoints + smoke 47/47 PASS) → **4.3C ✅** fronten
 (aba Documentos no drawer; `ClinicalDocumentsPanel`; tab bar; 7 API funcs) → **4.3D ✅**
 QA/hardening final (smoke 50/50 PASS; audit/logs; cleanup) → **4.4A ✅** ADR 0012 +
 `docs/financial-v0-scope.md` (docs-only; `financial_charges`; pending→paid|canceled;
-roles admin; sem gateway) → **4.4B** implementação backend financeiro (migration +
-`appointment_id` opcional + filtro `?appointment_id` na listagem) →
+roles admin; sem gateway) → **4.4B ✅** implementação backend (migration + DAO + service +
+8 endpoints + `appointment_id` opcional + smoke 49/49 PASS) →
 **4.4C** frontend financeiro (aba Financeiro; vinculado a agendamento opcional) →
 **4.4D** QA/hardening financeiro → **4.4E** integração Agenda × Financeiro
 (badge na Agenda; alertas; botão criar cobrança na consulta; sem automação) →
@@ -249,7 +309,7 @@ job/cron; gestão de usuários/papéis na UI.
 `20260526_scheduling` · `20260527_user_mfa` · `20260528_user_mfa_backup_codes` ·
 `20260529_clinic_team` · `20260530_clinic_join_requests_revoked` ·
 `20260601_patients_merged_into` · `20260602_clinical_encounters_v0` ·
-`20260603_clinical_documents_v0`.
+`20260603_clinical_documents_v0` · `20260604_financial_charges_v0`.
 
 **Invariantes locais (sanity-check):** patients=6 (base, sem demo), import_files=24,
 import_sessions=7. Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac,
