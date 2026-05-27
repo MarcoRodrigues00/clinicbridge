@@ -9,6 +9,7 @@
 > - **Roadmap Clinic OS:** `docs/product-clinic-os-roadmap.md`
 > - **Módulo Financeiro v0.1:** ADR `docs/adr/0012-financial-module-v0.md` · operacional `docs/financial-v0-scope.md`
 > - **Integração Agenda × Financeiro v0.1:** ADR `docs/adr/0013-agenda-financial-integration-v0.md` · `docs/agenda-financial-integration-v0-scope.md`
+> - **Relatórios Gerenciais v0.1:** ADR `docs/adr/0014-management-reports-v0.md` · `docs/management-reports-v0-scope.md`
 > - **Convênios/faturamento básico (futuro — Fase 4.6):** `docs/insurance-billing-future-scope.md`
 > - **Documentos Médicos v0.1:** ADR `docs/adr/0011-medical-documents-prescriptions-v0.md` · `docs/medical-documents-v0-scope.md`
 > - **Prontuário v0.1:** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` · `docs/clinical-encounters-v0-scope.md`
@@ -19,12 +20,15 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.4E-D** (entregue) — **QA/Hardening Agenda × Financeiro v0.1.**
-Code review segurança PASS (13/13 checks); smoke API 24/24 PASS real (5 papéis); SQL invariants 9/9;
-audit logs verificados; cleanup cobrança sintética; docs finais.
-Ressalvas: "Ver cobrança" navega para aba mas sem seleção automática; badge limit=100.
-`pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ · `pnpm --filter backend typecheck` ✅ · `pnpm --filter backend build` ✅ · `migrate:status` 15/0 ✅ · `git diff --check` rc=0.
-Detalhe: `docs/project-state.md`.
+**Sprint atual: 4.5A** (entregue) — **ADR 0014 Relatórios Gerenciais v0.1 (docs/ADR-only).**
+ADR 0014 + `docs/management-reports-v0-scope.md` criados.
+4 relatórios definidos (R-A Agenda, R-B Financeiro, R-C Pacientes, R-D Agenda×Financeiro);
+permissões por papel; fontes permitidas/proibidas; API 4 endpoints separados; UX; roadmap 4.5B/C/D.
+`git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.** Detalhe: `docs/project-state.md`.
+
+**Sprint anterior: 4.4E-D** (entregue) — **QA/Hardening Agenda × Financeiro v0.1.**
+Code review segurança PASS (13/13); smoke API 24/24 PASS; SQL 9/9; audit; cleanup.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `pnpm --filter backend typecheck` ✅ · build ✅ · `migrate:status` 15/0 ✅ · `git diff --check` rc=0.
 
 **Sprint anterior: 4.4E-C** (entregue) — **Frontend Agenda × Financeiro v0.1.**
 Badge financeiro (5 estados) por agendamento; alertas A1–A4; botão "Criar cobrança" inline; link "Ver cobrança".
@@ -60,8 +64,8 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.4E-D ✅ → **4.5** relatórios (ADR 0014) →
-**4.6** convênios/faturamento básico → **4.7** estoque básico.
+4.0–4.5A ✅ → **4.5B** backend relatórios → **4.5C** frontend → **4.5D** QA →
+**4.6** convênios/faturamento básico (ADR 0015) → **4.7** estoque básico.
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
@@ -75,7 +79,7 @@ financeiro v0.1 backend + frontend (aba Financeiro; lista + cards resumo; criar/
 badge financeiro na agenda (5 estados), alertas A1–A4, botão "Criar cobrança" inline, link "Ver cobrança".
 Detalhe: `docs/project-state.md`.
 
-**O que NÃO existe (sprint explícita):** relatórios gerenciais (4.5A+); convênios/carteirinha estruturada (4.6A+);
+**O que NÃO existe (sprint explícita):** relatórios gerenciais implementados (4.5B+); convênios/carteirinha estruturada (4.6A+);
 delete físico de paciente; undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina; NFS-e.
 
 **Migrações (15 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
@@ -100,8 +104,8 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.5** relatórios gerenciais v0.1 (ADR 0014)
-- **4.6A** ADR 0015 Convênios v0.1 (gate: 4.4E entregue; planejamento em `docs/insurance-billing-future-scope.md`)
+- **4.5B** backend relatórios gerenciais v0.1 (gate: ADR 0014 aceita ✅)
+- **4.6A** ADR 0015 Convênios v0.1 (gate: 4.5 entregue; planejamento em `docs/insurance-billing-future-scope.md`)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)

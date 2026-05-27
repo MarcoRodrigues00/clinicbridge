@@ -7,6 +7,18 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.5A** (entregue 2026-05-27) — **ADR 0014 Relatórios Gerenciais v0.1 (docs/ADR-only).**
+`docs/adr/0014-management-reports-v0.md` + `docs/management-reports-v0-scope.md` criados.
+Definidos: 4 relatórios (R-A Resumo Operacional, R-B Resumo Financeiro, R-C Resumo de Pacientes,
+R-D Agenda × Financeiro); permissões por papel; fontes de dados permitidas/proibidas;
+arquitetura de API (4 endpoints separados: `/reports/appointments`, `/reports/financial`,
+`/reports/patients`, `/reports/agenda-financial`); UX (aba "Relatórios", cards, filtros, copy);
+roadmap 4.5B/C/D; sem migration, sem export no v0.1.
+ADR 0014 aceita. Gate para 4.5B aberto.
+`git diff --check` rc=0. **Zero mudanças de código, schema, migration ou env.**
+
+---
+
 **Sprint 4.4E-D** (entregue 2026-05-27) — **QA/Hardening Agenda × Financeiro v0.1.**
 Code review segurança frontend: 13/13 PASS.
 Smoke API 24/24 PASS real: secretaria (login + GET appointments + GET charges + POST charge + GET ?appointment_id + list sem notes/cancel_reason),
