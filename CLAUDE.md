@@ -26,9 +26,16 @@
 > - **Checklist de testes (build/curl/SQL/responsivo):** `docs/testing-checklist.md`
 > - **Fonte de verdade de produto/arquitetura/STRIDE/LGPD:** `docs/ClinicBridge_Documentacao_Mestre.md`
 
-## Estado atual (resumido — atualizado 2026-05-26)
+## Estado atual (resumido — atualizado 2026-05-27)
 
-**Sprint atual: 4.3C** (entregue) — **Frontend de Documentos Médicos e Receitas v0.1.**
+**Sprint atual: 4.3D** (entregue) — **QA/hardening final de Documentos Médicos v0.1.**
+Smoke 50/50 PASS. Audit/logs verificados (clinical_read_audit: list/read/pdf.downloaded;
+audit_logs: created/updated/finalized/canceled). Cleanup de dados sintéticos. Zero código novo.
+**Sem migration, sem AWS, sem ICP-Brasil.** Nota técnica: validação de keywords PDF via hex
+extraction (PDFKit codifica texto como tokens `<hex>` em TJ operators com kerning intercalado;
+buscar raw ASCII falha — usar `extractPdfHexText()` + `kwHex()`).
+
+**Sprint anterior: 4.3C** (entregue 2026-05-26) — **Frontend de Documentos Médicos e Receitas v0.1.**
 Aba "Documentos" no drawer `ClinicalPatientPane`; `ClinicalDocumentsPanel` (lista, criar, detalhe,
 editar rascunho, finalizar, cancelar, download PDF); 7 funções API + 8 tipos adicionados.
 **Sem migration, sem AWS, sem ICP-Brasil, sem armazenamento de PDF.**
@@ -189,7 +196,8 @@ frontend `ClinicalReadAuditPanel`; smoke 8/8 PASS) → **4.3A ✅** ADR 0011 +
 operacional `docs/medical-documents-v0-scope.md` (docs-only; 5 tipos; 1 tabela;
 PDF on-demand; sem ICP-Brasil) → **4.3B ✅** implementação backend (migration +
 DAOs + services + PDF + 8 endpoints + smoke 47/47 PASS) → **4.3C ✅** frontend
-(aba Documentos no drawer; `ClinicalDocumentsPanel`; tab bar; 7 API funcs) → **4.4** financeiro → **4.5** relatórios
+(aba Documentos no drawer; `ClinicalDocumentsPanel`; tab bar; 7 API funcs) → **4.3D ✅**
+QA/hardening final (smoke 50/50 PASS; audit/logs verificados; cleanup) → **4.4** financeiro → **4.5** relatórios
 gerenciais → **4.6** convênios/faturamento básico (TISS/TUSS real fora) →
 **4.7** estoque básico (medicamentos controlados/ANVISA fora). Cada **fase
 nova** exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
@@ -284,7 +292,9 @@ conceitual e audit de leitura). Sequência de fases administrativas:
   8 endpoints + smoke 47/47 PASS) → **4.3C ✅**
   frontend (`ClinicalDocumentsPanel`; tab bar Atendimentos/Documentos; 7 API funcs +
   8 tipos; staleTime: 0; PDF blob sem token em URL; aviso jurídico ADR 0011 §10.2;
-  typecheck/build ✅) → **4.4** financeiro
+  typecheck/build ✅) → **4.3D ✅**
+  QA/hardening final (smoke 50/50 PASS; audit/logs verificados; cleanup; sem código novo) →
+  **4.4** financeiro
   v0.1 → **4.5** relatórios gerenciais v0.1 → **4.6** convênios/faturamento
   básico v0.1 (TISS/TUSS real fora) → **4.7** estoque básico v0.1
   (medicamentos controlados/ANVISA fora).

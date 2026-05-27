@@ -7,7 +7,13 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.3C** (entregue 2026-05-26) — **Frontend de Documentos Médicos e Receitas v0.1.**
+**Sprint 4.3D** (entregue 2026-05-27) — **QA/hardening final de Documentos Médicos v0.1.**
+Smoke 50/50 PASS. Audit/logs verificados. Cleanup de dados sintéticos. Zero mudanças de código.
+**Sem migration, sem AWS, sem ICP-Brasil.**
+
+---
+
+**Sprint anterior: 4.3C** (entregue 2026-05-26) — **Frontend de Documentos Médicos e Receitas v0.1.**
 Aba "Documentos" no drawer clínico; `ClinicalDocumentsPanel` (lista, criar, detalhe, editar,
 finalizar, cancelar, download PDF). **Sem migration, sem AWS, sem ICP-Brasil.**
 
