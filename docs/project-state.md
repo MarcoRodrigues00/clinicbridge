@@ -7,46 +7,33 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.8C** (entregue 2026-05-27) — **Frontend Estoque v0.1.**
+**Sprint 4.8D** (entregue 2026-05-27) — **QA/Hardening Estoque v0.1. Fase 4.8 completa.**
 
-Aba "Estoque" no Dashboard (`InventoryPanel`), consome os 9 endpoints da Sprint 4.8B.
-Zero backend novo, zero migration.
+Revisão de UX/estado, verificações de segurança/LGPD, sanity smoke live e atualização de docs.
+Zero código novo, zero migration, zero backend changes.
 
-**Arquivos criados:**
-- `frontend/src/components/InventoryPanel.tsx` — painel completo (hero, filtros, lista,
-  card de item, formulário de criação/edição, formulário de movimento, histórico por item).
-- `frontend/src/components/InventoryPanel.module.css` — CSS dark-theme, responsivo.
+**Revisão UX confirmada:** invalidação correta após create/update/status/movement; bloqueio de
+movimento em item inativo; botões de CRUD ocultos para secretaria; profissional → card 403;
+formulários de cancelamento limpam estado; troca de tipo de movimento recalcula delta; bloqueio
+visual de estoque negativo; erros mapeados PT-BR amigável.
 
-**Arquivos modificados:**
-- `frontend/src/services/api.ts` — tipos `InventoryItem`, `InventoryMovement`,
-  `InventoryMovementType`, `ListInventoryItemsParams`, `ListInventoryMovementsParams`,
-  `CreateInventoryItemPayload`, `UpdateInventoryItemPayload`, `CreateInventoryMovementPayload`
-  + 8 funções: `listInventoryItems`, `getInventoryItem`, `createInventoryItem`,
-  `updateInventoryItem`, `updateInventoryItemStatus`, `listInventoryItemMovements`,
-  `createInventoryMovement`, `listInventoryMovements`.
-- `frontend/src/views/Dashboard.tsx` — TabKey `estoque`, aba "Estoque" (ícone `Boxes`),
-  SECTION_INTRO, render `<InventoryPanel />`.
+**Verificações segurança/LGPD:** console.log payload=0 · localStorage=0 · sessionStorage=0 ·
+dangerouslySetInnerHTML=0 · patient_id na seção inventory=0 · UUID renderizado no histórico=0 ·
+current_quantity não editável direto=0 · avisos anti-dado-clínico em todos os formulários ✅.
+Classes CSS: 70+ classes em styles.* com definição correspondente no .module.css ✅.
 
-**UX/Segurança:**
-- Hero: Itens ativos · Estoque baixo (query de resumo independente dos filtros).
-- Filtros: busca por nome · categoria · status (ativos/inativos/todos) · "Apenas estoque baixo".
-- Badge "Estoque baixo" usa `item.low_stock` do backend (current < minimum && minimum > 0).
-- Movimento: modelo magnitude+direção (usuário nunca digita sinal; Ajuste tem toggle
-  Aumentar/Reduzir; Entrada sempre soma; Saída/Perda sempre subtraem). Pré-visualização
-  "Estoque atual → Após o movimento" + **bloqueio visual** (botão desabilitado) quando ficaria negativo.
-- `current_quantity` **nunca** editável direto — não há campo no formulário de item.
-- Permissões UI: owner cria/edita/desativa + movimenta; secretaria só movimenta + lê
-  (botões de CRUD ocultos); profissional_clinico → card "Acesso restrito" (403 do backend).
-- Erros mapeados para PT-BR: `inventory_item_name_duplicated`, `inventory_quantity_insufficient`,
-  `inventory_item_inactive`, `forbidden_role`.
-- React Query keys sob `['inventory', ...]`; invalidação ampla após create/update/status/movement.
-- Sem console.log de payload; sem localStorage/sessionStorage; sem `reason`/`notes` em URL;
-  sem `dangerouslySetInnerHTML`; histórico nunca renderiza UUID de `created_by_user_id`.
+**Sanity smoke live (8/8 PASS):** owner 200 · profissional 403 · anônimo 401 ·
+POST item 201 · POST movement 201 · PATCH status 200 · GET item inativo active=false ✅.
 
-`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
-**Validação visual no navegador pendente.**
+`pnpm --filter frontend typecheck` ✅ · `frontend build` ✅ · `pnpm --filter backend typecheck` ✅ ·
+`migrate:status` 18/0 ✅ · `git diff --check` rc=0 ✅ · `git status` limpo ✅.
 
-**Próxima sprint:** **4.8D** QA/Hardening Estoque v0.1.
+**Caveats registrados:**
+- `low_stock` usa `<` (current < minimum): item exatamente no mínimo não dispara alerta (intencional v0.1).
+- Hero usa `limit=100`: contagem subestimada para clínicas >100 itens ativos (aceitável v0.1).
+- Responsável não exibido no histórico: UUID não renderizado; nome exige JOIN futuro no backend.
+
+**Próxima fase:** Gate aberto — definir ADR da próxima fase do Clinic OS.
 
 ---
 

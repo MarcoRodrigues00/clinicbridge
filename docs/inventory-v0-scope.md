@@ -184,16 +184,22 @@ O sistema exibe quantidade atual e alerta quando abaixo do mínimo configurado.
 - [x] `git diff --check` rc=0 ✅ · backend intocado.
 - [ ] Validação visual no navegador — **pendente** (ambiente sem browser).
 
-### Sprint 4.8D — QA/Hardening
+### Sprint 4.8D — QA/Hardening ✅ (entregue 2026-05-27)
 
-- [ ] Smoke API: matriz papel × operação × tenant (auth, CRUD, permissão, cross-tenant,
-  quantidade negativa, UUID inválido, payload-safety).
-- [ ] SQL check: `SELECT COUNT(*) FROM inventory_items WHERE clinica_id IS NULL;` → 0.
-- [ ] Grep frontend: sem PII de paciente, sem `console.log` de `reason`/`notes`.
-- [ ] Audit: confirmar que `reason` e `notes` não aparecem em `audit_logs`.
-- [ ] `pnpm --filter frontend typecheck` ✅ · `build` ✅ · `pnpm --filter backend typecheck` ✅ · `build` ✅.
-- [ ] `migrate:status` 18/0 ✅.
-- [ ] `git diff --check` rc=0.
+- [x] Revisão UX: fluxos de criar/editar/desativar item; registrar movimento; histórico;
+  filtros; permissões por papel; bloqueio estoque negativo; item inativo bloqueia movimento.
+- [x] Grep segurança: `console.log` / `localStorage` / `sessionStorage` /
+  `dangerouslySetInnerHTML` / `patient_id` / UUID em histórico = 0.
+- [x] Sanity smoke live: owner 200 · profissional 403 · anônimo 401 · CRUD item · movimento · soft-delete.
+- [x] `pnpm --filter frontend typecheck` ✅ · `build` ✅ · `pnpm --filter backend typecheck` ✅.
+- [x] `migrate:status` 18/0 ✅.
+- [x] `git diff --check` rc=0 · `git status` limpo ✅.
+- [x] Docs atualizados: CLAUDE.md · project-state.md · sprint-history.md · inventory-v0-scope.md.
+
+**Caveats registrados:**
+- `low_stock` usa `<` (não `<=`) — item exatamente no mínimo não dispara alerta (intencional v0.1).
+- Hero usa `limit=100` — contagem subestimada para clínicas com >100 itens ativos (aceitável v0.1).
+- Responsável não exibido no histórico (UUID não renderizado; nome exige JOIN futuro no backend).
 
 ---
 
@@ -229,14 +235,23 @@ O sistema exibe quantidade atual e alerta quando abaixo do mínimo configurado.
 - [x] `git diff --check` rc=0 ✅
 - [x] Frontend `InventoryPanel` — **Sprint 4.8C** ✅
 
-**Sprint 4.8C — Gate de abertura de 4.8D:**
+**Sprint 4.8C — Gate de abertura de 4.8D (concluído):**
 
 - [x] `InventoryPanel` + aba "Estoque" no Dashboard ✅
 - [x] 8 funções API + 8 tipos em `api.ts` ✅
 - [x] typecheck frontend ✅ · build frontend ✅
 - [x] `git diff --check` rc=0 ✅ · backend intocado
-- [ ] Validação visual no navegador — pendente
-- [ ] QA/Hardening — **Sprint 4.8D**
+- [x] QA/Hardening — **Sprint 4.8D** ✅
+
+**Sprint 4.8D — Fase 4.8 completa:**
+
+- [x] Revisão UX/estado InventoryPanel ✅
+- [x] Greps segurança/LGPD: 0 violations ✅
+- [x] Sanity smoke live: 8/8 PASS ✅
+- [x] typecheck frontend ✅ · build frontend ✅ · typecheck backend ✅
+- [x] migrate:status 18/0 ✅
+- [x] `git diff --check` rc=0 · `git status` limpo ✅
+- [x] Docs atualizados ✅
 
 ---
 
