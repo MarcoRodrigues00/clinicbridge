@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
@@ -637,6 +637,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
       </div>
 
       <div className={styles.summary} data-tour-id="agenda-summary">
+        <span className={styles.summaryLabel}>Resumo do dia</span>
         <span className={styles.chip}>Total: <strong>{summary.total}</strong></span>
         <span className={`${styles.chip} ${styles.chipScheduled}`}>Agendados: <strong>{summary.agendados}</strong></span>
         <span className={`${styles.chip} ${styles.chipConfirmed}`}>Confirmados: <strong>{summary.confirmados}</strong></span>
@@ -794,9 +795,19 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
         <p className={styles.muted}><Loader2 size={16} className={styles.spin} aria-hidden="true" /> Carregando agenda…</p>
       ) : appointments.length === 0 ? (
         <div className={styles.empty}>
-          <CalendarCheck size={26} aria-hidden="true" />
-          <p>Nenhum agendamento para {shortDate(date)}.</p>
-          {!showForm && (
+          <CalendarCheck size={28} aria-hidden="true" />
+          <p className={styles.emptyTitle}>Nenhum agendamento para {shortDate(date)}.</p>
+          <p className={styles.emptyHint}>
+            {hasActiveFilters
+              ? 'Nenhum resultado com os filtros atuais. Tente limpar os filtros.'
+              : 'Use os dias acima para navegar ou crie um novo agendamento.'}
+          </p>
+          {hasActiveFilters && (
+            <button type="button" className={styles.clearFiltersBtn} onClick={clearFilters}>
+              <FilterX size={15} aria-hidden="true" /> Limpar filtros
+            </button>
+          )}
+          {!showForm && !hasActiveFilters && (
             <button type="button" className={styles.addBtn} onClick={() => setShowForm(true)}>
               <Plus size={16} aria-hidden="true" /> Novo agendamento
             </button>
@@ -804,7 +815,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
         </div>
       ) : (
         <ul className={styles.timeline} data-tour-id="agenda-list">
-          {appointments.map((a) => {
+          {appointments.map((a, idx) => {
             const today = todayStr();
             const badgeState = canSeeFinancial
               ? appointmentFinancialState(a.id, chargeMap, today)
@@ -816,15 +827,28 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
                 )
               : [];
 
+            // Hour-group separator (Sprint 6.0B): a thin "HH:00 ─────" divider
+            // appears whenever the starting hour changes from the previous slot,
+            // making the day quicker to scan (Google Calendar–style grouping).
+            const hour = timeFromIso(a.starts_at).slice(0, 2);
+            const prevHour = idx > 0 ? timeFromIso(appointments[idx - 1].starts_at).slice(0, 2) : null;
+            const showHour = hour !== prevHour && hour !== '—';
+
             return (
-              <li key={a.id} className={styles.slot}>
+              <Fragment key={a.id}>
+                {showHour && (
+                  <li className={styles.hourHeader} aria-hidden="true">
+                    <span>{hour}:00</span>
+                  </li>
+                )}
+              <li className={styles.slot}>
                 <div className={styles.slotTime}>
                   <span className={styles.slotStart}>{timeFromIso(a.starts_at)}</span>
                   <span className={styles.slotEnd}>{timeFromIso(a.ends_at)}</span>
                 </div>
-                <div className={styles.card}>
+                <div className={`${styles.card} ${styles[`cardAccent_${a.status}`] ?? ''}`}>
                   <div className={styles.cardHead}>
-                    <span className={styles.cardPatient}><User size={15} aria-hidden="true" /> {patientName(a.patient_id)}</span>
+                    <span className={styles.cardPatient}><User size={16} aria-hidden="true" /> {patientName(a.patient_id)}</span>
                     <div className={styles.cardBadges}>
                       <span className={`${styles.badge} ${styles[`st_${a.status}`] ?? ''}`}>{STATUS_LABELS[a.status]}</span>
                       {canSeeFinancial && badgeState !== 'none' && (
@@ -834,11 +858,13 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
                       )}
                     </div>
                   </div>
-                  <div className={styles.cardRow}><Stethoscope size={15} aria-hidden="true" /> {professionalName(a.professional_id)}</div>
-                  {serviceName(a.service_id) && (
-                    <div className={styles.cardRow}><Briefcase size={15} aria-hidden="true" /> {serviceName(a.service_id)}</div>
-                  )}
-                  <div className={styles.cardRow}><Clock size={15} aria-hidden="true" /> {timeFromIso(a.starts_at)}–{timeFromIso(a.ends_at)}</div>
+                  <div className={styles.metaChips}>
+                    <span className={styles.metaChip}><Stethoscope size={13} aria-hidden="true" /> {professionalName(a.professional_id)}</span>
+                    {serviceName(a.service_id) && (
+                      <span className={styles.metaChip}><Briefcase size={13} aria-hidden="true" /> {serviceName(a.service_id)}</span>
+                    )}
+                    <span className={styles.metaChip}><Clock size={13} aria-hidden="true" /> {timeFromIso(a.starts_at)}–{timeFromIso(a.ends_at)}</span>
+                  </div>
                   {a.administrative_notes && <div className={styles.cardNotes}>{a.administrative_notes}</div>}
 
                   {/* Financial section — hidden for profissional/blocked users */}
@@ -1069,6 +1095,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
                   )}
                 </div>
               </li>
+              </Fragment>
             );
           })}
         </ul>
