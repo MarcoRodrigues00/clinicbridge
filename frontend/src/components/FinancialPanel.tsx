@@ -34,6 +34,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Clock,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuth } from '../services/AuthProvider';
 import { getToken } from '../services/authStorage';
@@ -169,6 +170,7 @@ interface ListViewProps {
   onSelectCharge: (id: string) => void;
   onNew: () => void;
   onAccessBlocked: () => void;
+  onAuriTour?: () => void;
 }
 
 function ChargeListView({
@@ -177,6 +179,7 @@ function ChargeListView({
   onSelectCharge,
   onNew,
   onAccessBlocked,
+  onAuriTour,
 }: ListViewProps): JSX.Element {
   const [filterStatus, setFilterStatus] = useState<FinancialChargeStatus | ''>('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -354,8 +357,13 @@ function ChargeListView({
 
         <div className={styles.toolbarSpacer} />
 
-        <div className={styles.filterGroup} style={{ justifyContent: 'flex-end' }}>
-          <span className={styles.filterLabel} style={{ visibility: 'hidden' }}>.</span>
+        <div className={styles.filterGroupActions}>
+          {onAuriTour && (
+            <button type="button" className={styles.btnGhost} onClick={onAuriTour} title="Auri explica este módulo">
+              <HelpCircle size={15} aria-hidden="true" />
+              Auri explica
+            </button>
+          )}
           <button type="button" className={styles.btnPrimary} onClick={onNew}>
             <Plus size={15} aria-hidden="true" />
             Nova cobrança
@@ -1901,7 +1909,7 @@ function MarkPaidModalLoader({
 
 // ── Main Panel ────────────────────────────────────────────────────────────────
 
-export function FinancialPanel(): JSX.Element {
+export function FinancialPanel({ onAuriTour }: { onAuriTour?: () => void } = {}): JSX.Element {
   const { user } = useAuth();
   const token = getToken();
 
@@ -2023,6 +2031,7 @@ export function FinancialPanel(): JSX.Element {
           onSelectCharge={handleSelectCharge}
           onNew={handleNew}
           onAccessBlocked={() => setAccessBlocked(true)}
+          onAuriTour={onAuriTour}
         />
       )}
 

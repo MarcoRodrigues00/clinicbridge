@@ -15,6 +15,7 @@ import {
   ArchiveRestore,
   X,
   ClipboardList,
+  HelpCircle,
 } from 'lucide-react';
 import {
   api,
@@ -121,9 +122,11 @@ function apiMessage(err: unknown, fallback: string): string {
 export function PatientsList({
   refreshKey = 0,
   onPatientsChanged,
+  onAuriTour,
 }: {
   refreshKey?: number;
   onPatientsChanged?: () => void;
+  onAuriTour?: () => void;
 } = {}): JSX.Element {
   const { user } = useAuth();
   // Owner + secretaria can create/edit. Archive/restore and export are owner-only
@@ -381,12 +384,20 @@ export function PatientsList({
             filtros de status para encontrar um registro. Esta área não contém prontuário clínico.
           </p>
         </div>
-        {canWrite && (
-          <button type="button" className={styles.newBtn} onClick={openCreate}>
-            <Plus size={16} aria-hidden="true" />
-            Novo paciente
-          </button>
-        )}
+        <span className={styles.headActions}>
+          {onAuriTour && (
+            <button type="button" className={styles.clearBtn} onClick={onAuriTour} title="Auri explica este módulo">
+              <HelpCircle size={15} aria-hidden="true" />
+              Auri explica
+            </button>
+          )}
+          {canWrite && (
+            <button type="button" className={styles.newBtn} onClick={openCreate}>
+              <Plus size={16} aria-hidden="true" />
+              Novo paciente
+            </button>
+          )}
+        </span>
       </div>
 
       <p className={styles.notice}>

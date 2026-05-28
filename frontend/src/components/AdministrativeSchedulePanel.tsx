@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Briefcase,
   FilterX,
+  HelpCircle,
 } from 'lucide-react';
 import {
   api,
@@ -199,9 +200,10 @@ function timeFromIso(iso: string): string {
 
 interface AdministrativeSchedulePanelProps {
   onGoToFinanceiro?: () => void;
+  onAuriTour?: () => void;
 }
 
-export function AdministrativeSchedulePanel({ onGoToFinanceiro }: AdministrativeSchedulePanelProps): JSX.Element {
+export function AdministrativeSchedulePanel({ onGoToFinanceiro, onAuriTour }: AdministrativeSchedulePanelProps): JSX.Element {
   const queryClient = useQueryClient();
   const { clinic, user } = useAuth();
   const token = getToken();
@@ -604,10 +606,18 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
           <CalendarDays size={22} aria-hidden="true" />
           Agenda administrativa
         </h2>
-        <button type="button" className={styles.secondaryBtn} onClick={() => void appointmentsQuery.refetch()}>
-          <RefreshCw size={16} aria-hidden="true" />
-          Atualizar
-        </button>
+        <span className={styles.headActions}>
+          {onAuriTour && (
+            <button type="button" className={styles.secondaryBtn} onClick={onAuriTour} title="Auri explica este módulo">
+              <HelpCircle size={15} aria-hidden="true" />
+              Auri explica
+            </button>
+          )}
+          <button type="button" className={styles.secondaryBtn} onClick={() => void appointmentsQuery.refetch()}>
+            <RefreshCw size={16} aria-hidden="true" />
+            Atualizar
+          </button>
+        </span>
       </div>
       <p className={styles.subtitle}>
         Agendamentos administrativos da clínica. Esta agenda não é prontuário e não
@@ -688,7 +698,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
       </div>
 
       {!showForm ? (
-        <button type="button" className={styles.addBtn} onClick={() => { setShowForm(true); setError(null); setNotice(null); }}>
+        <button type="button" className={styles.addBtn} data-tour-id="agenda-create" onClick={() => { setShowForm(true); setError(null); setNotice(null); }}>
           <Plus size={16} aria-hidden="true" /> Novo agendamento
         </button>
       ) : (

@@ -7419,3 +7419,54 @@ typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅.
 Bundle: todos os `queryKey: ['setup',…]`, `retry: false`, `staleTime`, `is403`, `resolveStatus`, badges — confirmados. Validação visual no navegador: pendente.
 
 **Próxima:** spike billing 5.1D, tours por módulo, ou polish de UX pós-piloto.
+
+---
+
+## Sprint 6.0F (2026-05-28) — Guias por módulo da Auri v0.1
+
+Frontend-only. Sem backend, migration, demo-login, seed, troca de tenant.
+
+### Steps por módulo
+
+| Tour | Steps |
+|---|---|
+| Agenda | boas-vindas → `agenda-summary` → `agenda-filters` → `agenda-list` → `agenda-create` |
+| Pacientes | boas-vindas → `patients-search` → `patients-list` → nota sobre área clínica |
+| Financeiro | boas-vindas → `financial-summary` → `financial-table` → `financial-payer` → criar/registrar |
+
+### Infraestrutura
+
+`GuidedDemoTour.tsx`: `AGENDA_TOUR_STEPS`, `PATIENTS_TOUR_STEPS`, `FINANCIAL_TOUR_STEPS`, `MODULE_TOUR_STEPS` (map `TourId → DemoTourStep[]`).
+
+Painéis: prop `onAuriTour?: () => void` + botão "Auri explica" (`HelpCircle`) → `AdministrativeSchedulePanel`, `PatientsList`, `FinancialPanel` (thread até `ChargeListView`).
+
+Dashboard: estado `moduleTourId: TourId | null` + `moduleTourStep`, `openModuleTour`/`closeModuleTour`, `<GuidedDemoTour>` condicional a `!isDemo`.
+
+### `data-tour-id` adicionado
+
+`agenda-create` — botão "Novo agendamento" em `AdministrativeSchedulePanel.tsx`.
+
+### CSS modules (sem inline styles)
+
+`.headActions` → `AdministrativeSchedulePanel.module.css`, `PatientsList.module.css`.
+`.filterGroupActions` → `FinancialPanel.module.css`.
+
+### Separação de tours
+
+- Demo Aurora → `DEMO_TOUR_STEPS` (inalterada)
+- Onboarding interno → `ONBOARDING_STEPS` (inalterado)
+- Tours por módulo → `MODULE_TOUR_STEPS` (só em `!isDemo`)
+
+### Limitações
+
+- `financial-payer` aponta para o primeiro row — requer cobrança existente.
+- Targets ausentes degradam sem erro (herdado de `useTargetRect`).
+- Tours de Documentos, Convênios, Estoque e Relatórios não implementados.
+
+### Arquivos
+
+`GuidedDemoTour.tsx` · `AdministrativeSchedulePanel.tsx` · `AdministrativeSchedulePanel.module.css` · `PatientsList.tsx` · `PatientsList.module.css` · `FinancialPanel.tsx` · `FinancialPanel.module.css` · `Dashboard.tsx`.
+
+### Checks
+
+typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅. Validação visual no navegador: pendente.

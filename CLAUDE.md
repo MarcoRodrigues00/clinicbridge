@@ -17,8 +17,8 @@
 ## Estado atual (2026-05-28)
 
 **Entregue (landing/demo/Auri/mobile):** 5.0E–5.0I — Demo Experience, tour Auri, landing demo em destaque, teaser+bolinha, nav mobile compacto, CLAUDE.md slimming. Ver `docs/project-state.md`.
-**Sprint atual:** 6.0E (entregue) — **Checklist de configuração da clínica real v0.1.** `SetupChecklist.tsx`: 7 itens (5 obrigatórios + 2 opcionais), cada um com query TanStack (`limit:1`, `retry:false`, `staleTime:60s`) que detecta existência do recurso. Status: Concluído / Pendente / Opcional / Restrito (403 por item). Barra de progresso, `ownerOnly` para Profissionais. `api.ts`: `from`/`to`/`limit` adicionados a `ListAppointmentsParams`. Demo Aurora CTA inalterado. **Frontend-only.** Ver `docs/project-state.md`.
-**Próxima sprint:** 5.1D spike billing (Asaas vs Stripe) ou tours por módulo.
+**Sprint atual:** 6.0F (entregue) — **Guias por módulo da Auri v0.1.** `AGENDA_TOUR_STEPS` (5), `PATIENTS_TOUR_STEPS` (4), `FINANCIAL_TOUR_STEPS` (5) + `MODULE_TOUR_STEPS` map em `GuidedDemoTour.tsx`. Botão "Auri explica" (`HelpCircle`) nos 3 painéis via prop `onAuriTour`. Dashboard gerencia `moduleTourId` + renderiza `<GuidedDemoTour>` separado (`!isDemo`). CSS modules sem inline styles. `data-tour-id="agenda-create"` adicionado. Demo Aurora intocada. **Frontend-only.** Ver `docs/project-state.md`.
+**Próxima sprint:** 5.1D spike billing (Asaas vs Stripe), ou validação visual 6.0F.
 **Depois:** 5.1E QA/security billing · **5.2A** ADR Produção Segura AWS (renumerada de 5.1A; obrigatória antes de dados reais e de cobrança real).
 
 **Fase:** Fase 3 (produção/governança). **NÃO pronto para produção com dados reais** — ver `docs/security-notes.md`.

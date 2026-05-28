@@ -7,6 +7,24 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0F** (entregue 2026-05-28) — **Guias por módulo da Auri v0.1.**
+
+Frontend-only. Sem backend, migration, demo-login, seed, troca de tenant.
+
+**Implementação:** `GuidedDemoTour.tsx` recebeu `AGENDA_TOUR_STEPS` (5 passos), `PATIENTS_TOUR_STEPS` (4 passos), `FINANCIAL_TOUR_STEPS` (5 passos) e `MODULE_TOUR_STEPS` (map `TourId → DemoTourStep[]`). Os três painéis (`AdministrativeSchedulePanel`, `PatientsList`, `FinancialPanel`) receberam prop `onAuriTour?: () => void` e um botão discreto "Auri explica" (com `HelpCircle`). `Dashboard.tsx` gerencia estado `moduleTourId/moduleTourStep`, funções `openModuleTour`/`closeModuleTour`, passa `onAuriTour` a cada painel, e renderiza `<GuidedDemoTour>` separado para tours por módulo. CSS modules: `.headActions` em `AdministrativeSchedulePanel` e `PatientsList`; `.filterGroupActions` em `FinancialPanel` (sem inline styles).
+
+**`data-tour-id` adicionado:** `agenda-create` no botão "Novo agendamento" de `AdministrativeSchedulePanel`.
+
+**Separação mantida:** Demo Aurora usa `DEMO_TOUR_STEPS`; onboarding interno usa `ONBOARDING_STEPS`; tours por módulo usam `MODULE_TOUR_STEPS` e só aparecem em `!isDemo`.
+
+**Limitações:** `financial-payer` aponta para o primeiro row da tabela — requer ao menos uma cobrança. Targets ausentes degradam sem erro (comportamento herdado de `useTargetRect`). Tours de Documentos/Convênios/Estoque/Relatórios não implementados nesta sprint.
+
+**Checks:** typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅. Validação visual pendente no navegador.
+
+**Próxima:** spike billing 5.1D, ou validação visual 6.0F.
+
+---
+
 **Sprint 6.0E** (entregue 2026-05-28) — **Checklist de configuração da clínica real v0.1.**
 
 Frontend-only. Sem seed, sem backend, sem migration, sem demo-login, sem dado fake.

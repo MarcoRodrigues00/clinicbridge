@@ -41,7 +41,8 @@ import { InsurancePanel } from '../components/InsurancePanel';
 import { InventoryPanel } from '../components/InventoryPanel';
 import { SubscriptionPanel } from '../components/SubscriptionPanel';
 import { SetupChecklist } from '../components/SetupChecklist';
-import { GuidedDemoTour, DEMO_TOUR_STEPS, ONBOARDING_STEPS } from '../components/GuidedDemoTour';
+import { GuidedDemoTour, DEMO_TOUR_STEPS, ONBOARDING_STEPS, MODULE_TOUR_STEPS, TOUR_IDS } from '../components/GuidedDemoTour';
+import type { TourId } from '../components/GuidedDemoTour';
 import { DemoBlockedToast } from '../components/DemoBlockedToast';
 import { DemoMascot } from '../components/DemoMascot';
 import { useAuth } from '../services/AuthProvider';
@@ -126,6 +127,21 @@ export function Dashboard(): JSX.Element {
   const appTourDismissed = (() => {
     try { return !!window.localStorage.getItem(APP_TOUR_DISMISSED_KEY); } catch { return false; }
   })();
+
+  // Module tours (Sprint 6.0F): each module has a short contextual tour triggered
+  // by the "Auri explica" button inside the panel. Only one module tour at a time;
+  // closing sets moduleTourId back to null.
+  const [moduleTourId, setModuleTourId] = useState<TourId | null>(null);
+  const [moduleTourStep, setModuleTourStep] = useState(0);
+
+  function openModuleTour(id: TourId): void {
+    setModuleTourId(id);
+    setModuleTourStep(0);
+  }
+
+  function closeModuleTour(): void {
+    setModuleTourId(null);
+  }
 
   // Auri invite teaser (Sprint 6.0C.1). Uses a SEPARATE localStorage key so the
   // teaser can be dismissed without completing the tour, and stays gone regardless
@@ -401,6 +417,7 @@ export function Dashboard(): JSX.Element {
             <PatientsList
               refreshKey={patientsRefresh}
               onPatientsChanged={() => setPatientsRefresh((n) => n + 1)}
+              onAuriTour={() => openModuleTour(TOUR_IDS.PATIENTS)}
             />
             <DuplicatesList
               refreshKey={patientsRefresh}
@@ -416,12 +433,15 @@ export function Dashboard(): JSX.Element {
               <strong> Equipe → Profissionais da agenda</strong>. Aqui você só
               consome os profissionais ativos da clínica.
             </p>
-            <AdministrativeSchedulePanel onGoToFinanceiro={() => setTab('financeiro')} />
+            <AdministrativeSchedulePanel
+              onGoToFinanceiro={() => setTab('financeiro')}
+              onAuriTour={() => openModuleTour(TOUR_IDS.AGENDA)}
+            />
           </>
         )}
 
         {tab === 'financeiro' && (
-          <FinancialPanel />
+          <FinancialPanel onAuriTour={() => openModuleTour(TOUR_IDS.FINANCIAL)} />
         )}
 
         {tab === 'relatorios' && (
@@ -542,6 +562,19 @@ export function Dashboard(): JSX.Element {
           setCollapsed={() => { /* no-op: X button calls onClose directly in app mode */ }}
           onClose={closeAppTour}
           roleLabel="guia do ClinicBridge"
+        />
+      )}
+
+      {/* Module tours (Sprint 6.0F): contextual, triggered from each panel. */}
+      {moduleTourId !== null && !isDemo && (
+        <GuidedDemoTour
+          steps={MODULE_TOUR_STEPS[moduleTourId] ?? []}
+          step={moduleTourStep}
+          setStep={setModuleTourStep}
+          collapsed={false}
+          setCollapsed={() => { /* no-op */ }}
+          onClose={closeModuleTour}
+          roleLabel="Auri explica"
         />
       )}
     </div>
