@@ -119,8 +119,19 @@ tenant-scoped (inclui toda a agenda).
 - Profissional é **opcional**, mas, se houver, deve ser da mesma clínica.
 - **Sem acesso cross-tenant** (403); DAOs sempre filtram `clinica_id`; sem `listAll`.
 - **Sem status inválido**; `ends_at` > `starts_at`.
-- **Evitar sobreposição** de horário para o mesmo profissional — desejável, se
-  simples na implementação (não bloqueante para o conceito).
+- **Anti-overlap por profissional (implementado na Sprint 6.0A):** dois agendamentos
+  **ativos** do mesmo profissional na mesma clínica não podem se sobrepor.
+  - Conflito = mesmo `professional_id` (não-nulo) + sobreposição de intervalo meio-aberto
+    (`existing.starts_at < ends_at AND existing.ends_at > starts_at`; bordas que se tocam não
+    conflitam).
+  - **Reservam o horário:** `scheduled`, `confirmed`, `rescheduled` (`OVERLAP_BLOCKING_STATUSES`).
+    **Não reservam:** `cancelled` (liberado), `completed` (histórico — decisão de produto: não
+    afeta agendamento futuro), `no_show` (terminal — slot não retido).
+  - Validado em `create`, `reschedule` (exclui o próprio id) e `updateStatus` ao reativar
+    (alvo `scheduled`/`confirmed`). Agendamento **sem profissional** não sofre checagem.
+  - Conflito → **409 `appointment_time_conflict`**, mensagem **sem PII**.
+  - **Limitação:** check-then-write no service tem janela de corrida rara entre dois creates
+    concorrentes; endurecimento futuro = constraint DB `EXCLUDE USING gist` (btree_gist).
 - **Sem delete físico** no MVP — cancelar via status `cancelled`.
 - Registrar ações importantes em `audit_logs` (sem PII/observação).
 

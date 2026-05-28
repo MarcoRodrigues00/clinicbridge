@@ -61,6 +61,27 @@
   color: var(--text-2);
 }
 
+/* "Limpar filtros" — sits in the filters grid, aligned with the selects. */
+.clearFiltersBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-1);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+}
+
+.clearFiltersBtn:hover {
+  border-color: var(--cyan);
+  color: var(--text-0);
+}
+
 .input,
 .textarea {
   width: 100%;

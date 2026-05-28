@@ -7,6 +7,24 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0A** (entregue 2026-05-28) — **Agenda madura v0.1 pré-piloto (anti-overlap + filtros + multi-serviço).**
+
+Endurece a Agenda Administrativa para o piloto familiar multi-profissional/multi-serviço. **Administrativo, não clínico** (sem campo clínico novo). **Sem migration** — anti-overlap na camada de service. Permissões da agenda **inalteradas** (segue `requireAuth + requireClinic`, sem `requireRole`).
+
+**Backend (anti-overlap):** `appointmentDao.findActiveOverlap()` (tenant-scoped; intervalos meio-abertos `starts_at < ends_at AND ends_at > starts_at`); checagem em `create`, `reschedule` (exclui o próprio id) e `updateStatus` ao reativar (→`scheduled`/`confirmed`). Conflito → **409 `appointment_time_conflict`** (mensagem sem PII). Statuses que reservam o horário: `scheduled`/`confirmed`/`rescheduled` (`OVERLAP_BLOCKING_STATUSES`); `cancelled`/`completed`/`no_show` **não** bloqueiam. Sem profissional → sem checagem. **Filtro `service_id`** adicionado a `listByClinic`/service/controller.
+
+**Frontend:** filtro de **Serviço**, botão **Limpar filtros** (aparece quando há filtro ativo), **serviço exibido no card** (ícone Briefcase), mensagem amigável para `appointment_time_conflict` ("Este horário já está ocupado para o profissional selecionado…"). `service_id` propagado em `ListAppointmentsParams`/`listAppointments` + queryKey. Mobile preservado.
+
+**Decisão de bloqueio:** apenas estados ativos (`scheduled`/`confirmed`/`rescheduled`) reservam o slot; terminais (`cancelled`/`completed`/`no_show`) liberam — alinhado à preferência do dono (completed não afeta futuro; cancelled libera). Detalhe em `docs/administrative-scheduling-scope.md` §9.
+
+**Limitação conhecida:** check-then-write no service tem janela de corrida rara entre dois creates concorrentes no mesmo slot (aceitável na escala do piloto); endurecimento futuro = constraint DB `EXCLUDE USING gist` (btree_gist).
+
+**Checks/smokes:** backend typecheck/build ✅; frontend typecheck/build ✅; `migrate:status` sem pendências (sem migration nova) ✅; `git diff --check` rc=0 ✅. Smoke API anti-overlap (10 casos): sem conflito 201; mesmo prof 409; prof diferente 201; slot cancelado 201; reschedule p/ ocupado 409; reschedule do próprio 200; admin sem clínica 403; tenant isolation cross-clinic 404; service_id válido 201; filtro service_id 200, inválido 400. Agenda × Financeiro e Agenda × Serviços preservados. Validação visual (pixel/mobile/dark) pendente no navegador do usuário (sem browser headless no WSL2/Ubuntu 26.04).
+
+**Próxima:** 5.1D spike sandbox (Asaas vs Stripe) ou continuação da fase 6.0 (piloto familiar).
+
+---
+
 **Sprint 5.1C** (entregue 2026-05-28) — **Frontend Plano/Assinatura v0.1.**
 
 Painel visual de plano e assinatura no Dashboard, consumindo `GET /billing/status`. **Sem gateway, checkout, preço, env, backend novo, migration ou integração externa.**

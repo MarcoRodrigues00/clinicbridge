@@ -26,6 +26,7 @@ export const appointmentController = {
         from: req.query.from,
         to: req.query.to,
         professional_id: req.query.professional_id,
+        service_id: req.query.service_id,
         status: req.query.status,
         limit: req.query.limit,
       },

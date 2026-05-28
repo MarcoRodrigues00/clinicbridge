@@ -25,6 +25,22 @@ export const STATUS_UPDATE_ALLOWED: readonly AppointmentStatus[] = [
   'completed',
 ];
 
+// Anti-overlap (Sprint 6.0A). An existing appointment occupies a professional's
+// time slot ONLY while it is in one of these "active" statuses. Terminal states
+// free the slot:
+//   - `cancelled`  → the slot was given up; never blocks.
+//   - `completed`  → historical; per product decision must not block future
+//                    scheduling (a completed past slot only overlaps a re-entry
+//                    of the same past time, an edge case we choose not to block).
+//   - `no_show`    → terminal; the patient didn't come; the slot is not held.
+// Only `scheduled`, `confirmed` and `rescheduled` reserve the slot. Decision
+// documented in docs/administrative-scheduling-scope.md §9.
+export const OVERLAP_BLOCKING_STATUSES: readonly AppointmentStatus[] = [
+  'scheduled',
+  'confirmed',
+  'rescheduled',
+];
+
 export function isAppointmentStatus(value: unknown): value is AppointmentStatus {
   return (
     typeof value === 'string' &&

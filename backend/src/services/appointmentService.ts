@@ -9,6 +9,7 @@ import {
   isAppointmentStatus,
   STATUS_UPDATE_ALLOWED,
   toPublicAppointment,
+  type AppointmentStatus,
   type PublicAppointment,
 } from '../models/appointment';
 import type { AuthContext } from './authService';
@@ -61,6 +62,41 @@ function normalizeNotes(value: unknown): string | null {
 function assertTimeOrder(starts_at: Date, ends_at: Date): void {
   if (ends_at.getTime() <= starts_at.getTime()) {
     throw new HttpError(400, 'invalid_appointment', 'ends_at deve ser maior que starts_at.');
+  }
+}
+
+// Anti-overlap (Sprint 6.0A). Refuses a second active appointment for the same
+// professional whose time window overlaps an existing one in the same clinic.
+// No-op when there is no professional (an unassigned slot can't conflict with a
+// professional's schedule). Tenant-scoped via the DAO. The 409 message carries
+// NO PII — never the patient/professional name, time or any detail of the
+// conflicting appointment (anti-enumeration + LGPD minimization).
+//
+// NOTE (known limitation): this is a check-then-write at the service layer, so a
+// rare race between two concurrent creates for the same slot could let both
+// through. Acceptable at pilot scale; a DB-level EXCLUDE constraint
+// (btree_gist) is the future hardening path (documented in the scope doc).
+async function assertNoOverlap(
+  clinica_id: string,
+  professional_id: string | null,
+  starts_at: Date,
+  ends_at: Date,
+  excludeId: string | null,
+): Promise<void> {
+  if (!professional_id) return;
+  const conflict = await appointmentDao.findActiveOverlap(
+    clinica_id,
+    professional_id,
+    starts_at,
+    ends_at,
+    excludeId,
+  );
+  if (conflict) {
+    throw new HttpError(
+      409,
+      'appointment_time_conflict',
+      'Já existe um agendamento ativo neste horário para este profissional.',
+    );
   }
 }
 
@@ -165,6 +201,10 @@ export const appointmentService = {
     await assertPatientInClinic(patient_id, actor.clinica_id);
     if (professional_id) await assertProfessionalInClinic(professional_id, actor.clinica_id);
 
+    // Anti-overlap: no two active appointments for the same professional may
+    // share a time window (Sprint 6.0A).
+    await assertNoOverlap(actor.clinica_id, professional_id, starts_at, ends_at, null);
+
     const row = await appointmentDao.create({
       clinica_id: actor.clinica_id,
       patient_id,
@@ -183,7 +223,7 @@ export const appointmentService = {
   // Owner + secretaria. Lists the clinic's appointments with optional filters.
   async list(
     actor: SchedulingActor,
-    rawQuery: { date?: unknown; from?: unknown; to?: unknown; professional_id?: unknown; status?: unknown; limit?: unknown },
+    rawQuery: { date?: unknown; from?: unknown; to?: unknown; professional_id?: unknown; service_id?: unknown; status?: unknown; limit?: unknown },
     ctx: AuthContext,
   ): Promise<{ appointments: PublicAppointment[] }> {
     let from: Date | null = null;
@@ -211,6 +251,11 @@ export const appointmentService = {
       professional_id = parseUuid(rawQuery.professional_id, 'professional_id');
     }
 
+    let service_id: string | null = null;
+    if (rawQuery.service_id !== undefined && rawQuery.service_id !== '') {
+      service_id = parseUuid(rawQuery.service_id, 'service_id');
+    }
+
     let status: string | null = null;
     if (rawQuery.status !== undefined && rawQuery.status !== '') {
       if (!isAppointmentStatus(rawQuery.status)) {
@@ -234,6 +279,7 @@ export const appointmentService = {
       from,
       to,
       professional_id,
+      service_id,
       status,
       limit,
     });
@@ -269,6 +315,27 @@ export const appointmentService = {
         `status inválido. Use um de: ${STATUS_UPDATE_ALLOWED.join(', ')}.`,
       );
     }
+
+    // Anti-overlap on re-activation (Sprint 6.0A): moving an appointment INTO an
+    // active status (scheduled/confirmed) can re-occupy a slot that was freed
+    // (e.g. cancelled → confirmed). Re-check against its own time window,
+    // excluding itself. Other transitions (cancel/no_show/complete) free the
+    // slot and need no check.
+    const reactivating: AppointmentStatus[] = ['scheduled', 'confirmed'];
+    if (reactivating.includes(status)) {
+      const existing = await appointmentDao.findByIdForClinic(id, actor.clinica_id);
+      if (!existing) {
+        throw new HttpError(404, 'appointment_not_found', 'Agendamento não encontrado.');
+      }
+      await assertNoOverlap(
+        actor.clinica_id,
+        existing.professional_id,
+        new Date(existing.starts_at),
+        new Date(existing.ends_at),
+        existing.id,
+      );
+    }
+
     const row = await appointmentDao.updateStatusForClinic(
       id,
       actor.clinica_id,
@@ -293,6 +360,15 @@ export const appointmentService = {
     const starts_at = parseIsoDate(body.starts_at, 'starts_at');
     const ends_at = parseIsoDate(body.ends_at, 'ends_at');
     assertTimeOrder(starts_at, ends_at);
+
+    // Load first to learn the professional (reschedule keeps the same
+    // professional, only the time window changes) and to 404 before the
+    // conflict check. Anti-overlap excludes this appointment's own id.
+    const existing = await appointmentDao.findByIdForClinic(id, actor.clinica_id);
+    if (!existing) {
+      throw new HttpError(404, 'appointment_not_found', 'Agendamento não encontrado.');
+    }
+    await assertNoOverlap(actor.clinica_id, existing.professional_id, starts_at, ends_at, existing.id);
 
     const row = await appointmentDao.rescheduleForClinic(
       id,
