@@ -13,6 +13,7 @@
 > - **Catálogo de Serviços v0.1 (Fase 4.6):** ADR `docs/adr/0015-services-catalog-commercial-layer-v0.md` · `docs/services-catalog-v0-scope.md`
 > - **Convênios v0.1 (Fase 4.7):** ADR `docs/adr/0016-insurance-billing-v0.md` · operacional `docs/insurance-billing-v0-scope.md` · pré-planejamento `docs/insurance-billing-future-scope.md`
 > - **Estoque v0.1 (Fase 4.8):** ADR `docs/adr/0017-inventory-v0.md` · operacional `docs/inventory-v0-scope.md`
+> - **Plano de Piloto Controlado:** `docs/pilot-controlled-plan.md` · checklist `docs/pilot-go-no-go-checklist.md`
 > - **Documentos Médicos v0.1:** ADR `docs/adr/0011-medical-documents-prescriptions-v0.md` · `docs/medical-documents-v0-scope.md`
 > - **Prontuário v0.1:** ADR `docs/adr/0010-clinical-encounters-medical-record-v0.md` · `docs/clinical-encounters-v0-scope.md`
 > - **Arquitetura clínica + roles + audit:** ADR `docs/adr/0009-clinical-architecture-roles-read-audit.md` · `docs/clinical-architecture-and-permissions.md`
@@ -22,7 +23,15 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.9C.2** (entregue, aguardando validação visual) — **Microcorreção landing.**
+**Sprint atual: 5.0A** (entregue) — **Plano de Piloto Controlado (docs-only).**
+Criados `docs/pilot-controlled-plan.md` e `docs/pilot-go-no-go-checklist.md`.
+Plano cobre: fases 1/2/3, personas do piloto (médico, psicóloga, secretária, futuro odontologia),
+módulos incluídos/excluídos, fluxos de teste, critérios go/no-go, regras LGPD para dados sintéticos,
+roteiro de 28 min, backlog pós-piloto. Veredicto: ✅ GO para Fase 1 com dados sintéticos.
+Zero código, zero migration, zero backend/frontend.
+`git diff --check` rc=0 ✅.
+
+**Sprint anterior: 4.9C.2** (entregue) — **Microcorreção landing.**
 Header CTA "Ver demonstração" → "Criar conta" (Link to="/register"). PricingPlans items atualizados
 conforme spec (Essencial 4 itens, Profissional 5, Piloto assistido CTA "Começar piloto assistido").
 Demo guiada registrada como backlog futuro. DashboardMockup (ainda mostra migração) → backlog de redesign.
@@ -315,7 +324,8 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 retrocompat com cobranças existentes).
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
-- **4.9C.2** ⏳ Header CTA → "Criar conta" · PricingPlans items corrigidos · demo = backlog · aguardando validação visual
+- **5.0A** ✅ Plano de Piloto Controlado (docs-only) · `pilot-controlled-plan.md` · `pilot-go-no-go-checklist.md` · GO Fase 1
+- **4.9C.2** ✅ Header CTA → "Criar conta" · PricingPlans items corrigidos · demo = backlog
 - **4.9C.1** ✅ Copy simplificada + PricingPlans estático
 - **4.9C** ✅ UX polish / landing / demo prep — copy landing atualizada · AuthAside · Dashboard início/segurança · backend intocado
 - **4.9B** ✅ Fix cache TanStack Query — `token` removido de 11 queryKeys · `filters` object substituído por primitivos · backend intocado
@@ -349,8 +359,8 @@ retrocompat com cobranças existentes).
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) →
-**Próxima fase TBD** (ADR própria necessária antes de qualquer código).
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) · 5.0A ✅ (Plano de Piloto) →
+**Próxima fase TBD** (ADR própria necessária antes de qualquer código). **Próxima sprint: 5.0B** (Demo Dataset / seed sintético).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.

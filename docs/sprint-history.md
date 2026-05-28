@@ -5810,4 +5810,59 @@ para eventual reuso.
 - `pnpm --filter frontend build` ✅
 - `git diff --check` rc=0 ✅
 
-**Sprint 4.9C.2 entregue.** Aguardando validação visual antes do commit.
+**Sprint 4.9C.2 entregue.** Fase 4.9 (Super Revisão + Correções técnicas + UX Polish + Landing) concluída.
+
+---
+
+## Sprint 5.0A — Plano de Piloto Controlado (2026-05-27)
+
+**Tipo:** Docs-only. Zero código, zero migration, zero backend/frontend.
+
+### Entregáveis
+
+**`docs/pilot-controlled-plan.md`** — 11 seções:
+1. Objetivo do piloto (valida usabilidade; não valida produção real)
+2. Contexto do cenário (médico, psicóloga, secretária, futuro odontologia)
+3. Fases 1/2/3 (sintéticos → anonimizados → produção real)
+4. Módulos por prioridade (alta: pacientes, agenda, serviços, financeiro, convênios, estoque, relatórios; controlado/fake: prontuário, documentos)
+5. 50+ fluxos de teste (auth/MFA, pacientes, agenda, financeiro, convênios, estoque, relatórios, clínico)
+6. Critérios de sucesso (8 indicadores)
+7. Critérios de parada (10 condições de stop)
+8. Regras LGPD/dados (obrigatório/proibido na Fase 1; regras para Fase 2)
+9. Roteiro de demonstração (28 minutos, 11 tópicos)
+10. Backlog pós-piloto (5.0B Demo Dataset → 5.0C Página Demo → 5.1A Produção)
+11. Referências cruzadas para outros docs
+
+**`docs/pilot-go-no-go-checklist.md`** — 5 checklists + decisão:
+- Checklist 1: Preparação do ambiente
+- Checklist 2: Permissões por papel
+- Checklist 3: Logs e auditoria
+- Checklist 4: PII na UI
+- Checklist 5: Fluxos críticos
+- Go/No-Go para Fase 1 (sintéticos): ✅ **GO** após confirmar checklists
+- Go/No-Go para Fase 2 (anonimizados): condicionado ao pós-Fase 1
+- Go/No-Go para Fase 3 (dados reais): ❌ **NO-GO** até 5.1A+
+- Checklist pós-piloto
+
+### Escopo do piloto
+
+**Incluído (Fase 1):**
+- Pacientes, agenda, serviços, equipe, importação CSV/XLSX
+- Financeiro (particular, convênio, misto)
+- Convênios e carteirinhas
+- Estoque e insumos
+- Relatórios gerenciais
+- Prontuário v0.1 e documentos v0.1 (apenas dados fake)
+- MFA, audit, read audit clínico
+
+**Excluído:**
+- Telemedicina, TISS real, ICP-Brasil, WhatsApp automático
+- Medicamentos controlados / SNGPC / ANVISA
+- Checkout de planos, billing real
+- Produção AWS com dados reais (sprint 5.1A+)
+
+### Checks
+
+- `git diff --check` rc=0 ✅
+
+**Sprint 5.0A entregue.** Gate para 5.0B (Demo Dataset / seed sintético completo) aberto.
