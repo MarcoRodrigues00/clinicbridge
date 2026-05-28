@@ -542,6 +542,7 @@ export interface ClinicProfessionalResponse {
 export interface ListAppointmentsParams {
   date?: string;
   professional_id?: string;
+  service_id?: string;
   status?: AppointmentStatus;
 }
 
@@ -1742,6 +1743,7 @@ export const api = {
     const query = new URLSearchParams();
     if (params.date) query.set('date', params.date);
     if (params.professional_id) query.set('professional_id', params.professional_id);
+    if (params.service_id) query.set('service_id', params.service_id);
     if (params.status) query.set('status', params.status);
     const qs = query.toString();
     return apiFetch<ListAppointmentsResponse>(`/appointments${qs ? `?${qs}` : ''}`, {

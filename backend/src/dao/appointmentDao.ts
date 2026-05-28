@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { db } from '../config/db';
 import type { AppointmentRow } from '../types/db';
+import { OVERLAP_BLOCKING_STATUSES } from '../models/appointment';
 
 export interface CreateAppointmentInput {
   clinica_id: string;
@@ -19,6 +20,7 @@ export interface ListAppointmentsFilters {
   from?: Date | null;
   to?: Date | null;
   professional_id?: string | null;
+  service_id?: string | null;
   status?: string | null;
   limit: number;
 }
@@ -54,8 +56,36 @@ export const appointmentDao = {
     if (filters.from) query.andWhere('starts_at', '>=', filters.from);
     if (filters.to) query.andWhere('starts_at', '<', filters.to);
     if (filters.professional_id) query.andWhere({ professional_id: filters.professional_id });
+    if (filters.service_id) query.andWhere({ service_id: filters.service_id });
     if (filters.status) query.andWhere({ status: filters.status });
     return query.orderBy('starts_at', 'asc').limit(filters.limit);
+  },
+
+  // Anti-overlap (Sprint 6.0A). Returns the FIRST active appointment that
+  // overlaps [starts_at, ends_at) for the same professional in the same clinic,
+  // or undefined when the slot is free. ALWAYS tenant-scoped by clinica_id.
+  //
+  // Overlap test (half-open intervals; touching boundaries do NOT conflict):
+  //   existing.starts_at < ends_at  AND  existing.ends_at > starts_at
+  //
+  // Only "active" statuses reserve the slot (OVERLAP_BLOCKING_STATUSES);
+  // cancelled/completed/no_show never block. `excludeId` skips the row being
+  // updated/rescheduled so an appointment never conflicts with itself.
+  async findActiveOverlap(
+    clinica_id: string,
+    professional_id: string,
+    starts_at: Date,
+    ends_at: Date,
+    excludeId: string | null,
+    conn: Knex = db,
+  ): Promise<AppointmentRow | undefined> {
+    const query = conn<AppointmentRow>('appointments')
+      .where({ clinica_id, professional_id })
+      .whereIn('status', OVERLAP_BLOCKING_STATUSES as readonly string[])
+      .andWhere('starts_at', '<', ends_at)
+      .andWhere('ends_at', '>', starts_at);
+    if (excludeId) query.andWhereNot({ id: excludeId });
+    return query.first();
   },
 
   async findByIdForClinic(

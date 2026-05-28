@@ -21,6 +21,8 @@ import {
   Receipt,
   AlertCircle,
   ExternalLink,
+  Briefcase,
+  FilterX,
 } from 'lucide-react';
 import {
   api,
@@ -118,7 +120,16 @@ function getFinancialAlerts(
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 function errMsg(err: unknown, fallback: string): string {
-  return err instanceof ApiError ? err.message : fallback;
+  if (err instanceof ApiError) {
+    // Human-friendly message for the anti-overlap conflict (Sprint 6.0A). The
+    // backend already returns a safe PT message, but we phrase it clearly here
+    // and suggest the next action. No PII is ever in this code/message.
+    if (err.code === 'appointment_time_conflict') {
+      return 'Este horário já está ocupado para o profissional selecionado. Escolha outro horário ou profissional.';
+    }
+    return err.message;
+  }
+  return fallback;
 }
 
 function todayStr(): string {
@@ -197,6 +208,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
 
   const [date, setDate] = useState(todayStr());
   const [filterProfessional, setFilterProfessional] = useState('');
+  const [filterService, setFilterService] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | AppointmentStatus>('');
 
   const [notice, setNotice] = useState<string | null>(null);
@@ -282,12 +294,16 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
   });
 
   const appointmentsQuery = useQuery({
-    queryKey: [...APPOINTMENTS_KEY, { date, professional_id: filterProfessional, status: filterStatus }],
+    queryKey: [
+      ...APPOINTMENTS_KEY,
+      { date, professional_id: filterProfessional, service_id: filterService, status: filterStatus },
+    ],
     enabled: !!token,
     queryFn: async () => {
       const res = await api.listAppointments(token as string, {
         date,
         professional_id: filterProfessional || undefined,
+        service_id: filterService || undefined,
         status: filterStatus || undefined,
       });
       return res.appointments;
@@ -367,6 +383,21 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
     const map = new Map(professionals.map((p) => [p.id, p.name]));
     return (id: string | null): string => (id ? (map.get(id) ?? '—') : '—');
   }, [professionals]);
+
+  // Resolve a service label for the card. Falls back to a neutral label when the
+  // service is inactive/not in the active list (still administrative — never clinical).
+  const serviceName = useMemo(() => {
+    const map = new Map(services.map((s) => [s.id, s.name]));
+    return (id: string | null): string | null => (id ? (map.get(id) ?? 'Serviço') : null);
+  }, [services]);
+
+  const hasActiveFilters = filterProfessional !== '' || filterService !== '' || filterStatus !== '';
+
+  function clearFilters(): void {
+    setFilterProfessional('');
+    setFilterService('');
+    setFilterStatus('');
+  }
 
   // ── Mutations & handlers ──────────────────────────────────────────────────────
 
@@ -628,6 +659,15 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
           </select>
         </label>
         <label className={styles.field}>
+          <span className={styles.fieldLabel}>Serviço</span>
+          <select className={styles.input} value={filterService} onChange={(e) => setFilterService(e.target.value)}>
+            <option value="">Todos</option>
+            {services.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.field}>
           <span className={styles.fieldLabel}>Status</span>
           <select className={styles.input} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as '' | AppointmentStatus)}>
             <option value="">Todos</option>
@@ -636,6 +676,14 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
             ))}
           </select>
         </label>
+        {hasActiveFilters && (
+          <div className={styles.field}>
+            <span className={styles.fieldLabel} aria-hidden="true">&nbsp;</span>
+            <button type="button" className={styles.clearFiltersBtn} onClick={clearFilters}>
+              <FilterX size={15} aria-hidden="true" /> Limpar filtros
+            </button>
+          </div>
+        )}
       </div>
 
       {!showForm ? (
@@ -787,6 +835,9 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
                     </div>
                   </div>
                   <div className={styles.cardRow}><Stethoscope size={15} aria-hidden="true" /> {professionalName(a.professional_id)}</div>
+                  {serviceName(a.service_id) && (
+                    <div className={styles.cardRow}><Briefcase size={15} aria-hidden="true" /> {serviceName(a.service_id)}</div>
+                  )}
                   <div className={styles.cardRow}><Clock size={15} aria-hidden="true" /> {timeFromIso(a.starts_at)}–{timeFromIso(a.ends_at)}</div>
                   {a.administrative_notes && <div className={styles.cardNotes}>{a.administrative_notes}</div>}
 

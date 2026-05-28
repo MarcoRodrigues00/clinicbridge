@@ -470,6 +470,18 @@ secret/env, dado de cartão ou integração externa.
   persistência**), com `maxLength` 700 e **aviso anti-clínico** ao lado do textarea
   (sem bloqueio textual automático, p/ evitar falso positivo). WhatsApp automático/
   API segue gated (ADR futura).
+- **Anti-overlap por profissional (Sprint 6.0A):** dois agendamentos **ativos**
+  (`scheduled`/`confirmed`/`rescheduled`) do mesmo `professional_id` na mesma clínica não
+  podem se sobrepor (intervalo meio-aberto). `cancelled`/`completed`/`no_show` **não**
+  bloqueiam; agendamento sem profissional não é checado. Validado em create/reschedule
+  (exclui o próprio id)/updateStatus-ao-reativar via `appointmentDao.findActiveOverlap`
+  (tenant-scoped). Conflito → **409 `appointment_time_conflict`**, mensagem **sem PII**
+  (nunca nome/horário/detalhe do conflitante). **Sem migration** — checagem na camada de
+  service; **janela de corrida** rara documentada (futuro: `EXCLUDE USING gist`). Filtro
+  `service_id` adicionado ao `list` (tenant-scoped). **Permissões da agenda inalteradas**
+  (segue sem `requireRole`; nenhum papel ganhou poder novo). Frontend mostra serviço no
+  card, filtro de serviço, "Limpar filtros" e mensagem amigável de conflito — defesa real
+  continua no backend.
 - **App shell (Sprint 3.16):** `/app` em abas + footer; cache via
   `@tanstack/react-query` (sem token persistido no cache — o token segue em
   `authStorage`; as queries leem o token por request via `getToken()`). A

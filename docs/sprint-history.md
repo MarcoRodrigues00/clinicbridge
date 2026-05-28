@@ -7030,3 +7030,101 @@ Gateway real, checkout, SDK, webhook, secret/env, preço, cobrança real, migrat
 Guards `requireEntitlement`/`requireNotSoftLocked` existem (5.1B) mas **não foram montados** nesta sprint.
 
 **Próxima:** 5.1D spike sandbox (Asaas vs Stripe).
+
+---
+
+## Sprint 6.0A (2026-05-28) — Agenda madura v0.1 pré-piloto
+
+Endurece a Agenda Administrativa para o piloto familiar (pai médico, mãe psicóloga,
+odontologia futura): anti-overlap por profissional, filtros melhores e multi-serviço.
+**Administrativo, não clínico** — nenhum campo clínico novo. **Sem migration** (anti-overlap
+na camada de service). **Permissões da agenda inalteradas** (`requireAuth + requireClinic`,
+sem `requireRole` — não introduz poder novo para nenhum papel; ADR 0006 §8).
+
+### Regra final de anti-overlap
+
+- Conflito = mesma `clinica_id` + mesmo `professional_id` (não-nulo) + status existente em
+  `OVERLAP_BLOCKING_STATUSES` + sobreposição de intervalo meio-aberto
+  (`existing.starts_at < ends_at AND existing.ends_at > starts_at`; bordas que se tocam
+  **não** conflitam).
+- **Bloqueiam o horário:** `scheduled`, `confirmed`, `rescheduled`.
+- **Não bloqueiam:** `cancelled` (slot liberado), `completed` (histórico; decisão de produto:
+  não afeta futuro), `no_show` (terminal; slot não retido).
+- **Sem profissional → sem checagem** (slot sem profissional não conflita com a agenda de
+  ninguém).
+- Validado em `create`, `reschedule` (exclui o próprio id) e `updateStatus` ao reativar
+  (alvo `scheduled`/`confirmed`, re-checa contra o próprio horário excluindo a si mesmo).
+- Conflito → **409 `appointment_time_conflict`**, mensagem sem PII (nunca nome/horário/detalhe
+  do agendamento conflitante). Defesa no backend; frontend só traduz.
+
+### Arquivos (backend) — sem migration
+
+- `src/models/appointment.ts` — `OVERLAP_BLOCKING_STATUSES`.
+- `src/dao/appointmentDao.ts` — `findActiveOverlap()` (tenant-scoped, sem `listAll`) +
+  `service_id` em `ListAppointmentsFilters`/`listByClinic`.
+- `src/services/appointmentService.ts` — `assertNoOverlap()` + chamadas em create/reschedule/
+  updateStatus; parsing/propagação do filtro `service_id` no `list`.
+- `src/controllers/appointmentController.ts` — repassa `service_id` da query.
+
+### Arquivos (frontend)
+
+- `src/services/api.ts` — `service_id` em `ListAppointmentsParams` + envio em `listAppointments`.
+- `src/components/AdministrativeSchedulePanel.tsx` — filtro de **Serviço**, botão **Limpar
+  filtros** (`hasActiveFilters`/`clearFilters`), **serviço no card** (`serviceName` + ícone
+  Briefcase), `errMsg` mapeia `appointment_time_conflict` para mensagem humana, `service_id`
+  na queryKey + na chamada.
+- `src/components/AdministrativeSchedulePanel.module.css` — `.clearFiltersBtn`.
+
+### Filtros
+
+`date` (navegação) + `professional_id` + `service_id` + `status`, todos server-side
+(consistentes com o padrão existente). "Limpar filtros" reseta profissional/serviço/status
+(mantém a data, que tem navegação própria) e só aparece quando há filtro ativo.
+
+### Erro 409 no frontend
+
+`createMutation`/`rescheduleMutation`/`statusMutation` usam `errMsg(err, …)`, que detecta
+`err.code === 'appointment_time_conflict'` e mostra: *"Este horário já está ocupado para o
+profissional selecionado. Escolha outro horário ou profissional."* (sem PII).
+
+### Agenda × Serviços e Agenda × Financeiro
+
+- **Serviços:** `service_id` continua **opcional**; select de serviços ativos (filtrado por
+  profissional quando há profissional); serviço escolhido vai no agendamento e agora **aparece
+  no card**; filtro por serviço na agenda. Sem auto-propagação de duração/preço (inalterado).
+- **Financeiro:** integração via `appointment_id`/`service_id` **intocada**; badge financeiro,
+  alertas A1–A4 e "Criar cobrança a partir do agendamento" seguem funcionando.
+
+### Permissões / tenant / dados sensíveis
+
+- Tenant isolation: toda query por `clinica_id`; `findActiveOverlap`/`findByIdForClinic`
+  tenant-scoped; GET cross-clinic → 404 (validado). Sem `listAll`.
+- `admin_sistema` sem clínica → 403 `no_clinic_context`. Papéis da agenda inalterados.
+- `administrative_notes` segue administrativo; **nenhum campo clínico** adicionado. Audit
+  metadata-only (`appointment.*` = acao/recurso/recurso_id), nunca conteúdo de observação.
+
+### Limitação conhecida
+
+Check-then-write no service → janela de corrida rara entre dois creates concorrentes no mesmo
+slot (aceitável na escala do piloto familiar). Endurecimento futuro: constraint DB
+`EXCLUDE USING gist` (btree_gist) numa migration dedicada.
+
+### Checks + smokes
+
+- backend `typecheck`/`build` ✅; frontend `typecheck`/`build` ✅; `migrate:status` sem
+  pendências (nenhuma migration nova) ✅; `git diff --check` rc=0 ✅.
+- Smoke API anti-overlap (10 casos, todos ✅): [1] sem conflito 201; [2] mesmo prof 409;
+  [3] prof diferente 201; [4] slot de cancelado 201; [5] reschedule p/ ocupado 409;
+  [6] reschedule do próprio sem mudar 200; [7] profissional cria 201 (comportamento atual,
+  agenda sem `requireRole`); [8] admin sem clínica 403; [9] tenant isolation cross-clinic 404;
+  [10] service_id válido 201 + filtro service_id 200 / inválido 400.
+- Validação visual (filtros/limpar/conflito/mobile/card) pendente no navegador do usuário —
+  sem browser headless no WSL2/Ubuntu 26.04 (módulo compilado inspecionado via dev server).
+
+### Fora de escopo (mantido)
+
+Billing guards (não montados), gateway, AWS/deploy, WhatsApp, prontuário/documentos,
+migrations não relacionadas, seed/dados reais. Visão semanal, drag-and-drop e constraint DB
+de overlap ficam para sprint futura.
+
+**Próxima:** 5.1D spike sandbox (Asaas vs Stripe) ou continuação 6.0 (piloto familiar).
