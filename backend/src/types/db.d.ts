@@ -547,6 +547,95 @@ export interface UserClinicalRoleRow {
   revoked_by_user_id: string | null;
 }
 
+// Plans, Billing & Entitlements v0.1 — Sprint 5.1B (ADR 0018).
+//
+// COMMERCIAL layer — the ClinicBridge SaaS charging the CLINIC. NOT the clinic's
+// internal financial module (`financial_charges`, ADR 0012). Tenant-scoped by
+// `clinica_id`. NO card data is ever modeled here (PCI lives at the gateway);
+// only external IDs, status and minimal metadata. `billing_events` is the
+// idempotency ledger (UNIQUE provider+external_event_id).
+
+export type PlanCode = 'essential' | 'professional' | 'assisted_pilot';
+
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'suspended'
+  | 'canceled'
+  | 'manual_pilot';
+
+// 'mock'/'manual' for the 5.1B foundation; 'asaas'/'stripe' reserved for the
+// spike (5.1D). NULL on a subscription = no real gateway bound yet (mock phase).
+export type BillingProviderName = 'mock' | 'manual' | 'asaas' | 'stripe';
+
+export type EntitlementSource = 'plan' | 'override' | 'pilot';
+
+export type BillingEventStatus = 'received' | 'processed' | 'ignored' | 'failed';
+
+export interface ClinicSubscriptionRow {
+  id: string;
+  clinica_id: string;
+  plan_code: PlanCode;
+  status: SubscriptionStatus;
+  trial_ends_at: Date | null;
+  current_period_start: Date | null;
+  current_period_end: Date | null;
+  grace_until: Date | null;
+  canceled_at: Date | null;
+  provider: BillingProviderName | null;
+  created_by_user_id: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Per-tenant OVERRIDES only. The plan's default module/limit map is computed in
+// runtime (billingPlans.ts); rows here override a single feature_key for a
+// tenant (source 'override' | 'pilot'). UNIQUE(clinica_id, feature_key).
+export interface ClinicEntitlementRow {
+  id: string;
+  clinica_id: string;
+  feature_key: string;
+  enabled: boolean;
+  limit_value: number | null;
+  source: EntitlementSource;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface BillingProviderCustomerRow {
+  id: string;
+  clinica_id: string;
+  provider: BillingProviderName;
+  external_customer_id: string;
+  created_at: Date;
+}
+
+export interface BillingProviderSubscriptionRow {
+  id: string;
+  clinica_id: string;
+  subscription_id: string;
+  provider: BillingProviderName;
+  external_subscription_id: string;
+  external_status_raw: string | null;
+  last_synced_at: Date | null;
+  created_at: Date;
+}
+
+export interface BillingEventRow {
+  id: string;
+  provider: BillingProviderName;
+  external_event_id: string;
+  event_type: string;
+  // Resolved via the internal provider maps — NEVER trusted from the payload.
+  clinica_id: string | null;
+  status: BillingEventStatus;
+  // Hash of the raw payload — NEVER the raw payload (which may carry PII).
+  payload_hash: string | null;
+  received_at: Date;
+  processed_at: Date | null;
+}
+
 declare module 'knex/types/tables' {
   interface Tables {
     users: UserRow;
@@ -573,5 +662,10 @@ declare module 'knex/types/tables' {
     service_insurance_prices: ServiceInsurancePriceRow;
     inventory_items: InventoryItemRow;
     inventory_movements: InventoryMovementRow;
+    clinic_subscriptions: ClinicSubscriptionRow;
+    clinic_entitlements: ClinicEntitlementRow;
+    billing_provider_customers: BillingProviderCustomerRow;
+    billing_provider_subscriptions: BillingProviderSubscriptionRow;
+    billing_events: BillingEventRow;
   }
 }

@@ -17,9 +17,9 @@
 ## Estado atual (2026-05-28)
 
 **Entregue (landing/demo/Auri/mobile):** 5.0E–5.0I — Demo Experience, tour Auri, landing demo em destaque, teaser+bolinha, nav mobile compacto, CLAUDE.md slimming. Ver `docs/project-state.md`.
-**Sprint atual:** 5.1A (entregue, docs-only) — **ADR 0018 Planos, Billing e Entitlements v0.1.** Camada comercial por tenant (assinatura, entitlements no backend, soft-lock que não sequestra dados, gateway abstraído). Gateway **Proposto**: Asaas preferencial p/ spike, decisão final na 5.1D. `docs/adr/0018-plans-billing-entitlements-v0.md` + `docs/plans-billing-entitlements-v0-scope.md`.
-**Próxima sprint:** 5.1B — backend foundation de planos/entitlements com `MockProvider` (sem gateway real).
-**Depois:** 5.1C frontend · 5.1D spike sandbox (Asaas vs Stripe) · 5.1E QA/security billing · **5.2A** ADR Produção Segura AWS (renumerada de 5.1A; obrigatória antes de dados reais e de cobrança real).
+**Sprint atual:** 5.1B (entregue) — **Backend foundation de Planos/Entitlements v0.1 (mock).** Migration `20260608_billing_v0` (5 tabelas tenant-scoped); DAOs sem `listAll`; `computeEntitlements`/`computeSoftLock` puros; `BillingProvider`+`MockProvider` (sem rede/secret); `GET /billing/status` (dono/secretaria/gestor leem; profissional 403); guards `requireEntitlement`/`requireNotSoftLocked`/`assertWithinLimit` criados mas **não montados**; audit metadata-only; `billing_events` idempotente. **Sem gateway/checkout/webhook/secret/cartão real.** Nenhuma tabela existente alterada. Ver `docs/project-state.md` + `docs/sprint-history.md`.
+**Próxima sprint:** 5.1C — frontend de plano/assinatura (backend continua a defesa).
+**Depois:** 5.1D spike sandbox (Asaas vs Stripe) · 5.1E QA/security billing · **5.2A** ADR Produção Segura AWS (renumerada de 5.1A; obrigatória antes de dados reais e de cobrança real).
 
 **Fase:** Fase 3 (produção/governança). **NÃO pronto para produção com dados reais** — ver `docs/security-notes.md`.
 **Piloto controlado:** GO Fase 1 com dados sintéticos. Demo Aurora = 100% fictícia.
@@ -41,13 +41,13 @@ landing + /demo (DemoCallout, LandingAuriTeaser, hierarquia CTAs: "Ver demo guia
 
 **Fora do escopo permanente (não implementar sem nova ADR):** telemedicina · ICP-Brasil · TISS/TUSS real · NFS-e · gateway de pagamento · app mobile · CID estruturado · prescrição eletrônica legal · IA clínica · SNGPC/ANVISA.
 
-### Migrações (18 aplicadas)
+### Migrações (19 aplicadas)
 
 `20260520_init` · `20260521_audit_logs` · `20260522_import_files` · `20260523_import_sessions` ·
 `20260524_patients` · `20260525_import_sessions_summary` · `20260526_scheduling` · `20260527_user_mfa` ·
 `20260528_user_mfa_backup_codes` · `20260529_clinic_team` · `20260530_clinic_join_requests_revoked` ·
 `20260601_patients_merged_into` · `20260602_clinical_encounters_v0` · `20260603_clinical_documents_v0` ·
-`20260604_financial_charges_v0` · `20260605_clinic_services_v0` · `20260606_insurance_billing_v0` · `20260607_inventory_v0`.
+`20260604_financial_charges_v0` · `20260605_clinic_services_v0` · `20260606_insurance_billing_v0` · `20260607_inventory_v0` · `20260608_billing_v0`.
 
 ### Seeds / demo / smoke
 

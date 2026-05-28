@@ -151,17 +151,51 @@ portal do cliente, disponibilidade atual no Brasil. **Não cravar sem fonte ofic
 
 ## 9. Checklist por sprint
 
-### 5.1B — Backend foundation (mock)
-- [ ] Migration aditiva: `clinic_subscription`, `clinic_entitlement`,
-      `billing_provider_customer`, `billing_provider_subscription`, `billing_event`.
-- [ ] Tipos em `db.d.ts`.
-- [ ] DAOs tenant-scoped (sem `listAll`; sempre `clinica_id`).
-- [ ] `computeEntitlements(subscription)` (função pura) + catálogo de planos (config).
-- [ ] `BillingProvider` interface + `MockProvider`.
-- [ ] Máquina de estados da assinatura + soft-lock.
-- [ ] Middleware `requireEntitlement(featureKey)` + checagem de limite nos services.
-- [ ] Audit metadata-only (`billing.*`) + logger redige segredos de provider.
-- [ ] Smoke por role × plano × estado × tenant.
+### 5.1B — Backend foundation (mock) — ✅ ENTREGUE (2026-05-28)
+- [x] Migration aditiva `20260608000000_billing_v0` (batch 19): `clinic_subscriptions`,
+      `clinic_entitlements`, `billing_provider_customers`, `billing_provider_subscriptions`,
+      `billing_events` (nomes **plural**, padrão do projeto). Nenhuma tabela existente alterada.
+- [x] Tipos em `db.d.ts` (5 rows + enums + registro nas `Tables`).
+- [x] DAOs tenant-scoped (sem `listAll`; sempre `clinica_id`); idempotência via
+      `onConflict(...).ignore()` em `billing_events`; CAS em `clinic_subscriptions.updateStatus`.
+- [x] `computeEntitlements(plan, overrides)` (função **pura**) + catálogo de planos
+      (`billingPlans.ts`).
+- [x] `BillingProvider` interface (`billingProvider.ts`) + `MockProvider`
+      (`billingMockProvider.ts`) — sem rede, sem secret.
+- [x] Máquina de estados (`canTransition`) + soft-lock (`computeSoftLock`) em
+      `billingStateMachine.ts`.
+- [x] Middleware `requireEntitlement(featureKey)` + `requireNotSoftLocked()` +
+      `assertWithinLimit()` — **criados para uso futuro; NÃO montados em rotas** (5.1B só calcula).
+- [x] Audit metadata-only (`billing.status.read`, `billing.subscription.provisioned`,
+      `billing.subscription.transitioned`). *(Não foi necessário redigir segredo de provider no
+      logger nesta fase — `MockProvider` não usa chaves/API; o passo de redação entra com o
+      gateway real em 5.1D/E.)*
+- [x] Smoke por role × plano × estado × tenant (via `GET /billing/status` + `scripts/billing-admin.ts`).
+
+**Decisões de implementação 5.1B (a ADR §4/scope §3 deferiam as chaves exatas a esta sprint):**
+
+- **Chaves em inglês.** Módulos: `module.patients`, `module.schedule`, `module.financial`,
+  `module.reports`, `module.services`, `module.insurance`, `module.inventory`,
+  `module.clinical_records`, `module.clinical_documents`. Limites: `limit.users`,
+  `limit.professionals`, `limit.imports_per_month`. *(O scope §3 listava `module.agenda`/
+  `module.reports.basic|full`/`module.clinical`; a implementação consolidou em `module.schedule`/
+  `module.reports`/`module.clinical_records`+`module.clinical_documents` — chaves finais da 5.1B.)*
+- **Plan codes em inglês:** `essential`, `professional`, `assisted_pilot` (alinhados às chaves;
+  a UI pública segue rotulando em PT — "Essencial/Profissional/Piloto assistido").
+- **Limites default (tunáveis, sem migration):** essential 3/2/5 · professional 15/15/50 ·
+  assisted_pilot 25/25/100 (`limit.users`/`limit.professionals`/`limit.imports_per_month`).
+- **Default p/ clínica sem assinatura:** status **sintetizado não-persistido**
+  (`provisioned:false`, plano `professional`, estado `manual_pilot`, acesso total, sem lock).
+  Honra "estado só muda por webhook/ação manual" (GET não grava) e nunca trava tenant existente.
+- **Permissão de leitura `GET /billing/status`:** gate de rota
+  `requireRole(['dono_clinica','secretaria'])`; política fina no service — `profissional_clinico`
+  (grant) → 403 `forbidden_role`; `gestor_clinica` → leitura permitida; `admin_sistema` → 403
+  `no_clinic_context` (sem clínica). **Sem endpoint público de alteração**; provisionar/transicionar
+  é manual/dev-only (`scripts/billing-admin.ts`).
+- **Soft-lock 5.1B só calcula** (`can_create_new_records`/`read_only_mode`/`export_allowed`/
+  `lock_reason`); `export_allowed` **sempre true**; nenhuma rota existente foi gateada.
+- **`module.clinical_*` nunca destrava o gate clínico** — `requireClinicalRole` (ADR 0009/0010/0011)
+  segue intocado e é a autoridade real; o plano só **restringe**.
 
 ### 5.1C — Frontend
 - [ ] Tela de plano/assinatura (estado atual, plano, próximo ciclo).
