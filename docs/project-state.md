@@ -7,6 +7,30 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.9A** (entregue 2026-05-27) — **Super Revisão Geral — todos os módulos 4.4–4.8.**
+
+Revisão de 7 dimensões por agents especializados (UX/Produto, Segurança/LGPD, Permissões/Tenant,
+Financeiro/Convênios/Serviços, Prontuário/Documentos, Arquitetura Frontend, QA/Docs/Piloto).
+**Nenhum P0 encontrado.** 2 P1 de copy corrigidos (InsurancePanel); 2 P1 de cache TanStack Query
+registrados no backlog (sprint 4.9B). 3 correções pequenas aplicadas no frontend.
+
+**Correções aplicadas:**
+- `InsurancePanel.tsx:1373` — "funcionários administrativos" → "funcionário(a) com acesso administrativo" + texto positivo
+- `InsurancePanel.tsx:1855–1858` — card acesso-restrito padronizado com InventoryPanel
+- `ReportsPanel.tsx:438` — hint "oportunidade de retorno" removido (tom comercial)
+
+**Validações confirmadas:**
+- 0 violações P0 segurança/LGPD · 0 violações de permissão/tenant · 0 violações regras clínicas
+- ADR 0010/0011 conformidade 100% · 10 regras clínicas críticas PASS
+- Prontidão para piloto: ✅ controlado com dados sintéticos em local/staging
+
+`pnpm --filter frontend typecheck` ✅ · `frontend build` ✅ · `pnpm --filter backend typecheck` ✅ ·
+`migrate:status` 18/0 ✅ · `git diff --check` rc=0 ✅.
+
+Relatório completo: `docs/super-review-4-9A.md`.
+
+---
+
 **Sprint 4.8D** (entregue 2026-05-27) — **QA/Hardening Estoque v0.1. Fase 4.8 completa.**
 
 Revisão de UX/estado, verificações de segurança/LGPD, sanity smoke live e atualização de docs.

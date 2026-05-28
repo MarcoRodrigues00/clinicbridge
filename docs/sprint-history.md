@@ -5602,3 +5602,46 @@ Owner   GET item deactivated   → active=false ✅
 - **Medicamentos controlados (SNGPC/ANVISA):** permanentemente fora do v0.1 (ADR futura).
 
 **Sprint 4.8D entregue.** Fase 4.8 (Estoque v0.1) completa. Gate para próxima fase aberto.
+
+---
+
+## Sprint 4.9A — Super Revisão Geral (2026-05-27)
+
+**Tipo:** Revisão horizontal — sem código novo, sem migration, sem novos endpoints.
+
+**Objetivo:** Revisão completa de todos os módulos entregues (4.4–4.8) antes de avançar para a próxima fase do Clinic OS.
+
+### Agents executados (7)
+
+1. UX/Produto — copy, labels, PII na UI
+2. Segurança/LGPD — PII em logs, SQL, audit, rate limit
+3. Permissões/Tenant Isolation — pipeline de rotas, cross-tenant, roles
+4. Financeiro/Convênios/Serviços — regras de negócio, invariantes
+5. Prontuário/Documentos Clínicos — regras clínicas críticas, ADR 0010/0011
+6. Arquitetura/Manutenibilidade Frontend — cache TanStack Query, TypeScript
+7. QA/Docs/Piloto — consistência de docs, prontidão para piloto
+
+### Resultado
+
+**P0:** Nenhum.
+**P1:** 2 de copy (corrigidos) + 2 de cache frontend (backlog 4.9B).
+**P2:** 8 achados de melhoria (backlog).
+**P3:** 3 achados de polish (backlog).
+
+### Correções aplicadas
+
+| Arquivo | Correção |
+|---------|---------|
+| `InsurancePanel.tsx:1373` | "funcionários administrativos" → "funcionário(a) com acesso administrativo" + texto positivo |
+| `InsurancePanel.tsx:1855–1858` | Card restrito padronizado com InventoryPanel |
+| `ReportsPanel.tsx:438` | Hint "oportunidade de retorno" removido |
+
+### Checks finais
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `pnpm --filter backend typecheck` ✅
+- `migrate:status` 18/0 ✅
+- `git diff --check` rc=0 ✅
+
+**Sprint 4.9A entregue.** Relatório completo: `docs/super-review-4-9A.md`. Gate para 4.9B (cache fix TanStack Query) aberto.
