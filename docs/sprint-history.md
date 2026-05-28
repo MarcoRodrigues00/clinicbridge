@@ -5522,4 +5522,83 @@ Funções: `listInventoryItems`, `getInventoryItem`, `createInventoryItem`,
 
 **Sprint 4.8C entregue.** Gate para 4.8D (QA/Hardening Estoque) aberto.
 
-**Próxima sprint:** **4.8B** Backend Estoque v0.1.
+**Próxima sprint:** **4.8D** QA/Hardening Estoque v0.1.
+
+---
+
+## Sprint 4.8D — QA/Hardening Estoque v0.1 (2026-05-27)
+
+**Gate de entrada:** Frontend Estoque v0.1 (Sprint 4.8C) ✅.
+
+### Escopo
+
+QA/Hardening final do módulo de Estoque v0.1. Fecha a Fase 4.8.
+**Zero backend, zero migration, zero schema, zero novos componentes.** Revisão e validação apenas.
+
+### Revisão UX/estado do InventoryPanel
+
+Verificação dos fluxos principais em `InventoryPanel.tsx`:
+
+- Item criado aparece na lista sem reload (invalidação ampla `['inventory']`) ✅
+- Movimento atualiza `current_quantity` sem reload ✅
+- Histórico atualiza após movimento (mesma invalidação cobre `['inventory','item',id,'movements']`) ✅
+- Filtros (busca/categoria/status/low-stock) funcionam sem quebrar lista ✅
+- Status ativo/inativo funciona; item inativo não exibe botão "Registrar movimento" ✅
+- Secretaria: botões Criar/Editar/Desativar ocultos na UI (`isOwner` gate) ✅
+- Profissional: 403 na listagem → card "Acesso restrito" (não derruba a tela) ✅
+- Cancelar edição reset todos os campos (incluindo `editNotes`) via `cancelEdit()` ✅
+- Cancelar movimento: `MovementForm` é desmontado → estado interno zerado ✅
+- Troca de tipo de movimento: `delta` recalculado por `useMemo([magnitudeValue, type, adjustDirection])` ✅
+- Saída/Perda > estoque: botão desabilitado + aviso visual (`wouldGoNegative`) ✅
+- Item inativo bloqueia movimento na UI (condição `canMove && item.active` no botão e render) ✅
+- Erros do backend exibidos de forma amigável PT-BR (`inventoryErrMsg`) ✅
+
+### Verificações de segurança / LGPD
+
+Greps realizados em `InventoryPanel.tsx` e `api.ts` (seção inventory):
+
+- `console.log` de payload = 0 ✅ (só no comentário de cabeçalho)
+- `localStorage` / `sessionStorage` = 0 ✅
+- `dangerouslySetInnerHTML` = 0 ✅
+- `patient_id` na seção inventory = 0 ✅ (ocorrências em api.ts são de módulos anteriores)
+- `notes`/`reason` em URL = 0 ✅ (parâmetros de movimento e item nunca vão para query string)
+- UUID `created_by_user_id` renderizado = 0 ✅ (histórico exibe apenas data, tipo, delta, reason)
+- `current_quantity` sem campo editável direto no formulário de item ✅
+- Avisos anti-dado-clínico presentes: formulário de item, formulário de movimento, form de criação ✅
+- Classes CSS: todas as 70+ classes em `styles.*` têm definição correspondente no `.module.css` ✅
+
+### Sanity smoke (live backend)
+
+```
+Owner   GET /inventory/items   → 200  (4 itens existentes) ✅
+Profissional GET /inventory/items → 403 ✅
+Anônimo GET /inventory/items   → 401 ✅
+Owner   POST /inventory/items  → 201  (item QA-4.8D criado) ✅
+Owner   POST movement entry+10 → 201 ✅
+Owner   PATCH .../status active=false → 200 ✅
+Owner   GET item deactivated   → active=false ✅
+```
+
+### Checks finais
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅ (warning de chunk size pré-existente, não relacionado)
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend migrate:status` 18/0 ✅
+- `git diff --check` rc=0 ✅
+- `git status --short` — árvore limpa ✅
+
+### Caveats documentados
+
+- **Regra `low_stock`:** `current < minimum && minimum > 0`. Alerta ativo somente abaixo do
+  mínimo — item exatamente no mínimo não dispara (comportamento intencional v0.1;
+  possível ajuste para `<=` em v0.2 se houver demanda operacional).
+- **Hero `limit=100`:** a query de resumo (Itens ativos / Estoque baixo) usa `limit=100`.
+  Consultórios com >100 itens ativos teriam contagem subestimada no hero. Aceitável no v0.1
+  (escopo = consultório pequeno); v0.2 pode introduzir endpoint de agregação.
+- **Responsável não exibido no histórico:** backend devolve `created_by_user_id` (UUID);
+  a política é nunca renderizar UUID. Nome do responsável exige JOIN no backend — melhoria futura.
+- **Sem import CSV / baixa automática / custo / lote / validade:** fora do v0.1.
+- **Medicamentos controlados (SNGPC/ANVISA):** permanentemente fora do v0.1 (ADR futura).
+
+**Sprint 4.8D entregue.** Fase 4.8 (Estoque v0.1) completa. Gate para próxima fase aberto.

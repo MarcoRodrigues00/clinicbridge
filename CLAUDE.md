@@ -22,7 +22,15 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.8C** (entregue) — **Frontend Estoque v0.1.**
+**Sprint atual: 4.8D** (entregue) — **QA/Hardening Estoque v0.1. Fase 4.8 completa.**
+Revisão UX/estado InventoryPanel, verificações segurança/LGPD (0 violations), sanity smoke live
+(8/8 PASS: owner 200 · profissional 403 · anônimo 401 · CRUD · movimento · soft-delete),
+docs atualizados. Zero código novo, zero migration.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `pnpm --filter backend typecheck` ✅ ·
+`migrate:status` 18/0 ✅ · `git diff --check` rc=0 ✅.
+**Caveats:** `low_stock` usa `<` (item exatamente no mínimo não dispara); hero usa `limit=100`.
+
+**Sprint anterior: 4.8C** (entregue) — **Frontend Estoque v0.1.**
 Aba "Estoque" no Dashboard (`InventoryPanel`): hero (Itens ativos · Estoque baixo);
 filtros (busca por nome · categoria · status ativos/inativos/todos · "Apenas estoque baixo");
 lista de itens com badge "Estoque baixo" (usa `item.low_stock` do backend) e badge Inativo;
@@ -32,12 +40,10 @@ nunca digita sinal; Ajuste tem toggle Aumentar/Reduzir), pré-visualização "Es
 Após o movimento" e **bloqueio visual** quando ficaria negativo; histórico de movimentos por item.
 Card "Acesso restrito" para 403 (profissional_clinico). `current_quantity` **nunca** editável
 direto na UI — só muda por movimento. 8 funções API + tipos `InventoryItem`, `InventoryMovement`,
-`InventoryMovementType`, payloads/params em `api.ts`. Erros mapeados:
-`inventory_item_name_duplicated`/`inventory_quantity_insufficient`/`inventory_item_inactive`/`forbidden_role`.
-Sem console.log de payload; sem localStorage/sessionStorage; sem PII/`reason`/`notes` em URL;
-sem `dangerouslySetInnerHTML`. Zero backend, zero migration.
+`InventoryMovementType`, payloads/params em `api.ts`. Sem console.log de payload; sem
+localStorage/sessionStorage; sem PII/`reason`/`notes` em URL; sem `dangerouslySetInnerHTML`.
+Zero backend, zero migration.
 `pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
-**Validação visual no navegador pendente.**
 
 **Sprint anterior: 4.8B** (entregue) — **Backend Estoque v0.1.**
 Migration `20260607000000_inventory_v0` (batch 18): tabelas `inventory_items` +
@@ -271,6 +277,7 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 retrocompat com cobranças existentes).
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **4.8D** ✅ QA/Hardening Estoque — revisão UX · greps segurança 0-violations · sanity smoke 8/8 · docs · **Fase 4.8 completa**
 - **4.8C** ✅ Frontend Estoque v0.1 — aba "Estoque" + `InventoryPanel` (hero, filtros, low-stock, CRUD owner, movimentos, histórico) — typecheck/build ✅
 - **4.8B** ✅ Backend Estoque v0.1 — migration 18 + DAO + service + controller + 9 endpoints — smoke 51/51 PASS
 - **4.8A** ✅ ADR 0017 Estoque v0.1 (docs-only) — 2 entidades, permissões, invariantes, gate 4.8B aberto
@@ -299,8 +306,8 @@ retrocompat com cobranças existentes).
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–C ✅ (ADR 0017 + Backend + Frontend Estoque) →
-**4.8D** QA/Hardening Estoque v0.1.
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) →
+**Próxima fase TBD** (ADR própria necessária antes de qualquer código).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
@@ -366,7 +373,7 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.8D** QA/Hardening Estoque v0.1 (gate: 4.8C ✅)
+- **Próxima fase Clinic OS:** TBD — exige ADR própria antes de qualquer código
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)
