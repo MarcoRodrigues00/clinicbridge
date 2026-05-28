@@ -396,6 +396,21 @@ Objetivo (condicional, maior risco):
 
 ---
 
+## Trilha 5.0 — Piloto Controlado e Demo
+
+> Adicionado na Sprint 5.0A (2026-05-27).
+
+| Sprint | Entregável | Pré-requisito |
+|--------|-----------|---------------|
+| **5.0A** ✅ | Plano de Piloto Controlado (docs-only) | — |
+| **5.0B** | Demo Dataset — seed sintético completo | 5.0A |
+| **5.0C** | Página/tour de demo pública com dados fake | 5.0B |
+| **5.1A** | Produção AWS segura (S3, RDS, WAF, HTTPS) | 5.0A + security-notes P1 |
+
+Ver `docs/pilot-controlled-plan.md` e `docs/pilot-go-no-go-checklist.md` para detalhes.
+
+---
+
 ## Resumo de gating
 
 | Fase | Natureza | Pré-requisito para começar |

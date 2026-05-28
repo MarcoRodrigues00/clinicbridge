@@ -3,6 +3,10 @@
 > Consolidado na compactação de 2026-05-22 a partir das verificações das sprints
 > (`docs/sprint-history.md`). Use como roteiro de smoke test / regressão local.
 > Endpoints tenant-scoped exigem `Authorization: Bearer <token>` (de `/auth/login`).
+>
+> **Para o piloto controlado:** ver `docs/pilot-go-no-go-checklist.md` (checklists de
+> preparação, permissões, PII, logs e go/no-go) e `docs/pilot-controlled-plan.md`
+> (fluxos de teste completos, critérios de parada, regras de dados).
 
 ## Usuários smoke persistentes (dev local apenas)
 

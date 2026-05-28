@@ -7,7 +7,30 @@
 
 ## Última sprint aprovada
 
-**Sprint 4.9C.2** (entregue 2026-05-27, aguardando validação visual) — **Microcorreção landing.**
+**Sprint 5.0A** (entregue 2026-05-27) — **Plano de Piloto Controlado (docs-only).**
+
+Criados dois documentos de planejamento do piloto:
+
+- `docs/pilot-controlled-plan.md` — plano completo com 11 seções: objetivo, ambiente (Fases 1/2/3),
+  personas (médico, psicóloga, secretária, futuro odontologia), módulos por prioridade, fluxos de teste
+  (50+ itens), critérios de sucesso, critérios de parada, regras LGPD/dados, roteiro de 28 min e backlog pós-piloto.
+
+- `docs/pilot-go-no-go-checklist.md` — 5 checklists operacionais (ambiente, permissões, logs/audit,
+  PII na UI, fluxos críticos) + decisão go/no-go para Fase 1 (sintéticos), Fase 2 (anonimizados)
+  e Fase 3 (produção real). Veredicto atual: ✅ GO para Fase 1.
+
+**Módulos incluídos no piloto (Fase 1):** pacientes, agenda, serviços, financeiro, convênios, estoque,
+relatórios, equipe, MFA, importação, prontuário v0.1 e documentos v0.1 (apenas dados fake).
+
+**Módulos excluídos do piloto:** telemedicina, TISS, ICP-Brasil, WhatsApp, medicamentos controlados,
+checkout de planos, produção AWS com dados reais.
+
+Zero código, zero migration, zero backend/frontend.
+`git diff --check` rc=0 ✅.
+
+---
+
+**Sprint 4.9C.2** (entregue 2026-05-27) — **Microcorreção landing.**
 
 - `Header.tsx`: CTA "Ver demonstração" substituído por `<Link to="/register">Criar conta</Link>`; adicionado import de Link.
 - `PricingPlans.tsx`: items dos 3 planos atualizados conforme spec; CTA Piloto assistido → "Começar piloto assistido".
