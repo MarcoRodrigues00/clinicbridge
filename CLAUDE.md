@@ -23,7 +23,18 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 5.0A** (entregue) — **Plano de Piloto Controlado (docs-only).**
+**Sprint atual: 5.0B** (entregue) — **Demo Dataset / Seed Sintético.**
+Script `backend/scripts/seed-demo-data.ts` cria "Clínica Demo Aurora" com dados 100% sintéticos:
+5 usuários demo (`demo.*@clinicbridge.local`, senha `DemoDevOnly!23`), 3 profissionais, 6 serviços,
+20 pacientes, 20 agendamentos, 12 cobranças (particular/convênio/misto/vencida/cancelada),
+2 operadoras + 3 planos + 3 carteirinhas, 7 itens de estoque (2 com estoque baixo).
+Guards: `NODE_ENV=production` → recusa; `ALLOW_DEMO_SEED=true` obrigatório.
+Comandos: `ALLOW_DEMO_SEED=true pnpm --filter backend seed:demo:full` (seed) / `:clean` (limpar).
+Usuários smoke intactos. Zero migration, zero schema, zero frontend.
+`pnpm --filter backend typecheck` ✅ · build ✅ · `migrate:status` 18/0 ✅ · `git diff --check` rc=0 ✅.
+Doc: `docs/demo-dataset.md`.
+
+**Sprint anterior: 5.0A** (entregue) — **Plano de Piloto Controlado (docs-only).**
 Criados `docs/pilot-controlled-plan.md` e `docs/pilot-go-no-go-checklist.md`.
 Plano cobre: fases 1/2/3, personas do piloto (médico, psicóloga, secretária, futuro odontologia),
 módulos incluídos/excluídos, fluxos de teste, critérios go/no-go, regras LGPD para dados sintéticos,
@@ -324,6 +335,7 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 retrocompat com cobranças existentes).
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **5.0B** ✅ Demo Dataset / Seed Sintético · `seed:demo:full` · Clínica Demo Aurora · 20 pac + 20 appt + 12 cobranças + convênios + estoque
 - **5.0A** ✅ Plano de Piloto Controlado (docs-only) · `pilot-controlled-plan.md` · `pilot-go-no-go-checklist.md` · GO Fase 1
 - **4.9C.2** ✅ Header CTA → "Criar conta" · PricingPlans items corrigidos · demo = backlog
 - **4.9C.1** ✅ Copy simplificada + PricingPlans estático
@@ -359,8 +371,8 @@ retrocompat com cobranças existentes).
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) · 5.0A ✅ (Plano de Piloto) →
-**Próxima fase TBD** (ADR própria necessária antes de qualquer código). **Próxima sprint: 5.0B** (Demo Dataset / seed sintético).
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) · 5.0A–B ✅ (Piloto + Demo Dataset) →
+**Próxima fase TBD** (ADR própria necessária antes de qualquer código). **Próxima sprint: 5.0C** (Página demo/tour) ou **5.0B.1** (prontuário fake no seed).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
@@ -411,7 +423,8 @@ NFS-e; TISS/TUSS real.
 `20260605_clinic_services_v0` · `20260606_insurance_billing_v0` · `20260607_inventory_v0`.
 
 **Invariantes locais:** patients=6 (base, sem demo), import_files=24, import_sessions=7.
-Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac, +7 agend); reverter: `seed:demo:clean`.
+Seed demo (agenda): `pnpm --filter backend seed:demo` (+3 prof, +5 pac, +7 agend); reverter: `seed:demo:clean`.
+Seed demo completo: `ALLOW_DEMO_SEED=true pnpm --filter backend seed:demo:full` (Clínica Demo Aurora — 20 pac, 20 appt, 12 cobranças, convênios, estoque); reverter: `seed:demo:full:clean`. Ver `docs/demo-dataset.md`.
 
 **Usuários smoke persistentes (dev):** 5 `*@clinicbridge.local` na "Clinica Smoke Dev"; senha `SmokeDevOnly!23`.
 `smoke.profissional` + `smoke.gestor` têm grants clínicos. **Não apagar entre sprints.**
