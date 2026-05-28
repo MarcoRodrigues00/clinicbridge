@@ -126,6 +126,19 @@ const EnvSchema = z.object({
   // dedicated value (P1). Never logged.
   MFA_ENCRYPTION_KEY: z.string().optional(),
 
+  // Guided demo login (Sprint 5.0E). When 'true'/'1', enables POST /auth/demo-login,
+  // which issues a session for the pre-seeded demo owner of "Clínica Demo Aurora"
+  // WITHOUT accepting any credentials. Off by default; the endpoint also refuses
+  // whenever NODE_ENV=production (dev/staging-only, same posture as the demo seed).
+  // No password ever leaves the server; the demo identity is fixed server-side.
+  ALLOW_DEMO_LOGIN: z
+    .string()
+    .default('false')
+    .transform((raw): boolean => {
+      const v = raw.trim().toLowerCase();
+      return v === 'true' || v === '1';
+    }),
+
   // Clinical read audit posture (Sprint 4.2B-1, ADR 0010 §8.2.1). Controls
   // whether failure to persist a row in `clinical_read_audit` BLOCKS the
   // clinical content response.

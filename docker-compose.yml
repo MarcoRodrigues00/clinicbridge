@@ -63,6 +63,7 @@ services:
       RATE_LIMIT_STORE: "redis"
       REDIS_URL: "redis://redis:6379"
       FRONTEND_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:5173}"
+      ALLOW_DEMO_LOGIN: "true"
     # Not published to the host — Nginx is the entry point. (For debug you could add
     # a 127.0.0.1-bound port mapping, but keep the backend private by default.)
     expose:

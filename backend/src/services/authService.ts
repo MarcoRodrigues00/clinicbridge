@@ -112,6 +112,12 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+// Guided demo (Sprint 5.0E). The demo-login endpoint can ONLY ever authenticate
+// this exact identity in this exact clinic — both are fixed server-side so the
+// request can never select a different (real) user or tenant.
+const DEMO_OWNER_EMAIL = 'demo.owner@clinicbridge.local';
+const DEMO_CLINIC_NAME = 'Clínica Demo Aurora';
+
 // Generates an invite code not currently in use. Collisions are astronomically
 // unlikely (31^8); the unique index is the real guard, this just avoids the rare retry.
 async function generateUniqueInviteCode(): Promise<string> {
@@ -309,6 +315,51 @@ export const authService = {
     await userDao.touchLastLogin(user.id);
     await safeAudit({
       acao: 'auth.login.success',
+      usuario_id: user.id,
+      clinica_id: user.clinica_id,
+      ctx,
+    });
+    return buildSession(user);
+  },
+
+  // Guided demo login (Sprint 5.0E). Issues a normal session for the pre-seeded
+  // demo owner of "Clínica Demo Aurora" — no credentials are accepted and the
+  // identity/tenant are hard-coded here, so this can never reach a real account.
+  // Guards, in order, so we never even look up a user when the feature is off:
+  //   1. NODE_ENV=production       -> 403 demo_disabled (dev/staging-only)
+  //   2. ALLOW_DEMO_LOGIN !== true -> 403 demo_disabled
+  //   3. demo not seeded / wrong clinic -> 409 demo_not_available
+  // The issued JWT carries the demo user's real papel/clinica_id — no elevated
+  // permissions, full tenant isolation preserved.
+  async demoLogin(ctx: AuthContext): Promise<LoginResult> {
+    if (env.NODE_ENV === 'production') {
+      throw new HttpError(403, 'demo_disabled', 'Demonstração indisponível neste ambiente.');
+    }
+    if (!env.ALLOW_DEMO_LOGIN) {
+      throw new HttpError(403, 'demo_disabled', 'Demonstração indisponível neste ambiente.');
+    }
+
+    const unavailable = new HttpError(
+      409,
+      'demo_not_available',
+      'A demonstração ainda não foi preparada neste ambiente.',
+    );
+
+    const user = await userDao.findByEmail(DEMO_OWNER_EMAIL);
+    if (!user || !user.ativo || !user.clinica_id) {
+      throw unavailable;
+    }
+
+    // The demo owner MUST belong to the demo clinic — defends against a renamed
+    // or repurposed account ever being driven through this endpoint.
+    const clinic = await clinicDao.findById(user.clinica_id);
+    if (!clinic || clinic.nome !== DEMO_CLINIC_NAME) {
+      throw unavailable;
+    }
+
+    await userDao.touchLastLogin(user.id);
+    await safeAudit({
+      acao: 'auth.demo.login.success',
       usuario_id: user.id,
       clinica_id: user.clinica_id,
       ctx,

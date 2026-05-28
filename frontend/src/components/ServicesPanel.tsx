@@ -740,7 +740,7 @@ export function ServicesPanel(): JSX.Element {
       )}
 
       {services.length > 0 && (
-        <ul className={styles.list}>
+        <ul className={styles.list} data-tour-id="services-list">
           {services.map((svc) => (
             <ServiceCard
               key={svc.id}

@@ -1879,7 +1879,7 @@ export function InsurancePanel(): JSX.Element {
         Apenas dados administrativos — sem diagnóstico, CID ou informações clínicas.
       </p>
 
-      <nav className={styles.tabBar} aria-label="Seções de convênios">
+      <nav className={styles.tabBar} aria-label="Seções de convênios" data-tour-id="insurance-tabs">
         <button
           type="button"
           className={`${styles.tabBtn} ${activeTab === 'cards' ? styles.tabBtnActive : ''}`}
@@ -1903,7 +1903,7 @@ export function InsurancePanel(): JSX.Element {
         </button>
       </nav>
 
-      <div className={styles.tabContent}>
+      <div className={styles.tabContent} data-tour-id="insurance-content">
         {activeTab === 'cards' && (
           <PatientInsurancesSection
             token={token as string}

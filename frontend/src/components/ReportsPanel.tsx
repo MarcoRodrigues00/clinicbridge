@@ -563,7 +563,7 @@ function HeroSummary({ appt, fin, pat }: HeroProps): JSX.Element {
   const open = openCell();
 
   return (
-    <section className={styles.hero} aria-label="Resumo do período">
+    <section className={styles.hero} aria-label="Resumo do período" data-tour-id="reports-summary">
       <h3 className={styles.heroTitle}>Resumo do período</h3>
       <div className={styles.heroGrid}>
         <div className={styles.heroCell}>
@@ -748,7 +748,7 @@ export function ReportsPanel(): JSX.Element {
         </div>
       </header>
 
-      <section className={styles.filtersBar} aria-label="Filtros de período">
+      <section className={styles.filtersBar} aria-label="Filtros de período" data-tour-id="reports-filters">
         <div className={styles.presetGroup} role="tablist">
           {(
             [

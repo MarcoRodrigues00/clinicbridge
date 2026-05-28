@@ -23,7 +23,33 @@
 
 ## Estado atual (atualizado 2026-05-28)
 
-**Sprint atual: 5.0C.2** (entregue) — **Fluxo de acesso à demo / acesso controlado.**
+**Sprint atual: 5.0E** (entregue) — **Demo Experience / Tour Guiado com auto-login controlado.**
+Substitui a abordagem de login assistido da 5.0D por uma experiência de demonstração real e separada.
+**Backend (auth):** novo `POST /auth/demo-login` env-gated (`ALLOW_DEMO_LOGIN`); recusa em
+`NODE_ENV=production` e quando a flag está off (403 `demo_disabled` antes de qualquer lookup);
+sem credenciais no body — identidade fixa server-side (`demo.owner@clinicbridge.local` +
+"Clínica Demo Aurora"); emite JWT pelo mesmo `buildSession` do login normal; sem permissões extras;
+tenant isolation preservado; audit metadata-only `auth.demo.login.success`; reusa `authRateLimit`.
+**Frontend:** `enterDemo()` no AuthProvider chama o endpoint; `services/demoMode.ts` arma um
+write-block centralizado no `apiFetch` (POST/PATCH + export bloqueados em modo demo → `ApiError`
+`demo_action_blocked` + evento global) com `DemoBlockedToast` mostrando mensagem humanizada;
+`isDemo` derivado de `clinic.nome === 'Clínica Demo Aurora'`. Dashboard ganha barra de demo
+("Demonstração guiada · Dados 100% fictícios", "Recomeçar tour", "Sair da demo"), tour flutuante
+persistente `GuidedDemoTour` com a mascote **Auri** (SVG inline) — 8 passos (Boas-vindas → Agenda →
+Pacientes → Financeiro → Convênios → Estoque → Relatórios → Encerramento com CTA), Próximo/Voltar/
+Pular/Recomeçar/minimizar + "Ir para este módulo" (troca a aba), e coachmark de destaque na aba alvo.
+DemoPage: "Entrar na demo guiada" agora é botão que chama `enterDemo()` (hero, card "Demo guiada",
+CTA final); erro amigável quando a flag está off. `DemoGuideCard` (5.0D) e o banner `?demo=aurora`
+removidos. Bloqueio de escrita é guardrail de UX (não segurança) — enforcement backend read-only
+para demo pública fica como backlog. Zero migration, zero schema, zero seed.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `pnpm --filter backend typecheck` ✅ ·
+`git diff --check` rc=0 ✅.
+
+**Sprint anterior: 5.0D** (entregue) — **Demo Mode / Tour Guiado Controlado (superseded por 5.0E).**
+`DemoGuideCard` na aba Início + banner `?demo=aurora` no login (ambos removidos na 5.0E em favor do
+auto-login controlado + tour flutuante). Zero backend.
+
+**Sprint anterior: 5.0C.2** (entregue) — **Fluxo de acesso à demo / acesso controlado.**
 Seção "Como acessar a demonstração" adicionada à `/demo`. 3 cards de acesso: "Criar uma conta de teste"
 (→ /register), "Demo assistida" (→ /register), "Acesso interno" (→ /login, credenciais apenas em docs).
 Estilos `accessGrid` / `accessCard` / `accessIcon` / `accessTitle` / `accessDesc` / `accessCta`
@@ -367,6 +393,8 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 retrocompat com cobranças existentes).
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **5.0E** ✅ Demo Experience · `POST /auth/demo-login` env-gated · mascote Auri + tour flutuante 8 passos · write-block frontend · barra de demo · sem credenciais na UI
+- **5.0D** ✅ Demo Mode / Tour Guiado (superseded por 5.0E) · DemoGuideCard 7 passos · banner login ?demo=aurora · zero auto-login
 - **5.0C.2** ✅ Fluxo de acesso à demo · seção "Como acessar" com 3 cards · credenciais demo fora da UI · estilos accessGrid/Card
 - **5.0C.1** ✅ Polish de copy da demo · "dataset/seed/sintéticos/marcadores" removidos · linguagem humana para clínica pequena
 - **5.0C** ✅ Página Demo `/demo` · hero + 6 módulos + Aurora + vídeo placeholder + segurança · Header "Demo" nav link
@@ -407,8 +435,8 @@ retrocompat com cobranças existentes).
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) · 5.0A–C.2 ✅ (Piloto + Demo Dataset + Página Demo + Fluxo de Acesso) →
-**Próxima fase TBD** (ADR própria necessária antes de qualquer código). **Próxima sprint: 5.0D** (QA/validação visual da página /demo + polish) ou **5.1A** (ADR Produção Segura AWS, se demo aprovada).
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) · 5.0A–E ✅ (Piloto + Demo Dataset + Página Demo + Fluxo de Acesso + Tour Guiado + Demo Experience/auto-login) →
+**Próxima fase TBD** (ADR própria necessária antes de qualquer código). **Próxima sprint: 5.0F** (QA/validação visual da demo experience + polish) ou **5.1A** (ADR Produção Segura AWS).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
@@ -461,6 +489,8 @@ NFS-e; TISS/TUSS real.
 **Invariantes locais:** patients=6 (base, sem demo), import_files=24, import_sessions=7.
 Seed demo (agenda): `pnpm --filter backend seed:demo` (+3 prof, +5 pac, +7 agend); reverter: `seed:demo:clean`.
 Seed demo completo: `ALLOW_DEMO_SEED=true pnpm --filter backend seed:demo:full` (Clínica Demo Aurora — 20 pac, 20 appt, 12 cobranças, convênios, estoque); reverter: `seed:demo:full:clean`. Ver `docs/demo-dataset.md`.
+**Demo guiada (5.0E):** `ALLOW_DEMO_LOGIN=true` habilita `POST /auth/demo-login` (auto-login no
+`demo.owner` da Clínica Demo Aurora; recusa em produção; sem credenciais no body/frontend). Exige o seed acima.
 
 **Usuários smoke persistentes (dev):** 5 `*@clinicbridge.local` na "Clinica Smoke Dev"; senha `SmokeDevOnly!23`.
 `smoke.profissional` + `smoke.gestor` têm grants clínicos. **Não apagar entre sprints.**

@@ -605,7 +605,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
         </span>
       </div>
 
-      <div className={styles.summary}>
+      <div className={styles.summary} data-tour-id="agenda-summary">
         <span className={styles.chip}>Total: <strong>{summary.total}</strong></span>
         <span className={`${styles.chip} ${styles.chipScheduled}`}>Agendados: <strong>{summary.agendados}</strong></span>
         <span className={`${styles.chip} ${styles.chipConfirmed}`}>Confirmados: <strong>{summary.confirmados}</strong></span>
@@ -613,7 +613,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
         <span className={`${styles.chip} ${styles.chipAbsent}`}>Faltas/Cancelados: <strong>{summary.ausentes}</strong></span>
       </div>
 
-      <div className={styles.filters}>
+      <div className={styles.filters} data-tour-id="agenda-filters">
         <label className={styles.field}>
           <span className={styles.fieldLabel}>Data</span>
           <input type="date" className={styles.input} value={date} onChange={(e) => setDate(e.target.value)} />
@@ -755,7 +755,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
           )}
         </div>
       ) : (
-        <ul className={styles.timeline}>
+        <ul className={styles.timeline} data-tour-id="agenda-list">
           {appointments.map((a) => {
             const today = todayStr();
             const badgeState = canSeeFinancial

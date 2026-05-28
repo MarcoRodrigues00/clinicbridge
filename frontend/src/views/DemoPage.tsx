@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -8,16 +9,19 @@ import {
   BarChart3,
   ClipboardList,
   UserPlus,
-  FileSearch,
   ShieldCheck,
   Play,
   ArrowRight,
   AlertCircle,
   LogIn,
   Presentation,
+  Loader2,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { Footer } from '../components/Footer';
+import { DemoMascot } from '../components/DemoMascot';
+import { useAuth } from '../services/AuthProvider';
+import { ApiError } from '../services/api';
 import styles from './DemoPage.module.css';
 
 const MODULES = [
@@ -74,31 +78,57 @@ const SAFETY_ITEMS = [
 
 const ACCESS_CARDS = [
   {
-    icon: UserPlus,
-    title: 'Criar uma conta de teste',
-    desc: 'Entre pelo fluxo normal e explore o ClinicBridge com seus próprios dados de teste.',
-    cta: 'Criar conta',
-    to: '/register',
+    icon: Presentation,
+    title: 'Demo guiada',
+    desc: 'Entre direto na Clínica Demo Aurora e siga um tour passo a passo pelos principais módulos. Tudo com dados fictícios.',
+    cta: 'Entrar na demo guiada',
+    action: 'demo' as const,
   },
   {
-    icon: Presentation,
-    title: 'Demo assistida',
-    desc: 'Use a Clínica Demo Aurora em uma apresentação guiada, com agenda, pacientes, cobranças, convênios, estoque e prontuário de exemplo.',
-    cta: 'Começar piloto assistido',
+    icon: UserPlus,
+    title: 'Criar uma conta de teste',
+    desc: 'Prefere começar do zero? Crie sua conta e explore o ClinicBridge com seus próprios dados de teste.',
+    cta: 'Criar conta',
+    action: 'link' as const,
     to: '/register',
   },
   {
     icon: LogIn,
     title: 'Acesso interno',
-    desc: 'As credenciais da Clínica Demo Aurora ficam nos documentos internos do projeto e são usadas apenas em ambiente controlado.',
+    desc: 'É da equipe do projeto? Entre com suas credenciais internas. As credenciais da demo ficam nos documentos internos, nunca nesta página.',
     cta: 'Entrar',
+    action: 'link' as const,
     to: '/login',
   },
-] as const;
+];
 
 const fadeUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
 
 export function DemoPage(): JSX.Element {
+  const navigate = useNavigate();
+  const { enterDemo } = useAuth();
+  const [entering, setEntering] = useState(false);
+  const [enterError, setEnterError] = useState<string | null>(null);
+
+  async function handleEnterDemo(): Promise<void> {
+    if (entering) return;
+    setEnterError(null);
+    setEntering(true);
+    try {
+      await enterDemo();
+      navigate('/app', { replace: true });
+    } catch (err) {
+      setEntering(false);
+      if (err instanceof ApiError && (err.code === 'demo_disabled' || err.status === 403)) {
+        setEnterError('Demo guiada disponível apenas em ambiente preparado. Fale com a nossa equipe para agendar uma apresentação.');
+      } else if (err instanceof ApiError && err.code === 'demo_not_available') {
+        setEnterError('A demonstração ainda está sendo preparada neste ambiente. Tente novamente em instantes.');
+      } else {
+        setEnterError('Não foi possível abrir a demonstração agora. Tente novamente em instantes.');
+      }
+    }
+  }
+
   return (
     <div className={styles.page}>
       {/* ── Header ── */}
@@ -141,15 +171,35 @@ export function DemoPage(): JSX.Element {
               Nenhum paciente real é usado.
             </p>
             <div className={styles.heroActions}>
-              <Link to="/register" className={styles.btnPrimary} aria-label="Criar conta no ClinicBridge">
+              <button
+                type="button"
+                className={styles.btnPrimary}
+                onClick={handleEnterDemo}
+                disabled={entering}
+                aria-label="Entrar na demo guiada"
+              >
+                {entering ? (
+                  <>
+                    <Loader2 size={16} className="spin" aria-hidden="true" />
+                    Preparando…
+                  </>
+                ) : (
+                  <>
+                    <LogIn size={16} aria-hidden="true" />
+                    Entrar na demo guiada
+                  </>
+                )}
+              </button>
+              <Link to="/register" className={styles.btnGhost} aria-label="Criar conta no ClinicBridge">
                 <UserPlus size={16} aria-hidden="true" />
                 Criar conta
               </Link>
-              <Link to="/register" className={styles.btnGhost} aria-label="Preparar arquivo de teste">
-                <FileSearch size={16} aria-hidden="true" />
-                Preparar arquivo de teste
-              </Link>
             </div>
+            {enterError && (
+              <p className={styles.heroError} role="alert">
+                {enterError}
+              </p>
+            )}
           </motion.div>
         </section>
 
@@ -330,10 +380,22 @@ export function DemoPage(): JSX.Element {
                     </div>
                     <h3 className={styles.accessTitle}>{card.title}</h3>
                     <p className={styles.accessDesc}>{card.desc}</p>
-                    <Link to={card.to} className={styles.accessCta}>
-                      {card.cta}
-                      <ArrowRight size={13} aria-hidden="true" />
-                    </Link>
+                    {card.action === 'demo' ? (
+                      <button
+                        type="button"
+                        className={styles.accessCta}
+                        onClick={handleEnterDemo}
+                        disabled={entering}
+                      >
+                        {entering ? 'Preparando…' : card.cta}
+                        <ArrowRight size={13} aria-hidden="true" />
+                      </button>
+                    ) : (
+                      <Link to={card.to} className={styles.accessCta}>
+                        {card.cta}
+                        <ArrowRight size={13} aria-hidden="true" />
+                      </Link>
+                    )}
                   </motion.li>
                 );
               })}
@@ -350,21 +412,44 @@ export function DemoPage(): JSX.Element {
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <span className="eyebrow">Comece pelo essencial</span>
-            <h2 className={styles.ctaTitle}>Pronto para organizar sua clínica?</h2>
+            <div className={styles.ctaMascot} aria-hidden="true">
+              <DemoMascot size={64} mood="wave" />
+            </div>
+            <span className="eyebrow">Comece pela demonstração</span>
+            <h2 className={styles.ctaTitle}>Pronto para conhecer o ClinicBridge?</h2>
             <p className={styles.ctaSubtitle}>
-              Crie sua conta e comece pelo que faz mais sentido para a sua rotina.
+              Entre na demo guiada e deixe a Auri te mostrar o sistema em poucos minutos.
             </p>
             <div className={styles.ctaActions}>
-              <Link to="/register" className={styles.btnPrimary} aria-label="Criar conta">
+              <button
+                type="button"
+                className={styles.btnPrimary}
+                onClick={handleEnterDemo}
+                disabled={entering}
+                aria-label="Entrar na demo guiada"
+              >
+                {entering ? (
+                  <>
+                    <Loader2 size={16} className="spin" aria-hidden="true" />
+                    Preparando…
+                  </>
+                ) : (
+                  <>
+                    <LogIn size={16} aria-hidden="true" />
+                    Entrar na demo guiada
+                  </>
+                )}
+              </button>
+              <Link to="/register" className={styles.btnGhost} aria-label="Criar conta">
                 <UserPlus size={16} aria-hidden="true" />
                 Criar conta
               </Link>
-              <Link to="/register" className={styles.btnGhost} aria-label="Preparar arquivo de teste">
-                <FileSearch size={16} aria-hidden="true" />
-                Preparar arquivo de teste
-              </Link>
             </div>
+            {enterError && (
+              <p className={styles.heroError} role="alert">
+                {enterError}
+              </p>
+            )}
           </motion.div>
         </section>
       </main>

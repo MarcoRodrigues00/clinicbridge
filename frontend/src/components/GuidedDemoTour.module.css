@@ -1,0 +1,539 @@
+/* Auri Walkthrough Mode (Sprint 5.0F.2). A compact presenter card docked
+   bottom-right, with Auri poking out of the top edge so she reads as a guide
+   leaning into the screen — not a manual. A separate fixed spotlight rings the
+   element each step points at. Mobile keeps the compact bottom-sheet. */
+.panel {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 150;
+  width: 21.5rem;
+  max-width: calc(100vw - 2rem);
+  /* Visible overflow lets the avatar poke out of the top edge. */
+  overflow: visible;
+  padding: 1.15rem 1.25rem 1.2rem;
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(34, 211, 238, 0.13), transparent 60%),
+    linear-gradient(160deg, rgba(18, 28, 50, 0.98), rgba(8, 12, 24, 0.98));
+  border: 1px solid rgba(34, 211, 238, 0.34);
+  box-shadow:
+    0 26px 60px -20px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(34, 211, 238, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+@media (min-width: 1280px) {
+  .panel {
+    width: 23rem;
+    right: 2rem;
+    bottom: 2rem;
+  }
+}
+
+/* Phones + small tablets keep the compact bottom-sheet that already felt good. */
+@media (max-width: 768px) {
+  .panel {
+    right: 0.75rem;
+    left: 0.75rem;
+    bottom: 0.75rem;
+    width: auto;
+    /* Extra top padding = a "shelf" the bigger mobile Auri overlaps (5.0F.6). */
+    padding: 2.6rem 1.1rem 1rem;
+    border-radius: var(--r-md);
+  }
+}
+
+/* Smart placement (5.0F.3): when Auri floats next to the highlight, glide between
+   steps so she reads as a guide walking the screen. Inline top/left come from JS;
+   only the transition lives here. Reset on reduced-motion below. */
+.panelFloating {
+  transition:
+    top 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Inner scroll wrapper. */
+.inner {
+  max-height: calc(100vh - 7rem);
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .inner { max-height: 70vh; }
+}
+
+/* ── Collapsed bubble ── */
+.bubble {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 150;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(34, 211, 238, 0.18), transparent 60%),
+    linear-gradient(160deg, rgba(18, 28, 50, 0.98), rgba(8, 12, 24, 0.98));
+  border: 1px solid rgba(34, 211, 238, 0.45);
+  box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.65);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+@media (max-width: 768px) {
+  .bubble { right: 0.9rem; bottom: 0.9rem; width: 60px; height: 60px; }
+}
+
+.bubble:hover {
+  transform: translateY(-2px) scale(1.05);
+  border-color: var(--cyan);
+  box-shadow: 0 18px 40px -12px rgba(34, 211, 238, 0.35);
+}
+
+.bubbleFloat {
+  display: inline-flex;
+  animation: floaty 3.6s ease-in-out infinite;
+}
+
+.bubbleMascot {
+  width: 42px;
+  height: 42px;
+}
+
+.bubblePing {
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 2px solid rgba(34, 211, 238, 0.5);
+  animation: ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+/* ── Auri as a separate floating character (5.0F.5) ──────────────────────────
+   Her OWN fixed layer — not a child of the card. She glides between steps
+   (top/left transition) and grows out of the card once on mount (auriPopOut).
+   Purely visual: never intercepts a click. */
+.auriLayer {
+  position: fixed;
+  z-index: 152;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  transition:
+    top 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: auriPopOut 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Idle float (own layer so it never fights the pop-out / reaction transforms). */
+.auriFloat,
+.auriFloatStill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.auriFloat {
+  animation: floaty 3.6s ease-in-out infinite;
+}
+
+/* Per-step reaction (remounted via key → one-shot replays). */
+.mascotStill,
+.react_happy,
+.react_neutral,
+.react_wave,
+.react_cheer {
+  display: inline-flex;
+  transform-origin: 50% 85%;
+}
+
+.react_happy { animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.react_wave { animation: wave 0.95s ease-in-out; }
+.react_cheer { animation: cheer 0.75s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Lean toward the highlighted area. */
+.auriTilt {
+  display: inline-flex;
+  transform-origin: 50% 88%;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tiltLeft { transform: rotate(-7deg); }
+.tiltRight { transform: rotate(7deg); }
+
+.auriMascot {
+  width: 96px;
+  height: 96px;
+  filter:
+    drop-shadow(0 10px 16px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 0 12px rgba(34, 211, 238, 0.35));
+}
+
+@media (min-width: 1280px) {
+  .auriMascot { width: 104px; height: 104px; }
+}
+
+@media (max-width: 768px) {
+  /* Bigger on phones so Auri reads as a guide, not decoration (5.0F.6). */
+  .auriMascot { width: 72px; height: 72px; }
+  /* Shorter, subtler pop-out on mobile. */
+  .auriLayer { animation-duration: 0.45s; }
+}
+
+/* Speech-bubble tail linking the card up to Auri (desktop). */
+.cardTail {
+  position: absolute;
+  top: -7px;
+  width: 15px;
+  height: 15px;
+  transform: translateX(-50%) rotate(45deg);
+  background: linear-gradient(160deg, rgba(18, 28, 50, 0.98), rgba(8, 12, 24, 0.98));
+  border-left: 1px solid rgba(34, 211, 238, 0.34);
+  border-top: 1px solid rgba(34, 211, 238, 0.34);
+  border-top-left-radius: 3px;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.name {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-0);
+}
+
+.role {
+  font-size: 0.76rem;
+  color: var(--cyan-soft);
+}
+
+.iconBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  border: 1px solid transparent;
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.iconBtn:hover {
+  color: var(--text-0);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--surface-border-strong);
+}
+
+/* ── Segmented progress ── */
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.85rem 0 0.85rem;
+}
+
+.progress {
+  display: flex;
+  gap: 0.22rem;
+  flex: 1;
+}
+
+.segment {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 0.25s ease, transform 0.2s ease;
+}
+
+.segment:hover {
+  transform: scaleY(1.6);
+}
+
+.segmentOn {
+  background: linear-gradient(90deg, var(--cyan), var(--teal));
+}
+
+.counter {
+  flex-shrink: 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Content (short) ── */
+.title {
+  font-size: 1.16rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-0);
+  margin: 0 0 0.35rem;
+}
+
+.body {
+  font-size: 0.94rem;
+  color: var(--text-1);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── "Na demo" discreet note ── */
+.demoNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0.7rem 0 0;
+  font-size: 0.79rem;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+
+.demoNoteIcon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: var(--text-3);
+}
+
+/* ── Closing CTAs ── */
+.ctaCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.1rem;
+  border-radius: var(--r-sm);
+  font-size: 0.92rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #22d3ee 0%, #14b8a6 100%);
+  color: #03161a;
+  box-shadow: 0 10px 26px -10px rgba(34, 211, 238, 0.5);
+  transition: filter 0.18s ease, transform 0.15s ease;
+}
+
+.ctaPrimary:hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+.ctaGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--r-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-1);
+  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.ctaGhost:hover {
+  border-color: var(--cyan);
+  color: var(--cyan-soft);
+  background: rgba(34, 211, 238, 0.06);
+}
+
+/* ── Footer nav ── */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.navBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: var(--r-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-1);
+  border: 1px solid var(--surface-border-strong);
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.navBtn:hover:not(:disabled) {
+  color: var(--text-0);
+  border-color: rgba(120, 200, 230, 0.5);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.navBtn:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.navBtnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.2rem;
+  border-radius: var(--r-sm);
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: rgba(34, 211, 238, 0.16);
+  border: 1px solid rgba(34, 211, 238, 0.42);
+  color: var(--cyan-soft);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+}
+
+.navBtnPrimary:hover {
+  background: rgba(34, 211, 238, 0.28);
+  border-color: var(--cyan);
+  transform: translateY(-1px);
+}
+
+.subActions {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+}
+
+.linkBtn {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  transition: color 0.18s ease;
+}
+
+.linkBtn:hover {
+  color: var(--text-1);
+  text-decoration: underline;
+}
+
+/* ── Spotlight (fixed overlay; purely visual, never blocks a click) ── */
+.spotlight {
+  position: fixed;
+  z-index: 140;
+  border-radius: 12px;
+  border: 2px solid rgba(251, 191, 36, 0.95);
+  box-shadow:
+    0 0 0 3px rgba(251, 191, 36, 0.22),
+    0 0 24px 6px rgba(251, 191, 36, 0.3),
+    /* Soft darkening over everything outside the ring. */
+    0 0 0 9999px rgba(3, 6, 14, 0.55);
+  pointer-events: none;
+  transition:
+    top 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.spotCue {
+  position: fixed;
+  z-index: 151;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: #1a1205;
+  background: linear-gradient(135deg, #fcd34d, #fbbf24);
+  box-shadow: 0 6px 16px -6px rgba(251, 191, 36, 0.7);
+  animation: cueBob 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Animations ── */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.82); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* Friendly hello on the welcome step. */
+@keyframes wave {
+  0% { transform: rotate(0deg); }
+  20% { transform: rotate(-13deg); }
+  45% { transform: rotate(10deg); }
+  70% { transform: rotate(-6deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Little celebration on the closing step. */
+@keyframes cheer {
+  0% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-6px) scale(1.13); }
+  60% { transform: translateY(0) scale(0.97); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes ping {
+  0% { transform: scale(1); opacity: 0.7; }
+  80%, 100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes cueBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* Auri grows out of the card once (origin bottom = emerging from the card). */
+@keyframes auriPopOut {
+  0% { transform: translateY(16px) scale(0.5); opacity: 0; }
+  60% { transform: translateY(-2px) scale(1.05); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel { animation: none; }
+  .bubbleFloat,
+  .bubblePing,
+  .spotCue,
+  .auriLayer,
+  .auriFloat,
+  .react_happy,
+  .react_neutral,
+  .react_wave,
+  .react_cheer {
+    animation: none;
+  }
+  .spotlight,
+  .panelFloating,
+  .auriLayer,
+  .auriTilt {
+    transition: none;
+  }
+  .segment:hover { transform: none; }
+}

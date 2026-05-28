@@ -79,6 +79,33 @@ ALLOW_DEMO_SEED=true pnpm --filter backend seed:demo:full
 
 **Nota:** `DemoDevOnly!23` é senha dev-only. Nunca usar em produção. Nunca versionar em produção.
 
+### Demo guiada / auto-login (Sprint 5.0E)
+
+A partir da Sprint 5.0E existe uma entrada de **demo guiada** que NÃO expõe credenciais na UI pública.
+A página `/demo` tem o botão "Entrar na demo guiada", que chama `POST /auth/demo-login`. O backend
+faz auto-login no `demo.owner@clinicbridge.local` (acima) sem receber e-mail/senha — a identidade e o
+tenant são fixos no servidor.
+
+| Guard | Comportamento |
+|-------|--------------|
+| `NODE_ENV=production` | Endpoint recusa (403 `demo_disabled`) |
+| `ALLOW_DEMO_LOGIN` não definido / != `true` | Endpoint recusa (403 `demo_disabled`) |
+| Demo não semeado / clínica diferente | 409 `demo_not_available` |
+
+**Habilitar (dev/staging):**
+
+```bash
+# 1) Semear o demo
+ALLOW_DEMO_SEED=true pnpm --filter backend seed:demo:full
+# 2) Ligar o auto-login da demo no backend (.env)
+ALLOW_DEMO_LOGIN=true
+```
+
+Dentro da demo, o frontend entra em **modo demo** (clínica = "Clínica Demo Aurora"): barra de demonstração,
+tour guiado com a mascote "Auri" e bloqueio de ações de escrita/exportação com mensagem humanizada.
+O bloqueio é guardrail de UX — **não** é segurança suficiente para uma demo pública (enforcement backend
+read-only é backlog). As credenciais demo continuam apenas neste documento, nunca na UI.
+
 ### Profissionais da agenda
 
 | Nome | Especialidade (demo) |
