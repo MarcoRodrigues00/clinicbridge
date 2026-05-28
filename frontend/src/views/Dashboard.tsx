@@ -14,6 +14,7 @@ import {
   BarChart3,
   Briefcase,
   HeartHandshake,
+  Boxes,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { UploadPanel } from '../components/UploadPanel';
@@ -32,6 +33,7 @@ import { FinancialPanel } from '../components/FinancialPanel';
 import { ReportsPanel } from '../components/ReportsPanel';
 import { ServicesPanel } from '../components/ServicesPanel';
 import { InsurancePanel } from '../components/InsurancePanel';
+import { InventoryPanel } from '../components/InventoryPanel';
 import { useAuth } from '../services/AuthProvider';
 import type { SafeUser } from '../services/api';
 import styles from './Dashboard.module.css';
@@ -45,7 +47,7 @@ const ROLE_LABELS: Record<SafeUser['papel'], string> = {
   secretaria: 'Funcionário(a) (acesso administrativo)',
 };
 
-type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'financeiro' | 'relatorios' | 'servicos' | 'convenios' | 'equipe' | 'seguranca';
+type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'financeiro' | 'relatorios' | 'servicos' | 'convenios' | 'estoque' | 'equipe' | 'seguranca';
 
 const TABS: { key: TabKey; label: string; icon: typeof Home; ownerOnly?: boolean }[] = [
   { key: 'inicio', label: 'Início', icon: Home },
@@ -56,6 +58,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Home; ownerOnly?: boolean
   { key: 'relatorios', label: 'Relatórios', icon: BarChart3 },
   { key: 'servicos', label: 'Serviços', icon: Briefcase },
   { key: 'convenios', label: 'Convênios', icon: HeartHandshake },
+  { key: 'estoque', label: 'Estoque', icon: Boxes },
   { key: 'equipe', label: 'Equipe', icon: Users, ownerOnly: true },
   { key: 'seguranca', label: 'Segurança', icon: ShieldCheck },
 ];
@@ -69,6 +72,7 @@ const SECTION_INTRO: Record<TabKey, { title: string; subtitle: string }> = {
   relatorios: { title: 'Relatórios', subtitle: 'Resumos de agenda, financeiro e pacientes. Apenas dados administrativos — sem dados clínicos.' },
   servicos: { title: 'Serviços', subtitle: 'Catálogo de tipos de atendimento da clínica — consultas, retornos, sessões e procedimentos. Aparecem na agenda e nas cobranças.' },
   convenios: { title: 'Convênios', subtitle: 'Cadastre convênios aceitos pela clínica e use essas informações em pacientes e cobranças. Apenas dados administrativos — sem dados clínicos.' },
+  estoque: { title: 'Estoque', subtitle: 'Controle materiais e insumos da clínica com entradas, saídas e alertas de estoque baixo. Apenas dados administrativos — sem dados clínicos.' },
   equipe: { title: 'Equipe', subtitle: 'Acesso ao sistema (membros), solicitações pendentes e profissionais usados na agenda.' },
   seguranca: { title: 'Segurança e sessão', subtitle: 'Estado da autenticação e do MVP administrativo.' },
 };
@@ -230,6 +234,10 @@ export function Dashboard(): JSX.Element {
 
         {tab === 'convenios' && (
           <InsurancePanel />
+        )}
+
+        {tab === 'estoque' && (
+          <InventoryPanel />
         )}
 
         {tab === 'equipe' && isOwner && (

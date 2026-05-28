@@ -160,22 +160,29 @@ O sistema exibe quantidade atual e alerta quando abaixo do mínimo configurado.
 - `GET /inventory/movements` implementado além de `GET /inventory/items/:id/movements`.
 - Audit de movimento emitido **dentro** da transação — falha de audit aborta o movimento.
 
-### Sprint 4.8C — Frontend
+### Sprint 4.8C — Frontend ✅ (entregue 2026-05-27)
 
-- [ ] `InventoryPanel.tsx` — nova aba "Estoque" no Dashboard.
-- [ ] Lista de itens com badge de alerta (vermelho quando `current_quantity < minimum_quantity`).
-- [ ] Formulário de criação/edição de item (owner-only — botões ocultos para secretaria).
-- [ ] Formulário de movimentação (disponível para dono e secretaria).
-- [ ] Seletor de `movement_type` com labels PT-BR ("Entrada" / "Saída" / "Ajuste" / "Perda").
-- [ ] Histórico de movimentos por item (colapsável ou em aba interna).
-- [ ] Aviso de UI nos campos `notes`/`reason`: "Não incluir paciente, diagnóstico ou dado clínico."
-- [ ] Card "Acesso restrito" para profissional_clinico (403 tratado sem derrubar tela).
-- [ ] API funcs em `api.ts` (≥ 7 funções: CRUD items + movement + list).
-- [ ] React Query keys: `['inventory', 'items']`, `['inventory', 'items', id]`,
-  `['inventory', 'items', id, 'movements']`.
-- [ ] Invalidação de queries após movimentação.
-- [ ] `pnpm --filter frontend typecheck` ✅ · `build` ✅.
-- [ ] `git diff --check` rc=0.
+- [x] `InventoryPanel.tsx` — nova aba "Estoque" no Dashboard (ícone `Boxes`).
+- [x] Hero de resumo: Itens ativos · Estoque baixo (query de resumo independente dos filtros).
+- [x] Filtros: busca por nome · categoria · status (ativos/inativos/todos) · "Apenas estoque baixo".
+- [x] Lista de itens com badge "Estoque baixo" (usa `item.low_stock` do backend) + badge Inativo.
+- [x] Formulário de criação/edição de item (owner-only — botões ocultos para secretaria).
+- [x] Formulário de movimentação (dono + secretaria); magnitude + direção (Ajuste com toggle
+  Aumentar/Reduzir); usuário nunca digita sinal.
+- [x] Seletor de `movement_type` com labels PT-BR ("Entrada" / "Saída" / "Ajuste" / "Perda/descarte").
+- [x] Pré-visualização "Estoque atual → Após o movimento" + bloqueio visual de estoque negativo.
+- [x] `current_quantity` NUNCA editável direto — sem campo no formulário de item.
+- [x] Histórico de movimentos por item (colapsável; data PT-BR, tipo, delta, observação).
+- [x] Aviso de UI nos campos `notes`/`reason`: "Não coloque nome de paciente, diagnóstico,
+  prescrição, queixa ou detalhes clínicos."
+- [x] Card "Acesso restrito" para profissional_clinico (403 tratado sem derrubar tela).
+- [x] 8 funções de API em `api.ts` + 8 tipos.
+- [x] React Query keys sob `['inventory', ...]`; invalidação ampla após mutações.
+- [x] Erros mapeados PT-BR: name duplicado / estoque insuficiente / item inativo / 403.
+- [x] Sem console.log/localStorage/sessionStorage/URL para `notes`/`reason`; sem `dangerouslySetInnerHTML`.
+- [x] `pnpm --filter frontend typecheck` ✅ · `build` ✅.
+- [x] `git diff --check` rc=0 ✅ · backend intocado.
+- [ ] Validação visual no navegador — **pendente** (ambiente sem browser).
 
 ### Sprint 4.8D — QA/Hardening
 
@@ -213,14 +220,23 @@ O sistema exibe quantidade atual e alerta quando abaixo do mínimo configurado.
 - [x] `git diff --check` rc=0 ✅
 - [x] Zero mudanças de código, schema, migration ou env ✅
 
-**Sprint 4.8B — Gate de abertura de 4.8C:**
+**Sprint 4.8B — Gate de abertura de 4.8C (concluído):**
 
 - [x] Backend implementado (migration + DAO + service + controller + routes) ✅
 - [x] migrate:status 18/0 ✅
 - [x] Smoke 51/51 PASS ✅
 - [x] typecheck backend ✅ · build backend ✅ · typecheck frontend ✅
 - [x] `git diff --check` rc=0 ✅
-- [ ] Frontend `InventoryPanel` — **Sprint 4.8C**
+- [x] Frontend `InventoryPanel` — **Sprint 4.8C** ✅
+
+**Sprint 4.8C — Gate de abertura de 4.8D:**
+
+- [x] `InventoryPanel` + aba "Estoque" no Dashboard ✅
+- [x] 8 funções API + 8 tipos em `api.ts` ✅
+- [x] typecheck frontend ✅ · build frontend ✅
+- [x] `git diff --check` rc=0 ✅ · backend intocado
+- [ ] Validação visual no navegador — pendente
+- [ ] QA/Hardening — **Sprint 4.8D**
 
 ---
 

@@ -5426,4 +5426,100 @@ Módulo administrativo/operacional — usa `requireRole`, NÃO `requireClinicalR
 
 **Sprint 4.8B entregue.** Gate para 4.8C (Frontend Estoque) aberto.
 
+---
+
+## Sprint 4.8C — Frontend Estoque v0.1
+
+**Gate de entrada:** Backend Estoque v0.1 (Sprint 4.8B) ✅.
+
+### Escopo
+
+Frontend do módulo de Estoque v0.1 (ADR 0017). Consome os 9 endpoints da 4.8B.
+**Zero backend, zero migration, zero schema.** Frontend apenas.
+
+### Arquivos criados
+
+- `frontend/src/components/InventoryPanel.tsx` — painel completo.
+- `frontend/src/components/InventoryPanel.module.css` — estilos dark-theme responsivos.
+
+### Arquivos modificados
+
+- `frontend/src/services/api.ts` — 8 tipos + 8 funções de API (ver abaixo).
+- `frontend/src/views/Dashboard.tsx` — TabKey `estoque`, aba "Estoque" (ícone `Boxes`),
+  `SECTION_INTRO`, render `<InventoryPanel />`.
+
+### API frontend adicionada
+
+Tipos: `InventoryMovementType`, `InventoryItem`, `InventoryMovement`,
+`ListInventoryItemsParams`, `ListInventoryMovementsParams`, `CreateInventoryItemPayload`,
+`UpdateInventoryItemPayload`, `CreateInventoryMovementPayload`.
+
+Funções: `listInventoryItems`, `getInventoryItem`, `createInventoryItem`,
+`updateInventoryItem`, `updateInventoryItemStatus`, `listInventoryItemMovements`,
+`createInventoryMovement`, `listInventoryMovements`.
+
+### Componentes (InventoryPanel.tsx)
+
+- `InventoryPanel` (principal): hero (Itens ativos · Estoque baixo via query de resumo
+  independente dos filtros), filtros (busca/categoria/status/low-stock), lista, role-note.
+- `ItemCard`: nome, categoria, qtd + unidade, mínimo, local, badges (Estoque baixo / Inativo),
+  ações (Registrar movimento · Histórico · Editar · Desativar/Reativar), edição inline.
+- `MovementForm` (inline): tipo (Entrada/Saída/Ajuste/Perda·descarte), magnitude + direção,
+  observação administrativa, pré-visualização "Estoque atual → Após o movimento", bloqueio
+  visual de estoque negativo.
+- `MovementHistory` (inline): lista de movimentos por item (data PT-BR, tipo, delta com sinal
+  e unidade, observação administrativa quando presente). NUNCA renderiza `created_by_user_id`
+  (UUID sem nome — backend não devolve nome do responsável no v0.1).
+- `CreateItemForm`: criação owner-only.
+
+### Permissões na UI
+
+- `dono_clinica`: cria/edita/desativa item + registra movimento + histórico.
+- `secretaria`: registra movimento + histórico + leitura; botões de CRUD de item ocultos;
+  role-note explica a limitação.
+- `profissional_clinico`: lista 403 → card "Acesso restrito" (não derruba a tela).
+- Backend é a defesa real; a UI só oculta controles.
+
+### Segurança / LGPD
+
+- `current_quantity` **nunca** editável direto — sem campo no formulário de item; só muda
+  por movimento (transação no backend).
+- Movimento usa magnitude + direção: usuário nunca digita sinal manualmente (Ajuste tem
+  toggle Aumentar/Reduzir).
+- `notes`/`reason` são texto administrativo: aviso anti-dado-clínico em todos os formulários;
+  nunca em `console.log`, `localStorage`/`sessionStorage` ou URL.
+- Sem `dangerouslySetInnerHTML`. Histórico nunca renderiza UUID.
+- Erros mapeados para PT-BR amigável: `inventory_item_name_duplicated` → "Já existe um item
+  com esse nome."; `inventory_quantity_insufficient` → "O movimento deixaria o estoque
+  negativo."; `inventory_item_inactive` → "Este item está inativo…"; `forbidden_role`/403 →
+  card "Acesso restrito".
+
+### React Query
+
+- Keys sob `['inventory', ...]`: `['inventory','items',{filtros}]`,
+  `['inventory','items','summary']`, `['inventory','item',id,'movements']`.
+- Invalidação ampla (`['inventory']`) após create/update/status/movement — sem reload de página.
+
+### Checks finais
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅ (warning de chunk size pré-existente, não relacionado)
+- `git diff --check` rc=0 ✅
+- `git status --short` — apenas 4 arquivos frontend (2 modificados + 2 criados); **backend intocado**.
+- Greps de segurança no novo componente: `console.*` / `localStorage` / `sessionStorage` /
+  `dangerouslySetInnerHTML` = 0 (só aparecem no comentário de cabeçalho).
+
+### Ressalvas / TODOs futuros
+
+- **Validação visual no navegador pendente** (ambiente sem browser, igual às sprints frontend anteriores).
+- Hero "Itens ativos"/"Estoque baixo" derivado de uma query com `limit=100`; clínicas com
+  >100 itens ativos teriam contagem subestimada (aceitável no v0.1 para consultório pequeno).
+- Histórico não mostra "responsável" — backend devolve só `created_by_user_id` (UUID), e a
+  política é nunca renderizar UUID. Nome do responsável é melhoria futura (exigiria JOIN no backend).
+- Badge "Estoque baixo" segue `item.low_stock` do backend (current < minimum && minimum > 0),
+  não `<=` — consistente com o filtro `low_stock`.
+- Sem import CSV, sem baixa automática por atendimento, sem custo/lote/validade (fora do v0.1).
+
+**Sprint 4.8C entregue.** Gate para 4.8D (QA/Hardening Estoque) aberto.
+
 **Próxima sprint:** **4.8B** Backend Estoque v0.1.

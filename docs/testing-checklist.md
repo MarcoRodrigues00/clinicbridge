@@ -2859,3 +2859,45 @@ grep -n "Clinic OS\|MVP administrativo" frontend/src/views/Dashboard.tsx
 - Estoque negativo bloqueado → 409 `inventory_quantity_insufficient` — verificado (E11, E12).
 - Movimento em item inativo bloqueado → 400 `inventory_item_inactive` — verificado (E14).
 - profissional_clinico bloqueado em ALL endpoints (não só reads) — verificado (A7, A8).
+
+---
+
+## Sprint 4.8C — Estoque v0.1 (Frontend)
+
+> Frontend apenas. Backend intocado. `typecheck` ✅ · `build` ✅ · `git diff --check` rc=0.
+> **Validação visual no navegador pendente** (ambiente sem browser).
+
+### Greps de segurança (frontend) — esperado 0 fora de comentário
+
+```bash
+cd frontend/src
+grep -n "console\." components/InventoryPanel.tsx          # só no comentário de cabeçalho
+grep -n "localStorage\|sessionStorage" components/InventoryPanel.tsx  # só no comentário
+grep -n "dangerouslySetInnerHTML" components/InventoryPanel.tsx       # só no comentário
+grep -n "set('reason'\|set('notes'" services/api.ts        # nenhum (notes/reason nunca em URL)
+```
+
+### Checklist de validação visual (manual — 4.8C)
+
+| # | Papel | Cenário | Esperado |
+|---|-------|---------|---------|
+| 1 | owner | Abre aba "Estoque" | Hero (Itens ativos · Estoque baixo) + filtros + botão "Novo item" |
+| 2 | owner | Cria item (nome + unidade) | Item aparece na lista sem F5 (invalidação) |
+| 3 | owner | Tenta criar sem nome/unidade | Botão "Criar item" desabilitado |
+| 4 | owner | Cria item com nome já existente | Erro "Já existe um item com esse nome." |
+| 5 | owner | Edita metadados do item | Salva; sem campo de quantidade no formulário |
+| 6 | owner | Registra Entrada (qtd 10) | current_quantity sobe para 10; preview "Estoque atual → Após" |
+| 7 | owner | Registra Saída (qtd 3) | current_quantity cai para 7; hint "vamos reduzir o estoque" |
+| 8 | owner | Registra Perda/descarte (qtd 2) | current_quantity cai para 5 |
+| 9 | owner | Registra Ajuste com toggle Aumentar/Reduzir | delta aplicado conforme direção |
+| 10 | owner | Tenta Saída maior que o estoque | Botão desabilitado + aviso "deixaria o estoque negativo" |
+| 11 | owner | Abre Histórico do item | Lista de movimentos (data, tipo, delta, observação); sem UUID |
+| 12 | owner | Desativa item | Badge "Inativo"; botão "Registrar movimento" some |
+| 13 | owner | Reativa item | Volta ao normal; pode movimentar de novo |
+| 14 | owner | Filtro "Apenas estoque baixo" | Mostra só itens com `low_stock` |
+| 15 | owner | Item com qtd < mínimo | Badge "Estoque baixo" + hero conta o item |
+| 16 | secretaria | Abre aba "Estoque" | Vê itens; **sem** botões Novo/Editar/Desativar; role-note explicativa |
+| 17 | secretaria | Registra movimento | Funciona (entrada/saída/ajuste/perda) |
+| 18 | profissional | Abre aba "Estoque" | Card "Acesso restrito" (403); não vê itens nem botões |
+| 19 | qualquer | Console / Network | Sem 500; sem stack trace; erros amigáveis |
+| 20 | mobile | Largura ~360px | Cards/forms não estouram; grids viram 1 coluna |
