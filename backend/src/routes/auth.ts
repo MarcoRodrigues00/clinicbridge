@@ -13,6 +13,11 @@ authRouter.use('/auth', authRateLimit);
 authRouter.post('/auth/register', asyncHandler(authController.register));
 authRouter.post('/auth/login', asyncHandler(authController.login));
 
+// Guided demo (Sprint 5.0E). Env-gated (ALLOW_DEMO_LOGIN) and production-refused
+// in the service. No credentials in the body — issues a session for the fixed
+// pre-seeded demo owner only. Shares the /auth/* rate limiter above.
+authRouter.post('/auth/demo-login', asyncHandler(authController.demoLogin));
+
 // MFA (Sprint 3.19). All under /auth/* so the authRateLimit above applies.
 // verify-login uses the challenge token in the body (no requireAuth yet); the
 // others require an authenticated session.

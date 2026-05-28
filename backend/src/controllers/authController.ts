@@ -126,6 +126,18 @@ export const authController = {
     });
   },
 
+  // Guided demo login (Sprint 5.0E). No request body is read — the demo identity
+  // is fixed server-side. Returns the same shape as a normal login.
+  async demoLogin(req: Request, res: Response): Promise<void> {
+    const result = await authService.demoLogin(buildContext(req));
+    res.status(200).json({
+      message: 'Sessão de demonstração iniciada.',
+      user: result.user,
+      token: result.token,
+      expires_in: result.expires_in,
+    });
+  },
+
   async verifyMfaLogin(req: Request, res: Response): Promise<void> {
     const input = parseOrThrow(VerifyMfaLoginSchema, req.body);
     const result = await authService.verifyMfaLogin(input, buildContext(req));

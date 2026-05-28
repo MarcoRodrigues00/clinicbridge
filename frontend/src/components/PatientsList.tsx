@@ -517,7 +517,7 @@ export function PatientsList({
         ))}
       </div>
 
-      <form className={styles.searchBar} onSubmit={handleSearch} role="search">
+      <form className={styles.searchBar} onSubmit={handleSearch} role="search" data-tour-id="patients-search">
         <input
           type="search"
           className={styles.searchInput}
@@ -610,7 +610,7 @@ export function PatientsList({
             </p>
           )}
 
-          <ul className={styles.grid}>
+          <ul className={styles.grid} data-tour-id="patients-list">
             {patients.map((p) => (
               <li key={p.id} className={styles.card}>
                 <div className={styles.cardHead}>

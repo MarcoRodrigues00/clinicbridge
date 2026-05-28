@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { api, ApiError, type PublicClinic, type SafeUser } from './api';
 import { clearToken, getToken, setToken } from './authStorage';
+import { DEMO_CLINIC_NAME, setDemoWriteBlock } from './demoMode';
 
 export interface LoginAttemptResult {
   mfaRequired: boolean;
@@ -19,8 +20,12 @@ interface AuthContextValue {
   authenticated: boolean;
   user: SafeUser | null;
   clinic: PublicClinic | null;
+  // True while the active session belongs to the synthetic demo clinic.
+  isDemo: boolean;
   login: (email: string, senha: string) => Promise<LoginAttemptResult>;
   completeMfaLogin: (challengeToken: string, code: string) => Promise<void>;
+  // Starts a guided-demo session (no credentials; backend env-gated).
+  enterDemo: () => Promise<void>;
   logout: () => void;
   refreshMe: () => Promise<void>;
 }
@@ -36,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     clearToken();
     setUser(null);
     setClinic(null);
+    setDemoWriteBlock(false);
   }, []);
 
   const refreshMe = useCallback(async () => {
@@ -112,6 +118,26 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     [refreshMe],
   );
 
+  // Guided demo: starts a session for the fixed demo owner. The demo write-block
+  // is armed by the effect below once the demo clinic loads.
+  const enterDemo = useCallback(async () => {
+    const res = await api.demoLogin();
+    setToken(res.token);
+    try {
+      await refreshMe();
+    } catch {
+      setUser(res.user);
+    }
+  }, [refreshMe]);
+
+  const isDemo = clinic?.nome === DEMO_CLINIC_NAME;
+
+  // Keep the API-layer write-block in sync with the active tenant: armed only
+  // while the demo clinic is loaded, disarmed on logout / real-clinic sessions.
+  useEffect(() => {
+    setDemoWriteBlock(isDemo);
+  }, [isDemo]);
+
   const logout = useCallback(() => {
     clearSession();
   }, [clearSession]);
@@ -121,8 +147,10 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     authenticated: user !== null,
     user,
     clinic,
+    isDemo,
     login,
     completeMfaLogin,
+    enterDemo,
     logout,
     refreshMe,
   };

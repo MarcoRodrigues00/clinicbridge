@@ -7,6 +7,498 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.0F.6** (entregue 2026-05-28) — **Ajuste mobile da Auri / presença no celular.**
+
+Ajuste fino sobre a 5.0F.5. Na validação visual mobile a Auri ficou **pequena demais** (≈50px), perdida
+entre o spotlight e o card, parecendo decorativa. Agora ela é maior e **conectada ao card** no celular,
+sobrepondo a borda superior do balão. Frontend-only; desktop inalterado. Zero backend, migration, schema,
+seed; `demo-login` e write-block **intocados**.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/GuidedDemoTour.tsx` | `AURI_SIZE` mobile 56 → **80**; branch mobile no posicionamento — Auri **centralizada sobre o card**, sobrepondo o topo (`overlap 26`), em vez de pairar acima com folga; desktop mantém a lógica de 5.0F.5 |
+| `frontend/src/components/GuidedDemoTour.module.css` | `.auriMascot` mobile 50 → **72px**; `.panel` mobile ganha **padding-top 2.6rem** (prateleira p/ a Auri maior, sem cobrir botões); pop-out mais curto no mobile (`.auriLayer` 0.45s) |
+
+### Mobile: tamanho e posição
+
+- **Tamanho:** mascote 50px → **72px** (container `AURI_SIZE` 56 → 80).
+- **Posição:** antes pairava **acima** do card com folga (perdida no meio); agora fica **centralizada
+  horizontalmente sobre o card** e **sobrepõe a borda superior** (~26px dentro da prateleira de padding-top
+  do card), como se fosse dona do balão. Inclinação leve para o alvo mantida.
+- **Card:** `padding-top` mobile aumentado para abrir a prateleira; header/progresso e os botões
+  (Voltar/Próximo/Pular/Recomeçar) **não** são cobertos; texto segue legível.
+
+### Animação / performance
+
+Pop-out mais curto no mobile (0.45s); float discreto mantido; só `transform`/`opacity`. `prefers-reduced-motion`
+segue desligando pop-out/float/reações. Sem libs, sem canvas, sem timers.
+
+### Desktop não regrediu
+
+`AURI_SIZE` desktop (104), `pokeGap`, viés ao alvo, `topSafe`, rabicho e `.auriMascot` desktop (96 · 104
+≥1280) **inalterados** — a mudança vive só no branch `isMobile` e nos media queries `≤768px`.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+- Zero backend, migration, schema, seed; demo-login e write-block intocados.
+
+---
+
+**Sprint 5.0F.5** (entregue 2026-05-28) — **Auri Pop-Out / mascote fora do card.**
+
+Resolve o ponto que 5.0F.2–5.0F.4 não fechavam: a Auri ainda parecia **presa ao card**. Agora ela é um
+**personagem flutuante em camada própria** (não mais um `<span>` dentro do painel); o **card virou o
+balão de fala** dela, com um rabicho ligando os dois. Frontend-only. Zero backend, migration, schema,
+seed; `demo-login` e write-block **intocados**.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/GuidedDemoTour.tsx` | Auri removida de dentro do `motion.aside` e renderizada em camada própria `.auriLayer` (sibling, `position:fixed`); deriva `cardBox` (de placement ou geometria docked/bottom-sheet) e posiciona a Auri **acima do card**, enviesada para o alvo; rabicho de fala no card; removido o `PanelArrow` (sem duplicar conector); `topSafe` do `computePlacement` aumentado p/ reservar espaço acima do card |
+| `frontend/src/components/GuidedDemoTour.module.css` | `.auriLayer` (glide top/left + pop-out na montagem, `transform-origin` bottom); `.auriFloat`/`.auriFloatStill`; reações `react_*` agora one-shot (float separado); `.auriTilt`; `.auriMascot` (96px · 104px ≥1280 · 50px ≤768, drop-shadow + glow ciano); `.cardTail`; keyframe `auriPopOut`; removidos `.avatar`/`.mascotSvg`/`.panelArrow`/`arrowPulse`; header sem padding do avatar; reduced-motion atualizado |
+
+### Auri separada do card
+
+- Camada própria `position:fixed` (`z-index` acima do card), **`pointer-events:none`** — nunca bloqueia clique.
+- O card (`motion.aside`) virou **balão de fala**: só texto/controles + um **rabicho** (`.cardTail`) no topo,
+  posicionado no x da Auri.
+- A Auri **não** é mais filha do painel — é um personagem independente que paira **acima** do card.
+
+### Animação de saída / crescimento
+
+`.auriLayer` toca **`auriPopOut`** uma vez na montagem (abrir o tour / sair do minimizado): começa pequena
+e baixa (encostada no card), **cresce** com `transform-origin` na base (emergindo do card), sobe levemente
+e entra em **idle float**. Só `transform`/`opacity`. Camadas aninhadas, cada uma com **um** transform
+(layer = pop-out + glide · float · reação · tilt) — sem conflito de transform, sem canvas, sem lib.
+
+### Posição em relação ao spotlight
+
+A Auri paira logo **acima** do card, com o x **enviesado para o centro do alvo** (clampado à largura do
+card) — lê como "apontando" para o destaque, reforçada pela **inclinação** (`tiltLeft/Right`) e pelo anel
+do spotlight. Caso o card fique **abaixo** do alvo, a Auri é clampada para **nunca cobrir** o alvo. Glide
+suave entre passos via transição CSS de `top/left`.
+
+### Card como balão de fala
+
+Rabicho (`.cardTail`) no topo do card apontando para a Auri (desktop). O conector âmbar que apontava para
+o alvo (5.0F.3) foi **removido** para não duplicar seta/cue — o alvo é indicado pelo anel do spotlight; a
+Auri e o rabicho fazem a ligação card↔mascote.
+
+### Desktop vs mobile
+
+- **Desktop (foco):** Auri grande (96–104px), camada própria, pop-out + glide + tilt, rabicho no card.
+- **Mobile:** Auri compacta (50–56px) acima do bottom-sheet; placement inteligente segue **gated** por
+  `matchMedia('(max-width: 768px)')` (sem regressão); cue "Veja aqui" preservado.
+
+### Reduced-motion / performance
+
+`prefers-reduced-motion` desliga pop-out, float, wave/cheer/pop e as transições de `auriLayer`/`auriTilt`/
+painel/anel; `animated={false}` no mascote remove o SMIL (olhos/antena estáticos). Posição é matemática
+pura (sem novos observers além do `ResizeObserver` do card já existente); só `transform`/`opacity`/`filter`
+leve; overlays visuais com `pointer-events:none`; botões acessíveis por teclado.
+
+### Inalterado
+
+20 micro-passos, copy, `data-tour-id`, lógica do spotlight e Dashboard. Spotlight, cue e fallback docked
+seguem funcionando.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+- Zero backend, migration, schema, seed; demo-login e write-block intocados.
+
+---
+
+**Sprint 5.0F.4** (entregue 2026-05-28) — **Polish visual da mascote Auri / presença + microanimações.**
+
+Polish visual sobre a 5.0F.3 (engine de posicionamento preservado). Problema: a Auri ainda parecia um
+ícone pequeno preso ao card. Agora ela é uma **mascote-personagem**: avatar maior no desktop, saindo da
+borda do card, com microanimações leves de expressão. Frontend-only. Zero backend, migration, schema,
+seed; `demo-login` e write-block **intocados**.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/DemoMascot.tsx` | Headset (earcups + mic boom) para persona de "recepcionista digital"; mood `neutral`; prop `animated` que **gateia o SMIL** (blink/glow) sob reduced-motion; blink reescrito com `keyTimes` (pisca rápido, olhos abertos a maior parte do tempo) |
+| `frontend/src/components/GuidedDemoTour.tsx` | Hook `usePrefersReducedMotion`; `reactionClass(mood, reduced)`; avatar com classe de inclinação (`tiltLeft`/`tiltRight`) e camada de reação keyed por passo; passa `animated={!reduced}`; `computePlacement` ganha `topSafe`/`leftSafe` para o avatar não ser cortado |
+| `frontend/src/components/GuidedDemoTour.module.css` | Avatar maior (74px · 80px ≥1280 · 50px ≤768) com halo, saindo da borda superior-esquerda; `transform-origin` + transição para a inclinação; classes de reação `react_happy/neutral/wave/cheer` + `mascotStill`; keyframes `wave`/`cheer`; reduced-motion atualizado |
+
+### Auri com mais presença
+
+- **Avatar maior** e com **halo** (anel escuro + glow ciano) que a separa do card — desktop 74px (80px em
+  ≥1280px), poke-out na borda superior-esquerda (`top:-32px; left:-14px`). Mobile mantém 50px compacto.
+- **Headset** (conchas + haste de microfone) reforça "recepcionista digital simpática", sem virar brinquedo.
+- **Inclinação leve** (`±6deg`, origem na base) quando o painel flutua à direita/esquerda do alvo — lê como
+  uma cabeça que se inclina para "olhar" o destaque; transição suave; sem inclinação quando docado/empilhado.
+
+### Microanimações (apenas transform/opacity)
+
+- **Idle float** contínuo (translateY) — leve.
+- **Blink** das luzes-olho via SMIL (`r` com `keyTimes`), agora **desligável** pela prop `animated`.
+- **Reação por passo** (camada remontada por `key`): `pop` (happy/neutral), `wave` (boas-vindas, rotação
+  curta), `cheer` (encerramento, bounce). Uma animação one-shot por troca de passo — nada infinito pesado.
+- Sem canvas, sem libs novas, sem animação de layout/reflow (só `transform`/`opacity`).
+
+### Reduced-motion / performance
+
+`usePrefersReducedMotion` (matchMedia, listener limpo no unmount) passa `animated={false}` → **SMIL não é
+renderizado** (olhos/antena estáticos) e a classe `mascotStill` remove as reações. O bloco CSS
+`prefers-reduced-motion` zera float/wave/cheer/pop, o `arrowPulse`, e as transições de avatar/painel/anel.
+Tudo visual segue `pointer-events:none`; botões acessíveis por teclado.
+
+### Inalterado
+
+Copy dos 20 passos, lógica de posicionamento inteligente (5.0F.3), spotlight, seta-conector, `data-tour-id`
+e Dashboard. Mobile continua bottom-sheet compacto.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+- Zero backend, migration, schema, seed; demo-login e write-block intocados.
+
+---
+
+**Sprint 5.0F.3** (entregue 2026-05-28) — **Auri fluida / posicionamento inteligente do painel.**
+
+Polish visual fino sobre a 5.0F.2 (engine preservado, sem reescrita). Problema: a Auri ainda parecia
+presa num card fixo no canto inferior direito — o usuário olhava o spotlight no centro/esquerda e
+precisava ir ao canto para ler. Agora o painel da Auri **acompanha o spotlight**: posiciona-se perto do
+alvo e desliza entre os passos, como uma recepcionista apontando para cada área. Frontend-only.
+Zero backend, migration, schema, seed; `demo-login` e write-block **intocados**.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/GuidedDemoTour.tsx` | `TourSpotlight` desmembrado em hook `useTargetRect` (rect compartilhado entre anel e painel) + `SpotlightRing`/`SpotCue`; hooks `useIsMobile`/`usePanelSize` (ResizeObserver); `computePlacement` (direita→esquerda→abaixo→acima→fallback); `PanelArrow` (chip-seta conectando o painel ao alvo) |
+| `frontend/src/components/GuidedDemoTour.module.css` | `.panelFloating` (transição top/left para deslizar); `.panelArrow` + `.arrow_<side>`; keyframe `arrowPulse`; reduced-motion atualizado |
+
+### Posicionamento inteligente (desktop)
+
+Dado o rect do alvo + tamanho medido do painel (`ResizeObserver`) + viewport, tenta **direita → esquerda
+→ abaixo → acima**, com folga de 16px e clamp na viewport; se nada couber, **fallback** para o canto
+inferior direito (CSS). Por construção, o lado escolhido nunca cobre o alvo (o offset no eixo principal já
+o afasta). Recalcula em scroll/resize (o `useTargetRect` re-mede; o placement é derivado no render).
+
+### Fluidez
+
+`useTargetRect` **mantém o rect anterior** enquanto procura o próximo alvo (não zera no troca-passo); como
+o anel e o painel têm transição CSS de posição, ambos **deslizam** do alvo antigo para o novo — a Auri
+"caminha" o spotlight pela tela. Pop da mascote no troca-passo preservado (`key={safeStep}` + `pop`).
+
+### Conector em vez de duplicação
+
+Quando o painel flutua perto do alvo, o cue de texto "Veja aqui" é **ocultado** e aparece um **chip-seta
+âmbar** na borda do painel voltada para o alvo (aponta para ele, com `arrowPulse` leve). Quando o painel
+fica docado (nada coube) ou no mobile, mantém-se o cue "Veja aqui" sobre o alvo (comportamento da 5.0F.2).
+
+### Mobile (inalterado)
+
+Posicionamento inteligente é **gated** por `matchMedia('(max-width: 768px)')`: no celular o painel
+continua como bottom-sheet compacto + cue "Veja aqui", exatamente como na 5.0F.2. Sem regressão.
+
+### A11y / performance
+
+`prefers-reduced-motion` desliga o deslize (`.panelFloating`/`.spotlight`) e o `arrowPulse`. Listeners de
+scroll/resize/matchMedia/ResizeObserver limpos no unmount. Tudo visual é `pointer-events:none`
+(anel, cue, seta) — nunca bloqueia clique. Botões seguem acessíveis por teclado. Sem libs novas.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+- Zero backend, migration, schema, seed; demo-login e write-block intocados.
+
+---
+
+**Sprint 5.0F.2** (entregue 2026-05-28) — **Auri Walkthrough Mode / Tour por elementos da interface.**
+
+Muda a direção da 5.0F.1: o painel da Auri tinha virado um bloco grande de texto ("manual num card").
+A validação visual não aprovou. Agora a Auri **conduz a tela** — micro-passos curtos, cada um destacando
+**um elemento/área específica** da interface com um spotlight visual. Frontend-only.
+Zero backend, migration, schema, seed; `demo-login` e write-block **intocados**.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/GuidedDemoTour.tsx` | `DemoTourStep` reescrito (`targetId`/`placement`, sem `bullets`/`actionHint`); 20 micro-passos; engine de spotlight `TourSpotlight` (acha `[data-tour-id]`, anela, escurece o resto, mostra cue "Veja aqui") |
+| `frontend/src/components/GuidedDemoTour.module.css` | Card compacto (~21.5rem · 23rem ≥1280px); avatar da Auri "saindo" da borda superior; estilos de spotlight/cue; bottom-sheet ≤768px preservado |
+| `frontend/src/views/Dashboard.tsx` | `data-tour-id="nav-<tab>"` nas abas; auto-troca de aba no avanço de passo; removido o coachmark antigo (`tourTargetTab`); `onGoToTab` removido do tour |
+| `frontend/src/views/Dashboard.module.css` | Removidos `.navItemTourTarget`/`.tourCue` + keyframes `tourPulse`/`cueBob` (substituídos pelo spotlight) |
+| `AdministrativeSchedulePanel`, `PatientsList`, `FinancialPanel`, `InsurancePanel`, `InventoryPanel`, `ReportsPanel`, `ServicesPanel` | Adicionado `data-tour-id` em containers estáveis (uma linha cada, sem mudança estrutural) |
+
+### Walkthrough por elementos
+
+Cada passo aponta para um `targetId` que casa com um `data-tour-id` no DOM. Ao mudar de passo:
+1. o Dashboard auto-abre a aba do passo (`tab`);
+2. `TourSpotlight` procura o elemento (retry via `requestAnimationFrame` até ~30 frames, tolerante a
+   conteúdo assíncrono), faz `scrollIntoView`, anela com borda/brilho âmbar e escurece o resto da tela
+   (box-shadow `0 0 0 9999px`), e flutua o cue "Veja aqui" ao lado;
+3. tudo é `pointer-events:none` — **nunca** bloqueia clique nem quebra layout;
+4. se o elemento não existir (lista vazia, mobile, ainda carregando), **degrada com elegância**: sem
+   anel, só o texto curto da Auri — que por si já diz onde olhar.
+
+Targets ancorados: `nav-<tab>`, `agenda-summary`, `agenda-filters`, `agenda-list`, `patients-search`,
+`patients-list`, `financial-summary`, `financial-table`, `financial-payer` (1ª linha), `financial-details`
+(1ª linha), `insurance-tabs`, `insurance-content`, `inventory-summary`, `inventory-filters`,
+`inventory-list`, `reports-filters`, `reports-summary`, `services-list`.
+
+### Micro-passos por módulo (20 no total)
+
+- **Boas-vindas** — Auri se apresenta; aviso "tudo fictício, escrita bloqueada".
+- **Menu** — destaca a aba Agenda; ensina a navegação uma vez.
+- **Agenda** — resumo do dia · filtros · ações por agendamento.
+- **Pacientes** — busca · cartão/lista (histórico e prontuário).
+- **Financeiro** — cards (aberto/vencido/recebido) · tabela · badge de pagador · botão Detalhes.
+- **Convênios** — abas internas · carteirinhas (preço de referência nunca preenche sozinho).
+- **Estoque** — cards ativo/baixo · filtros · item com histórico.
+- **Relatórios** — filtros de período · resumo do período.
+- **Serviços** — lista com preço, duração e profissionais vinculados.
+- **Encerramento** — CTAs (Criar conta · Preparar arquivo de teste · Piloto assistido).
+
+Copy curta (1–2 frases por passo), linguagem de apresentação, sem jargão e sem listas grandes.
+
+### Auri "fora do quadradinho"
+
+Card mais enxuto (sem a seção "O que olhar"/"Experimente"). A mascote fica num avatar circular que
+**transborda a borda superior** do card (`overflow:visible` + avatar `position:absolute; top:-20px`),
+lendo como uma guia inclinada sobre a tela em vez de um widget. Minimizar continua disponível.
+
+### Mobile
+
+Bottom-sheet compacto preservado (≤768px): texto curto, `max-height` no scroll interno, spotlight ainda
+ancora/rola o alvo quando existe, sem cobrir totalmente o conteúdo.
+
+### Backlog — Auri dentro do app normal (NÃO implementado)
+
+Inalterado da 5.0F.1: Auri como onboarding no app real fica como **backlog futuro separado** — sem
+`/auth/demo-login`, sem troca de tenant, sem write-block, gatilho/dados diferentes da Demo Aurora.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+- Zero backend, migration, schema, seed; demo-login e write-block intocados.
+- Obs.: `docker-compose.yml` (`ALLOW_DEMO_LOGIN: "true"`) e linhas demo do `.env.example` já estavam
+  no diff desde a 5.0E — mudança externa/local, fora do escopo deste polish.
+
+---
+
+**Sprint 5.0F.1** (entregue 2026-05-28) — **Auri Presenter Mode / Tour profundo por módulo.**
+
+Aprofunda o tour guiado (sobre o polish visual da 5.0F): o painel da Auri vira um "copiloto de
+apresentação" no desktop e cada passo passa a explicar as funções principais de cada módulo.
+Frontend-only. Zero backend, migration, schema, seed; demo-login e write-block intocados.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/GuidedDemoTour.tsx` | `DemoTourStep` ganha `bullets`/`actionHint`/`demoNote`; 9 passos (inclui Serviços); seções "O que olhar / Experimente / Na demo" |
+| `frontend/src/components/GuidedDemoTour.module.css` | Painel desktop maior (31rem base · 34rem ≥1280px); bottom-sheet ≤768px; estilos de seção; reduced-motion |
+
+### Painel da Auri no desktop
+
+- Largura `31rem` (base desktop/tablet) e `34rem` em telas ≥1280px — presença de copiloto, não widget.
+- Mais respiro (padding maior), tipografia/hierarquia mais legíveis, controles maiores.
+- Mobile/tablet ≤768px mantém o bottom-sheet compacto (preservado, sem regressão).
+- `max-height` + `overflow-y:auto` para conteúdos mais longos.
+
+### Tour profundo por módulo
+
+Cada passo de módulo agora tem: título, frase de valor, **"O que olhar"** (bullets), **"Experimente"**
+(ação sugerida em destaque) e **"Na demo"** (aviso discreto sobre o que está bloqueado/como ler).
+Módulos cobertos: Boas-vindas · Agenda · Pacientes · Financeiro · Convênios · Estoque · Relatórios ·
+**Serviços** (novo) · Encerramento (CTAs). Linguagem humana e comercial, sem jargão técnico.
+
+### Backlog — Auri dentro do app normal (NÃO implementado)
+
+Futuramente queremos oferecer a Auri também no app normal, como onboarding ("Ver tour" / "Conhecer o
+sistema") para usuários novos. Regras obrigatórias quando for implementado:
+- **Não** usar `/auth/demo-login`.
+- **Não** trocar de clínica/tenant — guiar o usuário na própria conta.
+- Deve ser **separado** da Demo Aurora pública (mesmo componente de UI, gatilho e dados diferentes).
+- Sem write-block: no app real o usuário pode agir; o tour apenas orienta.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+- Zero backend, migration, schema, seed; demo-login e write-block intocados.
+
+---
+
+**Sprint 5.0E** (entregue 2026-05-28) — **Demo Experience / Tour Guiado com auto-login controlado.**
+
+Substitui o login assistido da 5.0D por uma experiência de demonstração real, separada do `/app` normal,
+com auto-login env-gated (sem expor credenciais) e um tour guiado com mascote.
+
+### Decisões (confirmadas com o usuário)
+
+1. **Entrada da demo:** endpoint backend env-gated `POST /auth/demo-login` (sem credenciais no body).
+2. **Restrição:** bloqueio no frontend com mensagem humanizada; backend read-only amplo fica como backlog.
+
+### Backend (autenticação)
+
+| Arquivo | Mudança |
+|---------|---------|
+| `backend/src/config/env.ts` | Flag `ALLOW_DEMO_LOGIN` (string→boolean, default false) |
+| `backend/src/services/authService.ts` | `demoLogin(ctx)` + constantes `DEMO_OWNER_EMAIL`/`DEMO_CLINIC_NAME` |
+| `backend/src/controllers/authController.ts` | handler `demoLogin` (não lê body) |
+| `backend/src/routes/auth.ts` | `POST /auth/demo-login` sob `authRateLimit` |
+| `.env.example` | bloco documentado `ALLOW_DEMO_LOGIN` |
+
+`authService.demoLogin` — guardas em ordem (nunca faz lookup com a feature off):
+1. `NODE_ENV=production` → 403 `demo_disabled`
+2. `!ALLOW_DEMO_LOGIN` → 403 `demo_disabled`
+3. demo não semeado / clínica errada → 409 `demo_not_available`
+
+Identidade e tenant são fixos no servidor (`demo.owner@clinicbridge.local` na "Clínica Demo Aurora");
+nenhum e-mail/senha vem do request. JWT emitido pelo mesmo `buildSession` do login normal — sem
+permissões extras, tenant isolation intacto. Audit metadata-only `auth.demo.login.success`.
+
+### Frontend
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/services/api.ts` | `api.demoLogin()`; write-block no `apiFetch` + bloqueio de export |
+| `frontend/src/services/demoMode.ts` | **novo** — `DEMO_CLINIC_NAME`, flag de write-block, evento, mensagem |
+| `frontend/src/services/AuthProvider.tsx` | `enterDemo()`, `isDemo`, efeito que arma/desarma o write-block |
+| `frontend/src/components/DemoMascot.tsx` | **novo** — mascote "Auri" em SVG inline |
+| `frontend/src/components/GuidedDemoTour.tsx` + `.module.css` | **novo** — tour flutuante persistente (8 passos) |
+| `frontend/src/components/DemoBlockedToast.tsx` + `.module.css` | **novo** — aviso humanizado global |
+| `frontend/src/views/Dashboard.tsx` + `.module.css` | barra de demo, tour, coachmark de aba, toast |
+| `frontend/src/views/DemoPage.tsx` + `.module.css` | CTAs "Entrar na demo guiada" chamam `enterDemo()` |
+| `frontend/src/views/LoginPage.tsx` + `Auth.module.css` | banner `?demo=aurora` removido (dead code) |
+| `frontend/src/components/DemoGuideCard.*` | **removidos** (substituídos pelo tour flutuante) |
+
+### Fluxo de entrada
+
+```
+/demo → "Entrar na demo guiada" (botão) → enterDemo() → POST /auth/demo-login
+      → JWT do demo.owner → navigate('/app')
+      → isDemo=true → barra de demo + tour flutuante "Auri" + write-block armado
+```
+
+Se `ALLOW_DEMO_LOGIN` não estiver ativo, o backend devolve 403 `demo_disabled` e a página mostra:
+"Demo guiada disponível apenas em ambiente preparado. Fale com a nossa equipe para agendar uma apresentação."
+
+### Restrições no modo demo (bloqueio frontend)
+
+- `apiFetch` recusa POST/PATCH (e `downloadPatientsExport`) quando o write-block está armado, antes da
+  rede, lançando `ApiError(403, demo_action_blocked)` + disparando `cb:demo-action-blocked`.
+- `DemoBlockedToast` (listener global) exibe: *"Na demonstração, esta ação fica bloqueada para manter os
+  dados de exemplo limpos. No uso real, sua clínica poderá executar essa ação."*
+- Leitura, navegação, filtros e detalhes seguem liberados. PDF de documento (leitura) não é bloqueado.
+- **Importante:** é guardrail de UX, **não** segurança. O tenant demo é 100% sintético e isolado; uma
+  chamada direta à API ainda poderia mutá-lo. Enforcement backend read-only para demo **pública** é backlog.
+
+### Tour guiado (mascote "Auri")
+
+- Painel flutuante (canto inferior direito; bottom-sheet no mobile), persistente durante a navegação,
+  minimizável (vira bolha com a mascote).
+- 8 passos: Boas-vindas → Agenda → Pacientes → Financeiro → Convênios → Estoque → Relatórios → Encerramento.
+- Próximo / Voltar / Pular / Recomeçar / minimizar + "Ir para este módulo" (troca a aba do Dashboard).
+- Coachmark: a aba alvo do passo atual pulsa em âmbar (`prefers-reduced-motion` respeitado).
+- Encerramento comercial: "Criar conta", "Preparar arquivo de teste", "Conhecer o piloto assistido"
+  (cada um encerra a demo e navega).
+
+### Segurança (resumo)
+
+- Sem credenciais demo no frontend (grep confirmado: 0 ocorrências).
+- Sem token hardcoded, sem bypass de auth — JWT real do mesmo mecanismo do login.
+- Endpoint duplamente gated (produção + flag) e identidade/tenant fixos no servidor.
+- Tenant isolation preservado; nenhum acesso a tenant real possível por este endpoint.
+- Auth normal (login/MFA) intocada.
+
+### Backlog (5.0F+)
+
+- Enforcement backend read-only para demo **pública** real (middleware por tenant demo).
+- Esconder visualmente botões de escrita (hoje clicáveis → mensagem), se desejado.
+- Reset periódico/automático dos dados demo.
+- Vídeo guiado real na página `/demo`.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `pnpm --filter backend typecheck` ✅
+- `git diff --check` rc=0 ✅
+- Zero migration, zero schema, zero seed.
+
+---
+
+**Sprint 5.0D** (entregue 2026-05-28) — **Demo Mode / Tour Guiado Controlado.**
+
+### Arquivos criados/alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/DemoGuideCard.tsx` | Criado — componente do tour guiado |
+| `frontend/src/components/DemoGuideCard.module.css` | Criado — estilos do tour |
+| `frontend/src/views/Dashboard.tsx` | `isDemoMode` + `DemoGuideCard` na aba Início |
+| `frontend/src/views/LoginPage.tsx` | Detecção `?demo=aurora` + banner âmbar |
+| `frontend/src/views/Auth.module.css` | `.demoNotice` adicionado |
+| `frontend/src/views/DemoPage.tsx` | CTA "Entrar na demo guiada" + card 3 → `/login?demo=aurora` |
+| `frontend/src/views/DemoPage.module.css` | `.btnDemo` adicionado |
+
+### Como funciona o tour guiado
+
+**Entrada:** `/demo` → CTA "Entrar na demo guiada" (amber) → `/login?demo=aurora`
+
+**Login:** detecta `?demo=aurora` via `useSearchParams`, exibe banner:
+> "Demonstração · Clínica Demo Aurora. Use somente dados fictícios. Nenhum paciente real.
+> As credenciais ficam nos documentos internos, apenas para ambiente controlado."
+> Sem auto-login, sem credenciais na UI.
+
+**Dashboard:** `isDemoMode = clinic?.nome === 'Clínica Demo Aurora'`.
+Quando true, renderiza `DemoGuideCard` acima do grid de Início.
+
+**DemoGuideCard — 7 passos:**
+1. Agenda — agendamentos fictícios da semana
+2. Pacientes — 20 pacientes de exemplo
+3. Serviços — catálogo com preço de tabela
+4. Financeiro — cobranças particulares/convênio/misto
+5. Convênios — operadoras e carteirinhas
+6. Estoque — itens e alertas de baixo estoque
+7. Relatórios — visão cruzada por período
+
+Interação:
+- Dots de progresso clicáveis
+- "Ir para módulo" — chama `setTab(t as TabKey)` direto no Dashboard
+- "Anterior" / "Próximo" — nav entre passos
+- Step resetado ao deslogar (estado React, sem persistência)
+
+### Segurança
+
+- Zero auto-login, zero bypass de auth
+- Zero credenciais no frontend (grep confirmado: 0 ocorrências)
+- `isDemoMode` é apenas informativo — não concede acesso extra
+- Backend, schema, migration e seed intocados
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+
+### Backlog 5.0E
+
+- Restrições visuais de ações destrutivas no modo demo (desativar usuário, resetar MFA)
+- Highlight visual da aba ativa ao clicar "Ir para módulo"
+- Dismiss/fechar card manualmente
+- Step persistido em sessionStorage se necessário
+
+---
+
 **Sprint 5.0C.2** (entregue 2026-05-28) — **Fluxo de acesso à demo / acesso controlado.**
 
 Seção "Como acessar a demonstração" adicionada à página `/demo`.

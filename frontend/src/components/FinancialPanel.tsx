@@ -239,7 +239,7 @@ function ChargeListView({
   return (
     <>
       {/* Summary cards */}
-      <div className={styles.summaryRow}>
+      <div className={styles.summaryRow} data-tour-id="financial-summary">
         <div className={styles.summaryCard}>
           <div className={styles.summaryCardIcon}>
             <Receipt size={18} aria-hidden="true" />
@@ -370,7 +370,7 @@ function ChargeListView({
 
       {/* Table */}
       {!listQuery.isError && (
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} data-tour-id="financial-table">
           <table className={styles.table}>
             <thead>
               <tr>
@@ -400,7 +400,7 @@ function ChargeListView({
                   </td>
                 </tr>
               )}
-              {charges.map((c) => (
+              {charges.map((c, i) => (
                 <tr
                   key={c.id}
                   className={styles.tableRow}
@@ -413,7 +413,7 @@ function ChargeListView({
                     {formatCents(c.amount_cents)}
                   </td>
                   <td className={styles.tdDate}>{formatDate(c.due_date)}</td>
-                  <td className={styles.tdPayer}>
+                  <td className={styles.tdPayer} data-tour-id={i === 0 ? 'financial-payer' : undefined}>
                     <PayerBadge payer_type={c.payer_type} />
                   </td>
                   <td>
@@ -423,6 +423,7 @@ function ChargeListView({
                     <button
                       type="button"
                       className={styles.btnDetails}
+                      data-tour-id={i === 0 ? 'financial-details' : undefined}
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectCharge(c.id);

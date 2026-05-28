@@ -961,7 +961,7 @@ export function InventoryPanel(): JSX.Element {
       </p>
 
       {/* Hero summary */}
-      <div className={styles.summary}>
+      <div className={styles.summary} data-tour-id="inventory-summary">
         <div className={styles.summaryCard}>
           <span className={styles.summaryLabel}>Itens ativos</span>
           <span className={styles.summaryValue}>
@@ -977,7 +977,7 @@ export function InventoryPanel(): JSX.Element {
       </div>
 
       {/* Filters */}
-      <div className={styles.filters}>
+      <div className={styles.filters} data-tour-id="inventory-filters">
         <input
           type="search"
           className={styles.filterInput}
@@ -1066,7 +1066,7 @@ export function InventoryPanel(): JSX.Element {
       )}
 
       {items.length > 0 && (
-        <ul className={styles.list}>
+        <ul className={styles.list} data-tour-id="inventory-list">
           {items.map((item) => (
             <ItemCard
               key={item.id}

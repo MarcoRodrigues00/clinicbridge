@@ -7,6 +7,13 @@
 // - We never read `message` from the network without sanitization; we only
 //   surface the `error.message` field that the backend explicitly produces.
 
+import {
+  DEMO_BLOCKED_MESSAGE,
+  isDemoWriteBlock,
+  isWriteBlockedInDemo,
+  notifyDemoBlocked,
+} from './demoMode';
+
 const DEFAULT_BASE_URL = 'http://localhost:3001';
 
 function resolveBaseUrl(): string {
@@ -1241,6 +1248,14 @@ function buildReportsQuery(
 }
 
 async function apiFetch<T>(path: string, opts: FetchOptions): Promise<T> {
+  // Demo guardrail (Sprint 5.0E): in guided-demo mode, refuse mutating calls
+  // before they ever reach the network and surface a humanized message. Reads
+  // pass through untouched. Not a security control — see services/demoMode.ts.
+  if (isWriteBlockedInDemo(path, opts.method)) {
+    notifyDemoBlocked();
+    throw new ApiError(403, { code: 'demo_action_blocked', message: DEMO_BLOCKED_MESSAGE });
+  }
+
   const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData;
   const headers: Record<string, string> = {
     Accept: 'application/json',
@@ -1324,6 +1339,13 @@ export const api = {
   // the account has MFA enabled (no session token issued yet).
   login(payload: LoginPayload): Promise<LoginOutcome> {
     return apiFetch<LoginOutcome>('/auth/login', { method: 'POST', body: payload });
+  },
+
+  // Guided demo (Sprint 5.0E). No credentials in the body — the backend issues a
+  // session for the fixed pre-seeded demo owner. Only enabled when the server has
+  // ALLOW_DEMO_LOGIN=true (otherwise 403 demo_disabled).
+  demoLogin(): Promise<LoginResponse> {
+    return apiFetch<LoginResponse>('/auth/demo-login', { method: 'POST' });
   },
 
   verifyMfaLogin(challenge_token: string, code: string): Promise<LoginResponse> {
@@ -2086,6 +2108,13 @@ export const api = {
     token: string,
     params: { format: 'csv' | 'xlsx'; search?: string },
   ): Promise<{ blob: Blob; filename: string }> {
+    // Demo guardrail (Sprint 5.0E): export is a download of the synthetic data;
+    // we block it in guided-demo mode for consistency with the other actions.
+    if (isDemoWriteBlock()) {
+      notifyDemoBlocked();
+      throw new ApiError(403, { code: 'demo_action_blocked', message: DEMO_BLOCKED_MESSAGE });
+    }
+
     const query = new URLSearchParams();
     query.set('format', params.format);
     if (params.search && params.search.trim().length > 0) {

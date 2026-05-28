@@ -15,6 +15,7 @@ import {
   Briefcase,
   HeartHandshake,
   Boxes,
+  RotateCcw,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { UploadPanel } from '../components/UploadPanel';
@@ -34,6 +35,9 @@ import { ReportsPanel } from '../components/ReportsPanel';
 import { ServicesPanel } from '../components/ServicesPanel';
 import { InsurancePanel } from '../components/InsurancePanel';
 import { InventoryPanel } from '../components/InventoryPanel';
+import { GuidedDemoTour, DEMO_TOUR_STEPS } from '../components/GuidedDemoTour';
+import { DemoBlockedToast } from '../components/DemoBlockedToast';
+import { DemoMascot } from '../components/DemoMascot';
 import { useAuth } from '../services/AuthProvider';
 import type { SafeUser } from '../services/api';
 import styles from './Dashboard.module.css';
@@ -79,12 +83,18 @@ const SECTION_INTRO: Record<TabKey, { title: string; subtitle: string }> = {
 
 export function Dashboard(): JSX.Element {
   const navigate = useNavigate();
-  const { user, clinic, logout, refreshMe } = useAuth();
+  const { user, clinic, isDemo, logout, refreshMe } = useAuth();
   const [sessionsRefresh, setSessionsRefresh] = useState(0);
   // Shared counter so the patient list and the duplicates panel reload each other
   // after a create/edit/archive/restore (Sprint 3.22/3.23).
   const [patientsRefresh, setPatientsRefresh] = useState(0);
   const [tab, setTab] = useState<TabKey>('inicio');
+
+  // Guided demo tour state (Sprint 5.0E; walkthrough mode 5.0F.2). Lifted here so
+  // the demo bar's "Recomeçar tour" can drive the floating tour and so each step
+  // can auto-open the module it points at.
+  const [tourStep, setTourStep] = useState(0);
+  const [tourCollapsed, setTourCollapsed] = useState(false);
 
   // Sprint 3.1: only the clinic owner can run sensitive administrative actions.
   const isOwner = user?.papel === 'dono_clinica';
@@ -93,9 +103,33 @@ export function Dashboard(): JSX.Element {
     void refreshMe();
   }, [refreshMe]);
 
+  // Walkthrough mode (5.0F.2): advancing/rewinding a step opens the module that
+  // step points at, so Auri's spotlight always has its target on screen. Only
+  // fires on step changes — manual tab clicks mid-tour are left alone.
+  useEffect(() => {
+    if (!isDemo || tourCollapsed) return;
+    const stepTab = DEMO_TOUR_STEPS[tourStep]?.tab;
+    if (stepTab) setTab(stepTab as TabKey);
+  }, [tourStep, isDemo, tourCollapsed]);
+
   function handleLogout(): void {
     logout();
     navigate('/login', { replace: true });
+  }
+
+  // Closing-CTA / "Sair da demo": end the demo session and leave /app.
+  function handleExitDemoTo(path: string): void {
+    logout();
+    if (path.startsWith('/#')) {
+      window.location.href = path;
+    } else {
+      navigate(path, { replace: true });
+    }
+  }
+
+  function restartTour(): void {
+    setTourStep(0);
+    setTourCollapsed(false);
   }
 
   // Sprint 3.24: a logged-in user without a clinic (typically a freshly
@@ -120,6 +154,32 @@ export function Dashboard(): JSX.Element {
         </button>
       </header>
 
+      {isDemo && (
+        <div className={styles.demoBar} role="note">
+          <span className={styles.demoBarLeft}>
+            <DemoMascot size={26} mood="happy" />
+            <span className={styles.demoBarText}>
+              <strong>Demonstração guiada</strong>
+              <span className={styles.demoBarSub}>Dados 100% fictícios · ambiente controlado</span>
+            </span>
+          </span>
+          <span className={styles.demoBarActions}>
+            <button type="button" className={styles.demoBarBtn} onClick={restartTour}>
+              <RotateCcw size={14} aria-hidden="true" />
+              Recomeçar tour
+            </button>
+            <button
+              type="button"
+              className={styles.demoBarExit}
+              onClick={() => handleExitDemoTo('/demo')}
+            >
+              <LogOut size={14} aria-hidden="true" />
+              Sair da demo
+            </button>
+          </span>
+        </div>
+      )}
+
       <main className={styles.main}>
         <section className={styles.hero}>
           <span className={styles.statusPill}>
@@ -138,6 +198,7 @@ export function Dashboard(): JSX.Element {
               <button
                 key={t.key}
                 type="button"
+                data-tour-id={`nav-${t.key}`}
                 className={`${styles.navItem} ${active ? styles.navItemActive : ''}`}
                 aria-current={active ? 'page' : undefined}
                 onClick={() => setTab(t.key)}
@@ -315,6 +376,19 @@ export function Dashboard(): JSX.Element {
           </nav>
         </div>
       </footer>
+
+      {isDemo && (
+        <>
+          <GuidedDemoTour
+            step={tourStep}
+            setStep={setTourStep}
+            collapsed={tourCollapsed}
+            setCollapsed={setTourCollapsed}
+            onExitTo={handleExitDemoTo}
+          />
+          <DemoBlockedToast />
+        </>
+      )}
     </div>
   );
 }
