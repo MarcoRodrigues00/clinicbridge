@@ -7,6 +7,135 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.0I** (entregue 2026-05-28) — **Mobile nav polish — grade compacta no dashboard.**
+
+CSS-only. `Dashboard.module.css` ganha bloco `@media (max-width: 560px)`:
+`.nav` vira grade 2 colunas (`grid-template-columns: repeat(2, 1fr)`); `.navItem` com padding menor (0.52rem 0.75rem vs 0.6rem 1rem), font-size 0.82rem vs 0.95rem; ícones 15px via `.navItem svg`; `.sectionHead` margin-top reduzido para 1.25rem; `.demoBarSub` oculto; botões da demo bar mais compactos. Desktop ≥561px: inalterado. Tour spotlight continua funcional (`data-tour-id` intocado; GuidedDemoTour já usa mobile-dock em ≤768px).
+Frontend-only. Zero backend, migration, schema, seed, demo-login, write-block.
+
+---
+
+**Sprint 5.0G.3** (entregue 2026-05-28) — **Auri teaser mais forte + bolinha de reabrir.**
+
+Teaser desktop ganhou mais presença: card 21rem → 26rem, avatar 56px → 74px, mascote 44px → 58px, título maior (1.05rem/800), CTA com mais padding. Mobile preservado (56px/44px nos media queries). Quando o usuário fecha o teaser com X ou "Agora não", a Auri não some — aparece uma bolinha flutuante circular (64px desktop, 52px mobile) com a mascote `happy`, idle pulse (`bubblePulse`) e hover scale. Clicar na bolinha reabre o teaser imediatamente e limpa o `sessionStorage`. Se `sessionStorage` já tiver o dismiss ao montar (sessão anterior), a bolinha aparece direto sem delay. Clicar em "Entrar na demo guiada" continua navegando para `/demo` (não chama `demo-login`). Frontend-only. Zero backend, migration, schema, seed; `demo-login` e write-block **intocados**; sem chat real, sem credenciais, sem bypass.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/LandingAuriTeaser.tsx` | Estado `bubble` adicionado; `dismiss()` seta `bubble=true`; `reopen()` limpa sessionStorage + mostra teaser; `<motion.button>` flutuante com DemoMascot; `useEffect` seta `bubble=true` diretamente se sessionStorage já tiver dismiss |
+| `frontend/src/components/LandingAuriTeaser.module.css` | `.teaser` desktop width 26rem, gap/padding aumentados, box-shadow com glow cyan; `.avatar` 74px desktop / 56px mobile; `.mascot` 58px desktop / 44px mobile; `.bubble` 64px desktop / 52px mobile, `bubblePulse` animation; `.bubbleMascot` 48px / 38px mobile |
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+- Zero backend, migration, schema, seed; demo-login e write-block intocados.
+
+---
+
+**Sprint 5.0H** (entregue 2026-05-28) — **CLAUDE.md Slimming / Context Hygiene.**
+
+Docs-only. CLAUDE.md reduzido de ~51.4k chars para ~13.6k chars (~73%). Todo o histórico detalhado por sprint já estava em `docs/sprint-history.md` e `docs/project-state.md`. Seção "Estado atual" condensada (último commit + working tree + próxima sprint); catálogos de endpoints removidos (já nos ADRs); "O que existe" virou lista de módulos em 1 parágrafo; sprints antigas e Trilha Clinic OS removidas. Decisões críticas preservadas: Clinic OS modular, piloto controlado, dados reais NO-GO, Demo Aurora fictícia, invariantes de segurança/tenant/LGPD, seeds/smoke users com comandos. Zero código, zero migration, zero backend/frontend.
+
+---
+
+**Sprint 5.0G.1** (entregue 2026-05-28) — **Auri teaser na landing.**
+
+Polish pequeno sobre a 5.0G: a Auri agora aparece como **personagem na primeira experiência pública** —
+um teaser leve e dismissível convidando o visitante para a demo guiada. Frontend-only. Zero backend,
+migration, schema, seed; `demo-login` e write-block **intocados**; sem chat real, sem credenciais, sem bypass.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/LandingAuriTeaser.tsx` + `.module.css` (novos) | Teaser `position:fixed` com a mascote Auri; surge após ~1200ms; copy curta ("Oi, eu sou a Auri 👋" / "Quer ver o ClinicBridge funcionando com dados fictícios?"); CTA "Entrar na demo guiada" → `/demo`; "Agora não" + botão fechar; dismiss persistido em `sessionStorage` |
+| `frontend/src/views/Landing.tsx` | Monta `<LandingAuriTeaser />` no fim da página |
+
+### Como aparece
+
+- Surge após **~1200ms** (delay) no canto inferior direito (desktop), com entrada leve (pop/slide via
+  framer-motion). Não cobre os CTAs do Hero (eles ficam na parte superior/esquerda).
+- Mostra a Auri (mascote ~44px num avatar de 56px) acenando (`mood="wave"`), maior que um ícone e menor
+  que a Auri do tour dentro do app.
+- Não duplica a `DemoCallout`: texto curto, só um convite.
+
+### Fechar / sessionStorage
+
+- "Agora não", o **X** e o clique no CTA marcam `sessionStorage['cb-auri-teaser-dismissed'] = '1'` e
+  escondem o teaser **durante a sessão**. Acesso a `sessionStorage` é protegido por `try/catch`.
+- Sem backend, sem cookies, sem tracking/analytics.
+
+### Desktop vs mobile
+
+- **Desktop:** card no canto inferior direito (`right/bottom 1.5rem`, ~21rem), convite (não modal bloqueante).
+- **Mobile (≤560px):** vira bottom card discreto (`left/right/bottom 0.75rem`), sem cobrir o Hero inteiro,
+  com X fácil de tocar.
+
+### CTA / fluxo da demo
+
+"Entrar na demo guiada" **navega para `/demo`** (não chama `demo-login`). O login real da demo continua
+acontecendo apenas pelo botão da `/demo` (`enterDemo()` → `POST /auth/demo-login` env-gated). Sem bypass.
+
+### Reduced-motion / performance
+
+`useReducedMotion` (framer): com reduced-motion, o teaser aparece **sem** pop/slide/float (só fade), o
+mascote vai estático (`animated={false}` → sem SMIL) e o CSS `prefers-reduced-motion` zera o float.
+Só transform/opacity; sem libs novas (framer já era usado); sem canvas; `setTimeout` único, limpo no unmount.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+- Zero backend, migration, schema, seed; demo-login e write-block intocados.
+
+---
+
+**Sprint 5.0G** (entregue 2026-05-28) — **Landing com demo guiada em destaque.**
+
+A demo guiada com a Auri virou o **principal ativo comercial**. A landing pública e a `/demo` foram
+reorganizadas para que conhecer o produto via demo seja o **caminho principal e mais óbvio**. Frontend-only.
+Zero backend, migration, schema, seed; `demo-login` e write-block **intocados** (nenhum bypass novo).
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/Hero.tsx` + `.module.css` | Copy nova (título "Veja o ClinicBridge funcionando antes de criar sua clínica" + subtítulo da demo); hierarquia de CTA: **Ver demo guiada** (primário → `/demo`) · Criar conta (secundário) · Preparar arquivo de teste (terciário, link discreto `.btnText`) |
+| `frontend/src/components/Header.tsx` + `.module.css` | CTA proeminente do header passa a ser **Ver demo guiada** (→ `/demo`); "Criar conta" vira link de nav; link "Demo" e `.demoLink` removidos |
+| `frontend/src/components/DemoCallout.tsx` + `.module.css` (novos) | Seção curta perto do topo: 4 pontos (Dados fictícios · A Auri guia você · Sem paciente real · Ações bloqueadas) + CTA "Ver demo guiada"; usa a mascote Auri |
+| `frontend/src/views/Landing.tsx` | `DemoCallout` inserida logo após o `Hero` |
+| `frontend/src/components/FinalCTA.tsx` | CTA final passa a liderar com **Ver demo guiada** (→ `/demo`); "Criar conta" como secundário; copy comercial |
+| `frontend/src/components/PricingPlans.tsx` + `.module.css` | Link discreto **"Ver na demo guiada"** (`.demoMini` → `/demo`) em cada plano; sem preço/checkout/billing |
+| `frontend/src/views/DemoPage.tsx` | Botão principal segue **Entrar na demo guiada** (chama `enterDemo()` existente); placeholder de vídeo **rebaixado** (movido para perto do fim e reescrito: "A demonstração guiada já está disponível agora — é só entrar") |
+
+### Hierarquia de CTAs (landing)
+
+1. **Primário:** "Ver demo guiada" → navega para `/demo` (Hero, Header, FinalCTA, DemoCallout, cada plano).
+2. **Secundário:** "Criar conta" → `/register`.
+3. **Terciário:** "Preparar arquivo de teste" → `/register` (link discreto no Hero).
+
+### Fluxo da demo (sem bypass novo)
+
+A landing **navega** para `/demo`; o ato de entrar continua sendo o botão "Entrar na demo guiada" da
+`/demo`, que chama `enterDemo()` (mecanismo frontend já existente → `POST /auth/demo-login` env-gated).
+Nenhuma credencial é exibida; nenhum novo caminho de autenticação foi criado.
+
+### Copy / honestidade
+
+Linguagem comercial simples para clínica pequena/consultório; sem "dataset/seed/tenant/schema/demo-login".
+Reforço de "dados fictícios / sem paciente real / ações bloqueadas". Planos seguem apresentação estática
+(sem preço, checkout ou promessa de função inexistente).
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+- Zero backend, migration, schema, seed; demo-login e write-block intocados.
+
+---
+
 **Sprint 5.0F.6** (entregue 2026-05-28) — **Ajuste mobile da Auri / presença no celular.**
 
 Ajuste fino sobre a 5.0F.5. Na validação visual mobile a Auri ficou **pequena demais** (≈50px), perdida

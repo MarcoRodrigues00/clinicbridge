@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { UserPlus, FileSearch } from 'lucide-react';
+import { Presentation, UserPlus } from 'lucide-react';
 import styles from './FinalCTA.module.css';
 
 export function FinalCTA(): JSX.Element {
@@ -13,30 +13,30 @@ export function FinalCTA(): JSX.Element {
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <span className="eyebrow">Comece pelo essencial</span>
+        <span className="eyebrow">Comece pela demonstração</span>
         <h2 className={styles.title}>
-          Comece a organizar sua clínica hoje
+          Veja o ClinicBridge funcionando agora
         </h2>
         <p className={styles.subtitle}>
-          Crie sua conta e comece pelo que faz mais sentido para a sua rotina — a plataforma
-          cresce junto com a clínica.
+          Entre na demonstração guiada com dados fictícios e deixe a Auri te mostrar agenda,
+          pacientes, financeiro e muito mais em poucos minutos. Quando quiser, crie sua conta.
         </p>
         <div className={styles.actions}>
           <Link
-            to="/register"
+            to="/demo"
             className={styles.btnPrimary}
-            aria-label="Criar conta no ClinicBridge"
+            aria-label="Ver a demonstração guiada do ClinicBridge"
           >
-            <UserPlus size={16} aria-hidden="true" />
-            Criar conta
+            <Presentation size={16} aria-hidden="true" />
+            Ver demo guiada
           </Link>
           <Link
             to="/register"
             className={styles.btnGhost}
-            aria-label="Preparar arquivo de teste para análise"
+            aria-label="Criar conta no ClinicBridge"
           >
-            <FileSearch size={16} aria-hidden="true" />
-            Preparar arquivo de teste
+            <UserPlus size={16} aria-hidden="true" />
+            Criar conta
           </Link>
         </div>
       </motion.div>

@@ -133,6 +133,23 @@
   transform: translateY(-1px);
 }
 
+/* Tertiary, discreet text link (below the two buttons). */
+.btnText {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: -0.5rem;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: color 0.18s ease;
+}
+
+.btnText:hover {
+  color: var(--text-0);
+  text-decoration: underline;
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, auto));

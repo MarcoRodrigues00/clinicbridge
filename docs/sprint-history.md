@@ -6625,3 +6625,201 @@ Inalterado: `AURI_SIZE` 104, `pokeGap`, viés ao alvo, `topSafe`, rabicho e `.au
 - `git diff --check` rc=0 ✅
 
 **Sprint 5.0F.6 entregue.** Pronta para validação visual antes do commit.
+
+---
+
+## Sprint 5.0G (Landing com demo guiada em destaque)
+
+**Tipo:** Frontend-only. Zero backend, migration, schema, seed; `demo-login` e write-block intocados;
+nenhum bypass novo.
+
+### Por que mudou
+
+A demo guiada com a Auri (5.0E–5.0F.6) foi validada e virou o principal ativo comercial. A landing ainda
+dava peso a "Criar conta"/"Preparar arquivo de teste". Agora a demo é o caminho principal e mais óbvio.
+
+### O que mudou
+
+- **Hero:** título "Veja o ClinicBridge funcionando antes de criar sua clínica" + subtítulo da demo;
+  CTA primário **Ver demo guiada** (→ `/demo`), secundário Criar conta, terciário Preparar arquivo de teste
+  (link discreto `.btnText`).
+- **Header:** CTA proeminente passa a ser **Ver demo guiada** (→ `/demo`); "Criar conta" vira link de nav;
+  link "Demo" e `.demoLink` removidos.
+- **DemoCallout (novo):** seção curta perto do topo — 4 pontos (Dados fictícios · A Auri guia você · Sem
+  paciente real · Ações bloqueadas) + CTA "Ver demo guiada"; usa a mascote. Inserida após o Hero.
+- **FinalCTA:** lidera com **Ver demo guiada** (→ `/demo`); Criar conta secundário.
+- **PricingPlans:** link discreto **"Ver na demo guiada"** (→ `/demo`) em cada plano; sem preço/checkout.
+- **/demo:** botão principal segue **Entrar na demo guiada** (chama `enterDemo()` existente); placeholder
+  de vídeo rebaixado/reescrito ("a demo já está disponível agora — é só entrar; vídeo em breve, complemento").
+
+### Hierarquia de CTAs
+
+Primário: Ver demo guiada → `/demo`. Secundário: Criar conta → `/register`. Terciário: Preparar arquivo de
+teste → `/register`. O entrar de fato continua no botão da `/demo` (`enterDemo()` → `POST /auth/demo-login`
+env-gated). Sem credenciais expostas, sem novo caminho de auth.
+
+### Copy / honestidade
+
+Linguagem comercial simples; sem "dataset/seed/tenant/schema/demo-login"; reforço de dados fictícios / sem
+paciente real / ações bloqueadas. Planos seguem estáticos (sem preço/checkout/billing).
+
+### Arquivos
+
+`Hero.tsx`/`.module.css`, `Header.tsx`/`.module.css`, `DemoCallout.tsx`/`.module.css` (novos), `Landing.tsx`,
+`FinalCTA.tsx`, `PricingPlans.tsx`/`.module.css`, `DemoPage.tsx`.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ (aviso de bundle pré-existente)
+- `git diff --check` rc=0 ✅
+
+**Sprint 5.0G entregue.** Pronta para validação visual antes do commit.
+
+---
+
+## Sprint 5.0G.1 (Auri teaser na landing)
+
+**Tipo:** Frontend-only, polish. Zero backend, migration, schema, seed; `demo-login` e write-block
+intocados; sem chat real, sem credenciais, sem bypass.
+
+### O que mudou
+
+- **`LandingAuriTeaser` (novo):** teaser `position:fixed` com a mascote Auri, surgindo após ~1200ms no
+  canto inferior direito (desktop) com entrada leve (framer-motion). Copy curta ("Oi, eu sou a Auri 👋" /
+  "Quer ver o ClinicBridge funcionando com dados fictícios?"), CTA **Entrar na demo guiada** → `/demo`,
+  "Agora não" + botão fechar.
+- **Landing.tsx:** monta `<LandingAuriTeaser />`.
+
+### Fechar / sessionStorage
+
+"Agora não", X e clique no CTA marcam `sessionStorage['cb-auri-teaser-dismissed']='1'` (try/catch) e
+escondem o teaser durante a sessão. Sem backend, sem cookies, sem analytics.
+
+### Desktop vs mobile
+
+Desktop: card no canto inferior direito (~21rem), convite não bloqueante, não cobre os CTAs do Hero.
+Mobile (≤560px): bottom card discreto (margens 0.75rem), sem cobrir o Hero, X fácil de tocar.
+
+### CTA / fluxo
+
+"Entrar na demo guiada" navega para `/demo` (não chama demo-login). A entrada real segue só pelo botão da
+`/demo` (`enterDemo()` → `POST /auth/demo-login` env-gated). Sem bypass.
+
+### Reduced-motion / performance
+
+`useReducedMotion`: com reduced-motion, aparece só com fade (sem pop/slide/float), mascote estático
+(`animated={false}`), CSS zera o float. Só transform/opacity; framer já era dependência; sem canvas;
+`setTimeout` único limpo no unmount.
+
+### Arquivos
+
+`LandingAuriTeaser.tsx` + `.module.css` (novos), `views/Landing.tsx`.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅ (aviso de bundle pré-existente)
+- `git diff --check` rc=0 ✅
+
+---
+
+## Sprint 5.0H — CLAUDE.md Slimming / Context Hygiene (2026-05-28)
+
+**Tipo:** Docs-only. Zero código, zero migration, zero backend/frontend.
+
+CLAUDE.md reduziu de ~51.4k chars (674 linhas) para ~13.6k chars (212 linhas), redução de ~73%.
+Todo o histórico detalhado por sprint já estava em `docs/sprint-history.md` e `docs/project-state.md`.
+
+**O que foi removido do CLAUDE.md:**
+- Descrições detalhadas sprint-a-sprint de 5.0A até 4.4E-A (~470 linhas de histórico)
+- Catálogos de endpoints (financeiro, relatórios, serviços, estoque, convênios) — já nos ADRs
+- "O que existe" (parágrafo longo) → virou lista de módulos em 1 parágrafo
+- "Sprints anteriores recentes" bullet list e "Trilha Clinic OS" timeline
+
+**O que foi preservado:** estado operacional, módulos, migrações, seeds/smoke, restrições críticas de segurança, stack, arquitetura, comandos, próximas prioridades.
+
+### Checks
+
+- `git diff --check` rc=0 ✅
+- Zero código, schema, migration, seed, backend, frontend.
+
+---
+
+## Sprint 5.0G.3 — Auri teaser mais forte + bolinha de reabrir (2026-05-28)
+
+**Tipo:** Frontend-only. Zero backend, migration, schema, seed; `demo-login` e write-block intocados.
+
+### Mudanças
+
+**Teaser desktop mais presente:**
+- Card: 21rem → **26rem**; gap/padding aumentados; box-shadow com glow cyan suave.
+- Avatar: 56px → **74px** (desktop); 56px mantido no mobile.
+- Mascote: 44px → **58px** (desktop); 44px mantido no mobile.
+- Título: 0.95rem → **1.05rem**, font-weight 800 mantido.
+- CTA: padding 0.6/0.9 → **0.7/1.1**, font-size 0.88 → **0.9rem**.
+
+**Bolinha flutuante de reabrir:**
+- Fechar (X ou "Agora não"): `setVisible(false) + setBubble(true) + sessionStorage='1'`.
+- Bolinha: `position: fixed`, `bottom/right: 1.5rem`, **64px desktop / 52px mobile**, circular, radial cyan,
+  idle `bubblePulse` (glow oscila), hover `scale(1.1)`. `aria-label="Abrir convite da Auri"`.
+- Mascote `DemoMascot` mood=`happy` centralizada (48px desktop / 38px mobile).
+- Clicar: `reopen()` → `setBubble(false) + setVisible(true) + sessionStorage.removeItem`.
+- Montagem com sessionStorage já = '1': `setBubble(true)` direto (sem delay).
+- `prefers-reduced-motion`: sem float/pulse, fade simples.
+
+**Mobile:** preservado. Bolinha 52px discreta no canto.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/components/LandingAuriTeaser.tsx` | Estado `bubble`; funções `dismiss`/`reopen`; `<motion.button>` flutuante |
+| `frontend/src/components/LandingAuriTeaser.module.css` | Teaser maior desktop; `.avatar`/`.mascot` com override mobile; `.bubble` + `.bubbleMascot` + `bubblePulse` |
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+
+**Sprint 5.0G.1 entregue.** Pronta para validação visual antes do commit.
+
+---
+
+## Sprint 5.0I — Mobile nav polish / grade compacta no dashboard (2026-05-28)
+
+**Tipo:** Frontend CSS-only. Zero backend, migration, schema, seed, demo-login, write-block.
+
+### Problema
+
+Na visão mobile (≤560px) o menu do dashboard usava `flex-wrap: wrap` com `padding: 0.6rem 1rem; font-size: 0.95rem` para cada item. Com 10–11 módulos, formava ~5 linhas de itens de largura variável — aparência de menu desktop espremido, sem polimento mobile.
+
+### Solução
+
+Adicionado bloco `@media (max-width: 560px)` em `Dashboard.module.css`:
+
+| Propriedade | Antes | Depois |
+|---|---|---|
+| `.nav` layout | `flex-wrap: wrap` | `grid 2 colunas` |
+| `.nav` gap | 0.4rem | 0.35rem |
+| `.nav` margin-top | 2rem | 1.5rem |
+| `.navItem` padding | 0.6rem 1rem | 0.52rem 0.75rem |
+| `.navItem` font-size | 0.95rem | 0.82rem |
+| `.navItem` justify | default | flex-start |
+| `.navItem svg` | 17px (TSX) | 15px (CSS override) |
+| `.sectionHead` margin-top | 2rem | 1.25rem |
+| `.demoBarSub` | visível | oculto (mobile) |
+| `.demoBarBtn/Exit` padding | 0.45rem 0.85rem | 0.38rem 0.65rem |
+
+Desktop ≥561px: intocado.
+
+### Tour (GuidedDemoTour)
+
+Spotlight continua funcional: `data-tour-id="nav-agenda"` permanece no botão; `getBoundingClientRect()` encontra o novo layout; GuidedDemoTour já usa `isMobile (≤768px)` → modo bottom-dock, independente da posição visual do item.
+
+### Arquivo alterado
+
+`frontend/src/views/Dashboard.module.css` — somente adição de media query.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅

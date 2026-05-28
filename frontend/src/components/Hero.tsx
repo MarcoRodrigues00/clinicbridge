@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { UserPlus, FileSearch } from 'lucide-react';
+import { Presentation, UserPlus, FileSearch } from 'lucide-react';
 import { DashboardMockup } from './DashboardMockup';
 import styles from './Hero.module.css';
 
@@ -22,25 +22,30 @@ export function Hero(): JSX.Element {
           <span className="eyebrow">Para clínicas e consultórios · piloto v0.1</span>
 
           <h1 className={styles.title}>
-            Organize sua clínica{' '}
-            <span className={styles.titleAccent}>em um só lugar</span>
+            Veja o ClinicBridge funcionando{' '}
+            <span className={styles.titleAccent}>antes de criar sua clínica</span>
           </h1>
 
           <p className={styles.subtitle}>
-            Controle pacientes, agenda, cobranças, convênios, estoque e documentos em uma
-            plataforma segura para clínicas pequenas e consultórios.
+            Entre em uma demonstração guiada com dados fictícios. A Auri mostra agenda,
+            pacientes, financeiro, convênios, estoque, serviços e relatórios em poucos minutos.
           </p>
 
           <div className={styles.actions}>
-            <Link to="/register" className={styles.btnPrimary}>
+            <Link to="/demo" className={styles.btnPrimary}>
+              <Presentation size={16} aria-hidden="true" />
+              Ver demo guiada
+            </Link>
+            <Link to="/register" className={styles.btnGhost}>
               <UserPlus size={16} aria-hidden="true" />
               Criar conta
             </Link>
-            <Link to="/register" className={styles.btnGhost}>
-              <FileSearch size={16} aria-hidden="true" />
-              Preparar arquivo de teste
-            </Link>
           </div>
+
+          <Link to="/register" className={styles.btnText}>
+            <FileSearch size={14} aria-hidden="true" />
+            Preparar arquivo de teste
+          </Link>
 
           <div className={styles.stats} role="list">
             <div role="listitem">

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { Presentation, ArrowRight } from 'lucide-react';
 import { Logo } from './Logo';
 import styles from './Header.module.css';
 
@@ -13,7 +13,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Como funciona',  href: '#como-funciona' },
   { label: 'Funcionalidades', href: '#roadmap' },
   { label: 'Planos',         href: '#planos' },
-  { label: 'Demo',           to: '/demo' },
+  { label: 'Criar conta',    to: '/register' },
 ];
 
 export function Header(): JSX.Element {
@@ -33,7 +33,7 @@ export function Header(): JSX.Element {
         <nav className={styles.nav} aria-label="Navegação principal">
           {NAV_ITEMS.map((item) =>
             'to' in item ? (
-              <Link key={item.to} to={item.to} className={styles.demoLink}>
+              <Link key={item.to} to={item.to}>
                 {item.label}
               </Link>
             ) : (
@@ -44,10 +44,11 @@ export function Header(): JSX.Element {
           )}
         </nav>
 
-        <Link to="/register" className={styles.cta} aria-label="Criar conta no ClinicBridge">
-          <span className={styles.ctaLong}>Criar conta</span>
+        <Link to="/demo" className={styles.cta} aria-label="Ver a demonstração guiada do ClinicBridge">
+          <Presentation size={15} aria-hidden="true" />
+          <span className={styles.ctaLong}>Ver demo guiada</span>
           <span className={styles.ctaShort} aria-hidden="true">
-            Entrar
+            Demo
           </span>
           <ArrowRight size={14} aria-hidden="true" />
         </Link>

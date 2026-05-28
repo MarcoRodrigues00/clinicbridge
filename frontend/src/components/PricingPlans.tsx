@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, ArrowRight } from 'lucide-react';
 import styles from './PricingPlans.module.css';
 
 type Plan = {
@@ -99,6 +99,14 @@ export function PricingPlans(): JSX.Element {
                 aria-label={`${plan.cta} — ClinicBridge`}
               >
                 {plan.cta}
+              </Link>
+              <Link
+                to="/demo"
+                className={styles.demoMini}
+                aria-label={`Explorar o plano ${plan.name} na demonstração guiada`}
+              >
+                Ver na demo guiada
+                <ArrowRight size={12} aria-hidden="true" />
               </Link>
             </motion.li>
           ))}
