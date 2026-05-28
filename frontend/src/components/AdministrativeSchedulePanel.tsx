@@ -299,7 +299,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro }: Administrative
   const isPapelFinanceiro = user?.papel === 'dono_clinica' || user?.papel === 'secretaria';
 
   const financialChargesQuery = useQuery({
-    queryKey: [...FINANCIAL_BADGE_KEY, token],
+    queryKey: FINANCIAL_BADGE_KEY,
     enabled: !!token && isPapelFinanceiro,
     staleTime: 30_000,
     retry: false,

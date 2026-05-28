@@ -22,10 +22,16 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.9A** (entregue) — **Super Revisão Geral (todos os módulos 4.4–4.8).**
+**Sprint atual: 4.9B** (entregue) — **Fix cache TanStack Query.**
+Removido `token` de todas as queryKeys (FinancialPanel × 6, ReportsPanel × 4, AdministrativeSchedulePanel × 1).
+Objeto `filters` mutável substituído por primitivos escalares em `listQuery` (FinancialPanel).
+Comentário incorreto sobre `token` no ReportsPanel corrigido. Backend, schema, regras de negócio e UX intocados.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+**Sprint anterior: 4.9A** (entregue) — **Super Revisão Geral (todos os módulos 4.4–4.8).**
 7 agents especializados; nenhum P0. 2 P1 de copy corrigidos (InsurancePanel copy + card restrito);
 hint "oportunidade de retorno" removido do ReportsPanel. 2 P1 de cache TanStack Query (token em
-queryKeys, objeto mutable em queryKey) registrados no backlog para Sprint 4.9B.
+queryKeys, objeto mutable em queryKey) identificados e entregues na 4.9B.
 Prontidão para piloto controlado com dados sintéticos: ✅ liberado.
 Relatório: `docs/super-review-4-9A.md`.
 `pnpm --filter frontend typecheck` ✅ · build ✅ · `pnpm --filter backend typecheck` ✅ ·
@@ -286,7 +292,8 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 retrocompat com cobranças existentes).
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
-- **4.9A** ✅ Super Revisão Geral — 7 agents · 0 P0 · 2 P1 copy corrigidos · 2 P1 cache TanStack no backlog · piloto liberado · `docs/super-review-4-9A.md`
+- **4.9B** ✅ Fix cache TanStack Query — `token` removido de 11 queryKeys · `filters` object substituído por primitivos · backend intocado
+- **4.9A** ✅ Super Revisão Geral — 7 agents · 0 P0 · 2 P1 copy corrigidos · 2 P1 cache TanStack entregues em 4.9B · piloto liberado · `docs/super-review-4-9A.md`
 - **4.8D** ✅ QA/Hardening Estoque — revisão UX · greps segurança 0-violations · sanity smoke 8/8 · docs · **Fase 4.8 completa**
 - **4.8C** ✅ Frontend Estoque v0.1 — aba "Estoque" + `InventoryPanel` (hero, filtros, low-stock, CRUD owner, movimentos, histórico) — typecheck/build ✅
 - **4.8B** ✅ Backend Estoque v0.1 — migration 18 + DAO + service + controller + 9 endpoints — smoke 51/51 PASS
@@ -316,8 +323,8 @@ retrocompat com cobranças existentes).
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A ✅ (Super Revisão Geral) →
-**Próxima fase TBD** (ADR própria necessária antes de qualquer código). **Próxima sprint técnica: 4.9B** (cache fix TanStack Query).
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–B ✅ (Super Revisão + Cache Fix) →
+**Próxima fase TBD** (ADR própria necessária antes de qualquer código).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
