@@ -27,6 +27,7 @@ import {
   X,
   AlertCircle,
   ShieldOff,
+  HelpCircle,
 } from 'lucide-react';
 import {
   api,
@@ -1801,7 +1802,7 @@ function ServicePricesSection({
 
 type InsuranceTab = 'accepted' | 'cards' | 'prices';
 
-export function InsurancePanel(): JSX.Element {
+export function InsurancePanel({ onAuriTour }: { onAuriTour?: () => void } = {}): JSX.Element {
   const { user } = useAuth();
   const isOwner = user?.papel === 'dono_clinica';
   const canWriteCards = isOwner || user?.papel === 'secretaria';
@@ -1872,6 +1873,14 @@ export function InsurancePanel(): JSX.Element {
           Convênios
           <span className={styles.categoryChip}>Administrativo</span>
         </h3>
+        {onAuriTour && (
+          <div className={styles.headActions}>
+            <button type="button" className={styles.secondaryBtn} onClick={onAuriTour} title="Auri explica este módulo">
+              <HelpCircle size={15} aria-hidden="true" />
+              Auri explica
+            </button>
+          </div>
+        )}
       </div>
 
       <p className={styles.subtitle}>

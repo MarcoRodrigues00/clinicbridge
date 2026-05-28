@@ -7470,3 +7470,54 @@ Dashboard: estado `moduleTourId: TourId | null` + `moduleTourStep`, `openModuleT
 ### Checks
 
 typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅. Validação visual no navegador: pendente.
+
+---
+
+## Sprint 6.0G (2026-05-28) — Guias restantes da Auri v0.1
+
+Frontend-only. Sem backend, migration, demo-login, seed, troca de tenant.
+
+### Módulos implementados
+
+| Módulo | Steps | Padrão |
+|---|---|---|
+| Documentos médicos | 5 | Self-contained em `ClinicalDocumentsPanel` |
+| Convênios | 5 | Dashboard → `InsurancePanel` |
+| Estoque | 5 | Dashboard → `InventoryPanel` |
+| Relatórios | 5 | Dashboard → `ReportsPanel` |
+| Assinatura/Plano | 5 | Dashboard → `SubscriptionPanel` |
+
+### Steps por módulo
+
+- **Documentos:** boas-vindas (acesso restrito) → `docs-list` → `docs-create` → ciclo de status (null) → assinatura externa (null)
+- **Convênios:** boas-vindas → `insurance-tabs` → `insurance-content` → carteirinha é PII (null) → preços não autopropagam (null)
+- **Estoque:** boas-vindas → `inventory-summary` → `inventory-filters` → `inventory-list` → movimentos manuais (null)
+- **Relatórios:** boas-vindas → `reports-filters` → `reports-summary` → 4 blocos (null) → sem dado clínico (null)
+- **Plano:** boas-vindas → `subscription-plan` → `subscription-modules` → `subscription-limits` → pagamento em preparação (null)
+
+### `data-tour-id` adicionados
+
+`docs-list` · `docs-create` · `subscription-plan` · `subscription-modules` · `subscription-limits`.
+
+### Padrão Documents (self-contained)
+
+`ClinicalDocumentsPanel` gerencia `docTourOpen/docTourStep` internamente. Motivo: aninhado 3 níveis abaixo do Dashboard (Dashboard→PatientsList→ClinicalPatientPane→ClinicalDocumentsPanel). `useAuth().isDemo` guarda o botão fora do contexto demo.
+
+### CSS modules (sem inline styles)
+
+`.listHeadActions` + `.auriBtn` → `ClinicalDocumentsPanel.module.css`.
+`.headActions` → `InsurancePanel.module.css`.
+`.auriBtn` → `ReportsPanel.module.css`, `SubscriptionPanel.module.css`.
+`InventoryPanel`: reutilizou `.headActions` + `.secondaryBtn` já existentes.
+
+### MODULE_TOUR_STEPS completo (8 módulos)
+
+AGENDA · PATIENTS · FINANCIAL · INSURANCE · INVENTORY · REPORTS · PLAN + DOCUMENTS (self-contained, fora do map).
+
+### Arquivos
+
+`GuidedDemoTour.tsx` · `ClinicalDocumentsPanel.tsx` · `ClinicalDocumentsPanel.module.css` · `InsurancePanel.tsx` · `InsurancePanel.module.css` · `InventoryPanel.tsx` · `ReportsPanel.tsx` · `ReportsPanel.module.css` · `SubscriptionPanel.tsx` · `SubscriptionPanel.module.css` · `Dashboard.tsx`.
+
+### Checks
+
+typecheck ✅ · build ✅ (3.60s) · `git diff --check` rc=0 ✅. Validação visual no navegador: pendente.

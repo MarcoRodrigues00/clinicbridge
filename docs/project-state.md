@@ -7,6 +7,28 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0G** (entregue 2026-05-28) — **Guias restantes da Auri v0.1.**
+
+Frontend-only. Sem backend, migration, demo-login, seed, troca de tenant.
+
+**Módulos implementados:** Documentos médicos (self-contained em `ClinicalDocumentsPanel`), Convênios, Estoque, Relatórios, Assinatura/Plano. Adicionados ao Dashboard via prop `onAuriTour → openModuleTour(TOUR_IDS.X)`. `ClinicalDocumentsPanel` gerencia estado internamente (`docTourOpen/docTourStep`) — sem threading de 3 níveis.
+
+**`GuidedDemoTour.tsx`:** `DOCUMENTS_TOUR_STEPS` (5), `INSURANCE_TOUR_STEPS` (5), `INVENTORY_TOUR_STEPS` (5), `REPORTS_TOUR_STEPS` (5), `PLAN_TOUR_STEPS` (5). `MODULE_TOUR_STEPS` atualizado com todos os 8 módulos.
+
+**`data-tour-id` adicionados:** `docs-list` (docList), `docs-create` (botão Novo documento), `subscription-plan` (planCard), `subscription-modules` (sectionCard módulos), `subscription-limits` (sectionCard limites).
+
+**CSS modules sem inline styles:** `.listHeadActions`/`.auriBtn` em `ClinicalDocumentsPanel`; `.headActions` em `InsurancePanel`; `.auriBtn` em `ReportsPanel` e `SubscriptionPanel`. `InventoryPanel` já tinha `.headActions`.
+
+**Separação mantida:** Demo Aurora usa `DEMO_TOUR_STEPS`; onboarding usa `ONBOARDING_STEPS`; tours por módulo usam `MODULE_TOUR_STEPS` (`!isDemo`). `ClinicalDocumentsPanel` também guarda `!isDemo`.
+
+**Comportamento sem permissão:** `SubscriptionPanel` retorna early (403→restrictedCard) antes de renderizar `BillingContent` — botão não aparece. `ClinicalDocumentsPanel` retorna error antes do `listHead` para 403. Painéis diretos do Dashboard: botão condicionado à renderização do painel.
+
+**Checks:** typecheck ✅ · build ✅ (3.60s) · `git diff --check` ✅. Validação visual pendente.
+
+**Próxima:** spike billing 5.1D, ou validação visual 6.0G.
+
+---
+
 **Sprint 6.0F** (entregue 2026-05-28) — **Guias por módulo da Auri v0.1.**
 
 Frontend-only. Sem backend, migration, demo-login, seed, troca de tenant.

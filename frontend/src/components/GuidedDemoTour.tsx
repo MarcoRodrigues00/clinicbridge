@@ -139,11 +139,158 @@ export const FINANCIAL_TOUR_STEPS: DemoTourStep[] = [
   },
 ];
 
+export const DOCUMENTS_TOUR_STEPS: DemoTourStep[] = [
+  {
+    id: 'doc-welcome', tab: null, targetId: null, mood: 'wave',
+    title: 'Documentos clínicos',
+    body: 'Esta área registra documentos médicos do paciente. Apenas profissionais com permissão clínica têm acesso.',
+  },
+  {
+    id: 'doc-list', tab: null, targetId: 'docs-list', mood: 'happy',
+    title: 'Lista de documentos',
+    body: 'Cada documento mostra tipo, data e status — rascunho, finalizado ou cancelado.',
+  },
+  {
+    id: 'doc-create', tab: null, targetId: 'docs-create', mood: 'happy',
+    title: 'Novo documento',
+    body: 'Preencha título, tipo e conteúdo. Salve como rascunho e finalize quando estiver pronto.',
+  },
+  {
+    id: 'doc-status', tab: null, targetId: null, mood: 'neutral',
+    title: 'Ciclo do documento',
+    body: 'Rascunho → Finalizado → (opcional) Cancelado. Finalizado gera PDF sob demanda. Documentos cancelados não são excluídos.',
+  },
+  {
+    id: 'doc-sign', tab: null, targetId: null, mood: 'neutral',
+    title: 'Assinatura digital',
+    body: 'Assinatura com validade legal (ICP-Brasil/Gov.br) deve ser feita fora do ClinicBridge nesta fase. O sistema mostra orientações, mas não substitui esse processo.',
+  },
+];
+
+export const INSURANCE_TOUR_STEPS: DemoTourStep[] = [
+  {
+    id: 'ins-welcome', tab: null, targetId: null, mood: 'wave',
+    title: 'Convênios',
+    body: 'Camada administrativa e comercial da clínica. Não é integração TISS/TUSS/ANS — apenas cadastro de referência para cobranças.',
+  },
+  {
+    id: 'ins-tabs', tab: null, targetId: 'insurance-tabs', mood: 'happy',
+    title: 'Três seções',
+    body: 'Carteirinhas dos pacientes, Convênios aceitos e Preços de referência. Use as abas para navegar.',
+    placement: 'bottom',
+  },
+  {
+    id: 'ins-content', tab: null, targetId: 'insurance-content', mood: 'happy',
+    title: 'Conteúdo da aba',
+    body: 'Aqui aparecem os registros da seção ativa: carteirinhas, operadoras/planos ou tabela de preços.',
+  },
+  {
+    id: 'ins-pii', tab: null, targetId: null, mood: 'neutral',
+    title: 'Carteirinha é dado pessoal',
+    body: 'O número da carteirinha é PII administrativa. Ele não é exibido na listagem — acesse o registro do paciente para vê-lo.',
+  },
+  {
+    id: 'ins-prices', tab: null, targetId: null, mood: 'neutral',
+    title: 'Preços de referência',
+    body: 'Os preços cadastrados aqui são só referência. Eles não preenchem automaticamente o valor da cobrança — você confirma o valor ao criar cada cobrança.',
+  },
+];
+
+export const INVENTORY_TOUR_STEPS: DemoTourStep[] = [
+  {
+    id: 'inv-welcome', tab: null, targetId: null, mood: 'wave',
+    title: 'Estoque',
+    body: 'Controle de materiais e insumos da clínica. Apenas materiais de uso administrativo/operacional — sem medicamentos controlados ou integração SNGPC/ANVISA.',
+  },
+  {
+    id: 'inv-summary', tab: null, targetId: 'inventory-summary', mood: 'happy',
+    title: 'Resumo do estoque',
+    body: 'Total de itens ativos e quantos estão com estoque baixo. O alerta de baixo é por item, com limite configurável.',
+  },
+  {
+    id: 'inv-filters', tab: null, targetId: 'inventory-filters', mood: 'happy',
+    title: 'Filtros',
+    body: 'Filtre por categoria, status ou ative "Só estoque baixo" para focar no que precisa de reposição.',
+  },
+  {
+    id: 'inv-list', tab: null, targetId: 'inventory-list', mood: 'happy',
+    title: 'Item por item',
+    body: 'Cada item guarda o histórico completo de entradas e saídas. Clique para expandir e registrar movimentos.',
+  },
+  {
+    id: 'inv-movement', tab: null, targetId: null, mood: 'neutral',
+    title: 'Movimentos são manuais',
+    body: 'Entradas, saídas e ajustes são registrados manualmente. O sistema não subtrai estoque automaticamente por atendimento.',
+  },
+];
+
+export const REPORTS_TOUR_STEPS: DemoTourStep[] = [
+  {
+    id: 'rep-welcome', tab: null, targetId: null, mood: 'wave',
+    title: 'Relatórios',
+    body: 'Visão gerencial de agenda, financeiro e pacientes. Apenas dados administrativos — nenhum dado clínico sensível.',
+  },
+  {
+    id: 'rep-filters', tab: null, targetId: 'reports-filters', mood: 'happy',
+    title: 'Escolha o período',
+    body: 'Hoje, 7 dias, mês atual ou intervalo personalizado. O resumo e os blocos abaixo se atualizam automaticamente.',
+    placement: 'bottom',
+  },
+  {
+    id: 'rep-summary', tab: null, targetId: 'reports-summary', mood: 'happy',
+    title: 'Resumo do período',
+    body: 'Consultas, receita recebida, receita em aberto e pacientes no período — números consolidados.',
+  },
+  {
+    id: 'rep-sections', tab: null, targetId: null, mood: 'happy',
+    title: 'Quatro blocos',
+    body: 'Abaixo do resumo: Agenda (agendamentos e status), Financeiro (cobranças), Pacientes (cadastros) e cruzamento Agenda×Financeiro.',
+  },
+  {
+    id: 'rep-note', tab: null, targetId: null, mood: 'neutral',
+    title: 'Leitura gerencial',
+    body: 'Os relatórios mostram totais e tendências — sem diagnósticos, evolução clínica ou dados de prontuário.',
+  },
+];
+
+export const PLAN_TOUR_STEPS: DemoTourStep[] = [
+  {
+    id: 'plan-welcome', tab: null, targetId: null, mood: 'wave',
+    title: 'Plano e assinatura',
+    body: 'Esta área é sobre a assinatura do ClinicBridge — diferente do Financeiro, que registra cobranças da clínica com seus pacientes.',
+  },
+  {
+    id: 'plan-card', tab: null, targetId: 'subscription-plan', mood: 'happy',
+    title: 'Plano atual',
+    body: 'Veja o plano ativo, o status da conta e se há algum alerta de vencimento ou suspensão.',
+  },
+  {
+    id: 'plan-modules', tab: null, targetId: 'subscription-modules', mood: 'happy',
+    title: 'Módulos incluídos',
+    body: 'Lista dos recursos habilitados no plano. Módulos clínicos exigem também permissão clínica configurada pela clínica.',
+  },
+  {
+    id: 'plan-limits', tab: null, targetId: 'subscription-limits', mood: 'happy',
+    title: 'Limites do plano',
+    body: 'Pacientes, importações e outros limites. O sistema avisará antes de atingir o teto — acesso suave, sem corte brusco de dados.',
+  },
+  {
+    id: 'plan-payment', tab: null, targetId: null, mood: 'neutral',
+    title: 'Pagamento online',
+    body: 'A cobrança da assinatura por Pix ou cartão está em preparação. Por ora o plano é gerenciado manualmente — todos os módulos abaixo estão acessíveis.',
+  },
+];
+
 // Map used by Dashboard to resolve the active module tour steps.
+// ClinicalDocumentsPanel manages its own tour state (nested context, not top-level tab).
 export const MODULE_TOUR_STEPS: Partial<Record<TourId, DemoTourStep[]>> = {
   [TOUR_IDS.AGENDA]: AGENDA_TOUR_STEPS,
   [TOUR_IDS.PATIENTS]: PATIENTS_TOUR_STEPS,
   [TOUR_IDS.FINANCIAL]: FINANCIAL_TOUR_STEPS,
+  [TOUR_IDS.INSURANCE]: INSURANCE_TOUR_STEPS,
+  [TOUR_IDS.INVENTORY]: INVENTORY_TOUR_STEPS,
+  [TOUR_IDS.REPORTS]: REPORTS_TOUR_STEPS,
+  [TOUR_IDS.PLAN]: PLAN_TOUR_STEPS,
 };
 
 // ── App onboarding steps (Sprint 6.0C) ───────────────────────────────────────

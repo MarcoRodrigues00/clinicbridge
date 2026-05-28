@@ -18,6 +18,12 @@
   flex-wrap: wrap;
 }
 
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .title {
   display: flex;
   align-items: center;
