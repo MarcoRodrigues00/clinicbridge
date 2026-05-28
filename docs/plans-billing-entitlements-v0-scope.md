@@ -197,12 +197,18 @@ portal do cliente, disponibilidade atual no Brasil. **Não cravar sem fonte ofic
 - **`module.clinical_*` nunca destrava o gate clínico** — `requireClinicalRole` (ADR 0009/0010/0011)
   segue intocado e é a autoridade real; o plano só **restringe**.
 
-### 5.1C — Frontend
-- [ ] Tela de plano/assinatura (estado atual, plano, próximo ciclo).
-- [ ] Banners `trialing`/`past_due`/`suspended`/`canceled`.
-- [ ] Esconder/desabilitar ações fora do plano (UX) — backend continua a defesa.
-- [ ] Mensagens de upgrade (não de erro) para `feature_not_in_plan`/`limit_reached`.
-- [ ] typecheck/build.
+### 5.1C — Frontend — ✅ ENTREGUE (2026-05-28)
+- [x] Tipos `BillingStatus`/`SoftLockFlags`/`EffectiveEntitlement` em `api.ts` +
+      `api.getBillingStatus()`.
+- [x] `SubscriptionPanel.tsx` — plano, badge de status, mock notice, grid de 9 módulos,
+      3 limites, soft-lock, banner de alerta para past\_due/suspended/canceled.
+- [x] Aba "Assinatura" no `Dashboard.tsx` (ícone CreditCard, sem `ownerOnly`).
+- [x] 403 tratado como "Acesso restrito" (não como erro genérico).
+- [x] Banners `past_due` (warning) / `suspended`/`canceled` (danger).
+- [x] CTA "Gerenciar assinatura" desabilitado/informativo — sem checkout.
+- [x] Nota em módulos clínicos: "Requer também permissão clínica" (plano só restringe).
+- [x] typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅.
+- Validação visual no navegador: pendente (sem browser headless no ambiente WSL2).
 
 ### 5.1D — Spike sandbox
 - [ ] Asaas: criar cliente+assinatura, webhook+verificação, idempotência, CPF/CNPJ,

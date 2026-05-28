@@ -16,6 +16,7 @@ import {
   HeartHandshake,
   Boxes,
   RotateCcw,
+  CreditCard,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { UploadPanel } from '../components/UploadPanel';
@@ -35,6 +36,7 @@ import { ReportsPanel } from '../components/ReportsPanel';
 import { ServicesPanel } from '../components/ServicesPanel';
 import { InsurancePanel } from '../components/InsurancePanel';
 import { InventoryPanel } from '../components/InventoryPanel';
+import { SubscriptionPanel } from '../components/SubscriptionPanel';
 import { GuidedDemoTour, DEMO_TOUR_STEPS } from '../components/GuidedDemoTour';
 import { DemoBlockedToast } from '../components/DemoBlockedToast';
 import { DemoMascot } from '../components/DemoMascot';
@@ -51,7 +53,7 @@ const ROLE_LABELS: Record<SafeUser['papel'], string> = {
   secretaria: 'Funcionário(a) (acesso administrativo)',
 };
 
-type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'financeiro' | 'relatorios' | 'servicos' | 'convenios' | 'estoque' | 'equipe' | 'seguranca';
+type TabKey = 'inicio' | 'importacoes' | 'pacientes' | 'agenda' | 'financeiro' | 'relatorios' | 'servicos' | 'convenios' | 'estoque' | 'equipe' | 'seguranca' | 'assinatura';
 
 const TABS: { key: TabKey; label: string; icon: typeof Home; ownerOnly?: boolean }[] = [
   { key: 'inicio', label: 'Início', icon: Home },
@@ -65,6 +67,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Home; ownerOnly?: boolean
   { key: 'estoque', label: 'Estoque', icon: Boxes },
   { key: 'equipe', label: 'Equipe', icon: Users, ownerOnly: true },
   { key: 'seguranca', label: 'Segurança', icon: ShieldCheck },
+  { key: 'assinatura', label: 'Assinatura', icon: CreditCard },
 ];
 
 const SECTION_INTRO: Record<TabKey, { title: string; subtitle: string }> = {
@@ -79,6 +82,7 @@ const SECTION_INTRO: Record<TabKey, { title: string; subtitle: string }> = {
   estoque: { title: 'Estoque', subtitle: 'Controle materiais e insumos da clínica com entradas, saídas e alertas de estoque baixo. Apenas dados administrativos — sem dados clínicos.' },
   equipe: { title: 'Equipe', subtitle: 'Acesso ao sistema (membros), solicitações pendentes e profissionais usados na agenda.' },
   seguranca: { title: 'Segurança e sessão', subtitle: 'Estado da autenticação, MFA e auditoria de acesso clínico.' },
+  assinatura: { title: 'Plano e assinatura', subtitle: 'Acompanhe o plano comercial da clínica, módulos habilitados e estado da assinatura.' },
 };
 
 export function Dashboard(): JSX.Element {
@@ -309,6 +313,10 @@ export function Dashboard(): JSX.Element {
             <ClinicProfessionalsPanel />
             <ClinicalRolesPanel />
           </>
+        )}
+
+        {tab === 'assinatura' && (
+          <SubscriptionPanel />
         )}
 
         {tab === 'seguranca' && (

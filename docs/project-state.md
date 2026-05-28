@@ -7,6 +7,20 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.1C** (entregue 2026-05-28) — **Frontend Plano/Assinatura v0.1.**
+
+Painel visual de plano e assinatura no Dashboard, consumindo `GET /billing/status`. **Sem gateway, checkout, preço, env, backend novo, migration ou integração externa.**
+
+**Frontend:** tipos `BillingStatus`/`SoftLockFlags`/`EffectiveEntitlement`/`BillingStatusResponse` + `api.getBillingStatus()` em `services/api.ts`; `SubscriptionPanel.tsx` + `SubscriptionPanel.module.css`; aba "Assinatura" com ícone `CreditCard` adicionada ao `Dashboard.tsx` (`TabKey`, `TABS`, `SECTION_INTRO`, render block). Visível a todos os membros da clínica; `profissional_clinico` recebe 403 do backend → card "Acesso restrito". `queryKey: ['billing','status'] as const`, `staleTime: 60s`. Sem `ownerOnly`.
+
+**Painel exibe:** plano atual (Profissional/Essencial/Piloto assistido) · badge de status (Piloto assistido / Período de teste / Ativo / Pagamento pendente / Suspenso / Cancelado) · aviso mock/piloto "Pagamento online em preparação" quando provider=null/mock/manual ou não provisionado · grid de 9 módulos com ✓/✗ e nota em clínicos ("Requer também permissão clínica") · 3 limites · estado de soft-lock (criação/leitura/exportação) · banner de alerta para past\_due/suspended/canceled · botão "Gerenciar assinatura" **desabilitado/informativo** (sem checkout).
+
+**Validação:** typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅. API smoke via curl: 401 sem token ✅; owner 200 ✅; profissional 403 ✅; admin 403 `no_clinic_context` ✅; payload sem PII/valor/IDs de provider ✅; GET não bloqueado pelo demo write-block ✅. Validação visual (pixel/responsive/dark theme) pendente no navegador do usuário — não há browser headless disponível no ambiente WSL2/Ubuntu 26.04.
+
+**Próxima:** 5.1D spike sandbox (Asaas vs Stripe).
+
+---
+
 **Sprint 5.1B** (entregue 2026-05-28) — **Backend foundation de Planos/Entitlements v0.1 (mock).**
 
 Implementa a fundação backend da camada comercial (ADR 0018) com **provider mock/manual** — sem gateway real, checkout, webhook real, secret/env novo, dado de cartão ou integração externa. **Nenhuma tabela existente alterada** (só FKs novos referenciando `clinics`/`users`).

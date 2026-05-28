@@ -6972,3 +6972,61 @@ Gateway real, checkout, SDK, webhook real/endpoint público, secret/env real, co
 preços, NF-e, cupom/proration, cofre de cartão. Nenhum endpoint público de alteração de assinatura.
 
 **Próxima:** 5.1C (frontend de plano/assinatura — backend continua a defesa) · 5.1D spike sandbox.
+
+---
+
+## Sprint 5.1C (2026-05-28) — Frontend Plano/Assinatura v0.1
+
+Painel visual de plano e assinatura no Dashboard. Consome `GET /billing/status` (5.1B).
+**Sem gateway, checkout, preço real, env novo, backend novo, migration ou integração externa.**
+Backend continua sendo a fonte da verdade de acesso.
+
+### Arquivos (frontend)
+
+- `src/services/api.ts` — tipos `PlanCode`, `SubscriptionStatus`, `SoftLockFlags`,
+  `EffectiveEntitlement`, `BillingEntitlements`, `BillingStatus`, `BillingStatusResponse` +
+  método `api.getBillingStatus(token)` no objeto `api`.
+- `src/components/SubscriptionPanel.tsx` + `SubscriptionPanel.module.css` — painel completo.
+- `src/views/Dashboard.tsx` — `TabKey` expandido com `'assinatura'`; `TABS` ganha
+  `{ key:'assinatura', label:'Assinatura', icon: CreditCard }` (sem `ownerOnly`);
+  `SECTION_INTRO` e render block adicionados; `SubscriptionPanel` importado.
+
+### UX / comportamento
+
+- **Aba "Assinatura"** visível a todos os membros da clínica (dono, secretaria, gestor, profissional).
+  `profissional_clinico` abre a aba → backend retorna 403 → card "Acesso restrito" (ShieldOff).
+- **Mock notice** aparece quando `provider===null/mock/manual` ou `!provisioned` —
+  "Pagamento online em preparação. A cobrança real ainda não está conectada nesta fase."
+- **Banners de alerta** para `past_due` (warning), `suspended`/`canceled` (danger).
+- **Grid de 9 módulos** com ✓ verde (enabled) / ✗ cinza (disabled); módulos clínicos
+  exibem nota "Requer também permissão clínica" (plano só restringe, `requireClinicalRole` é
+  a autoridade real — invariante ADR 0009/0010/0011 preservado).
+- **3 limites** numéricos; `null` → "Ilimitado".
+- **Soft-lock**: criação/leitura/exportação mostrados; `lock_reason` renderizado em destaque
+  quando presente; nota "Seus dados continuam exportáveis" quando suspenso/cancelado.
+- **CTA "Gerenciar assinatura"** desabilitado (`disabled aria-disabled cursor:not-allowed`)
+  com texto "Pagamento online em preparação. Disponível em fase futura." Sem checkout, sem URL.
+- **Sem preço inventado**, sem Asaas/Stripe mencionados, sem PII, sem valor monetário.
+
+### Query
+
+`queryKey: ['billing','status'] as const` · `staleTime: 60_000` · `enabled: !!token`.
+Sem token → query não dispara (usuário não logado nunca acessa o endpoint).
+GET não é bloqueado pelo demo write-block (correto: `isWriteBlockedInDemo` só bloqueia POST/PATCH).
+
+### Checks + validação
+
+- `pnpm --filter frontend typecheck` ✅ · `build` ✅ · `git diff --check` rc=0 ✅.
+- API smoke via curl: 401 sem token ✅; owner 200 com shape correto ✅; profissional 403 ✅;
+  admin 403 `no_clinic_context` ✅; payload sem PII/valor/IDs externos ✅.
+- Compilação Vite do módulo inspecionada via HTTP: labels PT-BR, mock notice, módulos, CTA,
+  403 branch, mobile CSS `@media(max-width:480px)` — todos presentes.
+- **Validação visual (pixel/dark theme/responsive 360px)** não foi possível por ausência de
+  browser headless no ambiente WSL2/Ubuntu 26.04. Necessário validar no navegador do usuário.
+
+### Fora de escopo (mantido)
+
+Gateway real, checkout, SDK, webhook, secret/env, preço, cobrança real, migration.
+Guards `requireEntitlement`/`requireNotSoftLocked` existem (5.1B) mas **não foram montados** nesta sprint.
+
+**Próxima:** 5.1D spike sandbox (Asaas vs Stripe).

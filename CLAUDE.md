@@ -17,9 +17,9 @@
 ## Estado atual (2026-05-28)
 
 **Entregue (landing/demo/Auri/mobile):** 5.0E–5.0I — Demo Experience, tour Auri, landing demo em destaque, teaser+bolinha, nav mobile compacto, CLAUDE.md slimming. Ver `docs/project-state.md`.
-**Sprint atual:** 5.1B (entregue) — **Backend foundation de Planos/Entitlements v0.1 (mock).** Migration `20260608_billing_v0` (5 tabelas tenant-scoped); DAOs sem `listAll`; `computeEntitlements`/`computeSoftLock` puros; `BillingProvider`+`MockProvider` (sem rede/secret); `GET /billing/status` (dono/secretaria/gestor leem; profissional 403); guards `requireEntitlement`/`requireNotSoftLocked`/`assertWithinLimit` criados mas **não montados**; audit metadata-only; `billing_events` idempotente. **Sem gateway/checkout/webhook/secret/cartão real.** Nenhuma tabela existente alterada. Ver `docs/project-state.md` + `docs/sprint-history.md`.
-**Próxima sprint:** 5.1C — frontend de plano/assinatura (backend continua a defesa).
-**Depois:** 5.1D spike sandbox (Asaas vs Stripe) · 5.1E QA/security billing · **5.2A** ADR Produção Segura AWS (renumerada de 5.1A; obrigatória antes de dados reais e de cobrança real).
+**Sprint atual:** 5.1C (entregue) — **Frontend Plano/Assinatura v0.1.** Aba "Assinatura" no Dashboard; `SubscriptionPanel` consome `GET /billing/status`; badge de status, grid de módulos, limites, soft-lock, mock notice, CTA desabilitado. 403 → "Acesso restrito". **Sem gateway/checkout/preço/env/backend/migration.** Validação visual pendente no navegador do usuário. Ver `docs/project-state.md` + `docs/sprint-history.md`.
+**Próxima sprint:** 5.1D — spike sandbox Asaas vs Stripe.
+**Depois:** 5.1E QA/security billing · **5.2A** ADR Produção Segura AWS (renumerada de 5.1A; obrigatória antes de dados reais e de cobrança real).
 
 **Fase:** Fase 3 (produção/governança). **NÃO pronto para produção com dados reais** — ver `docs/security-notes.md`.
 **Piloto controlado:** GO Fase 1 com dados sintéticos. Demo Aurora = 100% fictícia.
