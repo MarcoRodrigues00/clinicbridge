@@ -7189,3 +7189,121 @@ Visão semanal completa / colunas por profissional, drag-and-drop, recorrência,
 automática (self-booking), integração Google Calendar/iCal, WhatsApp automático.
 
 **Próxima:** 6.0C (visão semanal, **se** o piloto pedir) ou 5.1D spike sandbox billing.
+
+---
+
+## Sprint 6.0C (2026-05-28) — Onboarding interno com Auri v0.1
+
+Frontend-only. Sem backend, migration, demo-login, troca de tenant, dependência nova.
+`GuidedDemoTour` estendido com props opcionais backward-compat; Demo Aurora intocada.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---|---|
+| `GuidedDemoTour.tsx` | `ONBOARDING_STEPS` exportados (10 passos, sem `demoNote`, sem CTAs demo). Props: `steps?`, `roleLabel?`, `onClose?`, `onExitTo?` (agora opcional). `isAppMode = onClose !== undefined`. Bubble escondida em app mode. `demoNote` e CTAs demo suprimidos via `!isAppMode`. |
+| `Dashboard.tsx` | Import `ONBOARDING_STEPS` + `HelpCircle`. Estado `appTourOpen`/`appTourStep`. `openAppTour`/`closeAppTour` (localStorage `cb-app-tour-dismissed`). `useEffect` de troca de aba do app tour. Botão "Ajuda guiada"/"Ver tour" no topbar (`!isDemo`). Render `<GuidedDemoTour steps={ONBOARDING_STEPS} ... onClose={closeAppTour} />` em `appTourOpen && !isDemo`. |
+| `Dashboard.module.css` | `.topbarActions`, `.tourBtn`, `.tourBtnLabel` (oculto em ≤360px). |
+
+### Separação Demo Aurora / onboarding interno
+
+- **Estado:** variáveis completamente independentes (`tourStep`/`tourCollapsed` = demo; `appTourStep`/`appTourOpen` = interno).
+- **Render:** demo tour só quando `isDemo`; onboarding só quando `!isDemo && appTourOpen`.
+- **Botão:** só aparece quando `!isDemo` — usuário demo nunca vê "Ajuda guiada".
+- **Conteúdo:** `ONBOARDING_STEPS` não tem `demoNote`, não tem CTAs "Criar conta"; `demoNote` e esses CTAs só renderizam quando `!isAppMode`.
+- **localStorage:** chave `cb-app-tour-dismissed` isolada (sem conflito com nada do demo).
+- **Tenant:** zero troca; o tour roda na própria sessão do usuário sem qualquer login novo.
+
+### Passos do onboarding (10)
+
+1. Boas-vindas — Auri se apresenta, sem dados fictícios.
+2. Menu principal — spotlight `nav-agenda`.
+3. Agenda — spotlight `agenda-summary`.
+4. Filtros da agenda — spotlight `agenda-filters`.
+5. Pacientes — spotlight `patients-search`.
+6. Financeiro — spotlight `financial-summary`.
+7. Serviços — spotlight `services-list`.
+8. Relatórios — spotlight `reports-summary`.
+9. Plano e assinatura — spotlight `nav-assinatura`.
+10. Pronto! — "Fechar tour" chama `closeAppTour`.
+
+Targets não existentes (ex.: `nav-equipe` para não-owner) degradam graciosamente (sem spotlight, tour continua).
+
+### Checks
+
+`pnpm --filter frontend typecheck` ✅ · `build` ✅ · `git diff --check` rc=0 ✅.
+Módulo compilado: `ONBOARDING_STEPS`, `Fechar tour`, `isAppMode`, `appTourOpen`, `tourBtn`, `cb-app-tour-dismissed` — todos presentes. Validação visual (pixel/mobile/dark) pendente no navegador do usuário.
+
+**Fora de escopo (mantido):** backend, migration, auto-show na primeira sessão, tour por papel, passos de prontuário/dados clínicos.
+
+**Próxima:** 6.0D seed sintético do piloto familiar ou 5.1D spike sandbox billing.
+
+---
+
+## Sprint 6.0C.1 (2026-05-28) — Polish da chamada da Auri + ajuste mobile
+
+Continuação imediata de 6.0C. Três mudanças frontend-only.
+
+### (a) Teaser da Auri no Início
+
+Card discreto exibido no tab `inicio` quando o usuário ainda não abriu o tour:
+- Copy: "Quer conhecer o sistema?" / "A Auri te guia pelos módulos em poucos minutos."
+- CTA: "Começar tour" → `dismissTeaser() + openAppTour()`.
+- Dismiss: botão "×" → `dismissTeaser()` sem abrir o tour.
+- Chave separada `localStorage['cb-app-tour-teaser-dismissed']` (independente de `cb-app-tour-dismissed`).
+- Condições: `!isDemo && tab === 'inicio' && !appTourOpen && !teaserDismissed`.
+- Mascote Auri 44px, `animated={false}` (não distrai, apenas convida).
+- Mobile ≤420px: actions em row completa.
+
+### (b) Mobile CSS — redução de altura e fonte do tour
+
+`GuidedDemoTour.module.css`, `@media (max-width: 640px)`:
+- `.inner max-height`: 70vh → **55vh** (principal ganho — 396px em 720px, 297px em 540px).
+- `.title font-size`: 1.16rem → **1.05rem**.
+- `.body font-size`: 0.94rem → **0.88rem**.
+- `.progressRow margin`: 0.85rem → **0.6rem/0.6rem**.
+- `.navBtn`/`.navBtnPrimary padding`: 0.5rem → **0.42rem** + font 0.82rem.
+- Auri shelf (padding-top: 2.6rem) **preservado** — necessário para a mascote não cobrir o header.
+
+### (c) TOUR_IDS exportados (roadmap)
+
+`GuidedDemoTour.tsx`: exporta `TOUR_IDS` (const object tipado) + `TourId` type com 9 IDs:
+`onboarding` (atual) + `agenda` / `patients` / `financial` / `documents` / `insurance` /
+`inventory` / `reports` / `plan` (todos futuros). Nenhum step concreto criado — apenas
+namespace reservado para facilitar wiring futuro por módulo.
+
+### Separação Demo Aurora (inalterada)
+
+`isDemo` continua bloqueando teaser e botão de tour. Demo tour usa `DEMO_TOUR_STEPS`;
+onboarding usa `ONBOARDING_STEPS`. Estados, useEffects e localStorage completamente separados.
+
+### Arquivos
+
+`GuidedDemoTour.tsx` (TOUR_IDS) · `GuidedDemoTour.module.css` (mobile 640px) ·
+`Dashboard.tsx` (teaser + teaserDismissed + APP_TEASER_KEY) · `Dashboard.module.css`
+(auriTeaser* classes).
+
+### Checks
+
+typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅.
+CSS module: auriTeaser + auriTeaserActions + auriTeaserBody + auriTeaserBtn +
+auriTeaserDismiss + auriTeaserSub + auriTeaserTitle — todos exportados.
+TOUR_IDS + dismissTeaser + teaserDismissed + APP_TEASER_KEY no bundle.
+Validação visual no navegador: pendente.
+
+### Backlog de roteiros por módulo (documentado, não implementado)
+
+| Tour ID | Módulo | Conteúdo previsto |
+|---|---|---|
+| `agenda` | Agenda | filtros, anti-overlap, cobrança do agendamento |
+| `patients` | Pacientes | busca, cartão, prontuário (se permissão) |
+| `financial` | Financeiro | cobrança, marcar pago, convênio |
+| `documents` | Documentos médicos | criar/finalizar PDF, orientação de validade |
+| `insurance` | Convênios | carteirinha, operadora, preço de referência |
+| `inventory` | Estoque | item, movimento, alerta de estoque baixo |
+| `reports` | Relatórios | período e leitura dos cards |
+| `plan` | Assinatura | plano, limites, pagamento em preparação |
+
+Trigger esperado: botão "?" dentro de cada módulo (sprint futura).
+
+**Próxima:** 6.0D seed sintético do piloto familiar ou 5.1D spike sandbox billing.

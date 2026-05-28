@@ -31,6 +31,39 @@
   overflow-wrap: anywhere;
 }
 
+.topbarActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tourBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--r-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--cyan-soft);
+  background: rgba(34, 211, 238, 0.07);
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.tourBtn:hover {
+  background: rgba(34, 211, 238, 0.13);
+  border-color: rgba(34, 211, 238, 0.5);
+}
+
+/* Hide label text on very narrow viewports; keep icon for touch targets. */
+@media (max-width: 360px) {
+  .tourBtnLabel {
+    display: none;
+  }
+}
+
 .logout {
   display: inline-flex;
   align-items: center;
@@ -49,6 +82,90 @@
   background: rgba(255, 255, 255, 0.07);
   border-color: rgba(120, 200, 230, 0.5);
   transform: translateY(-1px);
+}
+
+/* ── Auri onboarding teaser (Sprint 6.0C.1) ─────────────────────────────────
+   Shown on the Início tab when the user hasn't dismissed the tour invite.
+   Uses a separate localStorage key from the tour itself. Only visible in
+   real clinic sessions (!isDemo). Low visual weight — not a modal. */
+.auriTeaser {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 1.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md);
+  background: linear-gradient(120deg, rgba(34, 211, 238, 0.05) 0%, transparent 60%);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  flex-wrap: wrap;
+}
+
+.auriTeaserBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.auriTeaserTitle {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--text-0);
+  line-height: 1.3;
+}
+
+.auriTeaserSub {
+  font-size: 0.84rem;
+  color: var(--text-2);
+  margin-top: 0.2rem;
+  line-height: 1.4;
+}
+
+.auriTeaserActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.auriTeaserBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.05rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  background: rgba(34, 211, 238, 0.13);
+  border: 1px solid rgba(34, 211, 238, 0.38);
+  color: var(--cyan-soft);
+  transition: background 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
+}
+
+.auriTeaserBtn:hover {
+  background: rgba(34, 211, 238, 0.22);
+  border-color: var(--cyan);
+}
+
+.auriTeaserDismiss {
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--text-3);
+  padding: 0.3rem 0.45rem;
+  border-radius: var(--r-sm);
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
+
+.auriTeaserDismiss:hover {
+  color: var(--text-1);
+}
+
+@media (max-width: 420px) {
+  .auriTeaser { gap: 0.6rem; }
+  .auriTeaserActions { width: 100%; justify-content: space-between; }
+  .auriTeaserBtn { flex: 1; justify-content: center; }
 }
 
 /* ── Guided demo bar (Sprint 5.0E) ── */

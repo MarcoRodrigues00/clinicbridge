@@ -7,6 +7,20 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0C** (entregue 2026-05-28) — **Onboarding interno com Auri v0.1 (6.0C + 6.0C.1).**
+
+Frontend-only. Sem backend, migration, demo-login, troca de tenant, dependência nova.
+
+**6.0C base:** `GuidedDemoTour` estendido com props `steps`, `roleLabel`, `onClose` (backward-compat; Demo Aurora intocada). `ONBOARDING_STEPS` (10 passos, sem demoNote/CTAs demo). Botão "Ajuda guiada"/"Ver tour" no topbar (`!isDemo`). `localStorage['cb-app-tour-dismissed']`.
+
+**6.0C.1 polish:** (a) **Teaser da Auri** no tab Início — card discreto "Quer conhecer o sistema? · A Auri te guia em poucos minutos · [Começar tour] [×]", chave separada `localStorage['cb-app-tour-teaser-dismissed']`, estados independentes, só em `!isDemo`. (b) **Mobile CSS** — `max-height: 55vh` (de 70vh) + fonte título 1.05rem + corpo 0.88rem + padding buttons menores, todos em `@media (max-width: 640px)`. (c) **`TOUR_IDS`** exportados — namespace tipado para 9 tours futuros por módulo (agenda, patients, financial, documents, insurance, inventory, reports, plan + onboarding atual); não implementados ainda.
+
+**Checks:** typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅. 4 frontend + 3 docs alterados. Validação visual (pixel/mobile/dark) pendente no navegador.
+
+**Próxima:** 6.0D seed sintético do piloto familiar ou 5.1D spike sandbox billing.
+
+---
+
 **Sprint 6.0B** (entregue 2026-05-28) — **Benchmark e polish UX da Agenda Administrativa.**
 
 Redesign **incremental frontend-only** da Agenda (sem backend, sem migration, sem dependência nova). Benchmark leve (Google Calendar, Square Appointments, Cal.com, Calendly) em `docs/agenda-ux-benchmark.md`. **Administrativa, não clínica** — nenhum campo clínico novo.

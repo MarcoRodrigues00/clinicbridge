@@ -34,6 +34,118 @@ export interface DemoTourStep {
 // each point at one piece of the screen. Short copy, strong visual focus. The
 // mechanic is demonstrated across every main module; targets degrade gracefully
 // when an element is absent.
+// ── Future: per-module contextual tours (Sprint 6.0C.1 backlog) ──────────────
+// Each module will eventually offer its own focused tour triggered by a "?"
+// button within the panel or when a user first opens the tab. The IDs below
+// reserve the namespace; no steps are defined yet. Wiring happens in a future
+// sprint once the backlog is prioritised. See docs/sprint-history.md for the
+// full planned list.
+export const TOUR_IDS = {
+  ONBOARDING: 'onboarding',   // current: full app walkthrough
+  AGENDA: 'agenda',           // future: filtros, anti-overlap, cobrança
+  PATIENTS: 'patients',       // future: busca, prontuário, documentos
+  FINANCIAL: 'financial',     // future: cobrança, marcar pago, convênio
+  DOCUMENTS: 'documents',     // future: criar/finalizar PDF, orientação
+  INSURANCE: 'insurance',     // future: carteirinha, operadora, preço ref.
+  INVENTORY: 'inventory',     // future: item, movimento, estoque baixo
+  REPORTS: 'reports',         // future: período e interpretação dos cards
+  PLAN: 'plan',               // future: assinatura, limites, pagamento
+} as const;
+
+export type TourId = (typeof TOUR_IDS)[keyof typeof TOUR_IDS];
+
+// ── App onboarding steps (Sprint 6.0C) ───────────────────────────────────────
+// Used in the internal tour for logged-in users on their own clinic — NOT the
+// Demo Aurora public tour. No demoNote, no exit-to-register CTAs, no write-block.
+// Steps are role-agnostic: targets that don't exist (e.g. nav-equipe for non-
+// owners) degrade gracefully — useTargetRect returns null and no spotlight shows.
+// Content is administrative only: no clinical examples, no PII, no promises
+// about specific role access.
+export const ONBOARDING_STEPS: DemoTourStep[] = [
+  {
+    id: 'ob-welcome',
+    tab: null,
+    targetId: null,
+    mood: 'wave',
+    title: 'Oi! Eu sou a Auri 👋',
+    body: 'Vou te apresentar os módulos principais do ClinicBridge. São só alguns passos!',
+  },
+  {
+    id: 'ob-nav',
+    tab: 'agenda',
+    targetId: 'nav-agenda',
+    mood: 'happy',
+    title: 'Menu principal',
+    body: 'Use as abas para navegar entre Agenda, Pacientes, Financeiro e muito mais.',
+    placement: 'bottom',
+  },
+  {
+    id: 'ob-agenda',
+    tab: 'agenda',
+    targetId: 'agenda-summary',
+    mood: 'happy',
+    title: 'Agenda',
+    body: 'O resumo do dia mostra agendados, confirmados e faltas num relance.',
+  },
+  {
+    id: 'ob-agenda-filters',
+    tab: 'agenda',
+    targetId: 'agenda-filters',
+    mood: 'happy',
+    title: 'Filtros da agenda',
+    body: 'Filtre por profissional, serviço ou situação para encontrar rápido.',
+  },
+  {
+    id: 'ob-patients',
+    tab: 'pacientes',
+    targetId: 'patients-search',
+    mood: 'happy',
+    title: 'Pacientes',
+    body: 'Busque qualquer paciente por nome, e-mail ou telefone.',
+  },
+  {
+    id: 'ob-financial',
+    tab: 'financeiro',
+    targetId: 'financial-summary',
+    mood: 'happy',
+    title: 'Financeiro',
+    body: 'Cobranças em aberto, vencidas e recebidas no período, sempre atualizadas.',
+  },
+  {
+    id: 'ob-services',
+    tab: 'servicos',
+    targetId: 'services-list',
+    mood: 'happy',
+    title: 'Serviços',
+    body: 'Consultas, sessões e procedimentos cadastrados aqui aparecem na agenda e nas cobranças.',
+  },
+  {
+    id: 'ob-reports',
+    tab: 'relatorios',
+    targetId: 'reports-summary',
+    mood: 'happy',
+    title: 'Relatórios',
+    body: 'Resultados de agenda, financeiro e pacientes agrupados por período.',
+  },
+  {
+    id: 'ob-plan',
+    tab: 'assinatura',
+    targetId: 'nav-assinatura',
+    mood: 'happy',
+    title: 'Plano e assinatura',
+    body: 'Veja os módulos habilitados e os limites do plano da clínica.',
+    placement: 'bottom',
+  },
+  {
+    id: 'ob-done',
+    tab: null,
+    targetId: null,
+    mood: 'cheer',
+    title: 'Pronto! 🎉',
+    body: 'Você já conhece o essencial. Explore à vontade — qualquer dúvida, abra o tour de novo.',
+  },
+];
+
 export const DEMO_TOUR_STEPS: DemoTourStep[] = [
   {
     id: 'welcome',
@@ -414,7 +526,15 @@ interface Props {
   setStep: (n: number) => void;
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
-  onExitTo: (path: string) => void;
+  // Demo mode: called when user clicks a closing CTA (e.g. "Criar conta").
+  // Optional in app (non-demo) mode — use onClose instead.
+  onExitTo?: (path: string) => void;
+  // App (non-demo) mode: called when the user dismisses or finishes the tour.
+  onClose?: () => void;
+  // Custom step list. Defaults to DEMO_TOUR_STEPS when omitted.
+  steps?: DemoTourStep[];
+  // Header role label. Defaults to "guia da demonstração".
+  roleLabel?: string;
 }
 
 export function GuidedDemoTour({
@@ -423,10 +543,18 @@ export function GuidedDemoTour({
   collapsed,
   setCollapsed,
   onExitTo,
+  onClose,
+  steps: propSteps,
+  roleLabel,
 }: Props): JSX.Element {
-  const total = DEMO_TOUR_STEPS.length;
+  // App mode: custom steps + close callback. Demo mode: DEMO_TOUR_STEPS + exit callbacks.
+  const steps = propSteps ?? DEMO_TOUR_STEPS;
+  const isAppMode = onClose !== undefined;
+  const effectiveRoleLabel = roleLabel ?? 'guia da demonstração';
+
+  const total = steps.length;
   const safeStep = Math.min(Math.max(step, 0), total - 1);
-  const current = DEMO_TOUR_STEPS[safeStep];
+  const current = steps[safeStep];
   const isFirst = safeStep === 0;
   const isLast = safeStep === total - 1;
 
@@ -442,7 +570,9 @@ export function GuidedDemoTour({
       ? computePlacement(targetRect, panelSize)
       : null;
 
-  if (collapsed) {
+  // In app (onboarding) mode the X button already called onClose — the parent
+  // unmounts this component. In demo mode the bubble stays for re-expanding.
+  if (collapsed && !isAppMode) {
     return (
       <button
         type="button"
@@ -558,12 +688,12 @@ export function GuidedDemoTour({
           <header className={styles.header}>
             <span className={styles.headText}>
               <span className={styles.name}>Auri</span>
-              <span className={styles.role}>guia da demonstração</span>
+              <span className={styles.role}>{effectiveRoleLabel}</span>
             </span>
             <button
               type="button"
               className={styles.iconBtn}
-              onClick={() => setCollapsed(true)}
+              onClick={() => { setCollapsed(true); if (isAppMode) onClose?.(); }}
               aria-label="Minimizar o guia"
               title="Minimizar"
             >
@@ -577,7 +707,7 @@ export function GuidedDemoTour({
               role="group"
               aria-label={`Passo ${safeStep + 1} de ${total}`}
             >
-              {DEMO_TOUR_STEPS.map((s, i) => (
+              {steps.map((s, i) => (
                 <button
                   key={s.id}
                   type="button"
@@ -594,28 +724,35 @@ export function GuidedDemoTour({
           <h3 className={styles.title}>{current.title}</h3>
           <p className={styles.body}>{current.body}</p>
 
-          {current.demoNote && (
+          {/* demoNote is only relevant in Demo Aurora — hidden in app (onboarding) mode. */}
+          {current.demoNote && !isAppMode && (
             <p className={styles.demoNote}>
               <Lock size={13} className={styles.demoNoteIcon} aria-hidden="true" />
               <span>{current.demoNote}</span>
             </p>
           )}
 
-          {isLast && (
+          {isLast && !isAppMode && (
             <div className={styles.ctaCol}>
-              <button type="button" className={styles.ctaPrimary} onClick={() => onExitTo('/register')}>
+              <button type="button" className={styles.ctaPrimary} onClick={() => onExitTo?.('/register')}>
                 <UserPlus size={15} aria-hidden="true" />
                 Criar conta
               </button>
-              <button type="button" className={styles.ctaGhost} onClick={() => onExitTo('/register')}>
+              <button type="button" className={styles.ctaGhost} onClick={() => onExitTo?.('/register')}>
                 <FileSearch size={15} aria-hidden="true" />
                 Preparar arquivo de teste
               </button>
-              <button type="button" className={styles.ctaGhost} onClick={() => onExitTo('/#planos')}>
+              <button type="button" className={styles.ctaGhost} onClick={() => onExitTo?.('/#planos')}>
                 <HeartHandshake size={15} aria-hidden="true" />
                 Conhecer o piloto assistido
               </button>
             </div>
+          )}
+
+          {isLast && isAppMode && (
+            <button type="button" className={styles.ctaPrimary} onClick={onClose}>
+              Fechar tour
+            </button>
           )}
 
           <footer className={styles.footer}>
