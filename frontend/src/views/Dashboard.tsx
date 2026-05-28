@@ -18,6 +18,8 @@ import {
   RotateCcw,
   CreditCard,
   HelpCircle,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { UploadPanel } from '../components/UploadPanel';
@@ -327,6 +329,82 @@ export function Dashboard(): JSX.Element {
                   </button>
                 </div>
               </div>
+            )}
+
+            {/* ── Demo Aurora CTA ─────────────────────────────────────────────
+                Links to /demo in a new tab. No auto-login, no tenant switch.
+                Demo Aurora = 100% fictitious data. Only in real sessions. */}
+            {!isDemo && (
+              <div className={styles.demoCta}>
+                <span className={styles.demoCtaBadge}>
+                  <Sparkles size={11} aria-hidden="true" />
+                  Dados fictícios
+                </span>
+                <div className={styles.demoCtaText}>
+                  <p className={styles.demoCtaTitle}>Quer ver como fica tudo preenchido?</p>
+                  <p className={styles.demoCtaSub}>
+                    A Demo Aurora tem agenda, pacientes, cobranças e mais — sem nenhum dado clínico real.
+                  </p>
+                </div>
+                <a
+                  href="/demo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.demoCtaBtn}
+                >
+                  Ver Demo Aurora
+                  <ArrowRight size={14} aria-hidden="true" />
+                </a>
+              </div>
+            )}
+
+            {/* ── Primeiros passos ─────────────────────────────────────────────
+                Actionable shortcuts that open the relevant tab. Only in real
+                sessions. Equipe step restricted to owners (matches tab visibility). */}
+            {!isDemo && (
+              <section className={styles.stepsSection}>
+                <h3 className={styles.stepsTitle}>Primeiros passos</h3>
+                <div className={styles.stepsGrid}>
+                  <button type="button" className={styles.stepCard} onClick={() => setTab('servicos')}>
+                    <Briefcase size={20} className={styles.stepIcon} aria-hidden="true" />
+                    <span className={styles.stepCardTitle}>Serviços</span>
+                    <span className={styles.stepCardDesc}>Tipos de atendimento e preços de referência</span>
+                    <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
+                  </button>
+                  {isOwner && (
+                    <button type="button" className={styles.stepCard} onClick={() => setTab('equipe')}>
+                      <Users size={20} className={styles.stepIcon} aria-hidden="true" />
+                      <span className={styles.stepCardTitle}>Equipe</span>
+                      <span className={styles.stepCardDesc}>Profissionais e membros da clínica</span>
+                      <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
+                    </button>
+                  )}
+                  <button type="button" className={styles.stepCard} onClick={() => setTab('pacientes')}>
+                    <Users size={20} className={styles.stepIcon} aria-hidden="true" />
+                    <span className={styles.stepCardTitle}>Pacientes</span>
+                    <span className={styles.stepCardDesc}>Histórico administrativo dos pacientes</span>
+                    <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
+                  </button>
+                  <button type="button" className={styles.stepCard} onClick={() => setTab('agenda')}>
+                    <CalendarDays size={20} className={styles.stepIcon} aria-hidden="true" />
+                    <span className={styles.stepCardTitle}>Agenda</span>
+                    <span className={styles.stepCardDesc}>Crie o primeiro agendamento da clínica</span>
+                    <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
+                  </button>
+                  <button type="button" className={styles.stepCard} onClick={() => setTab('financeiro')}>
+                    <Wallet size={20} className={styles.stepIcon} aria-hidden="true" />
+                    <span className={styles.stepCardTitle}>Financeiro</span>
+                    <span className={styles.stepCardDesc}>Cobranças, recebimentos e resumo</span>
+                    <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
+                  </button>
+                  <button type="button" className={styles.stepCard} onClick={() => setTab('relatorios')}>
+                    <BarChart3 size={20} className={styles.stepIcon} aria-hidden="true" />
+                    <span className={styles.stepCardTitle}>Relatórios</span>
+                    <span className={styles.stepCardDesc}>Resumo por período de agenda e financeiro</span>
+                    <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
+                  </button>
+                </div>
+              </section>
             )}
 
             <div className={styles.grid}>

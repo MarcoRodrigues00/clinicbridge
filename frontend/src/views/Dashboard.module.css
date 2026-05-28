@@ -84,6 +84,169 @@
   transform: translateY(-1px);
 }
 
+/* ── Demo Aurora CTA (Sprint 6.0D) ──────────────────────────────────────────
+   Opens /demo in a new tab. No auto-login. Only in real clinic sessions. */
+.demoCta {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md);
+  background: linear-gradient(120deg, rgba(251, 191, 36, 0.06) 0%, transparent 70%);
+  border: 1px solid rgba(251, 191, 36, 0.18);
+}
+
+.demoCtaBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: var(--warning);
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.demoCtaText {
+  flex: 1;
+  min-width: 0;
+}
+
+.demoCtaTitle {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--text-0);
+  line-height: 1.3;
+}
+
+.demoCtaSub {
+  font-size: 0.84rem;
+  color: var(--text-2);
+  margin-top: 0.2rem;
+  line-height: 1.4;
+}
+
+.demoCtaBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--r-sm);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  text-decoration: none;
+  transition: background 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.demoCtaBtn:hover {
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+@media (max-width: 480px) {
+  .demoCta { flex-direction: column; align-items: flex-start; }
+  .demoCtaBtn { align-self: flex-start; }
+}
+
+/* ── Primeiros passos (Sprint 6.0D) ─────────────────────────────────────────
+   Actionable step cards that navigate to the relevant Dashboard tab. */
+.stepsSection {
+  margin-top: 2rem;
+}
+
+.stepsTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 0.75rem;
+}
+
+.stepsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  gap: 0.6rem;
+}
+
+.stepCard {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 0.6rem;
+  row-gap: 0.15rem;
+  align-items: center;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+  min-width: 0;
+}
+
+.stepCard:hover {
+  border-color: rgba(34, 211, 238, 0.35);
+  background: rgba(34, 211, 238, 0.04);
+}
+
+.stepCard:hover .stepIcon {
+  color: var(--cyan-soft);
+}
+
+.stepCard:hover .stepArrow {
+  transform: translateX(2px);
+  color: var(--cyan-soft);
+}
+
+.stepIcon {
+  grid-row: 1 / 3;
+  grid-column: 1;
+  color: var(--text-2);
+  flex-shrink: 0;
+  transition: color 0.18s ease;
+}
+
+.stepCardTitle {
+  grid-row: 1;
+  grid-column: 2;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-0);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.stepCardDesc {
+  grid-row: 2;
+  grid-column: 2;
+  font-size: 0.78rem;
+  color: var(--text-2);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.stepArrow {
+  grid-row: 1 / 3;
+  grid-column: 3;
+  color: var(--text-3);
+  flex-shrink: 0;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
 /* ── Auri onboarding teaser (Sprint 6.0C.1) ─────────────────────────────────
    Shown on the Início tab when the user hasn't dismissed the tour invite.
    Uses a separate localStorage key from the tour itself. Only visible in

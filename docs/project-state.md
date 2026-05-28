@@ -7,6 +7,22 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0D** (entregue 2026-05-28) — **Ponte Demo Aurora + primeiros passos no Dashboard real.**
+
+Frontend-only. Sem backend, migration, auth, demo-login, auto-login ou troca de tenant.
+
+**Demo Aurora CTA:** strip horizontal no tab Início (`!isDemo`), badge "Dados fictícios" âmbar, link `<a href="/demo" target="_blank" rel="noopener noreferrer">` — abre em nova aba sem trocar sessão ou tenant. Copy: "Quer ver como fica tudo preenchido? · A Demo Aurora tem agenda, pacientes, cobranças e mais — sem nenhum dado clínico real."
+
+**Primeiros passos:** seção de 6 cards clicáveis (grade auto-fill ≥13rem) que abrem a aba correspondente via `setTab()`: Serviços, Equipe (ownerOnly), Pacientes, Agenda, Financeiro, Relatórios. Cada card: ícone + título + descrição curta + ArrowRight. Hover: borda ciano + ícones cyan.
+
+**Onde entrou:** no `tab === 'inicio'`, entre o auriTeaser existente e o grid "Bem-vindo". Separação demo/real: tudo condicionado a `!isDemo`; link da demo é âncora normal (sem navigate/demo-login/state magic).
+
+**Checks:** typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅ · 2 arquivos. Validação visual pendente no navegador (sem headless no WSL2).
+
+**Próxima:** seed sintético do piloto familiar, spike billing 5.1D, ou tours por módulo.
+
+---
+
 **Sprint 6.0C** (entregue 2026-05-28) — **Onboarding interno com Auri v0.1 (6.0C + 6.0C.1).**
 
 Frontend-only. Sem backend, migration, demo-login, troca de tenant, dependência nova.
