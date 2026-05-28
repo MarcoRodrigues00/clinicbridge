@@ -17,9 +17,9 @@
 ## Estado atual (2026-05-28)
 
 **Entregue (landing/demo/Auri/mobile):** 5.0E–5.0I — Demo Experience, tour Auri, landing demo em destaque, teaser+bolinha, nav mobile compacto, CLAUDE.md slimming. Ver `docs/project-state.md`.
-**Sprint atual:** 6.0G (entregue) — **Guias restantes da Auri v0.1.** Tours por módulo completos: Documentos (self-contained), Convênios, Estoque, Relatórios, Assinatura. `MODULE_TOUR_STEPS` agora cobre 7 módulos; Documents tem estado próprio em `ClinicalDocumentsPanel`. `data-tour-id` adicionados: `docs-list`, `docs-create`, `subscription-plan`, `subscription-modules`, `subscription-limits`. Demo Aurora intocada. **Frontend-only.** Ver `docs/project-state.md`.
-**Próxima sprint:** 5.1D spike billing (Asaas vs Stripe), ou validação visual 6.0G.
-**Depois:** 5.1E QA/security billing · **5.2A** ADR Produção Segura AWS (renumerada de 5.1A; obrigatória antes de dados reais e de cobrança real).
+**Sprint atual:** 5.1D (entregue) — **Spike billing Asaas vs Stripe (research/docs-only).** `docs/billing-gateway-spike-5-1D.md` com fontes oficiais. **Recomendação: Asaas preferencial** (encaminhada, não cravada — adendo à ADR 0018 só após sandbox). Achados: Stripe **Pix Automático indisponível no BR (invite only)**; Stripe-BR **aceita PF/CPF** (corrige ADR 0018 §11); webhook Asaas = **token compartilhado** (não HMAC). **Não** criada ADR 0019 (`[VERIFICAR]` abertos). Sem gateway/secret/checkout/código. Ver `docs/project-state.md`.
+**Próxima sprint:** 5.1E `AsaasProvider` sandbox adapter (sem tocar `billingService`) + validar ADR 0018 §12 + adendo; ou voltar ao produto (validação visual 6.0x).
+**Depois:** **5.2A** ADR Produção Segura AWS (renumerada de 5.1A; obrigatória antes de dados reais e de cobrança real).
 
 **Fase:** Fase 3 (produção/governança). **NÃO pronto para produção com dados reais** — ver `docs/security-notes.md`.
 **Piloto controlado:** GO Fase 1 com dados sintéticos. Demo Aurora = 100% fictícia.

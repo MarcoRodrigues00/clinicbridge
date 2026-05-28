@@ -7,6 +7,26 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.1D** (entregue 2026-05-28) — **Spike billing: Asaas vs Stripe (research/docs-only).**
+
+Docs-only. **Sem** backend, migration, endpoint, webhook real, SDK, env/secret, checkout, cobrança real ou alteração em `billingService`/`SubscriptionPanel`. Nenhum gateway ligado.
+
+**Entregue:** `docs/billing-gateway-spike-5-1D.md` — comparação Asaas vs Stripe com fontes oficiais (docs.asaas.com, docs.stripe.com, support.stripe.com), tabela comparativa, perguntas pendentes (`[VERIFICAR]`), recomendação, go/no-go sandbox, riscos LGPD/segurança e encaixe na arquitetura ADR 0018.
+
+**Recomendação: Asaas preferencial** (decisão **encaminhada**, não cravada — adendo formal à ADR 0018 só após validação em sandbox). Razões: Brasil-first; Pix/boleto recorrente nativo; PF/MEI amigável.
+
+**Achados decisivos:**
+- **Stripe: Pix Automático indisponível no Brasil ("invite only")** — fricção real p/ SaaS recorrente BR (oficial, docs Pix).
+- **Stripe-BR aceita PF/CPF** (company ou individual) — **corrige** o pressuposto "exige CNPJ" da ADR 0018 §11 (oficial, support).
+- **Webhook Asaas = token compartilhado** (`asaas-access-token`), **não HMAC** como Stripe → modelo mais fraco, mitigado por HTTPS+idempotência por event id+tenant por mapa interno.
+- **Idempotência:** Asaas (event id único, at-least-once) e Stripe (`event.id` + `Idempotency-Key` em todo POST) **casam** com `billing_events.UNIQUE(provider, external_event_id)`.
+
+**Não criada ADR 0019:** ADR 0018 já prevê registrar a escolha como **adendo** após sandbox; ainda há `[VERIFICAR]` abertos.
+
+**Próxima:** **5.1E** — `AsaasProvider` sandbox adapter (sem tocar `billingService`) + validar ADR 0018 §12 + resolver `[VERIFICAR]` + adendo à ADR. Alternativa: voltar ao produto (validação visual 6.0x) — gateway já suficientemente encaminhado.
+
+---
+
 **Sprint 6.0G** (entregue 2026-05-28) — **Guias restantes da Auri v0.1.**
 
 Frontend-only. Sem backend, migration, demo-login, seed, troca de tenant.
