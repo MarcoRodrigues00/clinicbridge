@@ -5925,4 +5925,49 @@ para eventual reuso.
 - Prontuário fake / encontros clínicos → documentado para 5.0B.1
 - Documentos médicos fake → documentado para 5.0B.1 ou 5.0C
 
-**Sprint 5.0B entregue.** Gate para 5.0C (Página demo/tour) ou 5.0B.1 (prontuário fake no seed) aberto.
+**Sprint 5.0B entregue.** Gate para 5.0B.1 (prontuário fake no seed) aberto.
+
+---
+
+## Sprint 5.0B.1 — Prontuário e Documentos Fake no Seed Demo (2026-05-27)
+
+**Tipo:** Extensão de script de seed. Zero migration, zero schema, zero frontend. Arquivo único alterado.
+
+### Dados clínicos adicionados
+
+**3 clinical_encounters:**
+- Encounter 1: patient[3] Ricardo (medicina) — linked ao apptIds[6] (completed -1d), attending = `demo.medico`
+- Encounter 2: patient[10] Amanda (psicologia) — linked ao apptIds[7] (completed -1d), attending = `demo.psicologa`
+- Encounter 3: patient[0] Mariana (medicina) — sem link de appointment, attending = `demo.medico`
+
+**3 clinical_encounter_notes (1 por encounter):**
+- Enc 1: `chief_complaint`, `anamnesis`, `evolution`, `plan` — sem internal_note
+- Enc 2: `chief_complaint`, `evolution`, `internal_note` — demonstra que nota interna é visível só para autor
+- Enc 3: `chief_complaint`, `plan`
+
+Marcador obrigatório em todos os campos: `"DADO CLÍNICO FICTÍCIO PARA DEMONSTRAÇÃO."`
+
+**1 clinical_document:**
+- `doc_type`: `declaration`
+- `title`: "Declaração de comparecimento (FICTÍCIA — SEM VALIDADE)"
+- `status`: `finalized` (com `finalized_at` e `finalized_by_user_id`)
+- Marcador obrigatório no body: `"DOCUMENTO FICTÍCIO PARA DEMONSTRAÇÃO — SEM VALIDADE CLÍNICA OU LEGAL."`
+
+### Clean atualizado
+
+Antes da cascade da clínica, o clean agora deleta explicitamente (ordem FK-safe):
+1. `clinical_encounter_notes` (RESTRICT no encounter_id)
+2. `clinical_documents` (FK para encounter/patient)
+3. `clinical_encounters` (RESTRICT no patient_id e attending_user_id)
+
+### Validações realizadas
+
+- ✅ Guard sem flag: exit 2
+- ✅ Guard NODE_ENV=production: env.ts recusa no boot
+- ✅ Clean: 0 encounters · 0 notes · 0 docs (seed anterior não tinha clínico)
+- ✅ Seed: 3 encounters · 3 notes · 1 doc · marcadores todos presentes
+- ✅ Rerun: skip sem duplicar
+- ✅ Smoke users: 5/5 intactos
+- ✅ `typecheck` · `build` · `migrate:status 18/0` · `git diff --check` rc=0
+
+**Sprint 5.0B.1 entregue.** Gate para 5.0C (Página demo/tour) aberto.

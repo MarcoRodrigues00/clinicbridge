@@ -7,6 +7,21 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.0B.1** (entregue 2026-05-27) — **Prontuário e Documentos Fake no Seed Demo.**
+
+Extensão do `seed-demo-data.ts` com dados clínicos 100% fictícios e marcados:
+
+- **3 encontros clínicos fake:** Ricardo (medicina, linked ao appt completed), Amanda (psicologia, linked), Mariana (medicina, sem link)
+- **3 notas clínicas:** uma por encontro; campos `chief_complaint`/`anamnesis`/`evolution`/`plan`/`internal_note` com marcador `"DADO CLÍNICO FICTÍCIO PARA DEMONSTRAÇÃO"`
+- **1 documento médico fake:** declaração fictícia, `status=finalized`, corpo com `"DOCUMENTO FICTÍCIO PARA DEMONSTRAÇÃO — SEM VALIDADE CLÍNICA OU LEGAL"`
+- **Clean atualizado:** deletes explícitos de notes → documents → encounters antes da cascade da clínica (FK RESTRICT order)
+
+Arquivo alterado: apenas `backend/scripts/seed-demo-data.ts`. Zero migration, zero schema, zero frontend.
+
+`pnpm --filter backend typecheck` ✅ · build ✅ · `migrate:status` 18/0 ✅ · `git diff --check` rc=0 ✅.
+
+---
+
 **Sprint 5.0B** (entregue 2026-05-27) — **Demo Dataset / Seed Sintético.**
 
 Script `backend/scripts/seed-demo-data.ts` + `package.json` commands `seed:demo:full` / `seed:demo:full:clean`.

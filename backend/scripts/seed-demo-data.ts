@@ -20,9 +20,12 @@ import { env } from '../src/config/env';
 //   - 12 financial charges (particular, convênio, misto, various statuses)
 //   - 2 insurance providers + 2 plans + 3 service prices + 3 patient insurances
 //   - 7 inventory items + movements (2 below minimum for low-stock demo)
+//   - 3 clinical encounters + 4 notes (fake, all texts contain mandatory markers)
+//   - 1 clinical document — declaration fake, finalized, mandatory markers
 //
-// Clinical encounters/documents: skipped — only safe with fake IDs after proper
-// role setup. Documented as 5.0B.1 follow-up.
+// ALL CLINICAL TEXT: "DADO CLÍNICO FICTÍCIO PARA DEMONSTRAÇÃO"
+// ALL DOCUMENT BODY: "DOCUMENTO FICTÍCIO PARA DEMONSTRAÇÃO — SEM VALIDADE CLÍNICA OU LEGAL"
+// No real CID, no real prescription, no real diagnosis, no real patient data.
 //
 // GUARDS:
 //   1. Refuses if NODE_ENV=production
@@ -463,6 +466,104 @@ async function seed(clinic: DemoClinic): Promise<void> {
     }
   }
 
+  // ── Clinical encounters (fake — 3 encounters for medicine + psychology demo) ─
+  //
+  // ALL texts contain mandatory marker: "DADO CLÍNICO FICTÍCIO PARA DEMONSTRAÇÃO"
+  // No real CID, no real prescription, no real patient name, no real diagnosis.
+  // attending_user_id = demo users with profissional_clinico grant (medico, psicologa).
+  // Patients chosen: index 3 (Ricardo, medicina), 10 (Amanda, psicologia), 0 (Mariana, medicina).
+  // status='active' — only status in v0.1 schema (no 'completed').
+  // Appointment links: apptIds[6] (Ricardo completed -1d), apptIds[7] (Amanda completed -1d).
+
+  const FAKE_MARKER  = 'DADO CLÍNICO FICTÍCIO PARA DEMONSTRAÇÃO.';
+  const past1 = new Date(today); past1.setUTCDate(today.getUTCDate() - 1);
+
+  // Encounter 1: medicina — Ricardo (patient 3), linked to completed appointment
+  const [enc1] = await db('clinical_encounters').insert({
+    clinica_id:        clinic.id,
+    patient_id:        patientIds[3],
+    attending_user_id: userMap['medico'],
+    professional_id:   profIds[0],
+    appointment_id:    apptIds[6],
+    started_at:        atUTC(-1, 9, 0),
+    ended_at:          atUTC(-1, 9, 30),
+    status:            'active',
+  }).returning('id');
+
+  await db('clinical_encounter_notes').insert({
+    clinica_id:       clinic.id,
+    encounter_id:     enc1.id as string,
+    author_user_id:   userMap['medico'],
+    chief_complaint:  `${FAKE_MARKER} Queixa fictícia usada apenas para demonstração do fluxo de prontuário. Sem diagnóstico real.`,
+    anamnesis:        `${FAKE_MARKER} Anamnese fictícia para demonstração. Nenhuma informação de saúde real.`,
+    evolution:        `${FAKE_MARKER} Evolução fictícia para demonstração do campo de prontuário. Sem conduta clínica real.`,
+    plan:             `${FAKE_MARKER} Plano fictício para demonstração. Sem prescrição, sem orientação médica real.`,
+    internal_note:    null,
+  });
+
+  // Encounter 2: psicologia — Amanda (patient 10), linked to completed appointment
+  const [enc2] = await db('clinical_encounters').insert({
+    clinica_id:        clinic.id,
+    patient_id:        patientIds[10],
+    attending_user_id: userMap['psicologa'],
+    professional_id:   profIds[1],
+    appointment_id:    apptIds[7],
+    started_at:        atUTC(-1, 10, 0),
+    ended_at:          atUTC(-1, 10, 50),
+    status:            'active',
+  }).returning('id');
+
+  await db('clinical_encounter_notes').insert({
+    clinica_id:      clinic.id,
+    encounter_id:    enc2.id as string,
+    author_user_id:  userMap['psicologa'],
+    chief_complaint: `${FAKE_MARKER} Registro fictício para demonstrar controle de acesso e auditoria do prontuário. Não representa atendimento psicológico real.`,
+    evolution:       `${FAKE_MARKER} Evolução fictícia para demonstração. Sem conteúdo clínico ou psicológico real.`,
+    internal_note:   `${FAKE_MARKER} Nota interna fictícia — visível apenas para o(a) autor(a). Sem dado sensível real.`,
+  });
+
+  // Encounter 3: medicina — Mariana (patient 0), sem appointment link
+  const [enc3] = await db('clinical_encounters').insert({
+    clinica_id:        clinic.id,
+    patient_id:        patientIds[0],
+    attending_user_id: userMap['medico'],
+    professional_id:   profIds[0],
+    appointment_id:    null,
+    started_at:        atUTC(-3, 14, 0),
+    ended_at:          atUTC(-3, 14, 30),
+    status:            'active',
+  }).returning('id');
+
+  await db('clinical_encounter_notes').insert({
+    clinica_id:     clinic.id,
+    encounter_id:   enc3.id as string,
+    author_user_id: userMap['medico'],
+    chief_complaint: `${FAKE_MARKER} Queixa fictícia para segundo exemplo de prontuário. Sem diagnóstico real.`,
+    plan:            `${FAKE_MARKER} Plano fictício para demonstração. Sem orientação médica real.`,
+  });
+
+  // ── Clinical document (fake — 1 finalized declaration) ────────────────────
+  //
+  // doc_type options: 'receipt_simple' | 'attestation' | 'declaration' | 'exam_request' | 'orientation'
+  // Using 'declaration' (declaração fictícia). status='finalized' for a complete demo.
+  // BODY must contain: "DOCUMENTO FICTÍCIO PARA DEMONSTRAÇÃO — SEM VALIDADE CLÍNICA OU LEGAL"
+
+  const DOC_MARKER = 'DOCUMENTO FICTÍCIO PARA DEMONSTRAÇÃO — SEM VALIDADE CLÍNICA OU LEGAL.';
+
+  await db('clinical_documents').insert({
+    clinica_id:           clinic.id,
+    patient_id:           patientIds[3],
+    encounter_id:         enc1.id as string,
+    author_user_id:       userMap['medico'],
+    doc_type:             'declaration',
+    title:                'Declaração de comparecimento (FICTÍCIA — SEM VALIDADE)',
+    body:                 `${DOC_MARKER}\n\nEste documento é fictício e foi gerado automaticamente para demonstração do ClinicBridge.\nNão possui validade clínica, jurídica ou legal.\nNome fictício do paciente: Ricardo Demo. Data fictícia: ${past1.toLocaleDateString('pt-BR')}.`,
+    metadata_json:        null,
+    status:               'finalized',
+    finalized_at:         new Date(),
+    finalized_by_user_id: userMap['medico'],
+  });
+
   console.log(
     `[seed:demo:full] ✅  Clínica Demo Aurora (${clinic.id})\n` +
     `  • Usuários demo:       ${DEMO_USERS.length} (+ clinic already counted)\n` +
@@ -473,6 +574,9 @@ async function seed(clinic: DemoClinic): Promise<void> {
     `  • Cobranças:           ${chargesData.length}\n` +
     `  • Convênios:           2 operadoras · 3 planos · 3 preços ref · 3 carteirinhas\n` +
     `  • Estoque:             ${DEMO_INVENTORY.length} itens (2 com estoque baixo)\n` +
+    `  • Encontros clínicos:  3 (medicine ×2, psicologia ×1) — dados fictícios\n` +
+    `  • Notas clínicas:      3 (todas com marcador de dado fictício)\n` +
+    `  • Documentos médicos:  1 declaração fictícia finalizada\n` +
     `\n  Senha de todos os usuários demo: ${DEMO_PASSWORD}\n` +
     `  (dev/staging only — nunca usar em produção)`,
   );
@@ -489,7 +593,20 @@ async function clean(): Promise<void> {
 
   // financial_charges.patient_id has RESTRICT; must delete before patients/clinic cascade.
   const removedCharges = await db('financial_charges').where({ clinica_id: clinic.id }).del();
-  console.log(`[seed:demo:full:clean] removed ${removedCharges} financial charges`);
+
+  // clinical_encounter_notes.encounter_id has RESTRICT on encounters; delete notes first.
+  const removedNotes = await db('clinical_encounter_notes').where({ clinica_id: clinic.id }).del();
+
+  // clinical_documents.patient_id / encounter_id — delete before encounter/patient cascade.
+  const removedDocs = await db('clinical_documents').where({ clinica_id: clinic.id }).del();
+
+  // clinical_encounters.patient_id and attending_user_id have RESTRICT; delete before cascade.
+  const removedEncounters = await db('clinical_encounters').where({ clinica_id: clinic.id }).del();
+
+  console.log(
+    `[seed:demo:full:clean] removed: ${removedCharges} charges · ${removedEncounters} encounters · ` +
+    `${removedNotes} notes · ${removedDocs} documents`,
+  );
 
   // users.clinica_id → clinics.id has no CASCADE; NULL it before deleting clinic.
   await db('users').where({ clinica_id: clinic.id }).update({ clinica_id: null });
@@ -506,6 +623,7 @@ async function clean(): Promise<void> {
   console.log(
     `[seed:demo:full:clean] ✅  Demo clinic "${DEMO_CLINIC_NAME}" and all data removed.\n` +
     `  • Financial charges: ${removedCharges}\n` +
+    `  • Clinical encounters: ${removedEncounters} · Notes: ${removedNotes} · Documents: ${removedDocs}\n` +
     `  • Users: ${removedUsers}`,
   );
 }
