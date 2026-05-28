@@ -74,7 +74,7 @@ const SECTION_INTRO: Record<TabKey, { title: string; subtitle: string }> = {
   convenios: { title: 'Convênios', subtitle: 'Cadastre convênios aceitos pela clínica e use essas informações em pacientes e cobranças. Apenas dados administrativos — sem dados clínicos.' },
   estoque: { title: 'Estoque', subtitle: 'Controle materiais e insumos da clínica com entradas, saídas e alertas de estoque baixo. Apenas dados administrativos — sem dados clínicos.' },
   equipe: { title: 'Equipe', subtitle: 'Acesso ao sistema (membros), solicitações pendentes e profissionais usados na agenda.' },
-  seguranca: { title: 'Segurança e sessão', subtitle: 'Estado da autenticação e do MVP administrativo.' },
+  seguranca: { title: 'Segurança e sessão', subtitle: 'Estado da autenticação, MFA e auditoria de acesso clínico.' },
 };
 
 export function Dashboard(): JSX.Element {
@@ -179,9 +179,11 @@ export function Dashboard(): JSX.Element {
                 </span>
                 <h3 className={styles.cardTitle}>Bem-vindo(a) ao ClinicBridge</h3>
                 <p className={styles.cardText}>
-                  Use a navegação acima: <strong>Importações</strong> para migrar dados,
-                  <strong> Pacientes</strong> para revisar e exportar, e <strong>Agenda</strong>
-                  {' '}para os agendamentos administrativos da clínica.
+                  Use a navegação: <strong>Agenda</strong> e <strong>Pacientes</strong> para o
+                  dia a dia; <strong>Financeiro</strong> e <strong>Relatórios</strong> para
+                  cobranças e resultados; <strong>Convênios</strong>, <strong>Serviços</strong>{' '}
+                  e <strong>Estoque</strong> para a gestão operacional; e{' '}
+                  <strong>Importações</strong> para migrar dados do sistema anterior.
                 </p>
               </section>
             </div>
@@ -270,7 +272,7 @@ export function Dashboard(): JSX.Element {
                 <ListChecks size={14} aria-hidden="true" />
                 Resumo
               </span>
-              <h3 className={styles.cardTitle}>Checklist do MVP</h3>
+              <h3 className={styles.cardTitle}>Módulos disponíveis</h3>
               <ul className={styles.checklist}>
                 <li className={styles.checkItem}>
                   <CheckCircle2 size={18} className={styles.iconDone} aria-hidden="true" />
@@ -278,11 +280,11 @@ export function Dashboard(): JSX.Element {
                 </li>
                 <li className={styles.checkItem}>
                   <CheckCircle2 size={18} className={styles.iconDone} aria-hidden="true" />
-                  <span>Importação CSV/XLSX e pacientes</span>
+                  <span>Importação, pacientes, agenda, serviços e equipe</span>
                 </li>
                 <li className={styles.checkItem}>
                   <CheckCircle2 size={18} className={styles.iconDone} aria-hidden="true" />
-                  <span>Agenda administrativa e lembrete manual</span>
+                  <span>Financeiro, relatórios, convênios e estoque</span>
                 </li>
                 <li className={styles.checkItem}>
                   <Clock size={18} className={styles.iconPending} aria-hidden="true" />

@@ -10,9 +10,11 @@ export function Footer(): JSX.Element {
           ClinicBridge
         </div>
         <p className={styles.note}>
-          ClinicBridge — MVP focado em migração administrativa, não em prontuário clínico.
+          ClinicBridge — sistema de gestão para clínicas e consultórios. Sistema em piloto.
+          Funcionalidades clínicas e documentos estão em evolução. Assinatura digital válida,
+          integrações oficiais e obrigações regulatórias específicas exigem etapas próprias.
         </p>
-        <span className={styles.meta}>Piloto administrativo · v0.1</span>
+        <span className={styles.meta}>v0.1 · piloto</span>
       </div>
     </footer>
   );

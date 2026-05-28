@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Play, FileSearch } from 'lucide-react';
+import { UserPlus, FileSearch } from 'lucide-react';
 import styles from './FinalCTA.module.css';
 
 export function FinalCTA(): JSX.Element {
@@ -15,17 +15,21 @@ export function FinalCTA(): JSX.Element {
       >
         <span className="eyebrow">Comece pelo essencial</span>
         <h2 className={styles.title}>
-          Quer sair do sistema antigo sem perder seus dados?
+          Comece a organizar sua clínica hoje
         </h2>
         <p className={styles.subtitle}>
-          ClinicBridge começa pelo problema mais urgente: organizar a migração administrativa com
-          segurança, revisão e exportação limpa.
+          Crie sua conta e comece pelo que faz mais sentido para a sua rotina — a plataforma
+          cresce junto com a clínica.
         </p>
         <div className={styles.actions}>
-          <a href="#produto" className={styles.btnPrimary} aria-label="Ver demonstração do produto">
-            <Play size={16} aria-hidden="true" />
-            Ver demonstração
-          </a>
+          <Link
+            to="/register"
+            className={styles.btnPrimary}
+            aria-label="Criar conta no ClinicBridge"
+          >
+            <UserPlus size={16} aria-hidden="true" />
+            Criar conta
+          </Link>
           <Link
             to="/register"
             className={styles.btnGhost}

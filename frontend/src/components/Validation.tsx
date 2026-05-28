@@ -17,11 +17,11 @@ export function Validation(): JSX.Element {
           <div className={styles.content}>
             <span className="eyebrow">Análise prévia</span>
             <h2 className={styles.title}>
-              Valide sua migração antes do MVP completo
+              Comece com uma análise do seu arquivo
             </h2>
             <p className={styles.desc}>
-              Envie um arquivo de exemplo para uma análise inicial de qualidade dos dados,
-              duplicados e campos incompletos.
+              Envie um arquivo de exemplo para uma análise inicial: qualidade dos dados,
+              duplicados e campos incompletos — antes de migrar tudo.
             </p>
           </div>
 
@@ -37,10 +37,10 @@ export function Validation(): JSX.Element {
             <Link
               to="/register"
               className={styles.btnGhost}
-              aria-label="Entrar na lista de espera do ClinicBridge"
+              aria-label="Criar conta no ClinicBridge"
             >
               <BellRing size={16} aria-hidden="true" />
-              Entrar na lista de espera
+              Criar conta
             </Link>
           </div>
         </motion.div>

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Logo } from './Logo';
 import styles from './Header.module.css';
@@ -6,8 +7,8 @@ import styles from './Header.module.css';
 const NAV_ITEMS = [
   { label: 'Produto', href: '#produto' },
   { label: 'Como funciona', href: '#como-funciona' },
-  { label: 'Segurança', href: '#seguranca' },
-  { label: 'Roadmap', href: '#roadmap' },
+  { label: 'Funcionalidades', href: '#roadmap' },
+  { label: 'Planos', href: '#planos' },
 ];
 
 export function Header(): JSX.Element {
@@ -32,13 +33,13 @@ export function Header(): JSX.Element {
           ))}
         </nav>
 
-        <a href="#produto" className={styles.cta} aria-label="Ver demonstração do produto">
-          <span className={styles.ctaLong}>Ver demonstração</span>
+        <Link to="/register" className={styles.cta} aria-label="Criar conta no ClinicBridge">
+          <span className={styles.ctaLong}>Criar conta</span>
           <span className={styles.ctaShort} aria-hidden="true">
-            Demo
+            Entrar
           </span>
           <ArrowRight size={14} aria-hidden="true" />
-        </a>
+        </Link>
       </div>
     </motion.header>
   );

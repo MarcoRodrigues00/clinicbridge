@@ -1,4 +1,4 @@
-import { Users, CalendarDays, ShieldCheck, UploadCloud, FileX2 } from 'lucide-react';
+import { Users, CalendarDays, ShieldCheck, UploadCloud, ClipboardList } from 'lucide-react';
 import styles from '../views/Auth.module.css';
 
 const ITEMS = [
@@ -23,9 +23,9 @@ const ITEMS = [
     text: 'Trabalhe com CSV/XLSX, duplicados e exportações limpas para continuar usando seus dados com segurança.',
   },
   {
-    icon: FileX2,
-    title: 'Não é prontuário clínico',
-    text: 'O ClinicBridge trata dados administrativos. Não armazena diagnóstico, prescrição, evolução ou exames.',
+    icon: ClipboardList,
+    title: 'Prontuário com regras restritas',
+    text: 'Prontuário e documentos v0.1 disponíveis com roles clínicas, auditoria e controle de acesso. Não substitui assinatura ICP-Brasil, TISS ou sistema homologado.',
   },
 ];
 
