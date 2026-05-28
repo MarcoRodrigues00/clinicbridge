@@ -1,0 +1,233 @@
+/* SetupChecklist — Sprint 6.0E.
+   Compact per-item list with progress bar. Never a blocking wizard. */
+
+.root {
+  margin-top: 2rem;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-0);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 0.84rem;
+  color: var(--text-2);
+  margin-top: 0.2rem;
+  line-height: 1.45;
+}
+
+.counter {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-2);
+  align-self: flex-end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Progress bar ── */
+.progressBar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--cyan), var(--teal));
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── List ── */
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+/* ── Item row ──
+   Columns: status-icon | module-icon | info (flex) | badge | open-btn */
+.item {
+  display: grid;
+  grid-template-columns: 1.25rem 1.25rem 1fr auto auto;
+  align-items: center;
+  column-gap: 0.55rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+  min-width: 0;
+  transition: border-color 0.18s ease;
+}
+
+.item:not(.itemRestricted):hover {
+  border-color: rgba(34, 211, 238, 0.28);
+}
+
+.itemDone {
+  background: rgba(52, 211, 153, 0.03);
+  border-color: rgba(52, 211, 153, 0.15);
+}
+
+.itemRestricted {
+  opacity: 0.48;
+}
+
+/* ── Status icon (col 1) ── */
+.statusIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconDone  { color: var(--success); }
+.iconPending { color: var(--text-3); }
+.iconRestricted { color: var(--text-3); }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  animation: spin 1s linear infinite;
+  color: var(--cyan-soft);
+}
+
+/* ── Module icon (col 2) ── */
+.moduleIcon {
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.itemDone .moduleIcon { color: var(--success); }
+
+/* ── Info (col 3) ── */
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.itemTitle {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-0);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.itemRestricted .itemTitle,
+.itemRestricted .itemDesc {
+  color: var(--text-2);
+}
+
+.itemDesc {
+  font-size: 0.76rem;
+  color: var(--text-2);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* ── Badge (col 4) ── */
+.badge {
+  flex-shrink: 0;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.badgeDone {
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: var(--success);
+}
+
+.badgePending {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-2);
+}
+
+.badgeOptional {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--surface-border);
+  color: var(--text-3);
+}
+
+.badgeRestricted {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--surface-border);
+  color: var(--text-3);
+}
+
+/* ── Open button (col 5) ── */
+.openBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--r-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-2);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+  white-space: nowrap;
+}
+
+.openBtn:hover {
+  color: var(--cyan-soft);
+  border-color: rgba(34, 211, 238, 0.42);
+  background: rgba(34, 211, 238, 0.07);
+}
+
+/* ── Mobile (≤ 480px): stack badge and open below info ── */
+@media (max-width: 480px) {
+  .item {
+    grid-template-columns: 1.25rem 1.25rem 1fr;
+    grid-template-rows: auto auto;
+    row-gap: 0.4rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .badge {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .openBtn {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: end;
+  }
+
+  /* If both badge AND openBtn are on row 2 col 3, put them inline. */
+  /* Simpler: hide badge on mobile — status is obvious from icon + title. */
+  .badge { display: none; }
+  .openBtn { justify-self: start; }
+}

@@ -17,8 +17,8 @@
 ## Estado atual (2026-05-28)
 
 **Entregue (landing/demo/Auri/mobile):** 5.0E–5.0I — Demo Experience, tour Auri, landing demo em destaque, teaser+bolinha, nav mobile compacto, CLAUDE.md slimming. Ver `docs/project-state.md`.
-**Sprint atual:** 6.0D (entregue) — **Ponte Demo Aurora + primeiros passos no Dashboard real.** CTA âmbar "Quer ver como fica tudo preenchido?" → abre `/demo` em nova aba (âncora pura, sem demo-login, sem troca de tenant). Seção "Primeiros passos": 6 cards clicáveis que abrem a aba correspondente (Serviços, Equipe, Pacientes, Agenda, Financeiro, Relatórios; Equipe ownerOnly). Tudo `!isDemo`. **Frontend-only.** 2 arquivos. Anterior: 6.0C.1 (Auri onboarding), 6.0B (polish Agenda). Ver `docs/project-state.md`.
-**Próxima sprint:** seed sintético do piloto familiar, 5.1D spike billing, ou tours por módulo.
+**Sprint atual:** 6.0E (entregue) — **Checklist de configuração da clínica real v0.1.** `SetupChecklist.tsx`: 7 itens (5 obrigatórios + 2 opcionais), cada um com query TanStack (`limit:1`, `retry:false`, `staleTime:60s`) que detecta existência do recurso. Status: Concluído / Pendente / Opcional / Restrito (403 por item). Barra de progresso, `ownerOnly` para Profissionais. `api.ts`: `from`/`to`/`limit` adicionados a `ListAppointmentsParams`. Demo Aurora CTA inalterado. **Frontend-only.** Ver `docs/project-state.md`.
+**Próxima sprint:** 5.1D spike billing (Asaas vs Stripe) ou tours por módulo.
 **Depois:** 5.1E QA/security billing · **5.2A** ADR Produção Segura AWS (renumerada de 5.1A; obrigatória antes de dados reais e de cobrança real).
 
 **Fase:** Fase 3 (produção/governança). **NÃO pronto para produção com dados reais** — ver `docs/security-notes.md`.

@@ -541,6 +541,11 @@ export interface ClinicProfessionalResponse {
 
 export interface ListAppointmentsParams {
   date?: string;
+  // Half-open window. The backend already accepts these; added here for the
+  // setup-checklist existence check (Sprint 6.0E).
+  from?: string;
+  to?: string;
+  limit?: number;
   professional_id?: string;
   service_id?: string;
   status?: AppointmentStatus;
@@ -1742,6 +1747,9 @@ export const api = {
   ): Promise<ListAppointmentsResponse> {
     const query = new URLSearchParams();
     if (params.date) query.set('date', params.date);
+    if (params.from) query.set('from', params.from);
+    if (params.to) query.set('to', params.to);
+    if (params.limit !== undefined) query.set('limit', String(params.limit));
     if (params.professional_id) query.set('professional_id', params.professional_id);
     if (params.service_id) query.set('service_id', params.service_id);
     if (params.status) query.set('status', params.status);

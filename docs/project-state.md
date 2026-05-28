@@ -7,6 +7,22 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0E** (entregue 2026-05-28) — **Checklist de configuração da clínica real v0.1.**
+
+Frontend-only. Sem seed, sem backend, sem migration, sem demo-login, sem dado fake.
+
+**Implementação:** novo componente `SetupChecklist.tsx` + CSS. 7 itens (5 obrigatórios + 2 opcionais): Serviços, Profissionais (ownerOnly), Pacientes, Agendamento, Cobrança, Convênios (opcional), Estoque (opcional). Cada item: query TanStack (`queryKey: ['setup','<item>'] as const`, `staleTime: 60s`, `retry: false`). Todos com `limit: 1` onde o backend suporta. **Profissionais** não tem limit no backend — payload pequeno, aceitável. **Agendamentos**: `from: '2020-01-01'` + `limit: 1` (requer adição de `from/to/limit` a `ListAppointmentsParams` em `api.ts` — backend já suportava).
+
+**UX:** progresso "N de M concluídos" + barra animada; status por item (ícone CheckCircle/Circle/Loader/Lock); badge Concluído/Pendente/Opcional/Restrito; botão "Abrir →" que chama `setTab()`. 403 → "Restrito" por item (sem erro vermelho). Não-owner: "Profissionais" oculto (ownerOnly). Mobile ≤480px: badge oculto, "Abrir" fica junto ao título.
+
+**Substituição:** bloco `stepsSection` do 6.0D substituído por `<SetupChecklist isOwner onNavigate>`. Demo Aurora CTA mantido inalterado.
+
+**Checks:** typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅ · 2 novos arquivos + 2 modificados. Validação visual pendente no navegador.
+
+**Próxima:** spike billing 5.1D ou tours por módulo (TOUR_IDS já reservados).
+
+---
+
 **Sprint 6.0D** (entregue 2026-05-28) — **Ponte Demo Aurora + primeiros passos no Dashboard real.**
 
 Frontend-only. Sem backend, migration, auth, demo-login, auto-login ou troca de tenant.
