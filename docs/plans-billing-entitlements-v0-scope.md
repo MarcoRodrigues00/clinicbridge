@@ -210,11 +210,21 @@ portal do cliente, disponibilidade atual no Brasil. **Não cravar sem fonte ofic
 - [x] typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅.
 - Validação visual no navegador: pendente (sem browser headless no ambiente WSL2).
 
-### 5.1D — Spike sandbox
-- [ ] Asaas: criar cliente+assinatura, webhook+verificação, idempotência, CPF/CNPJ,
-      Pix/boleto/cartão, (Pix recorrente?), retentativa, portal, taxas.
-- [ ] Stripe: mesmos itens, com foco em **operação BR/PF**.
-- [ ] **Adendo à ADR 0018** com a escolha + fontes oficiais consultadas.
+### 5.1D — Spike sandbox (research/docs) — ✅ ENTREGUE (2026-05-28)
+- [x] Comparação documental Asaas vs Stripe com fontes oficiais →
+      `docs/billing-gateway-spike-5-1D.md`.
+- [x] **Recomendação: Asaas preferencial** (Brasil-first; Pix/boleto recorrente
+      nativo; PF/MEI). Decisão **encaminhada**, não cravada.
+- [x] **Achado decisivo:** Stripe declara **Pix Automático indisponível no Brasil
+      (invite only)** → fricção real p/ SaaS recorrente BR. Stripe-BR **aceita PF/CPF**
+      (corrige o pressuposto "exige CNPJ" da ADR 0018 §11).
+- [x] **Achado de segurança:** webhook Asaas usa **token compartilhado**
+      (`asaas-access-token`), **não HMAC** como o Stripe → mitigado por
+      HTTPS+idempotência+tenant interno (spike §11).
+- [ ] **Validação em sandbox** (criar cliente+assinatura, webhook+verificação,
+      idempotência real, resolver os **[VERIFICAR]**) → **5.1E** (não feita nesta
+      sprint: spike é docs-only, sem conta/API key/requisição).
+- [ ] **Adendo à ADR 0018** com a escolha formal + fontes — **só após sandbox** (5.1E).
 
 ### 5.1E — QA/security billing hardening
 - [ ] Idempotência (reenvio de evento = no-op).

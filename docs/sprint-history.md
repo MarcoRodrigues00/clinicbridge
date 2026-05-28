@@ -7521,3 +7521,39 @@ AGENDA · PATIENTS · FINANCIAL · INSURANCE · INVENTORY · REPORTS · PLAN + D
 ### Checks
 
 typecheck ✅ · build ✅ (3.60s) · `git diff --check` rc=0 ✅. Validação visual no navegador: pendente.
+
+---
+
+## Sprint 5.1D (2026-05-28) — Spike billing: Asaas vs Stripe (research/docs-only)
+
+Docs-only. **Sem** backend, migration, endpoint, webhook real, SDK, env/secret, checkout, cobrança real ou alteração em `billingService`/`SubscriptionPanel`. Nenhum gateway ligado, nenhuma conta/API key/requisição.
+
+### Entregue
+
+- `docs/billing-gateway-spike-5-1D.md` — comparação documental Asaas vs Stripe com **fontes oficiais** (docs.asaas.com, docs.stripe.com, support.stripe.com), tabela comparativa, `[VERIFICAR]` pendentes, recomendação, go/no-go sandbox, riscos LGPD/segurança, encaixe na arquitetura ADR 0018, próxima sprint.
+- Atualizados: `docs/project-state.md`, `docs/plans-billing-entitlements-v0-scope.md` (checklist 5.1D), `CLAUDE.md` (estado).
+
+### Recomendação
+
+**Asaas preferencial** — decisão **encaminhada**, não cravada. O adendo formal à ADR 0018 só após validação em sandbox (ainda há `[VERIFICAR]`). **Não** foi criada ADR 0019 (ADR 0018 já prevê adendo).
+
+### Achados (fontes oficiais)
+
+- **Stripe — Pix Automático indisponível no BR ("invite only")**: recorrência via Pix bloqueada para conta brasileira hoje → fricção real p/ SaaS recorrente BR. (docs.stripe.com/payments/pix)
+- **Stripe-BR aceita PF/CPF** (company **ou** individual; CPF ou CNPJ): **corrige** o pressuposto "exige CNPJ" da ADR 0018 §11. (support.stripe.com)
+- **Asaas atende PF/MEI/CNPJ**, Pix/boleto/cartão, assinatura nativa (`POST /v3/subscriptions`, cycle MONTHLY), link recorrente (`chargeType=RECURRENT`), dunning 5 tentativas, sandbox (`api-sandbox.asaas.com/v3`). Pix R$0,99→R$1,99; boleto/cartão "paga ao receber".
+- **Webhook Asaas = token compartilhado** (`asaas-access-token`), **não HMAC** como Stripe (`Stripe-Signature`) → modelo mais fraco; mitigado por HTTPS + idempotência por event id + tenant por mapa interno.
+- **Idempotência:** Asaas (event id único, at-least-once) e Stripe (`event.id` + `Idempotency-Key` em todo POST) casam com `billing_events.UNIQUE(provider, external_event_id)`. `Idempotency-Key` na API REST do Asaas → `[VERIFICAR]`.
+- **Customer Portal self-service:** Stripe tem; Asaas → `[VERIFICAR]` (fatura+link confirmados).
+
+### Go/No-Go
+
+**GO** sandbox fictício (sem dinheiro/PII/dado real). **No-Go** dinheiro real / produção / webhook público (dependem de 5.2A + validação jurídica/comercial). **No-Go** PII de paciente ao gateway em qualquer ambiente.
+
+### Próxima
+
+**5.1E** — `AsaasProvider` sandbox adapter (sem tocar `billingService`) + validar ADR 0018 §12 + resolver `[VERIFICAR]` + adendo à ADR. Alternativa: voltar ao produto.
+
+### Checks
+
+docs-only. `git diff --check` rc=0 ✅ · `git status --short` (só docs alterados) ✅. Sem typecheck/build (nenhum código tocado).
