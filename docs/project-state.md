@@ -7,6 +7,25 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.8B** (entregue 2026-05-27) — **Backend Estoque v0.1.**
+
+Migration `20260607000000_inventory_v0` (batch 18): tabelas `inventory_items` +
+`inventory_movements`. 9 endpoints: `GET|POST /inventory/items`,
+`GET|PATCH /inventory/items/:id`, `PATCH /inventory/items/:id/status`,
+`GET|POST /inventory/items/:id/movements`, `GET /inventory/movements`.
+DAO (`inventoryDao.ts`) + service (`inventoryService.ts`) + controller + routes.
+Permissões: owner CRUD+movimentos; secretaria movimentos+leitura;
+profissional_clinico bloqueado via `buildInventoryActor` (grants de `user_clinical_roles`).
+`current_quantity` atualizado **somente** via transação com `SELECT FOR UPDATE`.
+Audit metadata-only: `reason`/`notes`/`name` nunca no audit. Logger redige `reason`.
+`created_by_user_id` nullable (ON DELETE SET NULL). Smoke **51/51 PASS**.
+`pnpm --filter backend typecheck` ✅ · build ✅ · `migrate:status` 18/0 ✅ ·
+`pnpm --filter frontend typecheck` ✅ · `git diff --check` rc=0 ✅.
+
+**Próxima sprint:** **4.8C** Frontend Estoque v0.1.
+
+---
+
 **Sprint 4.8A** (entregue 2026-05-27) — **ADR 0017 Estoque v0.1 (docs/ADR-only).**
 
 ADR 0017 + `docs/inventory-v0-scope.md` criados. Estoque v0.1 = controle manual de
@@ -19,8 +38,6 @@ movimentos + lê; profissional_clinico bloqueado. Invariantes: sem PII de pacien
 notes/reason nunca em audit; append-only em movimentos; sem dedução automática;
 medicamentos controlados (SNGPC/ANVISA) fora do v0.1.
 `git diff --check` rc=0 ✅. **Zero código, schema, migration ou env.**
-
-**Próxima sprint:** **4.8B** Backend Estoque v0.1.
 
 ---
 

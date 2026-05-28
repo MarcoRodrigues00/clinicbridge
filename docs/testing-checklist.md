@@ -2772,3 +2772,90 @@ grep -n "Clinic OS\|MVP administrativo" frontend/src/views/Dashboard.tsx
 | 14 | "Marcar como pago" em cobrança convênio | Título: "Registrar recebimento do convênio"; nota azul; método default Transferência |
 | 15 | "Marcar como pago" em cobrança mista | Título: "Confirmar recebimento misto"; nota amarela com breakdown; aviso v0.1 |
 | 16 | Footer do Dashboard | "ClinicBridge · Clinic OS" (sem "MVP administrativo") |
+
+---
+
+## Sprint 4.8B — Estoque v0.1 (Backend)
+
+> Smoke executado em 2026-05-27 via Python (`/tmp/smoke_4_8b.py`).
+> **51/51 PASS.** Dados sintéticos limpos após os testes (item soft-deletado; movimentos append-only).
+> Rate limit auth em Redis — limpar `clinicbridge:ratelimit:auth:*` antes de reexecutar
+> se o limite de 20 req/15min for atingido.
+
+### Smoke tests 51/51 PASS
+
+**A — Auth / Permissões (8 testes)**
+- sem token GET /inventory/items → 401 ✅
+- sem token POST /inventory/items → 401 ✅
+- admin_sistema GET /inventory/items → 403 ✅
+- owner GET /inventory/items → 200 ✅
+- secretaria GET /inventory/items → 200 ✅
+- gestor GET /inventory/items → 200 ✅
+- profissional_clinico GET /inventory/items → 403 ✅ (bloqueado via grants)
+- profissional_clinico POST movement → 403 ✅
+
+**B — CRUD Item owner (9 testes)**
+- POST /inventory/items → 201 ✅
+- GET /inventory/items list → 200 ✅
+- GET /inventory/items/:id detail → 200 ✅
+- PATCH metadata (minimum_quantity=10) → 200 ✅
+- PATCH metadata não altera current_quantity (=0) ✅
+- POST duplicado exato → 409 ✅
+- POST duplicado case-insensitive → 409 ✅
+- PATCH /status desativa → active=false ✅
+- PATCH /status reativa → active=true ✅
+
+**C — Secretaria (5 testes)**
+- GET /inventory/items → 200 ✅
+- POST movement entry → 201 ✅
+- POST /inventory/items (criar item) → 403 ✅
+- PATCH metadata → 403 ✅
+- PATCH /status → 403 ✅
+
+**D — Movimentos / Quantidade (8 testes)**
+- entry +10 aumenta qty (=10) ✅
+- exit -3 reduz qty (=7) ✅
+- loss -2 reduz qty (=5) ✅
+- adjustment +5 → 201 ✅
+- adjustment -3 → 201 ✅
+- GET /items/:id/movements (count ≥ 5) ✅
+- GET /inventory/movements lista geral → 200 ✅
+- low_stock filter retorna item abaixo do mínimo ✅
+
+**E — Validações (17 testes)**
+- name vazio → 400 ✅
+- name whitespace-only → 400 ✅
+- unit vazio → 400 ✅
+- unit ausente → 400 ✅
+- notes > 500 chars → 400 ✅
+- reason > 300 chars → 400 ✅
+- quantity_delta=0 → 400 ✅
+- entry negativo → 400 ✅
+- exit positivo → 400 ✅
+- loss positivo → 400 ✅
+- exit acima do estoque → 409 `inventory_quantity_insufficient` ✅
+- adjustment negativo acima do estoque → 409 `inventory_quantity_insufficient` ✅
+- movement_type inválido → 400 ✅
+- movimento em item inativo → 400 `inventory_item_inactive` ✅
+- limit > 100 → 400 ✅
+- UUID inválido → 400 ✅
+- UUID inexistente → 404 ✅
+
+**F — Audit / PII (3 testes)**
+- sem campos proibidos (patient_id/encounter_id/diagnosis/prescription) na resposta de item ✅
+- sem campos proibidos na resposta de movimentos ✅
+- secretaria pode ver movimentos (GET /items/:id/movements) ✅
+
+**G — Cleanup (1 teste)**
+- item smoke desativado (soft-delete) ✅
+- movimentos persistem por design (append-only, sem delete)
+
+### Invariantes verificados
+
+- `current_quantity` jamais alterado por PATCH metadata — verificado (B5).
+- `exit`/`loss` com quantidade negativa bloqueados — verificado (E8, E10).
+- `entry` negativo bloqueado — verificado (E8).
+- `adjustment` sinal livre mas ≠ 0 — verificado (D4, D5, E7).
+- Estoque negativo bloqueado → 409 `inventory_quantity_insufficient` — verificado (E11, E12).
+- Movimento em item inativo bloqueado → 400 `inventory_item_inactive` — verificado (E14).
+- profissional_clinico bloqueado em ALL endpoints (não só reads) — verificado (A7, A8).

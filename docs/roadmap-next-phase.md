@@ -95,6 +95,7 @@ ainda pendentes (ver `docs/production-minimum-plan.md` Seção 5).
 | **4.7C** ✅ | Frontend Convênios v0.1 — `InsurancePanel` (aba Convênios) + payer_type no `FinancialPanel`. typecheck/build ✅ |
 | **4.7D** ✅ | QA/hardening Convênios v0.1 — bugs canWrite/holder_name/paciente corrigidos; subtabs UI; PayerBadge; MarkPaidModal payer-aware; footer "Clinic OS". typecheck/build ✅ |
 | **4.8A** ✅ | ADR 0017 — Estoque v0.1 (docs-only). 2 entidades, permissões, invariantes. Gate: ADR 0017 aceita ✅ |
+| **4.8B** ✅ | Backend Estoque v0.1 — migration 18 + DAO + service + controller + 9 endpoints. Smoke 51/51 PASS. typecheck/build ✅ |
 
 **Riscos P0 documentados:**
 - `NODE_ENV=development` hardcoded no runtime stage do Dockerfile.

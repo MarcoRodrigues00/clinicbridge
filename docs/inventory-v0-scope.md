@@ -1,6 +1,6 @@
 # ClinicBridge — Estoque v0.1: Escopo Operacional
 
-> Documento operacional da Sprint 4.8A (docs/ADR-only).
+> Documento operacional. Sprint 4.8B (Backend) entregue.
 > Fonte de verdade arquitetural: `docs/adr/0017-inventory-v0.md`.
 > Roadmap: `docs/product-clinic-os-roadmap.md` §"Fase 4.8".
 > Histórico de sprints: `docs/sprint-history.md`.
@@ -122,31 +122,43 @@ O sistema exibe quantidade atual e alerta quando abaixo do mínimo configurado.
 
 ## 7. Checklist de implementação
 
-### Sprint 4.8B — Backend
+### Sprint 4.8B — Backend ✅ (entregue 2026-05-27)
 
-- [ ] Migration única aditiva `20260607_inventory_v0`:
-  - [ ] Tabela `inventory_items` com constraints e índices.
-  - [ ] Tabela `inventory_movements` com CHECK de `movement_type` e `quantity_delta`.
-  - [ ] Índices parciais tenant-scoped.
-- [ ] `db.d.ts` — tipos `InventoryItem`, `InventoryMovement`, payloads.
-- [ ] `inventoryItemDao.ts` — `create`, `list` (filtros: `active`, busca por nome),
-  `getById`, `update`, `setStatus` (soft-delete).
-- [ ] `inventoryMovementDao.ts` — `create` (append-only), `listByItem`, `listByClinic`
-  (filtros: `item_id`, `movement_type`, date range).
-- [ ] `inventoryService.ts` — lógica de negócio:
-  - `createItem` (owner-only, validação de nome duplicado case-insensitive → 409 `inventory_item_name_duplicated`).
-  - `updateItem` (owner-only).
+- [x] Migration única aditiva `20260607000000_inventory_v0`:
+  - [x] Tabela `inventory_items` com constraints e índices.
+  - [x] Tabela `inventory_movements` com CHECK de `movement_type` e `quantity_delta ≠ 0`.
+  - [x] Índices parciais tenant-scoped.
+- [x] `backend/src/types/db.d.ts` — tipos `InventoryItemRow`, `InventoryMovementRow`, `InventoryMovementType`.
+- [x] `backend/src/dao/inventoryDao.ts` — `inventoryItemDao` + `inventoryMovementDao`:
+  `create`, `listForClinic` (filtros: `active`, `low_stock`, `query`, `category`),
+  `findByIdForClinic`, `findByIdForUpdate` (SELECT FOR UPDATE), `findByNameForClinic`,
+  `updateForClinic`, `updateStatus`, `setQuantity`; movimento append-only (`listForClinic`).
+- [x] `backend/src/services/inventoryService.ts` — lógica de negócio:
+  - `buildInventoryActor` (carrega grants `user_clinical_roles`; bloqueia `profissional_clinico`).
+  - `createItem` (owner-only, duplicado case-insensitive → 409 `inventory_item_name_duplicated`).
+  - `updateItem` (owner-only; nunca toca `current_quantity`/`active`).
   - `setItemStatus` (soft-delete owner-only).
-  - `createMovement`: validação `quantity_delta ≠ 0`; transação `SELECT FOR UPDATE`
-    em `inventory_items`; atualiza `current_quantity`; rejeita se < 0 para exit/loss
-    → 409 `inventory_quantity_insufficient`; cria movimento; audit metadata-only.
-  - `listItems`, `getItem`, `listMovements`.
-- [ ] `inventoryController.ts` — recebe HTTP, valida input, chama service. Sem SQL.
-- [ ] `routes/inventory.ts` — `patientsRateLimit + requireAuth + requireClinic + requireRole`.
-- [ ] Registrar router em `app.ts`.
-- [ ] Smoke tests curl: auth/permissão/tenant/CRUD/movimentação/quantidade negativa.
-- [ ] `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 18/0 ✅.
-- [ ] `git diff --check` rc=0.
+  - `createMovement`: validação sign-per-type; transação `SELECT FOR UPDATE`;
+    rejeita `new_quantity < 0` → 409 `inventory_quantity_insufficient`; audit **dentro** da trx.
+  - `listItems`, `findItem`, `listMovementsForItem`, `listMovements`.
+  - Audit **metadata-only**: `recurso_id = entity.id`; `reason`/`notes`/`name`/`location` **nunca** no audit.
+- [x] `backend/src/controllers/inventoryController.ts` — sem SQL; chama service.
+- [x] `backend/src/routes/inventory.ts` — `patientsRateLimit + requireAuth + requireClinic + requireRole(['dono_clinica','secretaria'])`.
+  Rotas: `GET|POST /inventory/items`, `GET|PATCH /inventory/items/:id`,
+  `PATCH /inventory/items/:id/status`, `GET|POST /inventory/items/:id/movements`,
+  `GET /inventory/movements`.
+- [x] `backend/src/app.ts` — `inventoryRouter` registrado.
+- [x] `backend/src/config/logger.ts` — `reason` adicionado à lista de redação.
+- [x] Smoke tests 51/51 PASS (A-auth/B-CRUD/C-secretaria/D-movimentos/E-validações/F-PII/G-cleanup).
+- [x] `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:status` 18/0 ✅.
+- [x] `pnpm --filter frontend typecheck` ✅.
+- [x] `git diff --check` rc=0.
+
+**Decisões resolvidas em 4.8B:**
+- `created_by_user_id` é nullable na migration (ON DELETE SET NULL); service sempre preenche.
+- profissional_clinico bloqueado via `buildInventoryActor` + `userClinicalRoleDao.listActiveRoleNames` (papel='secretaria' no JWT não basta).
+- `GET /inventory/movements` implementado além de `GET /inventory/items/:id/movements`.
+- Audit de movimento emitido **dentro** da transação — falha de audit aborta o movimento.
 
 ### Sprint 4.8C — Frontend
 
@@ -189,7 +201,7 @@ O sistema exibe quantidade atual e alerta quando abaixo do mínimo configurado.
 
 ---
 
-## 9. Gate de abertura de 4.8B
+## 9. Gate de abertura de 4.8B (concluído)
 
 - [x] ADR 0017 aceita ✅
 - [x] `docs/inventory-v0-scope.md` criado ✅
@@ -200,6 +212,15 @@ O sistema exibe quantidade atual e alerta quando abaixo do mínimo configurado.
 - [x] `docs/product-clinic-os-roadmap.md` atualizado ✅
 - [x] `git diff --check` rc=0 ✅
 - [x] Zero mudanças de código, schema, migration ou env ✅
+
+**Sprint 4.8B — Gate de abertura de 4.8C:**
+
+- [x] Backend implementado (migration + DAO + service + controller + routes) ✅
+- [x] migrate:status 18/0 ✅
+- [x] Smoke 51/51 PASS ✅
+- [x] typecheck backend ✅ · build backend ✅ · typecheck frontend ✅
+- [x] `git diff --check` rc=0 ✅
+- [ ] Frontend `InventoryPanel` — **Sprint 4.8C**
 
 ---
 
