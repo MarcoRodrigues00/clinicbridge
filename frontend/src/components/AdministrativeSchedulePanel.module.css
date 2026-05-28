@@ -44,6 +44,16 @@
   margin-top: 1.25rem;
 }
 
+/* Filter toolbar (6.0B): a subtle container so the filters read as a distinct
+   bar, visually separated from the "Novo agendamento" creation flow below. */
+.filters {
+  align-items: end;
+  padding: 0.9rem 1rem;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -245,6 +255,17 @@
   color: var(--text-3);
 }
 
+.emptyTitle {
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.emptyHint {
+  font-size: 0.88rem;
+  color: var(--text-3);
+  max-width: 40ch;
+}
+
 /* --- Date bar (Sprint 3.17) --- */
 .dateBar {
   display: flex;
@@ -340,8 +361,18 @@
 .summary {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
   margin-top: 1rem;
+}
+
+.summaryLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-right: 0.15rem;
 }
 
 .chip {
@@ -451,8 +482,72 @@
   padding: 0.9rem 1rem;
   border-radius: var(--r-md);
   border: 1px solid var(--surface-border);
+  /* Status accent stripe (6.0B). Base is neutral; .cardAccent_<status> overrides
+     the color so the day reads at a glance (Google Calendar–style event color). */
+  border-left: 3px solid var(--surface-border-strong);
   background: var(--surface);
   min-width: 0;
+}
+
+.cardAccent_scheduled { border-left-color: #94a3b8; }
+.cardAccent_confirmed { border-left-color: var(--success); }
+.cardAccent_rescheduled { border-left-color: var(--cyan-soft); }
+.cardAccent_completed { border-left-color: var(--cyan); }
+.cardAccent_no_show { border-left-color: var(--warning); }
+.cardAccent_cancelled { border-left-color: var(--danger); }
+
+/* Cancelled/no-show read as "closed": dim the patient name a touch. */
+.cardAccent_cancelled .cardPatient,
+.cardAccent_no_show .cardPatient {
+  color: var(--text-1);
+}
+
+/* Compact meta chips (6.0B): professional · service · time at a glance. */
+.metaChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.metaChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  color: var(--text-1);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.metaChip svg {
+  flex-shrink: 0;
+  color: var(--text-3);
+}
+
+/* Hour-group separator (6.0B): "HH:00 ───────". */
+.hourHeader {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.hourHeader::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--surface-border);
 }
 
 .cardHead {

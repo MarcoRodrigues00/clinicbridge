@@ -165,6 +165,12 @@ tenant-scoped (inclui toda a agenda).
 - Aviso explícito de "observação administrativa — não inserir dados clínicos".
 - Responsiva (mobile), seguindo o padrão do dashboard atual.
 - Defesa real no backend; o frontend é só UX (esconder ações sem permissão).
+- **Polish UX (Sprint 6.0B):** card com faixa de accent **por status** (nunca por
+  especialidade — anti-insinuação clínica), chips de profissional/serviço/horário,
+  agrupamento por hora, barra de filtros distinta da criação, empty state contextual.
+  Benchmark e decisões (e o que ficou adiado: visão semanal, drag-and-drop, recorrência,
+  disponibilidade automática, Google Calendar, WhatsApp automático) em
+  `docs/agenda-ux-benchmark.md`. Frontend-only; mantém escopo administrativo.
 
 ## 13. Roadmap de implementação
 

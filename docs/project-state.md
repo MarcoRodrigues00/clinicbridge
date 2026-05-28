@@ -7,6 +7,24 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0B** (entregue 2026-05-28) — **Benchmark e polish UX da Agenda Administrativa.**
+
+Redesign **incremental frontend-only** da Agenda (sem backend, sem migration, sem dependência nova). Benchmark leve (Google Calendar, Square Appointments, Cal.com, Calendly) em `docs/agenda-ux-benchmark.md`. **Administrativa, não clínica** — nenhum campo clínico novo.
+
+**Mudou visualmente:** card com **faixa de accent por status** (scheduled/confirmed/completed/rescheduled/no_show/cancelled — cor lida num relance, estilo Google Calendar); **chips compactos** de profissional · serviço · horário (estilo Square) no lugar de linhas empilhadas; **agrupamento por hora** ("HH:00 ─────" quando a hora muda); **barra de filtros** num contêiner próprio (separada da criação); **empty state** distingue "dia vazio" de "sem resultado para filtros" (+ ação adequada); rótulo "Resumo do dia". Mobile preservado.
+
+**Arquivos:** `AdministrativeSchedulePanel.tsx` (Fragment + accent + metaChips + hourHeader + empty state + summaryLabel) e `AdministrativeSchedulePanel.module.css` (novas classes). Zero mudança de backend/contrato/API.
+
+**Fluxos preservados:** criar agendamento, anti-overlap (409), filtros profissional/serviço/status, limpar filtros, serviço no card, criar cobrança a partir da agenda, lembrete manual. Accent é por **status administrativo**, nunca por tipo clínico/especialidade (anti-insinuação).
+
+**Checks:** frontend typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅. Sem backend/migration. Módulo compilado servido pelo dev server sem erro (Fragment/accent/chips/hour). Validação visual (pixel/mobile 360-390/dark) pendente no navegador do usuário — sem browser headless no WSL2/Ubuntu 26.04.
+
+**Fora de escopo (adiado):** visão semanal completa, drag-and-drop, recorrência, disponibilidade automática, Google Calendar, WhatsApp automático.
+
+**Próxima:** 6.0C (visão semanal, **se** o piloto pedir) ou 5.1D spike sandbox billing.
+
+---
+
 **Sprint 6.0A** (entregue 2026-05-28) — **Agenda madura v0.1 pré-piloto (anti-overlap + filtros + multi-serviço).**
 
 Endurece a Agenda Administrativa para o piloto familiar multi-profissional/multi-serviço. **Administrativo, não clínico** (sem campo clínico novo). **Sem migration** — anti-overlap na camada de service. Permissões da agenda **inalteradas** (segue `requireAuth + requireClinic`, sem `requireRole`).

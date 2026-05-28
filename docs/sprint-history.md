@@ -7128,3 +7128,64 @@ migrations não relacionadas, seed/dados reais. Visão semanal, drag-and-drop e 
 de overlap ficam para sprint futura.
 
 **Próxima:** 5.1D spike sandbox (Asaas vs Stripe) ou continuação 6.0 (piloto familiar).
+
+---
+
+## Sprint 6.0B (2026-05-28) — Benchmark e polish UX da Agenda Administrativa
+
+Redesign **incremental frontend-only** da Agenda. **Sem backend, sem migration, sem
+dependência nova, sem mudança de contrato/API.** **Administrativa, não clínica** — nenhum
+campo clínico novo; accent é por **status**, nunca por especialidade (anti-insinuação).
+
+### Benchmark (doc novo)
+
+`docs/agenda-ux-benchmark.md` — referências (Google Calendar, Square Appointments, Cal.com,
+Calendly), o que cada uma faz bem, o que faz sentido **agora** (aplicado) e o que **não** faz
+sentido (adiado). Inspiração de UX, não cópia de marca/layout.
+
+### Decisões de UX aplicadas (menor mudança, maior ganho)
+
+- **Faixa de accent por status no card** (Google Calendar) — `border-left` colorido por
+  `scheduled`/`confirmed`/`completed`/`rescheduled`/`no_show`/`cancelled`. Só CSS.
+- **Chips compactos** profissional · serviço · horário (Square) substituem as 3 linhas
+  empilhadas (`.cardRow`) — "quem, o quê, quando" num relance.
+- **Agrupamento por hora** (Google Calendar) — separador "HH:00 ─────" quando a hora do slot
+  muda em relação ao anterior (`Fragment` + `.hourHeader`).
+- **Barra de filtros distinta da criação** (Cal/Calendly) — `.filters` ganha contêiner
+  (fundo/borda/padding), separando visualmente do fluxo "Novo agendamento".
+- **Empty state** distingue "dia vazio" (CTA criar) de "sem resultado para os filtros"
+  (CTA limpar filtros) com microcopy.
+- **Rótulo "Resumo do dia"** no strip de chips.
+
+### Arquivos (frontend apenas)
+
+- `src/components/AdministrativeSchedulePanel.tsx` — `import { Fragment }`; map com índice +
+  `showHour`; `<Fragment key>` envolvendo separador de hora + slot; card com
+  `cardAccent_<status>`; `.metaChips`/`.metaChip` no lugar dos `.cardRow`; empty state com
+  `emptyTitle`/`emptyHint` + ação condicional; `summaryLabel`.
+- `src/components/AdministrativeSchedulePanel.module.css` — `.cardAccent_*`, `.metaChips`/
+  `.metaChip`, `.hourHeader`, `.filters` (toolbar), `.summaryLabel`, `.emptyTitle`/`.emptyHint`.
+  (`.cardRow` permanece definido mas não é mais usado — sem impacto.)
+
+### Fluxos preservados (critérios de aceite)
+
+Criar agendamento ✅ · anti-overlap 409 ✅ · filtros profissional/serviço/status ✅ · limpar
+filtros ✅ · serviço no card ✅ (agora como chip) · criar cobrança a partir da agenda ✅
+(seção financeira/alertas A1–A4 intactas) · lembrete manual ✅ · remarcação ✅. Seções
+financeira, de lembrete e de remarcação **não foram tocadas**.
+
+### Checks + validação
+
+- `pnpm --filter frontend typecheck` ✅ · `build` ✅ · `git diff --check` rc=0 ✅.
+- Sem backend → backend typecheck/build/migrate não exigidos (nada mudou no backend).
+- Dev server: módulo da Agenda transforma sem erro; CSS module exporta as classes novas
+  (`cardAccent_*`/`metaChip`/`hourHeader`/`summaryLabel`/`emptyTitle`/`emptyHint`).
+- **Validação visual** (pixel/mobile 360–390/dark/escaneabilidade) pendente no navegador do
+  usuário — sem browser headless no WSL2/Ubuntu 26.04.
+
+### Fora de escopo (adiado, com justificativa em `docs/agenda-ux-benchmark.md` §4)
+
+Visão semanal completa / colunas por profissional, drag-and-drop, recorrência, disponibilidade
+automática (self-booking), integração Google Calendar/iCal, WhatsApp automático.
+
+**Próxima:** 6.0C (visão semanal, **se** o piloto pedir) ou 5.1D spike sandbox billing.
