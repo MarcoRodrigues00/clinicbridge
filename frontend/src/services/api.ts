@@ -1004,6 +1004,87 @@ export interface UpdateClinicServicePayload {
   price_cents?: number | null;
 }
 
+// --- Estoque v0.1 types (Sprint 4.8C — ADR 0017) -----------------------------
+// SECURITY: notes (item) and reason (movement) are ADMINISTRATIVE free text.
+// - Never log payloads containing these fields.
+// - Never save in localStorage/sessionStorage.
+// - Never include in URL params.
+// - Never put patient names / diagnosis / clinical data in these fields.
+// current_quantity is NEVER set directly by the client — only the backend
+// movement transaction changes it. There is no field to edit it on the item.
+
+export type InventoryMovementType = 'entry' | 'exit' | 'adjustment' | 'loss';
+
+export interface InventoryItem {
+  id: string;
+  clinica_id: string;
+  name: string;
+  category: string | null;
+  unit: string;
+  current_quantity: number;
+  minimum_quantity: number;
+  location: string | null;
+  notes: string | null;
+  active: boolean;
+  // Derived by the backend: minimum_quantity > 0 && current_quantity < minimum_quantity.
+  low_stock: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InventoryMovement {
+  id: string;
+  clinica_id: string;
+  item_id: string;
+  movement_type: InventoryMovementType;
+  quantity_delta: number;
+  reason: string | null;
+  created_by_user_id: string | null;
+  created_at: string;
+}
+
+export interface ListInventoryItemsParams {
+  active?: boolean;
+  low_stock?: boolean;
+  query?: string;
+  category?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ListInventoryMovementsParams {
+  item_id?: string;
+  movement_type?: InventoryMovementType;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CreateInventoryItemPayload {
+  name: string;
+  category?: string | null;
+  unit: string;
+  minimum_quantity?: number;
+  location?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateInventoryItemPayload {
+  name?: string;
+  category?: string | null;
+  unit?: string;
+  minimum_quantity?: number;
+  location?: string | null;
+  notes?: string | null;
+}
+
+export interface CreateInventoryMovementPayload {
+  movement_type: InventoryMovementType;
+  // Signed delta: entry > 0; exit/loss < 0; adjustment != 0. The UI computes
+  // the sign from the chosen movement type so the user types a magnitude.
+  quantity_delta: number;
+  reason?: string | null;
+}
+
 // --- Convênios v0.1 types (Sprint 4.7C — ADR 0016) ---------------------------
 // SECURITY: member_number and holder_name are PII.
 // - Never log payloads containing these fields.
@@ -2391,6 +2472,116 @@ export const api = {
     return apiFetch<{ price: ServiceInsurancePrice }>(
       `/insurance/service-prices/${encodeURIComponent(id)}/status`,
       { method: 'PATCH', body: { active }, token },
+    );
+  },
+
+  // --- Estoque v0.1 (Sprint 4.8C — ADR 0017) ----------------------------------
+  // SECURITY: notes/reason are administrative free text — never log payloads
+  // from these functions, never persist them in storage, never put them in URL.
+  // The backend is the authoritative access control: dono_clinica = full CRUD;
+  // secretaria = read + movements; profissional_clinico = 403 everywhere.
+
+  listInventoryItems(
+    token: string,
+    params: ListInventoryItemsParams = {},
+  ): Promise<{ items: InventoryItem[] }> {
+    const q = new URLSearchParams();
+    if (params.active !== undefined) q.set('active', String(params.active));
+    if (params.low_stock !== undefined) q.set('low_stock', String(params.low_stock));
+    if (params.query) q.set('query', params.query);
+    if (params.category) q.set('category', params.category);
+    if (params.limit !== undefined) q.set('limit', String(params.limit));
+    if (params.offset !== undefined) q.set('offset', String(params.offset));
+    const qs = q.toString();
+    return apiFetch<{ items: InventoryItem[] }>(
+      `/inventory/items${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  getInventoryItem(
+    token: string,
+    id: string,
+  ): Promise<{ item: InventoryItem }> {
+    return apiFetch<{ item: InventoryItem }>(
+      `/inventory/items/${encodeURIComponent(id)}`,
+      { method: 'GET', token },
+    );
+  },
+
+  createInventoryItem(
+    token: string,
+    payload: CreateInventoryItemPayload,
+  ): Promise<{ item: InventoryItem }> {
+    return apiFetch<{ item: InventoryItem }>('/inventory/items', {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
+  updateInventoryItem(
+    token: string,
+    id: string,
+    payload: UpdateInventoryItemPayload,
+  ): Promise<{ item: InventoryItem }> {
+    return apiFetch<{ item: InventoryItem }>(
+      `/inventory/items/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: payload, token },
+    );
+  },
+
+  updateInventoryItemStatus(
+    token: string,
+    id: string,
+    active: boolean,
+  ): Promise<{ item: InventoryItem }> {
+    return apiFetch<{ item: InventoryItem }>(
+      `/inventory/items/${encodeURIComponent(id)}/status`,
+      { method: 'PATCH', body: { active }, token },
+    );
+  },
+
+  listInventoryItemMovements(
+    token: string,
+    itemId: string,
+    params: Omit<ListInventoryMovementsParams, 'item_id'> = {},
+  ): Promise<{ movements: InventoryMovement[] }> {
+    const q = new URLSearchParams();
+    if (params.movement_type) q.set('movement_type', params.movement_type);
+    if (params.limit !== undefined) q.set('limit', String(params.limit));
+    if (params.offset !== undefined) q.set('offset', String(params.offset));
+    const qs = q.toString();
+    return apiFetch<{ movements: InventoryMovement[] }>(
+      `/inventory/items/${encodeURIComponent(itemId)}/movements${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
+    );
+  },
+
+  createInventoryMovement(
+    token: string,
+    itemId: string,
+    payload: CreateInventoryMovementPayload,
+  ): Promise<{ item: InventoryItem; movement: InventoryMovement }> {
+    return apiFetch<{ item: InventoryItem; movement: InventoryMovement }>(
+      `/inventory/items/${encodeURIComponent(itemId)}/movements`,
+      { method: 'POST', body: payload, token },
+    );
+  },
+
+  listInventoryMovements(
+    token: string,
+    params: ListInventoryMovementsParams = {},
+  ): Promise<{ movements: InventoryMovement[] }> {
+    const q = new URLSearchParams();
+    if (params.item_id) q.set('item_id', params.item_id);
+    if (params.movement_type) q.set('movement_type', params.movement_type);
+    if (params.limit !== undefined) q.set('limit', String(params.limit));
+    if (params.offset !== undefined) q.set('offset', String(params.offset));
+    const qs = q.toString();
+    return apiFetch<{ movements: InventoryMovement[] }>(
+      `/inventory/movements${qs ? `?${qs}` : ''}`,
+      { method: 'GET', token },
     );
   },
 };

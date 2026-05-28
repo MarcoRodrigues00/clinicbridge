@@ -47,7 +47,7 @@
 | **4.5** | Operacional — relatórios | ✅ 4.5A–D entregues | ADR 0014 ✅ | Relatórios gerenciais v0.1 · `docs/management-reports-v0-scope.md` |
 | **4.6** | Operacional — serviços | ✅ 4.6A–D entregues | ADR 0015 ✅ | Catálogo de Serviços v0.1 · `docs/services-catalog-v0-scope.md` |
 | **4.7** | Operacional — convênios | ✅ 4.7A–D entregues | ADR 0016 ✅ | Convênios manual básico v0.1 · `docs/insurance-billing-v0-scope.md` |
-| **4.8** | Operacional — estoque | 4.8A–B ✅ · 4.8C–D ⏳ | ADR 0017 ✅ | Estoque básico v0.1 · `docs/inventory-v0-scope.md` (medicamentos controlados/ANVISA fora) |
+| **4.8** | Operacional — estoque | 4.8A–C ✅ · 4.8D ⏳ | ADR 0017 ✅ | Estoque básico v0.1 · `docs/inventory-v0-scope.md` (medicamentos controlados/ANVISA fora) |
 
 **Fases futuras planejadas (sem número ainda, exigem ADR própria):**
 
@@ -422,7 +422,8 @@ Migração assistida (não automática) para `patient_insurances` decidida em 4.
 
 **Natureza:** **operacional**.
 
-**Status:** 4.8A ✅ (docs/ADR-only, 2026-05-27) · 4.8B ✅ (backend, 2026-05-27) · 4.8C–D ⏳.
+**Status:** 4.8A ✅ (docs/ADR-only, 2026-05-27) · 4.8B ✅ (backend, 2026-05-27) ·
+4.8C ✅ (frontend, 2026-05-27) · 4.8D ⏳.
 
 **ADR:** ADR 0017 ✅ aceita — `docs/adr/0017-inventory-v0.md`.
 Operacional: `docs/inventory-v0-scope.md`.
@@ -449,7 +450,7 @@ Operacional: `docs/inventory-v0-scope.md`.
 |---|---|
 | **4.8A** ✅ | ADR 0017 — Estoque v0.1 (docs-only). Gate: 4.7A–D ✅ |
 | **4.8B** ✅ | Backend: migration 18 + DAOs + service + controller + 9 endpoints — smoke 51/51 PASS |
-| **4.8C** ⏳ | Frontend: aba Estoque + `InventoryPanel` (lista, movimentos, alerta mínimo) |
+| **4.8C** ✅ | Frontend: aba Estoque + `InventoryPanel` (hero, filtros, low-stock, CRUD owner, movimentos, histórico) — typecheck/build ✅ |
 | **4.8D** ⏳ | QA/hardening Estoque v0.1 |
 
 **Não no v0.1 (invariantes permanentes desta ADR):**

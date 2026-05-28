@@ -48,6 +48,15 @@
 - **Sem PII em console.log, localStorage, sessionStorage ou parâmetros de URL** no `InsurancePanel`.
 - **`holder_name`** exibido apenas no formulário de edição (não na lista); segue o mesmo padrão de limpeza no `cancelEdit()`.
 
+**Frontend (Sprint 4.8C) — Estoque `InventoryPanel`:**
+
+- **`current_quantity` NUNCA editável direto na UI:** não existe campo de quantidade no formulário de item. A quantidade só muda por movimento (transação no backend com `SELECT FOR UPDATE`). Mesmo se o cliente forjasse um PATCH, o backend ignora `current_quantity` no `updateItem`.
+- **`notes` (item) e `reason` (movimento) são texto administrativo:** aviso anti-dado-clínico em todos os formulários ("não coloque nome de paciente, diagnóstico, prescrição, queixa ou detalhes clínicos"). Nunca em `console.log`, `localStorage`/`sessionStorage` ou URL.
+- **Movimento usa magnitude + direção:** usuário digita um número positivo; o sinal de `quantity_delta` é derivado do tipo (Entrada `+`, Saída/Perda `−`, Ajuste com toggle Aumentar/Reduzir). Bloqueio visual (botão desabilitado) quando o resultado ficaria negativo — backend continua sendo a defesa real (409 `inventory_quantity_insufficient`).
+- **Permissões na UI:** escrita de item só para `dono_clinica` (botões ocultos para secretaria); movimentos para dono + secretaria; `profissional_clinico` recebe 403 do backend e a UI mostra card "Acesso restrito". A UI só oculta controles — o backend autoriza de fato.
+- **Histórico nunca renderiza UUID:** `created_by_user_id` (sem nome no v0.1) não é exibido, seguindo a política de não mostrar UUID na UI.
+- **Sem `dangerouslySetInnerHTML`.**
+
 ## CPF mascarado
 
 - `GET /patients`, `/patients/duplicates`, `/patients/export` nunca retornam CPF bruto — só `cpf_masked` (`***.***.789-01`). `include_cpf_raw=true` no export → 400.
