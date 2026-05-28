@@ -175,6 +175,28 @@
   border-color: rgba(20, 184, 166, 0.55);
 }
 
+.auriBtn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-2);
+  border-radius: var(--r-sm);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  align-self: flex-start;
+}
+
+.auriBtn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan-soft);
+}
+
 .filterError {
   margin: -0.5rem 0 0;
   padding: 0.55rem 0.75rem;

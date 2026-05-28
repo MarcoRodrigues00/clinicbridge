@@ -32,6 +32,7 @@ import {
   History,
   PackagePlus,
   ShieldOff,
+  HelpCircle,
 } from 'lucide-react';
 import {
   api,
@@ -855,7 +856,7 @@ function CreateItemForm({ token, onCreated, onCancel }: CreateFormProps): JSX.El
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
-export function InventoryPanel(): JSX.Element {
+export function InventoryPanel({ onAuriTour }: { onAuriTour?: () => void } = {}): JSX.Element {
   const { user } = useAuth();
   const isOwner = user?.papel === 'dono_clinica';
   // Reads + movements are open to dono_clinica + secretaria. profissional_clinico
@@ -939,6 +940,12 @@ export function InventoryPanel(): JSX.Element {
           <span className={styles.categoryChip}>Materiais e insumos</span>
         </h3>
         <div className={styles.headActions}>
+          {onAuriTour && (
+            <button type="button" className={styles.secondaryBtn} onClick={onAuriTour} title="Auri explica este módulo">
+              <HelpCircle size={15} aria-hidden="true" />
+              Auri explica
+            </button>
+          )}
           {isOwner && !showCreate && (
             <button
               type="button"

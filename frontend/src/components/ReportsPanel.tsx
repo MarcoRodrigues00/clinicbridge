@@ -33,6 +33,7 @@ import {
   AlertCircle,
   ShieldOff,
   Clock,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuth } from '../services/AuthProvider';
 import { getToken } from '../services/authStorage';
@@ -606,7 +607,7 @@ function HeroSummary({ appt, fin, pat }: HeroProps): JSX.Element {
 
 // ── Root ────────────────────────────────────────────────────────────────────
 
-export function ReportsPanel(): JSX.Element {
+export function ReportsPanel({ onAuriTour }: { onAuriTour?: () => void } = {}): JSX.Element {
   const { user } = useAuth();
   const token = getToken();
 
@@ -746,6 +747,12 @@ export function ReportsPanel(): JSX.Element {
         <div className={styles.notice}>
           Apenas dados administrativos e financeiros. Nenhum dado clínico é exibido.
         </div>
+        {onAuriTour && (
+          <button type="button" className={styles.auriBtn} onClick={onAuriTour} title="Auri explica este módulo">
+            <HelpCircle size={15} aria-hidden="true" />
+            Auri explica
+          </button>
+        )}
       </header>
 
       <section className={styles.filtersBar} aria-label="Filtros de período" data-tour-id="reports-filters">

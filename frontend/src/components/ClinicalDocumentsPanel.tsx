@@ -12,6 +12,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileText, Plus, Eye, Loader2, Download, HelpCircle } from 'lucide-react';
+import { GuidedDemoTour, DOCUMENTS_TOUR_STEPS } from './GuidedDemoTour';
+import { useAuth } from '../services/AuthProvider';
 import {
   api,
   ApiError,
@@ -153,9 +155,10 @@ interface DocumentListProps {
   patientId: string;
   onNewDoc: () => void;
   onOpenDetail: (docId: string) => void;
+  onAuriTour?: () => void;
 }
 
-function DocumentList({ patientId, onNewDoc, onOpenDetail }: DocumentListProps): JSX.Element {
+function DocumentList({ patientId, onNewDoc, onOpenDetail, onAuriTour }: DocumentListProps): JSX.Element {
   const token = getToken();
 
   const { data, isLoading, error } = useQuery({
@@ -187,10 +190,18 @@ function DocumentList({ patientId, onNewDoc, onOpenDetail }: DocumentListProps):
           <FileText size={13} style={{ display: 'inline', marginRight: '0.3rem' }} aria-hidden="true" />
           Documentos ({docs.length})
         </span>
-        <button type="button" className={styles.newBtn} onClick={onNewDoc}>
-          <Plus size={14} aria-hidden="true" />
-          Novo documento
-        </button>
+        <span className={styles.listHeadActions}>
+          {onAuriTour && (
+            <button type="button" className={styles.auriBtn} onClick={onAuriTour} title="Auri explica este módulo">
+              <HelpCircle size={13} aria-hidden="true" />
+              Auri explica
+            </button>
+          )}
+          <button type="button" className={styles.newBtn} onClick={onNewDoc} data-tour-id="docs-create">
+            <Plus size={14} aria-hidden="true" />
+            Novo documento
+          </button>
+        </span>
       </div>
 
       {docs.length === 0 ? (
@@ -198,7 +209,7 @@ function DocumentList({ patientId, onNewDoc, onOpenDetail }: DocumentListProps):
           Este paciente ainda não tem documentos registrados.
         </p>
       ) : (
-        <ul className={styles.docList}>
+        <ul className={styles.docList} data-tour-id="docs-list">
           {docs.map((doc) => (
             <DocumentListItem key={doc.id} doc={doc} onOpenDetail={onOpenDetail} />
           ))}
@@ -744,8 +755,11 @@ export interface ClinicalDocumentsPanelProps {
 }
 
 export function ClinicalDocumentsPanel({ patientId }: ClinicalDocumentsPanelProps): JSX.Element {
+  const { isDemo } = useAuth();
   const [view, setView] = useState<DocPanelView>({ kind: 'list' });
   const [showBack, setShowBack] = useState(false);
+  const [docTourOpen, setDocTourOpen] = useState(false);
+  const [docTourStep, setDocTourStep] = useState(0);
 
   function goList(): void {
     setView({ kind: 'list' });
@@ -775,6 +789,7 @@ export function ClinicalDocumentsPanel({ patientId }: ClinicalDocumentsPanelProp
           patientId={patientId}
           onNewDoc={goNew}
           onOpenDetail={goDetail}
+          onAuriTour={!isDemo ? () => { setDocTourStep(0); setDocTourOpen(true); } : undefined}
         />
       )}
 
@@ -790,6 +805,18 @@ export function ClinicalDocumentsPanel({ patientId }: ClinicalDocumentsPanelProp
         <DocumentDetail
           docId={view.docId}
           patientId={patientId}
+        />
+      )}
+
+      {docTourOpen && (
+        <GuidedDemoTour
+          steps={DOCUMENTS_TOUR_STEPS}
+          step={docTourStep}
+          setStep={setDocTourStep}
+          collapsed={false}
+          setCollapsed={() => { /* no-op */ }}
+          onClose={() => setDocTourOpen(false)}
+          roleLabel="Auri explica"
         />
       )}
     </div>

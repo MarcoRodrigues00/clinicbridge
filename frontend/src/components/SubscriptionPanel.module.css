@@ -186,6 +186,27 @@
   flex-shrink: 0;
 }
 
+.auriBtn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-2);
+  border-radius: var(--r-sm);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.auriBtn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan-soft);
+}
+
 /* ── Status badge ───────────────────────────────────────────────────────────── */
 
 .statusBadge {

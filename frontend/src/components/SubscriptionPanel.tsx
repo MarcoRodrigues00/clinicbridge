@@ -29,6 +29,7 @@ import {
   Download,
   CreditCard,
   Gauge,
+  HelpCircle,
 } from 'lucide-react';
 import { api, ApiError } from '../services/api';
 import type { BillingStatus, PlanCode, SubscriptionStatus } from '../services/api';
@@ -174,7 +175,7 @@ function StatusBadge({ status }: { status: SubscriptionStatus }): JSX.Element {
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
-function BillingContent({ billing }: { billing: BillingStatus }): JSX.Element {
+function BillingContent({ billing, onAuriTour }: { billing: BillingStatus; onAuriTour?: () => void }): JSX.Element {
   const planLabel = PLAN_LABELS[billing.plan_code] ?? billing.plan_code;
   const showAlert = isAlertStatus(billing.status);
   const locked = isLocked(billing.status);
@@ -212,7 +213,7 @@ function BillingContent({ billing }: { billing: BillingStatus }): JSX.Element {
       )}
 
       {/* Plan + status header */}
-      <div className={styles.planCard}>
+      <div className={styles.planCard} data-tour-id="subscription-plan">
         <div className={styles.planLeft}>
           <span className={styles.planLabel}>Plano atual</span>
           <span className={styles.planName}>{planLabel}</span>
@@ -224,11 +225,17 @@ function BillingContent({ billing }: { billing: BillingStatus }): JSX.Element {
         </div>
         <div className={styles.planRight}>
           <StatusBadge status={billing.status} />
+          {onAuriTour && (
+            <button type="button" className={styles.auriBtn} onClick={onAuriTour} title="Auri explica este módulo">
+              <HelpCircle size={14} aria-hidden="true" />
+              Auri explica
+            </button>
+          )}
         </div>
       </div>
 
       {/* Modules */}
-      <div className={styles.sectionCard}>
+      <div className={styles.sectionCard} data-tour-id="subscription-modules">
         <h3 className={styles.sectionTitle}>
           <Package size={17} className={styles.sectionIcon} aria-hidden="true" />
           Recursos incluídos no plano
@@ -271,7 +278,7 @@ function BillingContent({ billing }: { billing: BillingStatus }): JSX.Element {
 
       {/* Limits */}
       {limitFeatures.length > 0 && (
-        <div className={styles.sectionCard}>
+        <div className={styles.sectionCard} data-tour-id="subscription-limits">
           <h3 className={styles.sectionTitle}>
             <Gauge size={17} className={styles.sectionIcon} aria-hidden="true" />
             Limites do plano
@@ -370,7 +377,7 @@ function BillingContent({ billing }: { billing: BillingStatus }): JSX.Element {
 
 // ── Exported panel ─────────────────────────────────────────────────────────────
 
-export function SubscriptionPanel(): JSX.Element {
+export function SubscriptionPanel({ onAuriTour }: { onAuriTour?: () => void } = {}): JSX.Element {
   const token = getToken();
 
   const { data, isLoading, error } = useQuery({
@@ -436,5 +443,5 @@ export function SubscriptionPanel(): JSX.Element {
     );
   }
 
-  return <BillingContent billing={data} />;
+  return <BillingContent billing={data} onAuriTour={onAuriTour} />;
 }

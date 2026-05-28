@@ -445,7 +445,7 @@ export function Dashboard(): JSX.Element {
         )}
 
         {tab === 'relatorios' && (
-          <ReportsPanel />
+          <ReportsPanel onAuriTour={() => openModuleTour(TOUR_IDS.REPORTS)} />
         )}
 
         {tab === 'servicos' && (
@@ -453,11 +453,11 @@ export function Dashboard(): JSX.Element {
         )}
 
         {tab === 'convenios' && (
-          <InsurancePanel />
+          <InsurancePanel onAuriTour={() => openModuleTour(TOUR_IDS.INSURANCE)} />
         )}
 
         {tab === 'estoque' && (
-          <InventoryPanel />
+          <InventoryPanel onAuriTour={() => openModuleTour(TOUR_IDS.INVENTORY)} />
         )}
 
         {tab === 'equipe' && isOwner && (
@@ -469,7 +469,7 @@ export function Dashboard(): JSX.Element {
         )}
 
         {tab === 'assinatura' && (
-          <SubscriptionPanel />
+          <SubscriptionPanel onAuriTour={() => openModuleTour(TOUR_IDS.PLAN)} />
         )}
 
         {tab === 'seguranca' && (
