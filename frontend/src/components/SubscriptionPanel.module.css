@@ -1,0 +1,462 @@
+/* SubscriptionPanel — Sprint 5.1C (ADR 0018) */
+
+/* ── Loading / error / restricted ─────────────────────────────────────────── */
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 2rem;
+  color: var(--text-2);
+  font-size: 0.98rem;
+}
+
+.spinnerIcon {
+  animation: spin 1s linear infinite;
+  color: var(--cyan-soft);
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.errorCard {
+  margin-top: 2rem;
+  padding: 1.4rem 1.6rem;
+  border-radius: var(--r-lg);
+  background: rgba(248, 113, 113, 0.06);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.errorIcon {
+  color: var(--danger);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.errorTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--danger);
+}
+
+.errorMsg {
+  margin-top: 0.35rem;
+  color: var(--text-1);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.restrictedCard {
+  margin-top: 2rem;
+  padding: 1.4rem 1.6rem;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.restrictedIcon {
+  color: var(--text-2);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.restrictedTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.restrictedMsg {
+  margin-top: 0.35rem;
+  color: var(--text-2);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+/* ── Mock / provider notice ────────────────────────────────────────────────── */
+
+.mockNotice {
+  margin-top: 2rem;
+  padding: 0.85rem 1.15rem;
+  border-radius: var(--r-sm);
+  background: rgba(34, 211, 238, 0.06);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  color: var(--text-1);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.mockNoticeIcon {
+  color: var(--cyan-soft);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+/* ── Alert banners (past_due / suspended / canceled) ───────────────────────── */
+
+.alertBanner {
+  margin-top: 1.5rem;
+  padding: 0.85rem 1.15rem;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.alertBannerWarning {
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fde68a;
+}
+
+.alertBannerDanger {
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: #fca5a5;
+}
+
+.alertBannerIcon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+/* ── Main plan card ─────────────────────────────────────────────────────────── */
+
+.planCard {
+  margin-top: 2rem;
+  padding: clamp(1.4rem, 2.5vw, 2rem);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.2rem 2rem;
+}
+
+.planLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.planLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.planName {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-0);
+  line-height: 1.1;
+}
+
+.planProvisioned {
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+
+.planRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+/* ── Status badge ───────────────────────────────────────────────────────────── */
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.statusBadgeSuccess {
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: var(--success);
+}
+
+.statusBadgeInfo {
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.32);
+  color: var(--cyan-soft);
+}
+
+.statusBadgeWarning {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: var(--warning);
+}
+
+.statusBadgeDanger {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: var(--danger);
+}
+
+/* ── Section heading ───────────────────────────────────────────────────────── */
+
+.sectionCard {
+  margin-top: 1.5rem;
+  padding: clamp(1.2rem, 2.5vw, 1.8rem);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-card);
+}
+
+.sectionTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-0);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sectionIcon {
+  color: var(--cyan-soft);
+  flex-shrink: 0;
+}
+
+/* ── Module grid ─────────────────────────────────────────────────────────────── */
+
+.moduleGrid {
+  margin-top: 1.15rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  gap: 0.6rem;
+}
+
+.moduleItem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--surface-border);
+  background: rgba(16, 25, 44, 0.3);
+  min-width: 0;
+}
+
+.moduleItemEnabled {
+  border-color: rgba(52, 211, 153, 0.2);
+  background: rgba(52, 211, 153, 0.04);
+}
+
+.moduleItemDisabled {
+  opacity: 0.5;
+}
+
+.moduleStatusIcon {
+  flex-shrink: 0;
+}
+
+.moduleStatusIconEnabled {
+  color: var(--success);
+}
+
+.moduleStatusIconDisabled {
+  color: var(--text-3);
+}
+
+.moduleName {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.moduleNote {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-3);
+  margin-top: 0.15rem;
+  line-height: 1.4;
+}
+
+/* ── Limits grid ─────────────────────────────────────────────────────────────── */
+
+.limitsGrid {
+  margin-top: 1.15rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+  gap: 0.75rem;
+}
+
+.limitItem {
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-sm);
+  background: rgba(16, 25, 44, 0.3);
+  border: 1px solid var(--surface-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.limitLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.limitValue {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-0);
+  letter-spacing: -0.01em;
+}
+
+.limitValueUnlimited {
+  font-size: 1.1rem;
+  color: var(--text-2);
+}
+
+/* ── Soft-lock section ───────────────────────────────────────────────────────── */
+
+.lockSection {
+  margin-top: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.lockRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.92rem;
+  color: var(--text-1);
+}
+
+.lockIcon {
+  flex-shrink: 0;
+}
+
+.lockIconBlocked {
+  color: var(--danger);
+}
+
+.lockIconOk {
+  color: var(--success);
+}
+
+.lockReason {
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--r-sm);
+  background: rgba(248, 113, 113, 0.06);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  font-size: 0.85rem;
+  color: #fca5a5;
+  font-family: var(--font-mono);
+}
+
+/* ── Future CTA ─────────────────────────────────────────────────────────────── */
+
+.ctaCard {
+  margin-top: 1.5rem;
+  padding: clamp(1.2rem, 2.5vw, 1.8rem);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+}
+
+.ctaLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.ctaTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.ctaDesc {
+  font-size: 0.88rem;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.ctaButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.3rem;
+  border-radius: var(--r-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-3);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: not-allowed;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* ── Mobile adjustments ─────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .planRight {
+    align-items: flex-start;
+  }
+
+  .moduleGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .limitsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ctaCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ctaButton {
+    width: 100%;
+    justify-content: center;
+  }
+}

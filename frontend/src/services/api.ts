@@ -1207,6 +1207,66 @@ export interface UpdateServiceInsurancePricePayload {
   notes?: string | null;
 }
 
+// --- Billing / Planos / Entitlements v0.1 types (Sprint 5.1C — ADR 0018) ------
+// COMMERCIAL layer — the SaaS charging the clinic. NOT the clinic's internal
+// financial module (ADR 0012 / financial_charges).
+//
+// SECURITY: payload carries no PII, no monetary values, no provider IDs.
+// Never log these types. Backend is the authoritative source for all access
+// control — the frontend only presents what the backend returns.
+
+export type PlanCode = 'essential' | 'professional' | 'assisted_pilot';
+
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'suspended'
+  | 'canceled'
+  | 'manual_pilot';
+
+export interface SoftLockFlags {
+  can_create_new_records: boolean;
+  read_only_mode: boolean;
+  export_allowed: boolean;
+  // Stable machine-readable reason code. null = no lock active.
+  lock_reason: string | null;
+}
+
+export interface EffectiveEntitlement {
+  feature_key: string;
+  enabled: boolean;
+  // Numeric for limit.* keys; null for module.* keys or unlimited limits.
+  limit_value: number | null;
+  source: 'plan' | 'override' | 'pilot';
+}
+
+export interface BillingEntitlements {
+  modules: Record<string, boolean>;
+  limits: Record<string, number | null>;
+  features: EffectiveEntitlement[];
+}
+
+export interface BillingStatus {
+  // false = no subscription row exists yet; values below are synthesized defaults.
+  provisioned: boolean;
+  plan_code: PlanCode;
+  status: SubscriptionStatus;
+  // null during the mock phase (no real gateway bound).
+  provider: string | null;
+  trial_ends_at: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  grace_until: string | null;
+  canceled_at: string | null;
+  entitlements: BillingEntitlements;
+  soft_lock: SoftLockFlags;
+}
+
+export interface BillingStatusResponse {
+  billing: BillingStatus;
+}
+
 export interface ApiErrorBody {
   code: string;
   message: string;
@@ -2612,5 +2672,13 @@ export const api = {
       `/inventory/movements${qs ? `?${qs}` : ''}`,
       { method: 'GET', token },
     );
+  },
+
+  // --- Billing / Planos / Entitlements v0.1 (Sprint 5.1C — ADR 0018) -----------
+  // GET /billing/status — plan/state/entitlements/soft-lock for the caller's
+  // clinic. Read-only. Token goes via header only (never in URL).
+  // 403: role not allowed (profissional_clinico) or no clinic context.
+  getBillingStatus(token: string): Promise<BillingStatusResponse> {
+    return apiFetch<BillingStatusResponse>('/billing/status', { method: 'GET', token });
   },
 };
