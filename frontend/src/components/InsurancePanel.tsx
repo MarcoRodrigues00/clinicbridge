@@ -1370,7 +1370,7 @@ function PatientInsurancesSection({
 
       {!canWrite && (
         <p className={styles.roleNote}>
-          Apenas o(a) dono(a) da clínica e funcionários administrativos podem registrar carteirinhas.
+          Você pode visualizar carteirinhas de pacientes. Apenas o(a) dono(a) da clínica e funcionário(a) com acesso administrativo podem registrar carteirinhas.
         </p>
       )}
     </div>
@@ -1852,11 +1852,9 @@ export function InsurancePanel(): JSX.Element {
         </div>
         <div className={styles.restrictedCard}>
           <ShieldOff size={22} className={styles.restrictedIcon} aria-hidden="true" />
-          <div className={styles.restrictedText}>
-            <strong>Acesso restrito.</strong>
-            {' '}Sua conta não tem permissão para acessar a área de convênios.
-            Solicite acesso ao(à) dono(a) da clínica.
-          </div>
+          <p className={styles.restrictedText}>
+            Acesso restrito ao painel de convênios. Solicite permissão ao(à) dono(a) da clínica.
+          </p>
         </div>
       </div>
     );

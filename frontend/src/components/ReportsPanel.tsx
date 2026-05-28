@@ -435,7 +435,6 @@ function PatientsSection({ query }: { query: PatResult }): JSX.Element {
         <MetricCard
           label={`Sem agendamento há mais de ${formatInt(noApptDays)} dias`}
           value={formatInt(data.without_recent_appointment)}
-          hint="oportunidade de retorno"
           tone={data.without_recent_appointment > 0 ? 'warning' : 'default'}
         />
         <MetricCard label="Arquivados" value={formatInt(data.total_archived)} />
