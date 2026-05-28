@@ -16,11 +16,10 @@
 
 ## Estado atual (2026-05-28)
 
-**Último commit entregue:** Sprint 5.0E — Demo Experience / Tour Guiado com auto-login controlado.
-**Working tree (entregue, não commitado):** 5.0F.1–5.0F.6 (Auri pop-out, polish, mobile) · 5.0G (landing demo em destaque) · 5.0G.1 (LandingAuriTeaser). Ver `docs/project-state.md`.
-**Sprint em progresso:** 5.0H — CLAUDE.md slimming (docs-only).
-**Próxima sprint:** 5.0G.3 — Auri teaser mais forte + bolinha de reabrir (landing polish).
-**Depois:** 5.1A — ADR Produção Segura AWS (obrigatória antes de produção com dados reais).
+**Entregue (landing/demo/Auri/mobile):** 5.0E–5.0I — Demo Experience, tour Auri, landing demo em destaque, teaser+bolinha, nav mobile compacto, CLAUDE.md slimming. Ver `docs/project-state.md`.
+**Sprint atual:** 5.1A (entregue, docs-only) — **ADR 0018 Planos, Billing e Entitlements v0.1.** Camada comercial por tenant (assinatura, entitlements no backend, soft-lock que não sequestra dados, gateway abstraído). Gateway **Proposto**: Asaas preferencial p/ spike, decisão final na 5.1D. `docs/adr/0018-plans-billing-entitlements-v0.md` + `docs/plans-billing-entitlements-v0-scope.md`.
+**Próxima sprint:** 5.1B — backend foundation de planos/entitlements com `MockProvider` (sem gateway real).
+**Depois:** 5.1C frontend · 5.1D spike sandbox (Asaas vs Stripe) · 5.1E QA/security billing · **5.2A** ADR Produção Segura AWS (renumerada de 5.1A; obrigatória antes de dados reais e de cobrança real).
 
 **Fase:** Fase 3 (produção/governança). **NÃO pronto para produção com dados reais** — ver `docs/security-notes.md`.
 **Piloto controlado:** GO Fase 1 com dados sintéticos. Demo Aurora = 100% fictícia.
@@ -64,8 +63,9 @@ landing + /demo (DemoCallout, LandingAuriTeaser, hierarquia CTAs: "Ver demo guia
 
 ## Próximas prioridades
 
-- **5.0G.3:** Auri teaser mais forte + bolinha de reabrir (landing polish)
-- **5.1A:** ADR Produção Segura AWS — obrigatória antes de qualquer dado real
+- **5.1B–E:** Billing/entitlements — backend (mock) · frontend · spike sandbox (Asaas vs Stripe) · QA/security. ADR 0018.
+- **5.2A:** ADR Produção Segura AWS — obrigatória antes de qualquer dado real e de cobrança real
+- **Camada comercial (invariantes ADR 0018):** plano por tenant (não por usuário); entitlements validados no backend; estado só muda por webhook verificado (nunca pelo frontend); soft-lock nunca sequestra dados; sem dado de cartão; billing não vaza PII clínica; webhook idempotente + tenant resolvido por mapa interno
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem agendamentos no merge; paginação duplicados; undo/snapshot (ADR própria)
 - **Trilha equipe:** saída voluntária; roles granulares (ADR própria)

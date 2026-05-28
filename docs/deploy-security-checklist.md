@@ -268,3 +268,21 @@ Motivo do guard de `JWT_SECRET`: o placeholder tem > 48 chars e passaria no `min
 - secrets manager real; offsite real do backup;
 - readiness endpoint com checagem de DB (registrado como melhoria futura);
 - qualquer dado clínico, limpeza real ou endpoint destrutivo.
+
+## 18. Billing do SaaS — pré-requisitos de produção (planejado, ADR 0018)
+
+> **Planejado — nada implementado.** Fonte: `docs/adr/0018-plans-billing-entitlements-v0.md`.
+> A cobrança real (gateway) só pode ser ligada quando estes itens existirem em produção.
+> Até lá: mock (5.1B/C) e sandbox (5.1D/E).
+
+- **Endpoint de webhook público HTTPS** com verificação de assinatura do provider
+  (sem TLS real + domínio, não há webhook seguro — depende do §5 / ADR 5.2A).
+- **Secrets do gateway no secrets manager** (API key + signing secret) — nunca em
+  `.env` versionado; entram na redação do logger.
+- **Idempotência de webhook** (`external_event_id` único) e **rate limit** no endpoint.
+- **`clinica_id` resolvido por mapa interno**, nunca pelo payload (anti-tenant-spoofing).
+- **Sem dado de cartão** armazenado; **sem PII de paciente** enviada ao gateway.
+- **Variáveis novas (futuras, 5.1D+):** `BILLING_PROVIDER` (asaas|stripe|mock),
+  `BILLING_API_KEY`, `BILLING_WEBHOOK_SIGNING_SECRET` — obrigatórias só quando o
+  gateway real for ativado; em mock/sandbox podem ser placeholders/test mode.
+- **Go/no-go comercial** antes de ligar cobrança real (rollout controlado).

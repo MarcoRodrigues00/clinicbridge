@@ -7,6 +7,22 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.1A** (entregue 2026-05-28) — **ADR 0018 Planos, Billing e Entitlements v0.1 (docs/ADR-only).**
+
+Docs-only. Criados `docs/adr/0018-plans-billing-entitlements-v0.md` + `docs/plans-billing-entitlements-v0-scope.md`. Define a **camada comercial do ClinicBridge** (o SaaS cobrando a clínica — **não** confundir com `financial_charges`/ADR 0012, que é a clínica cobrando pacientes).
+
+**Decisões aceitas (arquitetura):** plano comercial é **por clínica/tenant** (1 assinatura/tenant), não por usuário; **roles ≠ planos ≠ entitlements** (3 camadas ortogonais); entitlements **calculados e validados no backend** (frontend só esconde/desabilita); provider de pagamento **abstraído** (`BillingProvider` + `MockProvider`); **soft-lock progressivo** (avisos → tolerância → bloqueia criação/escrita nova → mantém leitura+export essencial; **nunca sequestra dados**); estado só muda por **webhook verificado** ou ação manual auditada (**nunca** pelo retorno do frontend); **sem dado de cartão**; billing **não vaza PII clínica** (só identidade de cobrança da clínica vai ao gateway); **webhooks idempotentes** (`external_event_id` único) + `clinica_id` resolvido por **mapa interno** (anti-spoofing); plano **nunca destrava módulo clínico** sem gate seguro (ADR 0009/0010/0011).
+
+**Planos v0.1:** Essencial · Profissional · Piloto Assistido (estado `manual_pilot`). Preços = TBD comercial. **Estados:** trialing · active · past_due · suspended · canceled · manual_pilot. **Entidades conceituais:** `clinic_subscription`, `clinic_entitlement`, `billing_provider_customer`, `billing_provider_subscription`, `billing_event`.
+
+**Gateway: Proposto (não cravado).** Asaas = candidato **preferencial** para o spike (Brasil-first, Pix/boleto/cartão/recorrência, reputação de aceitar PF); Stripe = comparação obrigatória (bloqueador a confirmar: operação BR/PF, Pix recorrente, CPF vs CNPJ); Mercado Pago mantido **com ressalva** (experiência prévia ruim de recusas — não escolher automaticamente); Pagar.me secundário. **Taxas, CPF vs CNPJ, Pix recorrente, webhook signature, idempotência e disponibilidade BR marcados como `[VERIFICAR]` — exigem fonte oficial antes da implementação.** Decisão final no spike 5.1D (adendo à ADR).
+
+**Roadmap:** 5.1B backend (mock) · 5.1C frontend · 5.1D spike sandbox · 5.1E QA/security · **5.2A** ADR Produção Segura AWS (renumerada de 5.1A). Cobrança real só pós-5.2A.
+
+Zero código, schema, migration, backend, frontend, env, secret, SDK. `git diff --check` rc=0 ✅.
+
+---
+
 **Sprint 5.0I** (entregue 2026-05-28) — **Mobile nav polish — grade compacta no dashboard.**
 
 CSS-only. `Dashboard.module.css` ganha bloco `@media (max-width: 560px)`:
