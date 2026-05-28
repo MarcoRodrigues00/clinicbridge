@@ -196,7 +196,7 @@ function ChargeListView({
 
   // Summary (totalizadores)
   const summaryQuery = useQuery({
-    queryKey: ['financial', 'summary', filterDateFrom, filterDateTo, token],
+    queryKey: ['financial', 'summary', filterDateFrom, filterDateTo],
     queryFn: () =>
       api.getFinancialSummary(token, {
         date_from: filterDateFrom || undefined,
@@ -208,7 +208,7 @@ function ChargeListView({
 
   // Charges list
   const listQuery = useQuery({
-    queryKey: ['financial', 'charges', filters, token],
+    queryKey: ['financial', 'charges', filterStatus, filterDateFrom, filterDateTo],
     queryFn: () => api.listFinancialCharges(token, filters),
     staleTime: 15_000,
     retry: false,
@@ -1605,7 +1605,7 @@ function ChargeDetailView({
 }: ChargeDetailViewProps): JSX.Element {
   // staleTime: 0 — notes are sensitive (ADR 0012 §10)
   const detailQuery = useQuery({
-    queryKey: ['financial', 'charge', chargeId, token],
+    queryKey: ['financial', 'charge', chargeId],
     queryFn: () => api.getFinancialCharge(token, chargeId),
     staleTime: 0,
   });
@@ -1804,7 +1804,7 @@ function EditChargeDetailLoader({
   onSaved,
 }: EditLoaderProps): JSX.Element {
   const detailQuery = useQuery({
-    queryKey: ['financial', 'charge', chargeId, token],
+    queryKey: ['financial', 'charge', chargeId],
     queryFn: () => api.getFinancialCharge(token, chargeId),
     staleTime: 0,
   });
@@ -1876,7 +1876,7 @@ function MarkPaidModalLoader({
   onPaid,
 }: MarkPaidLoaderProps): JSX.Element {
   const detailQuery = useQuery({
-    queryKey: ['financial', 'charge', chargeId, token],
+    queryKey: ['financial', 'charge', chargeId],
     queryFn: () => api.getFinancialCharge(token, chargeId),
     staleTime: 0,
   });
@@ -1916,7 +1916,7 @@ export function FinancialPanel(): JSX.Element {
   // - status='all' lets us show correct names for charges on archived patients
   // The NewChargeForm separately filters to status==='active' for the dropdown
   const patientsQuery = useQuery({
-    queryKey: ['patients', 'financial-picker', token],
+    queryKey: ['patients', 'financial-picker'],
     queryFn: () =>
       api.listPatients(token ?? '', { status: 'all', limit: 100 }),
     enabled: !!token,

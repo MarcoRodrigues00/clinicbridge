@@ -7,6 +7,22 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.9B** (entregue 2026-05-27) — **Fix cache TanStack Query.**
+
+Removido `token` de todas as queryKeys nos 3 componentes afetados.
+`filters` object substituído por primitivos escalares no `listQuery` (FinancialPanel).
+Comentário incorreto sobre `token` no ReportsPanel corrigido.
+Zero mudanças de backend, schema, regras de negócio ou UX.
+
+**Arquivos alterados:**
+- `FinancialPanel.tsx` — 6 queryKeys corrigidas (`summaryQuery`, `listQuery` com flatten de filters, `detailQuery` × 3, `patientsQuery`)
+- `ReportsPanel.tsx` — 4 queryKeys corrigidas (`apptQuery`, `finQuery`, `patQuery`, `agFinQuery`) + comentário errado removido
+- `AdministrativeSchedulePanel.tsx` — 1 queryKey corrigida (`financialChargesQuery`)
+
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+---
+
 **Sprint 4.9A** (entregue 2026-05-27) — **Super Revisão Geral — todos os módulos 4.4–4.8.**
 
 Revisão de 7 dimensões por agents especializados (UX/Produto, Segurança/LGPD, Permissões/Tenant,

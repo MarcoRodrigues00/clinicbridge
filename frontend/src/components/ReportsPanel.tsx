@@ -642,13 +642,12 @@ export function ReportsPanel(): JSX.Element {
   // mas centralizar evita re-subscription churn e mantém a árvore mais simples).
   // Cada `useQuery` é tipado pelo helper de api.ts e usa `ApiError` como TError.
   //
-  // NÃO PARA: queryKey inclui `token` para invalidar quando o usuário troca.
   // `enabled` desabilita o fetch quando o usuário não é admin (defensive — o
   // gate principal já bloqueia a tela inteira nesse caso).
   const enabled = !!token && isPapelAllowed;
 
   const apptQuery = useQuery<AppointmentReportResponse, ApiError>({
-    queryKey: ['reports', 'appointments', period.date_from, period.date_to, refreshKey, token],
+    queryKey: ['reports', 'appointments', period.date_from, period.date_to, refreshKey],
     queryFn: () =>
       api.getAppointmentReport(token ?? '', {
         date_from: period.date_from,
@@ -660,7 +659,7 @@ export function ReportsPanel(): JSX.Element {
   });
 
   const finQuery = useQuery<FinancialReportResponse, ApiError>({
-    queryKey: ['reports', 'financial', period.date_from, period.date_to, refreshKey, token],
+    queryKey: ['reports', 'financial', period.date_from, period.date_to, refreshKey],
     queryFn: () =>
       api.getFinancialReport(token ?? '', {
         date_from: period.date_from,
@@ -672,7 +671,7 @@ export function ReportsPanel(): JSX.Element {
   });
 
   const patQuery = useQuery<PatientsReportResponse, ApiError>({
-    queryKey: ['reports', 'patients', period.date_from, period.date_to, refreshKey, token],
+    queryKey: ['reports', 'patients', period.date_from, period.date_to, refreshKey],
     queryFn: () =>
       api.getPatientsReport(token ?? '', {
         date_from: period.date_from,
@@ -685,7 +684,7 @@ export function ReportsPanel(): JSX.Element {
   });
 
   const agFinQuery = useQuery<AgendaFinancialReportResponse, ApiError>({
-    queryKey: ['reports', 'agenda-financial', period.date_from, period.date_to, refreshKey, token],
+    queryKey: ['reports', 'agenda-financial', period.date_from, period.date_to, refreshKey],
     queryFn: () =>
       api.getAgendaFinancialReport(token ?? '', {
         date_from: period.date_from,

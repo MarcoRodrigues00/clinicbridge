@@ -59,15 +59,14 @@ Revisão completa de 7 dimensões por agents especializados. **Nenhum P0 encontr
 **Correção aplicada:** Padronizado para `Acesso restrito ao painel de convênios. Solicite permissão ao(à) dono(a) da clínica.` ✅
 
 #### [P1-ARCH-1] Token em queryKeys — `FinancialPanel.tsx`, `ReportsPanel.tsx`, `AdministrativeSchedulePanel.tsx`
-**Problema:** Token JWT incluído como parte da queryKey em ~12 queries. TanStack Query cria entradas de cache separadas por token — cache miss após refresh de token, memory leak potencial em sessões longas.  
-**Impacto:** Performance/cache (não segurança). Token raramente muda (expira em horas).  
-**Status:** Backlog sprint dedicada (P1-ARCH). Não corrigido nesta sprint (requer tocar múltiplos componentes).  
-**Exemplo:** `queryKey: ['financial', 'summary', filterDateFrom, filterDateTo, token]` → remover `token` e usar apenas `enabled: !!token`.
+**Problema:** Token JWT incluído como parte da queryKey em 11 queries. TanStack Query cria entradas de cache separadas por token — cache miss após refresh de token, memory leak potencial em sessões longas.
+**Impacto:** Performance/cache (não segurança). Token raramente muda (expira em horas).
+**Status:** ✅ **Corrigido na Sprint 4.9B.** Token removido de todas as 11 queryKeys afetadas.
 
 #### [P1-ARCH-2] Objeto `filters` mutável em queryKey — `FinancialPanel.tsx:211`
-**Problema:** `filters` é um objeto criado por `useMemo` — TanStack Query usa igualdade referencial para comparar queryKeys; dois objetos idênticos são chaves diferentes → cache miss toda vez que `useMemo` recomputa.  
-**Correção sugerida:** Spreadalizar primitivos: `queryKey: ['financial', 'charges', filterStatus, filterDateFrom, filterDateTo]`.  
-**Status:** Backlog sprint dedicada (P1-ARCH). Não corrigido nesta sprint.
+**Problema:** `filters` como objeto `useMemo` na queryKey — substituído por primitivos escalares para clareza e segurança futura.
+**Correção:** `['financial', 'charges', filterStatus, filterDateFrom, filterDateTo]`.
+**Status:** ✅ **Corrigido na Sprint 4.9B.**
 
 ---
 

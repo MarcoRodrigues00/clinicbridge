@@ -5645,3 +5645,46 @@ Owner   GET item deactivated   → active=false ✅
 - `git diff --check` rc=0 ✅
 
 **Sprint 4.9A entregue.** Relatório completo: `docs/super-review-4-9A.md`. Gate para 4.9B (cache fix TanStack Query) aberto.
+
+---
+
+## Sprint 4.9B — Fix cache TanStack Query (2026-05-27)
+
+**Gate de entrada:** Sprint 4.9A — P1-ARCH-1 e P1-ARCH-2 identificados.
+
+### Problema
+
+`token` JWT incluído em queryKeys em 3 componentes (11 queries total). Token raramente muda, mas cria uma nova entrada de cache cada vez que o token rotaciona, causando cache miss desnecessário e acúmulo de entradas órfãs. Adicionalmente, `filters` como objeto `useMemo` na `listQuery` do FinancialPanel quando poderia ser expresso com primitivos escalares diretamente na key.
+
+### Correções aplicadas
+
+**FinancialPanel.tsx — 6 queryKeys:**
+- `summaryQuery`: `['financial', 'summary', filterDateFrom, filterDateTo, token]` → sem token
+- `listQuery`: `['financial', 'charges', filters, token]` → `['financial', 'charges', filterStatus, filterDateFrom, filterDateTo]`
+- `detailQuery` (ChargeDetailView): sem token
+- `detailQuery` (EditLoader): sem token
+- `detailQuery` (MarkPaidModalLoader): sem token
+- `patientsQuery`: sem token (já tinha `enabled: !!token`)
+
+**ReportsPanel.tsx — 4 queryKeys + comentário:**
+- `apptQuery`, `finQuery`, `patQuery`, `agFinQuery`: token removido de todos
+- Comentário "NÃO PARA: queryKey inclui token para invalidar quando usuário troca" removido (raciocínio incorreto — `enabled: !!token && isPapelAllowed` já cobre o caso; na re-auth o componente re-renderiza)
+
+**AdministrativeSchedulePanel.tsx — 1 queryKey:**
+- `financialChargesQuery`: `[...FINANCIAL_BADGE_KEY, token]` → `FINANCIAL_BADGE_KEY` (já tinha `enabled: !!token && isPapelFinanceiro`)
+
+### Invariantes mantidas
+
+- `queryFn` continua recebendo `token` como argumento em todos os casos
+- Invalidações amplas `['financial']` e `APPOINTMENTS_KEY` continuam funcionando (prefixo não muda)
+- `enabled: !!token` já existia nas queries que precisam de proteção (patientsQuery, financialChargesQuery, reports)
+- Zero mudanças de backend, schema, regras de negócio, UX ou contrato de API
+
+### Checks finais
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅ (warning de chunk pré-existente, irrelevante)
+- `git diff --check` rc=0 ✅
+- Grep `queryKey.*token`: 0 ocorrências ✅
+
+**Sprint 4.9B entregue.** P1-ARCH-1 e P1-ARCH-2 da revisão 4.9A resolvidos.
