@@ -4,11 +4,16 @@ import { ArrowRight } from 'lucide-react';
 import { Logo } from './Logo';
 import styles from './Header.module.css';
 
-const NAV_ITEMS = [
-  { label: 'Produto', href: '#produto' },
-  { label: 'Como funciona', href: '#como-funciona' },
+type AnchorNavItem = { label: string; href: string };
+type RouteNavItem  = { label: string; to: string };
+type NavItem = AnchorNavItem | RouteNavItem;
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Produto',        href: '#produto' },
+  { label: 'Como funciona',  href: '#como-funciona' },
   { label: 'Funcionalidades', href: '#roadmap' },
-  { label: 'Planos', href: '#planos' },
+  { label: 'Planos',         href: '#planos' },
+  { label: 'Demo',           to: '/demo' },
 ];
 
 export function Header(): JSX.Element {
@@ -26,11 +31,17 @@ export function Header(): JSX.Element {
         </a>
 
         <nav className={styles.nav} aria-label="Navegação principal">
-          {NAV_ITEMS.map((item) => (
-            <a key={item.href} href={item.href}>
-              {item.label}
-            </a>
-          ))}
+          {NAV_ITEMS.map((item) =>
+            'to' in item ? (
+              <Link key={item.to} to={item.to} className={styles.demoLink}>
+                {item.label}
+              </Link>
+            ) : (
+              <a key={item.href} href={item.href}>
+                {item.label}
+              </a>
+            ),
+          )}
         </nav>
 
         <Link to="/register" className={styles.cta} aria-label="Criar conta no ClinicBridge">
