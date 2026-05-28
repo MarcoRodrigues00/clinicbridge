@@ -65,6 +65,34 @@
   .inner { max-height: 70vh; }
 }
 
+/* ≤ 640px (Sprint 6.0C.1): tighten the internal onboarding panel on small phones.
+   The panel already fills the full width as a bottom-sheet; the issue is HEIGHT.
+   We keep the 2.6rem top shelf (Auri needs it) but cut vertical bulk elsewhere. */
+@media (max-width: 640px) {
+  .inner {
+    /* 55vh ≈ 396px on a 720px phone — comfortable, doesn't dominate the screen. */
+    max-height: 55vh;
+  }
+  .title {
+    font-size: 1.05rem;
+  }
+  .body {
+    font-size: 0.88rem;
+  }
+  .progressRow {
+    margin-top: 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+  .navBtn,
+  .navBtnPrimary {
+    padding: 0.42rem 0.8rem;
+    font-size: 0.82rem;
+  }
+  .subActions {
+    margin-top: 0.55rem;
+  }
+}
+
 /* ── Collapsed bubble ── */
 .bubble {
   position: fixed;

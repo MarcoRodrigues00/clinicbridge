@@ -17,6 +17,7 @@ import {
   Boxes,
   RotateCcw,
   CreditCard,
+  HelpCircle,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { UploadPanel } from '../components/UploadPanel';
@@ -37,7 +38,7 @@ import { ServicesPanel } from '../components/ServicesPanel';
 import { InsurancePanel } from '../components/InsurancePanel';
 import { InventoryPanel } from '../components/InventoryPanel';
 import { SubscriptionPanel } from '../components/SubscriptionPanel';
-import { GuidedDemoTour, DEMO_TOUR_STEPS } from '../components/GuidedDemoTour';
+import { GuidedDemoTour, DEMO_TOUR_STEPS, ONBOARDING_STEPS } from '../components/GuidedDemoTour';
 import { DemoBlockedToast } from '../components/DemoBlockedToast';
 import { DemoMascot } from '../components/DemoMascot';
 import { useAuth } from '../services/AuthProvider';
@@ -100,6 +101,43 @@ export function Dashboard(): JSX.Element {
   const [tourStep, setTourStep] = useState(0);
   const [tourCollapsed, setTourCollapsed] = useState(false);
 
+  // Internal onboarding tour state (Sprint 6.0C). Separate from Demo Aurora:
+  //   - uses ONBOARDING_STEPS (no demoNote, no exit-to-register CTAs)
+  //   - does NOT use isDemo, write-block, or demo-login
+  //   - only shown for real clinic sessions (!isDemo)
+  const APP_TOUR_DISMISSED_KEY = 'cb-app-tour-dismissed';
+  const [appTourOpen, setAppTourOpen] = useState(false);
+  const [appTourStep, setAppTourStep] = useState(0);
+
+  function openAppTour(): void {
+    setAppTourStep(0);
+    setAppTourOpen(true);
+    try { window.localStorage.removeItem(APP_TOUR_DISMISSED_KEY); } catch { /* ignore */ }
+  }
+
+  function closeAppTour(): void {
+    setAppTourOpen(false);
+    try { window.localStorage.setItem(APP_TOUR_DISMISSED_KEY, '1'); } catch { /* ignore */ }
+  }
+
+  const appTourDismissed = (() => {
+    try { return !!window.localStorage.getItem(APP_TOUR_DISMISSED_KEY); } catch { return false; }
+  })();
+
+  // Auri invite teaser (Sprint 6.0C.1). Uses a SEPARATE localStorage key so the
+  // teaser can be dismissed without completing the tour, and stays gone regardless
+  // of whether the user later uses the "Ver tour" button in the topbar.
+  // Only shown: !isDemo, tab='inicio', not while tour is open, not after dismissed.
+  const APP_TEASER_KEY = 'cb-app-tour-teaser-dismissed';
+  const [teaserDismissed, setTeaserDismissed] = useState(() => {
+    try { return !!window.localStorage.getItem(APP_TEASER_KEY); } catch { return false; }
+  });
+
+  function dismissTeaser(): void {
+    setTeaserDismissed(true);
+    try { window.localStorage.setItem(APP_TEASER_KEY, '1'); } catch { /* ignore */ }
+  }
+
   // Sprint 3.1: only the clinic owner can run sensitive administrative actions.
   const isOwner = user?.papel === 'dono_clinica';
 
@@ -115,6 +153,14 @@ export function Dashboard(): JSX.Element {
     const stepTab = DEMO_TOUR_STEPS[tourStep]?.tab;
     if (stepTab) setTab(stepTab as TabKey);
   }, [tourStep, isDemo, tourCollapsed]);
+
+  // App onboarding tour (Sprint 6.0C): same tab-switching mechanic, independent
+  // from the demo tour. Only active when !isDemo and the tour is open.
+  useEffect(() => {
+    if (!appTourOpen || isDemo) return;
+    const stepTab = ONBOARDING_STEPS[appTourStep]?.tab;
+    if (stepTab) setTab(stepTab as TabKey);
+  }, [appTourStep, appTourOpen, isDemo]);
 
   function handleLogout(): void {
     logout();
@@ -152,10 +198,26 @@ export function Dashboard(): JSX.Element {
           <Logo size={30} />
           ClinicBridge
         </span>
-        <button type="button" className={styles.logout} onClick={handleLogout}>
-          <LogOut size={18} aria-hidden="true" />
-          Sair
-        </button>
+        <span className={styles.topbarActions}>
+          {/* Onboarding tour button — only in real clinic sessions, not in Demo Aurora. */}
+          {!isDemo && (
+            <button
+              type="button"
+              className={styles.tourBtn}
+              onClick={openAppTour}
+              title="Ver tour guiado com Auri"
+            >
+              <HelpCircle size={16} aria-hidden="true" />
+              <span className={styles.tourBtnLabel}>
+                {appTourDismissed ? 'Ver tour' : 'Ajuda guiada'}
+              </span>
+            </button>
+          )}
+          <button type="button" className={styles.logout} onClick={handleLogout}>
+            <LogOut size={18} aria-hidden="true" />
+            Sair
+          </button>
+        </span>
       </header>
 
       {isDemo && (
@@ -235,6 +297,37 @@ export function Dashboard(): JSX.Element {
                 <span className={styles.identityValue}>{clinic?.nome ?? '—'}</span>
               </div>
             </div>
+
+            {/* Auri invite teaser — only in real sessions, not in Demo Aurora.
+                Separate key from the tour itself, disappears once dismissed. */}
+            {!isDemo && !appTourOpen && !teaserDismissed && (
+              <div className={styles.auriTeaser} role="note">
+                <DemoMascot size={44} mood="wave" animated={false} aria-hidden="true" />
+                <div className={styles.auriTeaserBody}>
+                  <p className={styles.auriTeaserTitle}>Quer conhecer o sistema?</p>
+                  <p className={styles.auriTeaserSub}>
+                    A Auri te guia pelos módulos em poucos minutos.
+                  </p>
+                </div>
+                <div className={styles.auriTeaserActions}>
+                  <button
+                    type="button"
+                    className={styles.auriTeaserBtn}
+                    onClick={() => { dismissTeaser(); openAppTour(); }}
+                  >
+                    Começar tour
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.auriTeaserDismiss}
+                    aria-label="Dispensar convite do tour"
+                    onClick={dismissTeaser}
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className={styles.grid}>
               <section className={styles.card}>
@@ -396,6 +489,20 @@ export function Dashboard(): JSX.Element {
           />
           <DemoBlockedToast />
         </>
+      )}
+
+      {/* Internal onboarding tour (Sprint 6.0C). Only visible in real clinic sessions.
+          Separate steps (ONBOARDING_STEPS), no demoNote, no write-block, no demo CTAs. */}
+      {appTourOpen && !isDemo && (
+        <GuidedDemoTour
+          steps={ONBOARDING_STEPS}
+          step={appTourStep}
+          setStep={setAppTourStep}
+          collapsed={false}
+          setCollapsed={() => { /* no-op: X button calls onClose directly in app mode */ }}
+          onClose={closeAppTour}
+          roleLabel="guia do ClinicBridge"
+        />
       )}
     </div>
   );
