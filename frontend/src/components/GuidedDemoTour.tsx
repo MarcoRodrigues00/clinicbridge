@@ -54,6 +54,98 @@ export const TOUR_IDS = {
 
 export type TourId = (typeof TOUR_IDS)[keyof typeof TOUR_IDS];
 
+// ── Module tour steps (Sprint 6.0F) ──────────────────────────────────────────
+// Each module gets a short contextual tour (5-6 steps) using existing
+// data-tour-id targets. Steps have tab:null — the user is already on the
+// correct tab when they click "Auri explica". Content is administrative only:
+// no clinical data, no PII, no diagnosis, no medication.
+
+export const AGENDA_TOUR_STEPS: DemoTourStep[] = [
+  {
+    id: 'ag-welcome', tab: null, targetId: null, mood: 'wave',
+    title: 'Agenda administrativa',
+    body: 'Esta área registra os horários da clínica. Apenas dados administrativos — sem prontuário ou dado clínico.',
+  },
+  {
+    id: 'ag-summary', tab: null, targetId: 'agenda-summary', mood: 'happy',
+    title: 'Resumo do dia',
+    body: 'Total de agendamentos, confirmados e faltas/cancelados sempre à vista.',
+  },
+  {
+    id: 'ag-filters', tab: null, targetId: 'agenda-filters', mood: 'happy',
+    title: 'Filtros',
+    body: 'Filtre por profissional, serviço ou status. "Limpar filtros" restaura a visão completa.',
+  },
+  {
+    id: 'ag-list', tab: null, targetId: 'agenda-list', mood: 'happy',
+    title: 'Cards de agendamento',
+    body: 'Cada card mostra paciente, profissional e serviço. Confirme, conclua, remarque ou cancele direto aqui.',
+  },
+  {
+    id: 'ag-create', tab: null, targetId: 'agenda-create', mood: 'happy',
+    title: 'Novo agendamento',
+    body: 'Crie um horário escolhendo paciente, profissional e serviço. O sistema bloqueia sobreposição no mesmo profissional.',
+  },
+];
+
+export const PATIENTS_TOUR_STEPS: DemoTourStep[] = [
+  {
+    id: 'pa-welcome', tab: null, targetId: null, mood: 'wave',
+    title: 'Pacientes',
+    body: 'Dados administrativos dos pacientes. Sem prontuário ou informação clínica nesta área.',
+  },
+  {
+    id: 'pa-search', tab: null, targetId: 'patients-search', mood: 'happy',
+    title: 'Busca rápida',
+    body: 'Busque por nome, e-mail ou telefone. A lista é paginada para manter a tela leve.',
+  },
+  {
+    id: 'pa-list', tab: null, targetId: 'patients-list', mood: 'happy',
+    title: 'Cartões de paciente',
+    body: 'Cada cartão mostra o status do paciente. Clique em "Ver detalhes" para histórico administrativo.',
+  },
+  {
+    id: 'pa-clinical', tab: null, targetId: null, mood: 'neutral',
+    title: 'Prontuário e documentos',
+    body: 'O prontuário e os documentos médicos ficam em área clínica protegida, acessível apenas a quem tem permissão clínica específica.',
+  },
+];
+
+export const FINANCIAL_TOUR_STEPS: DemoTourStep[] = [
+  {
+    id: 'fi-welcome', tab: null, targetId: null, mood: 'wave',
+    title: 'Financeiro da clínica',
+    body: 'Cobranças da clínica com seus pacientes. Diferente da assinatura do ClinicBridge (que fica em Plano e assinatura).',
+  },
+  {
+    id: 'fi-summary', tab: null, targetId: 'financial-summary', mood: 'happy',
+    title: 'Totalizadores',
+    body: 'Valores em aberto, vencidos e recebidos no período. Atualizado a cada visita.',
+  },
+  {
+    id: 'fi-table', tab: null, targetId: 'financial-table', mood: 'happy',
+    title: 'Lista de cobranças',
+    body: 'Todas as cobranças em uma tabela. Clique em "Detalhes" para ver, editar ou marcar como pago.',
+  },
+  {
+    id: 'fi-payer', tab: null, targetId: 'financial-payer', mood: 'happy',
+    title: 'Tipo de pagador',
+    body: 'O badge indica se a cobrança é particular, convênio ou mista.',
+  },
+  {
+    id: 'fi-create', tab: null, targetId: null, mood: 'happy',
+    title: 'Criar e registrar',
+    body: 'Use "Nova cobrança" para registrar, ou crie direto de um agendamento na Agenda. Marque como pago ao receber.',
+  },
+];
+
+// Map used by Dashboard to resolve the active module tour steps.
+export const MODULE_TOUR_STEPS: Partial<Record<TourId, DemoTourStep[]>> = {
+  [TOUR_IDS.AGENDA]: AGENDA_TOUR_STEPS,
+  [TOUR_IDS.PATIENTS]: PATIENTS_TOUR_STEPS,
+  [TOUR_IDS.FINANCIAL]: FINANCIAL_TOUR_STEPS,
+};
+
 // ── App onboarding steps (Sprint 6.0C) ───────────────────────────────────────
 // Used in the internal tour for logged-in users on their own clinic — NOT the
 // Demo Aurora public tour. No demoNote, no exit-to-register CTAs, no write-block.

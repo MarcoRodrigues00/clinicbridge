@@ -199,6 +199,14 @@
   flex: 1;
 }
 
+.filterGroupActions {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
 /* ── Buttons (padrão ClinicalDocumentsPanel) ───────────────────────────────── */
 
 /* Cyan-tinted primary — "Nova cobrança", "Criar cobrança", "Salvar" */
