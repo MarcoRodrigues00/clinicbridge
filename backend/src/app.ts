@@ -21,6 +21,7 @@ import { financialChargesRouter } from './routes/financialCharges';
 import { reportsRouter } from './routes/reports';
 import { clinicServicesRouter } from './routes/clinicServices';
 import { insuranceRouter } from './routes/insurance';
+import { inventoryRouter } from './routes/inventory';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -124,6 +125,15 @@ export function createApp(): Express {
   // financial_charges.amount_cents. member_number/holder_name são PII com
   // redação ativa em config/logger.ts e ausentes em audit_logs.
   app.use(insuranceRouter);
+  // Estoque básico v0.1 (Sprint 4.8B, ADR 0017). ADMINISTRATIVE / OPERATIONAL —
+  // uses requireRole, not requireClinicalRole. profissional_clinico is
+  // downgraded to 403 at the SERVICE layer (route-level requireRole admits
+  // 'secretaria' which is also the papel of clinical-grant holders). Item
+  // CRUD is dono_clinica only; movements are dono_clinica + secretaria.
+  // current_quantity is mutated ONLY inside a SELECT FOR UPDATE transaction
+  // alongside the matching inventory_movements insert. notes/reason are
+  // administrative-only; logger redacts both, audit is metadata-only.
+  app.use(inventoryRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

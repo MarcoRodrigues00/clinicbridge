@@ -5320,4 +5320,110 @@ profissional_clinico bloqueado.
 
 **Sprint 4.8A entregue.** Gate para 4.8B aberto.
 
+---
+
+## Sprint 4.8B — Backend Estoque v0.1
+
+**Gate de entrada:** ADR 0017 aceita (Sprint 4.8A) ✅.
+
+### Escopo
+
+Backend completo do módulo de Estoque v0.1 (ADR 0017). Sem frontend (4.8C).
+Módulo administrativo/operacional — usa `requireRole`, NÃO `requireClinicalRole`.
+
+### Migration
+
+`20260607000000_inventory_v0` (batch 18 — única, aditiva):
+- Tabela `inventory_items`: `id (uuid PK)`, `clinica_id (FK)`, `name (1..120)`,
+  `category (≤80, nullable)`, `unit (1..40)`, `current_quantity (integer DEFAULT 0 ≥ 0)`,
+  `minimum_quantity (integer DEFAULT 0 ≥ 0)`, `location (≤120, nullable)`,
+  `notes (≤500, nullable)`, `active (boolean DEFAULT true)`, `created_at`, `updated_at`.
+  CHECK `char_length(btrim(name)) >= 1`. UNIQUE INDEX `(clinica_id, lower(btrim(name)))`.
+- Tabela `inventory_movements` (append-only): `id (uuid PK)`, `clinica_id (FK)`,
+  `item_id (FK ON DELETE CASCADE)`, `movement_type CHECK IN ('entry','exit','adjustment','loss')`,
+  `quantity_delta (integer ≠ 0)`, `reason (≤300, nullable)`,
+  `created_by_user_id (FK ON DELETE SET NULL — nullable por design)`, `created_at`.
+  Índices: `(clinica_id, item_id)`, `(clinica_id, movement_type)`.
+- Índices parciais tenant-scoped: `(clinica_id, active)`, `(clinica_id, minimum_quantity, current_quantity)`.
+
+### Arquivos criados
+
+- `backend/migrations/20260607000000_inventory_v0.ts` — migration 18.
+- `backend/src/dao/inventoryDao.ts` — `inventoryItemDao` + `inventoryMovementDao`.
+- `backend/src/services/inventoryService.ts` — lógica de negócio + `buildInventoryActor`.
+- `backend/src/controllers/inventoryController.ts` — handlers HTTP.
+- `backend/src/routes/inventory.ts` — pipeline `patientsRateLimit + requireAuth + requireClinic + requireRole`.
+
+### Arquivos modificados
+
+- `backend/src/types/db.d.ts` — `InventoryItemRow`, `InventoryMovementRow`, `InventoryMovementType`.
+- `backend/src/app.ts` — `inventoryRouter` registrado.
+- `backend/src/config/logger.ts` — `reason` adicionado à redaction list.
+
+### Endpoints (9 rotas)
+
+| Método | Path | Permissão |
+|---|---|---|
+| GET | `/inventory/items` | operator (owner + sec) |
+| POST | `/inventory/items` | admin (owner only) |
+| GET | `/inventory/items/:id` | operator |
+| PATCH | `/inventory/items/:id` | admin |
+| PATCH | `/inventory/items/:id/status` | admin |
+| GET | `/inventory/items/:id/movements` | operator |
+| POST | `/inventory/items/:id/movements` | operator |
+| GET | `/inventory/movements` | operator |
+
+### Permissões
+
+- `dono_clinica` — CRUD completo + movimentos + leitura.
+- `secretaria` (pura ou gestor_clinica) — movimentos + leitura.
+- `profissional_clinico` — **bloqueado** (papel='secretaria' no JWT, mas `buildInventoryActor`
+  carrega grants de `user_clinical_roles` e rejeita se tem grant `profissional_clinico`).
+- `admin_sistema` — 403 `no_clinic_context` via `requireClinic`.
+
+### Invariantes de segurança
+
+- **Tenant-scoped:** todo DAO filtra `clinica_id`. Sem `listAll`. Cross-tenant → 404.
+- **Append-only em movimentos:** sem `updateMovement`/`deleteMovement`.
+- **`current_quantity` protegido:** atualizado **somente** dentro de transação com
+  `SELECT FOR UPDATE` em `createMovement`. `updateItem` nunca toca `current_quantity`.
+- **Sign-per-type:** `entry > 0`; `exit < 0`; `loss < 0`; `adjustment ≠ 0`.
+- **Quantidade negativa bloqueada:** `new_quantity < 0` → 409 `inventory_quantity_insufficient`.
+- **Audit metadata-only:** `acao = inventory.{item|movement}.{create|update|status}.success`;
+  `recurso_id = entity.id`. `reason`, `notes`, `name`, `location`, `category` **nunca** em audit.
+- **Audit de movimento dentro da transação** — falha aborta o movimento (nunca deixar
+  `current_quantity` alterado sem evidência).
+- **Logger redaction:** `reason` e `notes` redactados nas entradas de log.
+
+### Smoke tests
+
+**51/51 PASS** (script Python `/tmp/smoke_4_8b.py`):
+- A (8): auth sem token, admin_sistema, owner/sec/gestor/profissional, movement profissional.
+- B (9): owner CRUD — criar, listar, detalhar, editar, qty inalterada, duplicado, case-insensitive, desativa, reativa.
+- C (5): secretaria — lista, registra movimento, não cria/edita/desativa item.
+- D (8): movimentos/qty — entry, exit, loss, adj+, adj-, histórico por item, lista geral, low_stock.
+- E (17): validações — name vazio, whitespace, unit ausente/vazio, notes>500, reason>300,
+  qty_delta=0, entry negativo, exit positivo, loss positivo, exit>estoque, adj>estoque,
+  type inválido, item inativo, limit>100, UUID inválido, UUID inexistente.
+- F (3): PII — sem campos proibidos em item, movimentos, acesso secretaria.
+- G (1): cleanup — item smoke desativado (soft-delete).
+
+### Checks finais
+
+- `pnpm --filter backend typecheck` ✅
+- `pnpm --filter backend build` ✅
+- `pnpm --filter backend migrate:status` 18/0 ✅
+- `pnpm --filter frontend typecheck` ✅
+- `git diff --check` rc=0 ✅
+
+### Ressalvas / TODOs futuros
+
+- `created_by_user_id` nullable na migration (ON DELETE SET NULL) — service sempre preenche; NULL em histórico indica usuário removido da clínica.
+- Sem frontend (4.8C abre o gate).
+- Import CSV de inventário inicial — deferido para v0.2.
+- Notificação push de estoque mínimo — sprint futura.
+- Medicamentos controlados (SNGPC/ANVISA) — ADR futura obrigatória.
+
+**Sprint 4.8B entregue.** Gate para 4.8C (Frontend Estoque) aberto.
+
 **Próxima sprint:** **4.8B** Backend Estoque v0.1.

@@ -22,16 +22,24 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.8A** (entregue) — **ADR 0017 Estoque v0.1 (docs/ADR-only).**
-ADR 0017 + `docs/inventory-v0-scope.md` criados. Estoque v0.1 = controle manual de
-entrada/saída de materiais e insumos. Entidades: `inventory_items` (catálogo com name 1..120,
-category ≤80, unit 1..40, current_quantity, minimum_quantity, location, notes ≤500, active;
-UNIQUE INDEX `(clinica_id, lower(btrim(name)))`) + `inventory_movements` (append-only:
-movement_type `entry|exit|adjustment|loss`, quantity_delta ≠ 0, reason ≤300 nullable,
-created_by_user_id). Permissões: dono_clinica CRUD completo; secretaria registra movimentos
-+ lê estoque; profissional_clinico bloqueado. Invariantes: sem PII de paciente; notes/reason
-nunca em audit (metadata-only: item_id + movement_type + quantity_delta); append-only em
-movimentos; sem dedução automática; medicamentos controlados (SNGPC/ANVISA) fora do v0.1.
+**Sprint atual: 4.8B** (entregue) — **Backend Estoque v0.1.**
+Migration `20260607000000_inventory_v0` (batch 18): tabelas `inventory_items` +
+`inventory_movements`. 9 endpoints: `GET|POST /inventory/items`,
+`GET|PATCH /inventory/items/:id`, `PATCH /inventory/items/:id/status`,
+`GET|POST /inventory/items/:id/movements`, `GET /inventory/movements`.
+DAO + service (`buildInventoryActor` carrega grants de `user_clinical_roles` para bloquear
+`profissional_clinico`) + controller + routes (`patientsRateLimit + requireAuth + requireClinic
++ requireRole(['dono_clinica','secretaria'])`). Permissões: owner CRUD+movimentos;
+secretaria movimentos+leitura; profissional_clinico bloqueado no service; admin_sistema 403.
+`current_quantity` atualizado **somente** via transação com `SELECT FOR UPDATE`.
+Audit metadata-only: `item_id` + `movement_type` + `quantity_delta`; `reason`/`notes`/`name`
+nunca no audit. Logger redige `reason`. `created_by_user_id` nullable (ON DELETE SET NULL).
+Smoke **51/51 PASS**. `pnpm --filter backend typecheck` ✅ · build ✅ · `migrate:status` 18/0 ✅ ·
+`pnpm --filter frontend typecheck` ✅ · `git diff --check` rc=0 ✅. **Sem frontend.**
+
+**Sprint anterior: 4.8A** (entregue) — **ADR 0017 Estoque v0.1 (docs/ADR-only).**
+ADR 0017 + `docs/inventory-v0-scope.md` criados. Entidades `inventory_items` + `inventory_movements`.
+Permissões: owner CRUD; secretaria movimentos+leitura; profissional_clinico bloqueado.
 `git diff --check` rc=0 ✅. **Zero código, schema, migration ou env.**
 
 **Sprint anterior: 4.7D** (entregue) — **QA/Hardening + UX Polish Convênios v0.1.**
@@ -224,6 +232,12 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 `GET /clinic-services/:id/professionals` · `POST /clinic-services/:id/professionals` ·
 `PATCH /clinic-services/:id/professionals/:professional_id/status`
 
+**Endpoints de Estoque registrados (Sprint 4.8B):**
+`GET /inventory/items` · `POST /inventory/items` · `GET /inventory/items/:id` ·
+`PATCH /inventory/items/:id` · `PATCH /inventory/items/:id/status` ·
+`GET /inventory/items/:id/movements` · `POST /inventory/items/:id/movements` ·
+`GET /inventory/movements`.
+
 **Endpoints de Convênios registrados (Sprint 4.7B):**
 `GET /insurance/providers` · `POST /insurance/providers` · `GET /insurance/providers/:id` ·
 `PATCH /insurance/providers/:id` · `PATCH /insurance/providers/:id/status` ·
@@ -240,6 +254,7 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 retrocompat com cobranças existentes).
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **4.8B** ✅ Backend Estoque v0.1 — migration 18 + DAO + service + controller + 9 endpoints — smoke 51/51 PASS
 - **4.8A** ✅ ADR 0017 Estoque v0.1 (docs-only) — 2 entidades, permissões, invariantes, gate 4.8B aberto
 - **4.7D** ✅ QA/Hardening Convênios — subtabs UX · PayerBadge · MarkPaid payer-aware · canWrite fix · holder_name PII fix · bug paciente
 - **4.7C** ✅ Frontend Convênios v0.1 — `InsurancePanel` + payer_type no Financeiro — typecheck/build ✅
@@ -266,8 +281,8 @@ retrocompat com cobranças existentes).
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A ✅ (ADR 0017 Estoque aceita) →
-**4.8B** Backend Estoque v0.1.
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–B ✅ (ADR 0017 + Backend Estoque) →
+**4.8C** Frontend Estoque v0.1.
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
@@ -287,6 +302,9 @@ leitura aberta para seletor de agenda; soft-delete; re-link idempotente; aba "Se
 visível a todos os papéis; seletor na Agenda filtra por profissional; seletor no Financeiro com botão
 "Usar preço de tabela" explícito; `service_id` wired em appointments e financial_charges com validação
 `service_not_available_for_professional` e `service_mismatch_with_appointment`);
+estoque v0.1 backend (inventory_items + inventory_movements; 9 endpoints; owner CRUD + sec movimentos;
+profissional_clinico bloqueado via grants; current_quantity em transação SELECT FOR UPDATE;
+audit metadata-only; append-only; sem frontend até 4.8C);
 convênios v0.1 backend + frontend (insurance_providers, insurance_plans, patient_insurances,
 service_insurance_prices; extensão de financial_charges com payer_type/insurance_provider_id/
 patient_insurance_id/copay_amount_cents/insurance_amount_cents; CRUD owner-only para
@@ -300,16 +318,16 @@ Detalhe: `docs/project-state.md`.
 
 **O que NÃO existe (sprint explícita):** export de relatórios
 (futuro com ADR própria); gráficos complexos / BI customizável; migração automática de
-patients.convenio→patient_insurances (decisão deferida); estoque backend (4.8B+); delete físico de paciente;
+patients.convenio→patient_insurances (decisão deferida); estoque frontend (4.8C+); delete físico de paciente;
 undo completo de merge; limpeza real de arquivos; gateway de pagamento; ICP-Brasil; telemedicina;
 NFS-e; TISS/TUSS real.
 
-**Migrações (17 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
+**Migrações (18 aplicadas):** `20260520_init` · `20260521_audit_logs` · `20260522_import_files` ·
 `20260523_import_sessions` · `20260524_patients` · `20260525_import_sessions_summary` ·
 `20260526_scheduling` · `20260527_user_mfa` · `20260528_user_mfa_backup_codes` ·
 `20260529_clinic_team` · `20260530_clinic_join_requests_revoked` · `20260601_patients_merged_into` ·
 `20260602_clinical_encounters_v0` · `20260603_clinical_documents_v0` · `20260604_financial_charges_v0` ·
-`20260605_clinic_services_v0` · `20260606_insurance_billing_v0`.
+`20260605_clinic_services_v0` · `20260606_insurance_billing_v0` · `20260607_inventory_v0`.
 
 **Invariantes locais:** patients=6 (base, sem demo), import_files=24, import_sessions=7.
 Seed demo: `pnpm --filter backend seed:demo` (+3 prof, +5 pac, +7 agend); reverter: `seed:demo:clean`.
@@ -327,7 +345,7 @@ Detalhe: `docs/adr/0008-clinicbridge-clinic-os-expansion.md`, `docs/product-clin
 
 ## Próximas prioridades
 
-- **4.8B** Backend Estoque v0.1 (gate: ADR 0017 ✅)
+- **4.8C** Frontend Estoque v0.1 (gate: 4.8B ✅)
 - **Trilha AWS (pausada):** gate de retomada = ADR 0010+0011+0012 aceitas ✅ + reavaliação RDS/EBS/KMS
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod
 - **Trilha pacientes:** contagem de agendamentos no merge; paginação duplicados; undo/snapshot completo (ADR)

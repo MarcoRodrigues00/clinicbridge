@@ -211,6 +211,24 @@ const redactPaths = [
 
   'payload.member_number',
   'payload.holder_name',
+
+  // Sprint 4.8B — Estoque v0.1 (ADR 0017 §5.2).
+  //   - `reason` (inventory_movements) — administrative free-text on a movement.
+  //     NEVER clinical content by invariant; redacted defensively against
+  //     accidental `logger.info({ body })` in future code.
+  // `notes` is already covered above (Sprint 4.4B) and also protects
+  // inventory_items.notes by the same path.
+  //
+  // Layer 1: top-level.
+  'reason',
+
+  // Layer 2: one-level wildcard.
+  '*.reason',
+
+  // Layer 3: explicit two-level paths.
+  'body.reason',
+  'req.body.reason',
+  'payload.reason',
 ];
 
 export const logger = pino({

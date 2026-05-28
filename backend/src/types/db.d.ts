@@ -487,6 +487,47 @@ export interface ServiceInsurancePriceRow {
   updated_at: Date;
 }
 
+// Estoque básico v0.1 — Sprint 4.8B (ADR 0017).
+// ADMINISTRATIVE / OPERATIONAL module. NEVER carries clinical content;
+// `notes` and `reason` are administrative free-text only and are redacted by
+// the logger (config/logger.ts). `current_quantity` is mutated ONLY by the
+// service inside a SELECT FOR UPDATE transaction alongside the matching
+// inventory_movements insert.
+export type InventoryMovementType = 'entry' | 'exit' | 'adjustment' | 'loss';
+
+export interface InventoryItemRow {
+  id: string;
+  clinica_id: string;
+  name: string;
+  category: string | null;
+  unit: string;
+  current_quantity: number;
+  minimum_quantity: number;
+  location: string | null;
+  // Administrative free-text. NEVER clinical content (invariant — ADR 0017 §5.3).
+  // Logger redacts via the existing 'notes' path.
+  notes: string | null;
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// APPEND-ONLY at the application layer. There is no UPDATE/DELETE method on
+// inventoryMovementDao. Corrections are issued as new `adjustment` rows.
+export interface InventoryMovementRow {
+  id: string;
+  clinica_id: string;
+  item_id: string;
+  movement_type: InventoryMovementType;
+  // Signed integer; sign convention per movement_type enforced by the service.
+  quantity_delta: number;
+  // Administrative free-text. NEVER clinical content (invariant — ADR 0017 §5.3).
+  // Logger redacts via the 'reason' path added in this sprint.
+  reason: string | null;
+  created_by_user_id: string | null;
+  created_at: Date;
+}
+
 // New clinical roles live in their own table (parallel to users.papel) so the
 // legacy 'dono_clinica' / 'secretaria' / 'admin_sistema' enum and the JWT/auth
 // pipeline keep working unchanged. financeiro is reserved for Sprint 4.4 and
@@ -530,5 +571,7 @@ declare module 'knex/types/tables' {
     insurance_plans: InsurancePlanRow;
     patient_insurances: PatientInsuranceRow;
     service_insurance_prices: ServiceInsurancePriceRow;
+    inventory_items: InventoryItemRow;
+    inventory_movements: InventoryMovementRow;
   }
 }
