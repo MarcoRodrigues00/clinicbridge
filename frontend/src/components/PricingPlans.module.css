@@ -128,6 +128,23 @@
   border-color: var(--cyan);
 }
 
+/* Discreet "explore this in the demo" link under each plan's main CTA. */
+.demoMini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: color 0.15s ease;
+}
+
+.demoMini:hover {
+  color: var(--cyan-soft);
+}
+
 .note {
   margin-top: 2rem;
   text-align: center;

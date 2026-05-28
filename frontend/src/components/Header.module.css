@@ -52,15 +52,6 @@
   color: var(--text-0);
 }
 
-.demoLink {
-  color: var(--cyan-soft) !important;
-  font-weight: 500;
-}
-
-.demoLink:hover {
-  color: var(--cyan) !important;
-}
-
 .cta {
   display: inline-flex;
   align-items: center;

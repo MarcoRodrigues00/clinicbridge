@@ -203,28 +203,6 @@ export function DemoPage(): JSX.Element {
           </motion.div>
         </section>
 
-        {/* ── Vídeo placeholder ── */}
-        <section className={`section ${styles.videoSection}`}>
-          <div className="section-inner">
-            <motion.div
-              className={styles.videoPlaceholder}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
-            >
-              <div className={styles.videoIcon} aria-hidden="true">
-                <Play size={28} strokeWidth={1.5} />
-              </div>
-              <h2 className={styles.videoTitle}>Vídeo guiado em breve</h2>
-              <p className={styles.videoDesc}>
-                Em breve, esta área terá um vídeo curto mostrando a rotina da clínica dentro do
-                ClinicBridge.
-              </p>
-            </motion.div>
-          </div>
-        </section>
-
         {/* ── Módulos ── */}
         <section className="section" id="modulos">
           <div className="section-inner">
@@ -400,6 +378,28 @@ export function DemoPage(): JSX.Element {
                 );
               })}
             </ul>
+          </div>
+        </section>
+
+        {/* ── Vídeo (complemento futuro, secundário) ── */}
+        <section className={`section ${styles.videoSection}`}>
+          <div className="section-inner">
+            <motion.div
+              className={styles.videoPlaceholder}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+            >
+              <div className={styles.videoIcon} aria-hidden="true">
+                <Play size={28} strokeWidth={1.5} />
+              </div>
+              <h2 className={styles.videoTitle}>Prefere ver em vídeo?</h2>
+              <p className={styles.videoDesc}>
+                A demonstração guiada já está disponível agora — é só entrar. Um vídeo curto
+                chega em breve, como complemento.
+              </p>
+            </motion.div>
           </div>
         </section>
 
