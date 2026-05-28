@@ -6823,3 +6823,58 @@ Spotlight continua funcional: `data-tour-id="nav-agenda"` permanece no botão; `
 
 - `pnpm --filter frontend typecheck` ✅ · `pnpm --filter frontend build` ✅
 - `git diff --check` rc=0 ✅
+
+---
+
+## Sprint 5.1A — ADR 0018 Planos, Billing e Entitlements v0.1 (2026-05-28)
+
+**Tipo:** docs/ADR-only. Zero código, schema, migration, backend, frontend, env, secret, SDK.
+
+### Entregáveis
+
+- `docs/adr/0018-plans-billing-entitlements-v0.md` — ADR (status: Aceita arquitetura · gateway Proposto).
+- `docs/plans-billing-entitlements-v0-scope.md` — operacional (chaves de entitlement, matriz de estados, checklists por sprint).
+
+### Decisão central
+
+Camada comercial do ClinicBridge = camada **por clínica/tenant**, separada das roles
+operacionais, com **entitlements validados no backend**, atrás de **abstração de
+gateway**. **Não confundir** com o financeiro da clínica (`financial_charges`/ADR 0012).
+
+Invariantes aceitos: plano por tenant (1 assinatura/tenant); roles ≠ planos ≠
+entitlements (3 camadas ortogonais); frontend esconde/desabilita mas backend valida;
+soft-lock progressivo que **nunca sequestra dados** (mantém leitura + export essencial
+LGPD); estado só muda por **webhook verificado** ou ação manual auditada (nunca pelo
+frontend); **sem dado de cartão**; billing não vaza PII clínica; webhooks idempotentes
+(`external_event_id` único) + `clinica_id` por mapa interno (anti-spoofing); plano
+nunca destrava módulo clínico sem gate seguro (ADR 0009/0010/0011).
+
+### Planos / estados / entidades
+
+- **Planos v0.1:** Essencial · Profissional · Piloto Assistido. Preços = TBD comercial.
+- **Estados:** trialing · active · past_due · suspended · canceled · manual_pilot.
+- **Entidades conceituais:** `clinic_subscription`, `clinic_entitlement`,
+  `billing_provider_customer`, `billing_provider_subscription`, `billing_event`.
+
+### Gateway (Proposto)
+
+- **Asaas** = candidato **preferencial** para o spike (Brasil-first; Pix/boleto/cartão/
+  recorrência; reputação de aceitar PF).
+- **Stripe** = comparação obrigatória (bloqueador: operação BR/PF, Pix recorrente, CPF vs CNPJ).
+- **Mercado Pago** = mantido **com ressalva** (recusas prévias do fundador — não escolher automaticamente).
+- **Pagar.me** = secundário.
+- Taxas, CPF vs CNPJ, Pix recorrente, webhook signature, idempotência, disponibilidade BR
+  marcados `[VERIFICAR]` — exigem fonte oficial. **Decisão final no spike 5.1D (adendo à ADR).**
+
+### Roadmap
+
+5.1B backend foundation (`MockProvider`, sem gateway real) · 5.1C frontend ·
+5.1D spike sandbox (Asaas vs Stripe) · 5.1E QA/security billing hardening ·
+**5.2A** ADR Produção Segura AWS (renumerada de 5.1A). Cobrança real só pós-5.2A.
+
+### Checks
+
+- `git diff --check` rc=0 ✅
+- Zero código/schema/migration/backend/frontend/env/secret/SDK.
+
+**Sprint 5.1A entregue.** Gate para 5.1B (backend foundation, sem ADR nova) aberto.

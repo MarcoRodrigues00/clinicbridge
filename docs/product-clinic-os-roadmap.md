@@ -464,6 +464,27 @@ Operacional: `docs/inventory-v0-scope.md`.
 
 ---
 
+## Trilha 5.1 — Camada Comercial (Planos, Billing, Entitlements)
+
+> Adicionada na Sprint 5.1A (2026-05-28). Fonte: **ADR 0018**
+> (`docs/adr/0018-plans-billing-entitlements-v0.md`) + operacional
+> (`docs/plans-billing-entitlements-v0-scope.md`).
+
+Camada do **SaaS cobrando a clínica** (assinatura por tenant) — **não** confundir com
+o financeiro da clínica (`financial_charges`/ADR 0012, clínica cobrando pacientes).
+
+**Invariantes (ADR 0018):** plano por tenant (não por usuário); roles ≠ planos ≠
+entitlements; entitlements validados no backend; provider abstraído; soft-lock
+progressivo que **nunca sequestra dados**; estado só muda por webhook verificado;
+sem dado de cartão; billing não vaza PII clínica; webhook idempotente + tenant por
+mapa interno; plano nunca destrava módulo clínico sem gate seguro.
+
+**Sequência:** 5.1A ADR ✅ → 5.1B backend (mock) → 5.1C frontend → 5.1D spike sandbox
+(Asaas preferencial vs Stripe) → 5.1E QA/security → **5.2A** ADR Produção Segura AWS
+(renumerada de 5.1A). Cobrança real só pós-5.2A. Gateway = **Proposto** (decisão na 5.1D).
+
+---
+
 ## Princípios transversais (aplicáveis a todas as Fases 4.x)
 
 > Repetidos aqui para reforço operacional. Fonte de verdade: ADR 0008 §4.

@@ -720,3 +720,45 @@
 - **Sem conformidade fiscal/contábil/tributária declarada.** Validação jurídica/contábil
   externa obrigatória antes de qualquer dado financeiro real em produção.
   Revisável antes de produção real se jurídico/regulatório exigir.
+
+## Billing do SaaS / Planos e Entitlements — guardrails (ADR 0018, Sprint 5.1A)
+
+> **Sprint 5.1A (docs/ADR-only) entregue 2026-05-28.** Regras **planejadas** — nada
+> implementado ainda. Fonte: `docs/adr/0018-plans-billing-entitlements-v0.md` +
+> `docs/plans-billing-entitlements-v0-scope.md`. Vigência a partir da 5.1B.
+
+- **Não confundir com o financeiro da clínica (ADR 0012).** "Billing" aqui é o
+  **ClinicBridge cobrando a clínica** pela assinatura do SaaS. `financial_charges`
+  (ADR 0012) é a clínica cobrando os pacientes — intocado por esta ADR.
+- **Plano por clínica/tenant**, não por usuário. Tudo keyed por `clinica_id`. Sem `listAll`.
+- **Entitlements validados no backend.** Frontend só esconde/desabilita. Middleware
+  `requireEntitlement` + checagem de limite nos services = defesa real.
+- **Estado da assinatura só muda por webhook verificado** (assinatura/signature do
+  provider conferida) **ou** ação manual auditada do `admin_sistema`. **Nunca** pelo
+  retorno do checkout no frontend.
+- **Webhooks idempotentes:** `external_event_id` único; reprocessar = no-op.
+  `clinica_id` **resolvido por mapa interno** (`billing_provider_customer` /
+  `billing_provider_subscription`), **nunca** confiando no payload (anti-tenant-spoofing).
+  Evento sem assinatura válida → descartado + `billing.webhook.rejected`. Rate limit IP-keyed.
+- **Sem dado de cartão no ClinicBridge.** Só IDs externos, status e metadados mínimos.
+  PAN/CVV/validade nunca tocam o backend (responsabilidade PCI do gateway). Nenhuma
+  tabela de cartão.
+- **Billing não vaza PII clínica.** Ao gateway vai só a **identidade de cobrança da
+  clínica** (razão social/nome, e-mail de cobrança, CPF/CNPJ do responsável financeiro).
+  **Nenhum dado de paciente** (nome, CPF, telefone, dado clínico) é enviado, jamais.
+- **Soft-lock progressivo, nunca sequestra dados:** vencido → avisos → tolerância →
+  bloqueia **criação/escrita nova** (403 `subscription_suspended`) → mantém **leitura +
+  exportação essencial** (portabilidade LGPD). Sem delete destrutivo como punição.
+- **Plano nunca destrava módulo clínico** que não esteja seguramente habilitado
+  (ADR 0009/0010/0011). Entitlement clínico = plano permite **E** gate clínico atendido.
+- **Audit metadata-only** (`billing.*` no `audit_logs` existente — sem coluna `metadata`):
+  `recurso_id` = id de assinatura/evento; **sem** valor monetário, **sem** PII, **sem**
+  payload. Logger redige chaves de API / signing secret do provider.
+- **Provider abstraído** (`BillingProvider` + `MockProvider`) — anti-lock-in; a lógica de
+  negócio (estados, entitlements, soft-lock, idempotência) vive no ClinicBridge.
+- **Gateway = Proposto (não cravado).** Asaas preferencial p/ spike; Stripe comparação;
+  Mercado Pago com ressalva; Pagar.me secundário. Taxas, CPF vs CNPJ, Pix recorrente,
+  webhook signature, idempotência, disponibilidade BR = **`[VERIFICAR]` com fonte oficial
+  antes de implementar**. Decisão final no spike 5.1D.
+- **Cobrança real só pós-produção segura (ADR 5.2A)** — webhooks públicos HTTPS + secrets
+  manager. Até lá: mock (5.1B/C) e sandbox (5.1D/E).

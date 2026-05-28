@@ -403,11 +403,29 @@ Objetivo (condicional, maior risco):
 | Sprint | Entregável | Pré-requisito |
 |--------|-----------|---------------|
 | **5.0A** ✅ | Plano de Piloto Controlado (docs-only) | — |
-| **5.0B** | Demo Dataset — seed sintético completo | 5.0A |
-| **5.0C** | Página/tour de demo pública com dados fake | 5.0B |
-| **5.1A** | Produção AWS segura (S3, RDS, WAF, HTTPS) | 5.0A + security-notes P1 |
+| **5.0B** ✅ | Demo Dataset — seed sintético completo | 5.0A |
+| **5.0C–5.0I** ✅ | Página/tour demo · Auri/tour guiado · landing demo · teaser+bolinha · nav mobile · CLAUDE.md slimming | 5.0B |
 
 Ver `docs/pilot-controlled-plan.md` e `docs/pilot-go-no-go-checklist.md` para detalhes.
+
+---
+
+## Trilha 5.1 — Camada Comercial (Planos, Billing, Entitlements)
+
+> Adicionado na Sprint 5.1A (2026-05-28). Fonte: `docs/adr/0018-plans-billing-entitlements-v0.md`
+> + `docs/plans-billing-entitlements-v0-scope.md`. **SaaS cobrando a clínica** —
+> não confundir com o financeiro da clínica (`financial_charges`/ADR 0012).
+
+| Sprint | Entregável | Gateway real? | Pré-requisito |
+|--------|-----------|---------------|---------------|
+| **5.1A** ✅ | ADR 0018 + escopo operacional (docs-only) | Não | — |
+| **5.1B** | Backend foundation: 5 entidades + DAOs + services + `MockProvider` + `requireEntitlement` + estados/soft-lock + audit | Mock | 5.1A |
+| **5.1C** | Frontend: plano/assinatura, banners de estado, esconder/desabilitar por entitlement | Mock | 5.1B |
+| **5.1D** | Spike sandbox: Asaas (preferencial) vs Stripe — adendo à ADR com a escolha | Sandbox | 5.1C |
+| **5.1E** | QA/security billing hardening (idempotência, signature, tenant isolation, soft-lock, sem PII/cartão) | Sandbox | 5.1D |
+| **5.2A** | **ADR Produção Segura AWS** (S3, RDS, WAF, HTTPS, secrets manager, webhooks públicos) — renumerada de 5.1A | — | 5.1E + security-notes P1 |
+
+Cobrança **real** (dinheiro) só é ligada pós-5.2A + go/no-go comercial. Até lá: mock (5.1B/C), sandbox (5.1D/E).
 
 ---
 
