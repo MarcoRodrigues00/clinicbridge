@@ -7307,3 +7307,46 @@ Validação visual no navegador: pendente.
 Trigger esperado: botão "?" dentro de cada módulo (sprint futura).
 
 **Próxima:** 6.0D seed sintético do piloto familiar ou 5.1D spike sandbox billing.
+
+---
+
+## Sprint 6.0D (2026-05-28) — Ponte Demo Aurora + primeiros passos no Dashboard real
+
+Frontend-only. Sem backend, migration, auth, demo-login, auto-login ou troca de tenant.
+
+### Demo Aurora CTA
+Strip horizontal no tab Início (condicionado a `!isDemo`):
+- Badge âmbar "Dados fictícios" (Sparkles + texto).
+- Copy: "Quer ver como fica tudo preenchido? · A Demo Aurora tem agenda, pacientes, cobranças e mais — sem nenhum dado clínico real."
+- `<a href="/demo" target="_blank" rel="noopener noreferrer">Ver Demo Aurora →</a>` — âncora pura, abre em nova aba, não troca sessão/tenant/state.
+- Visual: tint âmbar (rgba(251,191,36,…)) para sinalizar contexto de demo, distinto do ciano do tour.
+
+### Primeiros passos
+Seção `stepsSection` após o CTA, grade de 6 cards clicáveis (`stepsGrid`, auto-fill ≥13rem):
+
+| Step | Aba | Restrito |
+|---|---|---|
+| Briefcase Serviços | `servicos` | — |
+| Users Equipe | `equipe` | `isOwner` only |
+| Users Pacientes | `pacientes` | — |
+| CalendarDays Agenda | `agenda` | — |
+| Wallet Financeiro | `financeiro` | — |
+| BarChart3 Relatórios | `relatorios` | — |
+
+Cada card: grid 3 colunas (ícone | título+desc | arrow). Hover: `border-color cyan` + `arrow translateX(2px)`.
+
+### Separação Demo Aurora / conta real
+
+- **Demo CTA:** âncora para `/demo` (página pública), sem `navigate()`, sem `demo-login`, sem state de demo, sem troca de tenant. O usuário abre em nova aba e mantém a sessão real intacta.
+- **Primeiros passos:** chamam `setTab()` — navegação dentro do próprio Dashboard da clínica real, sem nenhum dado fictício.
+- Tudo condicionado a `!isDemo` — Demo Aurora nunca vê esses elementos (não faz sentido dentro da demo).
+
+### Arquivos
+
+`Dashboard.tsx` (imports + bloco inicio) · `Dashboard.module.css` (demoCta*/stepsSection/stepsGrid/stepCard*/stepIcon/stepArrow).
+
+### Checks
+
+typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅. CSS module: demoCta*, stepCard*, stepsSection — todos exportados. `target: "_blank"` confirmado no bundle. `isOwner && ... setTab("equipe")` confirmado. Validação visual no navegador: pendente.
+
+**Próxima:** seed sintético do piloto familiar, spike billing 5.1D, ou tours por módulo (TOUR_IDS já reservados em 6.0C.1).
