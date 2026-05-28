@@ -23,7 +23,15 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 5.0B** (entregue) — **Demo Dataset / Seed Sintético.**
+**Sprint atual: 5.0B.1** (entregue) — **Prontuário e Documentos Fake no Seed Demo.**
+`seed-demo-data.ts` estendido: 3 encontros clínicos fake (medicina ×2, psicologia ×1) + 3 notas
+(todos os campos com marcador `"DADO CLÍNICO FICTÍCIO PARA DEMONSTRAÇÃO"`) + 1 declaração médica fictícia
+(`"DOCUMENTO FICTÍCIO PARA DEMONSTRAÇÃO — SEM VALIDADE CLÍNICA OU LEGAL"`).
+Clean atualizado com deletes explícitos de notes/documents/encounters antes da cascade da clínica.
+Zero migration, zero schema, zero frontend. Apenas `backend/scripts/seed-demo-data.ts` alterado.
+`pnpm --filter backend typecheck` ✅ · build ✅ · `migrate:status` 18/0 ✅ · `git diff --check` rc=0 ✅.
+
+**Sprint anterior: 5.0B** (entregue) — **Demo Dataset / Seed Sintético.**
 Script `backend/scripts/seed-demo-data.ts` cria "Clínica Demo Aurora" com dados 100% sintéticos:
 5 usuários demo (`demo.*@clinicbridge.local`, senha `DemoDevOnly!23`), 3 profissionais, 6 serviços,
 20 pacientes, 20 agendamentos, 12 cobranças (particular/convênio/misto/vencida/cancelada),
@@ -335,6 +343,7 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 retrocompat com cobranças existentes).
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **5.0B.1** ✅ Prontuário/Documentos fake no seed · 3 encontros + 3 notas + 1 doc declaração · marcadores obrigatórios · clean atualizado
 - **5.0B** ✅ Demo Dataset / Seed Sintético · `seed:demo:full` · Clínica Demo Aurora · 20 pac + 20 appt + 12 cobranças + convênios + estoque
 - **5.0A** ✅ Plano de Piloto Controlado (docs-only) · `pilot-controlled-plan.md` · `pilot-go-no-go-checklist.md` · GO Fase 1
 - **4.9C.2** ✅ Header CTA → "Criar conta" · PricingPlans items corrigidos · demo = backlog
@@ -371,7 +380,7 @@ retrocompat com cobranças existentes).
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) · 5.0A–B ✅ (Piloto + Demo Dataset) →
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) · 5.0A–B.1 ✅ (Piloto + Demo Dataset + Clínico fake) →
 **Próxima fase TBD** (ADR própria necessária antes de qualquer código). **Próxima sprint: 5.0C** (Página demo/tour) ou **5.0B.1** (prontuário fake no seed).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 

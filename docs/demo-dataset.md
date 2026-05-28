@@ -1,6 +1,6 @@
 # ClinicBridge — Demo Dataset (Seed Sintético)
 
-> **Sprint:** 5.0B
+> **Sprint:** 5.0B + 5.0B.1
 > **Data:** 2026-05-27
 > **Status:** Implementado e validado.
 
@@ -162,12 +162,74 @@ Cada item tem pelo menos 1 movimento de entrada. Luvas e Papel toalha têm movim
 
 ---
 
+## Dados clínicos fictícios (Sprint 5.0B.1)
+
+> **Aviso:** estes registros não têm validade clínica, jurídica ou legal.
+> Existem apenas para demonstrar o fluxo de prontuário e documentos em ambiente controlado.
+> Nunca usar dados clínicos reais neste dataset.
+
+### Encontros clínicos (3)
+
+| Paciente (fictício) | Especialidade | Attending | Status |
+|---------------------|---------------|-----------|--------|
+| Ricardo Demo (medicina) | Clínica médica | `demo.medico` | active |
+| Amanda Demo (psicologia) | Psicologia | `demo.psicologa` | active |
+| Mariana Demo (medicina) | Clínica médica | `demo.medico` | active |
+
+### Notas clínicas (3)
+
+Uma nota por encontro, com os campos `chief_complaint`, `anamnesis`, `evolution`, `plan` e/ou
+`internal_note` conforme relevante. Todos os campos contêm o marcador obrigatório.
+
+**Marcador obrigatório em todos os campos de nota:**
+```
+DADO CLÍNICO FICTÍCIO PARA DEMONSTRAÇÃO.
+```
+
+**Campos `internal_note`:** usados no encontro de psicologia para demonstrar que notas internas
+são visíveis apenas para o(a) autor(a) (regra do prontuário v0.1).
+
+### Documento médico (1)
+
+| Campo | Valor |
+|-------|-------|
+| Tipo | `declaration` (declaração) |
+| Título | "Declaração de comparecimento (FICTÍCIA — SEM VALIDADE)" |
+| Status | `finalized` |
+| Paciente | Ricardo Demo (patient[3]) |
+| Autor | `demo.medico` |
+
+**Marcador obrigatório no corpo do documento:**
+```
+DOCUMENTO FICTÍCIO PARA DEMONSTRAÇÃO — SEM VALIDADE CLÍNICA OU LEGAL.
+```
+
+### Regras para dados clínicos fake
+
+- Nenhum CID real, nenhuma prescrição real, nenhuma conduta clínica real.
+- Nenhum nome real de paciente, familiar ou profissional.
+- Nenhum caso clínico real ou baseado em situação existente.
+- Nenhum texto que possa ser interpretado como recomendação médica.
+- Todo campo clínico preenchido começa com o marcador obrigatório.
+- `internal_note` não aparece para quem não é o(a) autor(a) — regra do sistema preservada.
+- O documento fake não é servido como PDF sem audit STRICT (comportamento normal do sistema).
+
+### O que NÃO está incluído nos dados clínicos fake
+
+- Receitas médicas — fora do escopo v0.1.
+- Exames / laudos — fora do escopo v0.1.
+- Documentos odontológicos — sem profissional com grant clínico no seed.
+- Mais de 1 documento por encontro — suficiente para demonstração.
+
+---
+
 ## Módulos não incluídos neste seed
 
 | Módulo | Status |
 |--------|--------|
-| Prontuário / encontros clínicos | Não incluído — planejado para 5.0B.1 |
-| Documentos médicos fake | Não incluído — planejado para 5.0B.1 |
+| Prontuário / encontros clínicos | ✅ Incluído na Sprint 5.0B.1 — dados fictícios |
+| Documentos médicos fake | ✅ Incluído na Sprint 5.0B.1 — 1 declaração fictícia |
+| Receitas / exames / laudos | Fora do escopo v0.1 |
 | Usuários smoke (`smoke.*`) | Nunca tocados por este seed |
 
 ---
@@ -180,9 +242,11 @@ Todos os registros demo têm marcadores explícitos:
 - Descrições de cobranças: `"... DADO SINTÉTICO."`
 - Notas de convênios: `"Operadora fictícia... DADO SINTÉTICO."`
 - Notas de agendamentos: `"... DADO SINTÉTICO."` quando presentes
+- **Notas clínicas:** todos os campos contêm `"DADO CLÍNICO FICTÍCIO PARA DEMONSTRAÇÃO."`
+- **Documento médico:** corpo contém `"DOCUMENTO FICTÍCIO PARA DEMONSTRAÇÃO — SEM VALIDADE CLÍNICA OU LEGAL."`
 - Clínica: nome `"Clínica Demo Aurora"` é inequivocamente fictício
 - Usuários: e-mails `@clinicbridge.local` são domínio reservado
-- Pacientes: e-mails `@demo.local` + CPF null + telefones ficticios
+- Pacientes: e-mails `@demo.local` + CPF null + telefones fictícios
 
 ---
 
