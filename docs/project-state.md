@@ -7,6 +7,48 @@
 
 ## Última sprint aprovada
 
+**Sprint 4.9C.2** (entregue 2026-05-27, aguardando validação visual) — **Microcorreção landing.**
+
+- `Header.tsx`: CTA "Ver demonstração" substituído por `<Link to="/register">Criar conta</Link>`; adicionado import de Link.
+- `PricingPlans.tsx`: items dos 3 planos atualizados conforme spec; CTA Piloto assistido → "Começar piloto assistido".
+- **Backlog registrado:** demo guiada com vídeo/tour (página própria, sprint futura); redesign de `DashboardMockup` para mostrar Clinic OS mais completo.
+
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+---
+
+**Sprint 4.9C.1** (entregue 2026-05-27) — **Ajuste de copy + seção de planos.**
+
+Copy simplificada para linguagem de clínica pequena/consultório:
+- Hero: "Organize sua clínica em um só lugar"; CTAs "Criar conta" e "Preparar arquivo de teste"; sem "Ver demonstração"
+- HowItWorks: 4 passos diretos; lead humano
+- Roadmap: sem TISS/ICP-Brasil/jurídico
+- Security: sem CIAA/STRIDE; lead humano
+- FinalCTA: sem "Ver demonstração"; CTA primário "Criar conta"
+- Footer: disclaimer completo discreto
+- Header: "Roadmap" → "Funcionalidades" + "Planos"
+- Validation removida do fluxo (CTAs cobertos por Hero + PricingPlans + FinalCTA)
+
+Nova seção: `PricingPlans.tsx` + `PricingPlans.module.css`:
+3 planos estáticos (Essencial, Profissional, Piloto assistido). Sem preço, sem checkout, sem backend.
+Nota "Sob consulta durante o piloto". Todos os CTAs apontam para /register.
+
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+---
+
+**Sprint 4.9C** (entregue 2026-05-27) — **UX polish / landing / demo prep.**
+
+Copy da landing page atualizada para refletir Clinic OS modular com 10+ módulos:
+Hero (eyebrow, h1, subtitle), HowItWorks (4 steps da jornada completa), Roadmap (capabilities atualizadas),
+Footer, Security (scopeNote: prontuário v0.1 com restrições), FinalCTA, Validation, AuthAside.
+Dashboard interno: card Início com todos os módulos; "Checklist do MVP" → "Módulos disponíveis"; subtítulo Segurança.
+Backend intocado. Zero migration.
+
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+---
+
 **Sprint 4.9B** (entregue 2026-05-27) — **Fix cache TanStack Query.**
 
 Removido `token` de todas as queryKeys nos 3 componentes afetados.

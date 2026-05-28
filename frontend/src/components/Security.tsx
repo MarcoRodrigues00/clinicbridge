@@ -42,12 +42,12 @@ export function Security(): JSX.Element {
           <span className="eyebrow">Segurança</span>
           <h2 className="section-title">Segurança desde o desenho</h2>
           <p className="section-lead">
-            Controles aplicados desde a arquitetura — não como remendo. Princípios CIAA, modelagem
-            STRIDE e LGPD orientam cada decisão.
+            Cada clínica vê apenas seus dados. Acesso por perfil, autenticação em dois fatores
+            e registros de auditoria ajudam a proteger as informações da sua clínica.
           </p>
           <p className={styles.scopeNote}>
-            O MVP é focado em dados administrativos. Não armazena prontuário, diagnóstico ou
-            prescrição.
+            Prontuário e documentos clínicos estão em evolução. Para obrigações regulatórias
+            específicas, consulte os requisitos da sua área de atuação.
           </p>
         </motion.div>
 

@@ -22,7 +22,30 @@
 
 ## Estado atual (atualizado 2026-05-27)
 
-**Sprint atual: 4.9B** (entregue) — **Fix cache TanStack Query.**
+**Sprint atual: 4.9C.2** (entregue, aguardando validação visual) — **Microcorreção landing.**
+Header CTA "Ver demonstração" → "Criar conta" (Link to="/register"). PricingPlans items atualizados
+conforme spec (Essencial 4 itens, Profissional 5, Piloto assistido CTA "Começar piloto assistido").
+Demo guiada registrada como backlog futuro. DashboardMockup (ainda mostra migração) → backlog de redesign.
+Backend intocado. Zero migration.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+**Sprint anterior: 4.9C.1** (entregue) — **Ajuste de copy + seção de planos.**
+Copy simplificada para linguagem humana (clínica pequena / consultório): Hero ("Organize sua clínica em um só lugar"),
+HowItWorks (4 passos simples), Roadmap (sem TISS/ICP-Brasil), Security (sem CIAA/STRIDE/jurídico),
+FinalCTA e Footer. CTA "Ver demonstração" removido; CTAs primários são "Criar conta" e "Preparar arquivo de teste".
+Nova seção de planos estática (PricingPlans.tsx): Essencial · Profissional · Piloto assistido — sem preço, sem
+checkout, sem backend. Header nav: "Roadmap" → "Funcionalidades" + "Planos". Validation removida do fluxo da landing
+(coberta pelos CTAs e PricingPlans). Backend, schema, permissões intocados.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+**Sprint anterior: 4.9C** (entregue) — **UX polish / landing / demo prep.**
+Copy da landing page atualizada para refletir Clinic OS modular (Hero, HowItWorks, Roadmap, FinalCTA,
+Footer, Security, Validation). AuthAside atualizada (prontuário v0.1 com restrições, não mais "não é prontuário").
+Dashboard: card Início menciona todos os módulos; "Checklist do MVP" → "Módulos disponíveis" com 3 linhas ✅;
+subtítulo Segurança atualizado. Backend intocado. Zero migration.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+**Sprint anterior: 4.9B** (entregue) — **Fix cache TanStack Query.**
 Removido `token` de todas as queryKeys (FinancialPanel × 6, ReportsPanel × 4, AdministrativeSchedulePanel × 1).
 Objeto `filters` mutável substituído por primitivos escalares em `listQuery` (FinancialPanel).
 Comentário incorreto sobre `token` no ReportsPanel corrigido. Backend, schema, regras de negócio e UX intocados.
@@ -292,6 +315,9 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 retrocompat com cobranças existentes).
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **4.9C.2** ⏳ Header CTA → "Criar conta" · PricingPlans items corrigidos · demo = backlog · aguardando validação visual
+- **4.9C.1** ✅ Copy simplificada + PricingPlans estático
+- **4.9C** ✅ UX polish / landing / demo prep — copy landing atualizada · AuthAside · Dashboard início/segurança · backend intocado
 - **4.9B** ✅ Fix cache TanStack Query — `token` removido de 11 queryKeys · `filters` object substituído por primitivos · backend intocado
 - **4.9A** ✅ Super Revisão Geral — 7 agents · 0 P0 · 2 P1 copy corrigidos · 2 P1 cache TanStack entregues em 4.9B · piloto liberado · `docs/super-review-4-9A.md`
 - **4.8D** ✅ QA/Hardening Estoque — revisão UX · greps segurança 0-violations · sanity smoke 8/8 · docs · **Fase 4.8 completa**
@@ -323,7 +349,7 @@ retrocompat com cobranças existentes).
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–B ✅ (Super Revisão + Cache Fix) →
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) →
 **Próxima fase TBD** (ADR própria necessária antes de qualquer código).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 

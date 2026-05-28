@@ -3,7 +3,7 @@ import { Hero } from '../components/Hero';
 import { HowItWorks } from '../components/HowItWorks';
 import { Security } from '../components/Security';
 import { Roadmap } from '../components/Roadmap';
-import { Validation } from '../components/Validation';
+import { PricingPlans } from '../components/PricingPlans';
 import { FinalCTA } from '../components/FinalCTA';
 import { Footer } from '../components/Footer';
 
@@ -17,7 +17,7 @@ export function Landing(): JSX.Element {
         <HowItWorks />
         <Security />
         <Roadmap />
-        <Validation />
+        <PricingPlans />
         <FinalCTA />
       </main>
       <Footer />

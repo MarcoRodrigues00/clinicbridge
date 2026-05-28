@@ -13,34 +13,34 @@ type Capability = {
 
 const CAPABILITIES: Capability[] = [
   {
-    title: 'Migração de dados',
+    title: 'Migração e pacientes',
     items: [
-      'Importação de CSV/XLSX',
-      'Mapeamento de colunas',
-      'Validação e revisão',
+      'Importação CSV/XLSX',
+      'Mapeamento, validação e duplicados',
+      'Exportação limpa',
     ],
   },
   {
-    title: 'Pacientes administrativos',
+    title: 'Agenda e serviços',
     items: [
-      'Listagem com busca',
-      'Detecção de duplicados',
-      'Exportação CSV/XLSX',
+      'Agendamentos por dia e profissional',
+      'Catálogo de serviços da clínica',
+      'Convênios e carteirinhas de planos',
     ],
   },
   {
-    title: 'Agenda administrativa',
+    title: 'Financeiro e operações',
     items: [
-      'Profissionais da clínica',
-      'Agendamentos por dia',
-      'Confirmar, remarcar, concluir',
+      'Cobranças e recebimentos',
+      'Relatórios gerenciais por período',
+      'Controle de estoque e insumos',
     ],
   },
   {
-    title: 'Segurança e governança',
+    title: 'Clínica e governança',
     items: [
-      'Isolamento por clínica',
-      'Papéis e auditoria',
+      'Prontuário e documentos v0.1',
+      'MFA, papéis e auditoria LGPD',
       'Retenção e backup (local)',
     ],
   },
@@ -56,12 +56,11 @@ export function Roadmap(): JSX.Element {
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
-          <span className="eyebrow">Piloto</span>
-          <h2 className="section-title">O que o ClinicBridge entrega no piloto</h2>
+          <span className="eyebrow">O que está incluído</span>
+          <h2 className="section-title">Tudo que você precisa para tocar a clínica</h2>
           <p className="section-lead">
-            Uma versão piloto administrativa: migração, revisão e operação de dados
-            administrativos com segurança desde o início — sem prontuário clínico nem
-            integrações complexas.
+            Pacientes, agenda, financeiro, convênios, estoque e documentos — em uma plataforma
+            só, com acesso por perfil e dados protegidos.
           </p>
         </motion.div>
 

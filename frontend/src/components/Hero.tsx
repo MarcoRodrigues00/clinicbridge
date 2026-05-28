@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Play, FileSearch } from 'lucide-react';
+import { UserPlus, FileSearch } from 'lucide-react';
 import { DashboardMockup } from './DashboardMockup';
 import styles from './Hero.module.css';
 
@@ -19,42 +19,41 @@ export function Hero(): JSX.Element {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: 'easeOut' }}
         >
-          <span className="eyebrow">MVP administrativo · piloto v0.1</span>
+          <span className="eyebrow">Para clínicas e consultórios · piloto v0.1</span>
 
           <h1 className={styles.title}>
-            Migração segura de{' '}
-            <span className={styles.titleAccent}>dados administrativos</span>{' '}
-            para clínicas pequenas
+            Organize sua clínica{' '}
+            <span className={styles.titleAccent}>em um só lugar</span>
           </h1>
 
           <p className={styles.subtitle}>
-            Organize pacientes, contatos e agendas exportados de sistemas antigos em poucos
-            passos, com revisão, auditoria e exportação limpa.
+            Controle pacientes, agenda, cobranças, convênios, estoque e documentos em uma
+            plataforma segura para clínicas pequenas e consultórios.
           </p>
 
           <div className={styles.actions}>
-            <a href="#produto" className={styles.btnPrimary}>
-              <Play size={16} aria-hidden="true" />
-              Ver demonstração
-            </a>
+            <Link to="/register" className={styles.btnPrimary}>
+              <UserPlus size={16} aria-hidden="true" />
+              Criar conta
+            </Link>
             <Link to="/register" className={styles.btnGhost}>
               <FileSearch size={16} aria-hidden="true" />
-              Analisar arquivo
+              Preparar arquivo de teste
             </Link>
           </div>
 
           <div className={styles.stats} role="list">
             <div role="listitem">
               <span className={styles.statValue}>CSV · XLSX</span>
-              Formatos suportados
+              Importação de dados
             </div>
             <div role="listitem">
-              <span className={styles.statValue}>Multi-tenant</span>
-              Isolamento por clínica
+              <span className={styles.statValue}>Por clínica</span>
+              Dados separados
             </div>
             <div role="listitem">
               <span className={styles.statValue}>LGPD</span>
-              Privacidade desde o desenho
+              Dados protegidos
             </div>
           </div>
         </motion.div>

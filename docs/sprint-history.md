@@ -5688,3 +5688,126 @@ Owner   GET item deactivated   → active=false ✅
 - Grep `queryKey.*token`: 0 ocorrências ✅
 
 **Sprint 4.9B entregue.** P1-ARCH-1 e P1-ARCH-2 da revisão 4.9A resolvidos.
+
+---
+
+## Sprint 4.9C — UX Polish / Landing / Demo Prep (2026-05-27)
+
+**Tipo:** Polish de copy e landing page. Zero backend, zero migration, zero regras de negócio.
+
+### Objetivo
+
+Atualizar copy pública e interna para refletir o produto atual (Clinic OS modular com 10+ módulos),
+substituindo referências ao "MVP administrativo de migração" que não representam mais o estado do produto.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `Hero.tsx` | eyebrow "MVP administrativo" → "Clinic OS modular"; h1 e subtitle refletindo plataforma completa |
+| `HowItWorks.tsx` | Seção "Do arquivo antigo à exportação limpa" → "à clínica organizada"; 4 steps refletindo jornada completa (migração → pacientes → financeiro/convênios → relatórios) |
+| `Roadmap.tsx` | Capabilities atualizadas: 10 módulos entregues; eyebrow "Piloto" → "Módulos disponíveis"; lead honesto (sem telemedicina, TISS, ICP-Brasil) |
+| `Footer.tsx` | "MVP focado em migração" → "gestão modular para clínicas"; "Piloto administrativo · v0.1" → "Clinic OS · v0.1 · piloto" |
+| `Security.tsx` | scopeNote: "Não armazena prontuário" → "módulo clínico com roles restritas e auditoria STRICT" |
+| `FinalCTA.tsx` | Headline e subtitle refletindo plataforma completa, não só migração |
+| `Validation.tsx` | "Valide sua migração antes do MVP completo" → "Comece com uma análise"; "Entrar na lista de espera" → "Criar conta" |
+| `AuthAside.tsx` | Item 5: "Não é prontuário clínico" (FileX2) → "Prontuário com regras restritas" (ClipboardList); texto honesto sobre v0.1 com restrições |
+| `Dashboard.tsx` | Card início: menciona todos os módulos; "Checklist do MVP" → "Módulos disponíveis" (3 ✅ + 1 pendente produção); subtítulo segurança atualizado |
+
+### O que ficou para backlog
+
+- DashboardMockup.tsx — ainda mostra fluxo de migração; é o mockup visual da landing, mudança requer redesign de conteúdo
+- Header.tsx nav item "Roadmap" — label levemente desatualizado; mudança simples mas sem urgência
+- Componentes gigantes (FinancialPanel, InsurancePanel) — backlog de refatoração futuro
+- Error Boundaries — backlog separado
+
+### Checks finais
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+
+**Sprint 4.9C entregue.** Produto pronto para refinamento de copy e demo prep (4.9C.1).
+
+---
+
+## Sprint 4.9C.1 — Ajuste de copy + seção de planos (2026-05-27)
+
+**Tipo:** Copy polish + novo componente estático. Zero backend, zero migration, zero regras de negócio.
+
+**Problema:** Copy da 4.9C ficou técnica demais para o público-alvo (clínica pequena / consultório):
+termos como "Clinic OS modular", "TISS", "ICP-Brasil", "auditoria STRICT", "controle de acesso por função"
+apareciam cedo demais. CTA "Ver demonstração" sem página/vídeo de destino.
+
+### Mudanças de copy
+
+| Componente | Antes | Depois |
+|------------|-------|--------|
+| Hero eyebrow | "Clinic OS modular · piloto v0.1" | "Para clínicas e consultórios · piloto v0.1" |
+| Hero h1 | "Gestão integrada para clínicas e consultórios" | "Organize sua clínica em um só lugar" |
+| Hero subtitle | mencionava "plataforma modular / auditoria" | "Controle pacientes, agenda, cobranças, convênios, estoque e documentos em uma plataforma segura" |
+| Hero CTA primário | "Ver demonstração" (href="#produto") | "Criar conta" (Link to="/register") |
+| HowItWorks lead | técnico | "Quatro passos que cabem na rotina de qualquer consultório" |
+| HowItWorks steps | labels longos | diretos: "Importe ou cadastre", "Organize a agenda", "Registre cobranças", "Acompanhe relatórios" |
+| Roadmap eyebrow/lead | "Módulos disponíveis" + TISS/ICP-Brasil | "O que está incluído" + lead limpo |
+| Security lead | CIAA/STRIDE/jurídico | "Cada clínica vê apenas seus dados. Acesso por perfil, MFA e registros" |
+| Security scopeNote | "auditoria STRICT / TISS / sistema homologado" | "Prontuário em evolução. Consulte requisitos regulatórios da sua área." |
+| FinalCTA | "Ver demonstração" primário | "Criar conta" primário |
+| FinalCTA subtitle | "auditoria, isolamento por função" | "a plataforma cresce junto com a clínica" |
+| Header nav | "Roadmap" | "Funcionalidades" + novo item "Planos" |
+| Footer meta | "Clinic OS · v0.1 · piloto" | "v0.1 · piloto" |
+
+### Novo: PricingPlans.tsx + PricingPlans.module.css
+
+3 planos estáticos:
+- **Essencial:** Pacientes, agenda, serviços, financeiro, relatórios
+- **Profissional** (destacado): tudo + convênios, estoque, documentos, MFA, relatórios gerenciais
+- **Piloto assistido:** importação, deduplicação, configuração, treinamento, acompanhamento
+
+Todos os CTAs apontam para /register. Sem preço numérico. Nota: "Sob consulta durante o piloto."
+CSS usa variáveis do design system existente (--text-0/1/2, --surface-border, --cyan, --success).
+
+### Validation removida do fluxo da landing
+
+A seção Validation foi removida do render de Landing.tsx (CTAs "Solicitar análise" e "Criar conta"
+estão cobertos por Hero, PricingPlans e FinalCTA). O componente Validation.tsx permanece no projeto
+para eventual reuso.
+
+### Checks finais
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+
+**Sprint 4.9C.1 entregue.** Validação visual realizada — ajustes finais em 4.9C.2.
+
+---
+
+## Sprint 4.9C.2 — Microcorreção landing (2026-05-27)
+
+**Tipo:** Microcorreção de copy e CTA. Zero backend, zero migration.
+
+### Mudanças
+
+**Header.tsx:**
+- Importado `Link` de `react-router-dom`.
+- CTA `<a href="#produto">Ver demonstração</a>` → `<Link to="/register">Criar conta</Link>`.
+- `aria-label` atualizado; `ctaLong` = "Criar conta", `ctaShort` = "Entrar".
+
+**PricingPlans.tsx:**
+- Essencial: itens → "Pacientes e agenda", "Serviços da clínica", "Cobranças básicas", "Relatórios simples".
+- Profissional: itens → "Tudo do Essencial", "Convênios e carteirinhas", "Estoque e insumos", "Documentos e auditoria", "Relatórios gerenciais".
+- Piloto assistido: desc simplificada; CTA "Começar piloto" → "Começar piloto assistido".
+
+### Backlog registrado
+
+- **Demo guiada:** página/vídeo com tour completo do produto (pacientes, agenda, financeiro, convênios, estoque, relatórios, prontuário com dados fake, importação). Sprint futura dedicada.
+- **DashboardMockup redesign:** mockup da landing ainda mostra fluxo de migração. Redesign futuro deve mostrar Clinic OS mais completo ou carrossel de módulos.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+
+**Sprint 4.9C.2 entregue.** Aguardando validação visual antes do commit.

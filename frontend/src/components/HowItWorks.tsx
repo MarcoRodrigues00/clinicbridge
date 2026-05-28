@@ -1,27 +1,27 @@
 import { motion } from 'framer-motion';
-import { UploadCloud, Columns3, WandSparkles, FileDown } from 'lucide-react';
+import { UploadCloud, Columns3, WandSparkles, BarChart3 } from 'lucide-react';
 import styles from './HowItWorks.module.css';
 
 const STEPS = [
   {
     icon: UploadCloud,
-    label: 'Envie o arquivo',
-    desc: 'Faça upload do CSV ou XLSX exportado do sistema antigo. Limite, MIME e hash conferidos no servidor.',
+    label: 'Importe ou cadastre seus dados',
+    desc: 'Comece pelo upload do arquivo antigo ou cadastre diretamente. Pacientes, duplicados e campos incompletos são identificados antes de salvar.',
   },
   {
     icon: Columns3,
-    label: 'Revise o mapeamento',
-    desc: 'O ClinicBridge sugere automaticamente quais colunas viraram nome, telefone, e-mail, CPF e data de nascimento.',
+    label: 'Organize a agenda e os pacientes',
+    desc: 'Agende consultas por profissional e serviço, mantenha os pacientes organizados e a equipe com acesso certo para cada função.',
   },
   {
     icon: WandSparkles,
-    label: 'Revise inconsistências',
-    desc: 'Veja duplicados, formatos inválidos e campos incompletos sinalizados na validação, antes de importar.',
+    label: 'Registre cobranças e convênios',
+    desc: 'Lance cobranças, marque recebimentos, cadastre convênios aceitos e controle os materiais e insumos da clínica.',
   },
   {
-    icon: FileDown,
-    label: 'Exporte os dados limpos',
-    desc: 'Baixe CSV e XLSX prontos para importar, junto com um relatório de migração para a clínica.',
+    icon: BarChart3,
+    label: 'Acompanhe relatórios e estoque',
+    desc: 'Veja resumos de agenda, recebimentos e pacientes por período. Estoque com alertas de quantidade baixa.',
   },
 ];
 
@@ -36,10 +36,10 @@ export function HowItWorks(): JSX.Element {
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
           <span className="eyebrow">Como funciona</span>
-          <h2 className="section-title">Do arquivo antigo à exportação limpa</h2>
+          <h2 className="section-title">Do arquivo antigo à clínica organizada</h2>
           <p className="section-lead">
-            Um fluxo curto que cabe na rotina administrativa da clínica, com revisão humana antes
-            de qualquer exportação.
+            Quatro passos que cabem na rotina de qualquer consultório — do arquivo antigo
+            à operação do dia a dia, sem precisar trocar de sistema.
           </p>
         </motion.div>
 
