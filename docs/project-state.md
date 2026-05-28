@@ -7,6 +7,82 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.0C.2** (entregue 2026-05-28) — **Fluxo de acesso à demo / acesso controlado.**
+
+Seção "Como acessar a demonstração" adicionada à página `/demo`.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/views/DemoPage.module.css` | Classes `accessGrid`, `accessCard`, `accessIcon`, `accessTitle`, `accessDesc`, `accessCta` adicionadas |
+
+> `DemoPage.tsx` já estava completo com o conteúdo correto desde o início desta sessão.
+
+### Seção adicionada
+
+- **Eyebrow:** "Como acessar"
+- **Título:** "Como acessar a demonstração"
+- **Lead:** "A demonstração é liberada em ambiente controlado, usando uma clínica fictícia e dados de exemplo. Você pode criar sua própria conta de teste ou solicitar uma apresentação guiada."
+- **3 cards de acesso:**
+  1. "Criar uma conta de teste" → `/register` — entrada pelo fluxo normal com dados próprios
+  2. "Demo assistida" → `/register` — Clínica Demo Aurora em apresentação guiada
+  3. "Acesso interno" → `/login` — credenciais apenas em documentos internos, ambiente controlado
+
+### Segurança de credenciais
+
+- Credenciais demo (`DemoDevOnly!23`, `demo.*@clinicbridge.local`) **não aparecem** em `frontend/src/`.
+- Grep confirmado: 0 ocorrências em toda a árvore `frontend/src/`.
+- Credenciais ficam somente em `docs/demo-dataset.md` e ambiente local/staging controlado.
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+- Zero backend, zero migration, zero schema, zero seed.
+
+---
+
+**Sprint 5.0C.1** (entregue 2026-05-28) — **Polish de copy da página Demo.**
+
+Termos técnicos removidos da UI pública de `DemoPage.tsx`:
+
+| Antes | Depois |
+|-------|--------|
+| "dados sintéticos" | "clínica fictícia" / "exemplos de demonstração" |
+| "O dataset de demo simula..." | "Criamos uma clínica fictícia para mostrar..." |
+| "populado com dados sintéticos realistas" | "já tem exemplos prontos" |
+| "marcador explícito de dado fictício" | "sem nenhum dado clínico real" |
+| "20 pacientes sintéticos com agenda populada" | "Pacientes fictícios com agenda preenchida" |
+| "Prontuário e documentos com marcadores..." | "Prontuário e documentos de exemplo, sem validade clínica ou legal" |
+| "Credenciais de demo documentadas internamente..." | "O acesso de demonstração é preparado em ambiente controlado." |
+| "os mesmos controles de segurança do produto real, mas com dados sintéticos" | "montada para apresentar o sistema sem usar informações de pacientes reais" |
+| "Dados fictícios por design" | "Demo segura, sem dados reais" |
+
+Zero backend, zero migration, zero schema, zero seed. Apenas `DemoPage.tsx` alterado.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+---
+
+**Sprint 5.0C** (entregue 2026-05-27) — **Página Demo / Tour público.**
+
+Rota `/demo` adicionada ao App.tsx. Componentes criados:
+- `frontend/src/views/DemoPage.tsx` — hero (badge, h1, subtítulo, CTAs), vídeo placeholder, grid de 6 módulos
+  com ícones, cenário Clínica Demo Aurora, lista de garantias de dados sintéticos, CTA final.
+- `frontend/src/views/DemoPage.module.css` — header próprio, hero, módulos 3 colunas, aurora list, safety list, CTA.
+
+`frontend/src/components/Header.tsx` atualizado:
+- NAV_ITEMS agora suporta tipo `AnchorNavItem | RouteNavItem` (discriminated union).
+- Link "Demo" adicionado como `RouteNavItem { to: '/demo' }`, renderizado como `<Link>`.
+- Classe `.demoLink` com cor cyan distinta.
+- `Header.module.css` atualizado com `.demoLink`.
+
+Backend, schema, migration, seed e backend intocados.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+---
+
 **Sprint 5.0B.1** (entregue 2026-05-27) — **Prontuário e Documentos Fake no Seed Demo.**
 
 Extensão do `seed-demo-data.ts` com dados clínicos 100% fictícios e marcados:

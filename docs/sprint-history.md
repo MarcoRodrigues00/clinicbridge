@@ -5971,3 +5971,149 @@ Antes da cascade da clínica, o clean agora deleta explicitamente (ordem FK-safe
 - ✅ `typecheck` · `build` · `migrate:status 18/0` · `git diff --check` rc=0
 
 **Sprint 5.0B.1 entregue.** Gate para 5.0C (Página demo/tour) aberto.
+
+---
+
+## Sprint 5.0C — Página Demo / Tour público (2026-05-27)
+
+**Tipo:** Frontend only. Zero backend, zero migration, zero schema, zero seed alterado.
+
+### Arquivos criados/alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/views/DemoPage.tsx` | Criado — página completa `/demo` |
+| `frontend/src/views/DemoPage.module.css` | Criado — estilos da página |
+| `frontend/src/App.tsx` | Rota `/demo` adicionada |
+| `frontend/src/components/Header.tsx` | Nav "Demo" como RouteNavItem + Link |
+| `frontend/src/components/Header.module.css` | Classe `.demoLink` com cor cyan |
+
+### Estrutura da DemoPage
+
+1. **Header próprio** — logo + nav (Início, Planos) + CTA "Criar conta"
+2. **Hero** — badge "Demo · dados fictícios", h1, subtítulo, CTAs
+3. **Vídeo placeholder** — bloco dashed com ícone Play e "Vídeo guiado em breve"
+4. **6 módulos** — grid 3 colunas com ícone, título e descrição do que há na demo
+5. **Clínica Demo Aurora** — lista dos dados sintéticos disponíveis + nota sobre credenciais internas
+6. **Segurança / dados fictícios** — 6 garantias (sem CPF real, sem e-mail real, etc.)
+7. **CTA final** — "Criar conta" + "Preparar arquivo de teste"
+
+### Header atualizado
+
+- NAV_ITEMS agora usa union type `AnchorNavItem | RouteNavItem`
+- Link "Demo" renderiza como `<Link to="/demo">` com classe `.demoLink` (cor cyan)
+- Anchor links mantidos para âncoras da landing (#produto, #como-funciona, etc.)
+
+### O que fica para backlog
+
+- **Vídeo real** — gravação com dados fictícios + player na página
+- **Carrossel de screenshots** — imagens reais do produto com dados demo
+- **Tour interativo** — walkthrough guiado step-by-step
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+
+**Sprint 5.0C entregue.** Gate para 5.0C.1 (polish de copy) aberto.
+
+---
+
+## Sprint 5.0C.1 — Polish de copy da página Demo (2026-05-28)
+
+**Tipo:** Copy-only. Zero backend, zero migration, zero schema, zero seed. Apenas `DemoPage.tsx`.
+
+### Termos removidos/trocados
+
+| Técnico (removido) | Humano (substituído) |
+|--------------------|----------------------|
+| "dados sintéticos" | "clínica fictícia" / "exemplos de demonstração" |
+| "O dataset de demo simula..." | "Criamos uma clínica fictícia para mostrar..." |
+| "populado com dados sintéticos realistas" | "já tem exemplos prontos" |
+| "marcador explícito de dado fictício" | "sem nenhum dado clínico real" |
+| "20 pacientes sintéticos com agenda populada" | "Pacientes fictícios com agenda preenchida" |
+| "Prontuário e documentos com marcadores de dado fictício" | "Prontuário e documentos de exemplo, sem validade clínica ou legal" |
+| "Credenciais de demo documentadas internamente..." | "O acesso de demonstração é preparado em ambiente controlado." |
+| "Esta página já está preparada para receber uma demonstração..." | "Em breve, esta área terá um vídeo curto mostrando a rotina da clínica..." |
+| "controles de segurança do produto real, mas com dados sintéticos" | "montada para apresentar o sistema sem usar informações de pacientes reais" |
+| "Dados fictícios por design" | "Demo segura, sem dados reais" |
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅
+- `git diff --check` rc=0 ✅
+
+**Sprint 5.0C.1 entregue.** Gate para 5.0C.2 (fluxo de acesso à demo) aberto.
+
+---
+
+## Sprint 5.0C.2 — Fluxo de acesso à demo / acesso controlado (2026-05-28)
+
+**Tipo:** Frontend CSS only. Zero backend, zero migration, zero schema, zero seed, zero TSX novo.
+
+### Contexto
+
+A Sprint 5.0C criou a página `/demo` e a 5.0C.1 simplificou a copy. Esta sprint adiciona a seção
+"Como acessar a demonstração" com 3 cards, explicando as opções sem expor credenciais publicamente.
+
+O `DemoPage.tsx` já estava completo com `ACCESS_CARDS` e a seção de acesso desde o início da sessão.
+Esta sprint finalizou os estilos CSS que estavam faltando.
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `frontend/src/views/DemoPage.module.css` | 6 classes adicionadas: `accessGrid`, `accessCard`, `accessIcon`, `accessTitle`, `accessDesc`, `accessCta` |
+
+### Seção "Como acessar a demonstração"
+
+```
+Eyebrow: "Como acessar"
+Título: "Como acessar a demonstração"
+Lead: "A demonstração é liberada em ambiente controlado, usando uma clínica fictícia e
+       dados de exemplo. Você pode criar sua própria conta de teste ou solicitar uma
+       apresentação guiada."
+```
+
+**3 cards (accessGrid — 3 colunas desktop / 1 coluna mobile):**
+
+| Card | Título | CTA | Link |
+|------|--------|-----|------|
+| 1 (UserPlus) | Criar uma conta de teste | Criar conta | /register |
+| 2 (Presentation) | Demo assistida | Começar piloto assistido | /register |
+| 3 (LogIn) | Acesso interno | Entrar | /login |
+
+Card 3 (Acesso interno): "As credenciais da Clínica Demo Aurora ficam nos documentos internos
+do projeto e são usadas apenas em ambiente controlado." — sem expor e-mail/senha.
+
+### Segurança de credenciais confirmada
+
+Grep em `frontend/src/`:
+- `DemoDevOnly` → 0 resultados
+- `demo.owner` → 0 resultados
+- `demo.secretaria` → 0 resultados
+- `demo.medico` → 0 resultados
+- `demo.psicologa` → 0 resultados
+- `demo.gestor` → 0 resultados
+
+Credenciais ficam somente em `docs/demo-dataset.md` e ambiente local/staging controlado.
+
+### Estilos CSS da seção de acesso
+
+- `accessGrid`: grid 3 colunas desktop → 2 colunas tablet → 1 coluna mobile
+- `accessCard`: mesmo visual escuro/glassmorphism dos `moduleCard`; hover eleva 3px
+- `accessIcon`: 40×40px, fundo cyan 10%, borda cyan 18%, ícone cyan
+- `accessTitle`: 1rem, 600, text-0
+- `accessDesc`: 0.855rem, text-1, line-height 1.55, flex:1 (alinha os CTAs na base)
+- `accessCta`: inline-flex, cyan-soft, 0.85rem, gap aumenta no hover
+
+### Checks
+
+- `pnpm --filter frontend typecheck` ✅
+- `pnpm --filter frontend build` ✅ (790 kB minified, aviso de bundle size pré-existente)
+- `git diff --check` rc=0 ✅
+- Zero backend, zero migration, zero schema, zero seed.
+
+**Sprint 5.0C.2 entregue.** Série 5.0C completa (5.0C → 5.0C.1 → 5.0C.2). Próxima: 5.0D QA/validação visual da página /demo ou 5.1A ADR Produção Segura AWS.

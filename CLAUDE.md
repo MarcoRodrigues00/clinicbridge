@@ -21,9 +21,33 @@
 > - **Runbooks (backup/DNS/TLS/Nginx/secrets/AWS):** `docs/backup-restore-local-runbook.md`, `docs/backup-offsite-runbook.md`, `docs/dns-tls-staging-runbook.md`, `docs/secrets-env-production-runbook.md`, `docs/aws-provisioning-runbook-3.41B.md`
 > - **Planos de prod/infra AWS:** `docs/production-minimum-plan.md`, `docs/aws-infra-sprint-3.41-plan.md`
 
-## Estado atual (atualizado 2026-05-27)
+## Estado atual (atualizado 2026-05-28)
 
-**Sprint atual: 5.0B.1** (entregue) — **Prontuário e Documentos Fake no Seed Demo.**
+**Sprint atual: 5.0C.2** (entregue) — **Fluxo de acesso à demo / acesso controlado.**
+Seção "Como acessar a demonstração" adicionada à `/demo`. 3 cards de acesso: "Criar uma conta de teste"
+(→ /register), "Demo assistida" (→ /register), "Acesso interno" (→ /login, credenciais apenas em docs).
+Estilos `accessGrid` / `accessCard` / `accessIcon` / `accessTitle` / `accessDesc` / `accessCta`
+adicionados ao `DemoPage.module.css`. Credenciais demo (`DemoDevOnly!23`, `demo.*@clinicbridge.local`)
+confirmadas ausentes de `frontend/src/` — ficam somente em `docs/demo-dataset.md`.
+Zero backend, zero migration, zero schema, zero seed.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+**Sprint anterior: 5.0C.1** (entregue) — **Polish de copy da página Demo.**
+Termos técnicos removidos da UI pública: "dataset", "seed", "sintéticos", "marcadores", "credenciais
+documentadas internamente", "local/staging", "controles do produto real". Substituídos por linguagem
+humana: "clínica fictícia", "exemplos de demonstração", "cenário de teste", "sem dados reais".
+Zero backend, zero migration, zero schema, zero seed. Apenas `DemoPage.tsx` alterado.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+**Sprint anterior: 5.0C** (entregue) — **Página Demo / Tour público.**
+Rota `/demo` criada (`DemoPage.tsx` + `DemoPage.module.css`). Seções: hero (badge "dados fictícios",
+h1 "Veja o ClinicBridge em ação"), placeholder de vídeo, 6 cards de módulos, cenário Clínica Demo Aurora,
+lista de garantias de dados sintéticos, CTA final. Header atualizado: "Demo" como nav link `/demo`
+(tipo `RouteNavItem`, `Link` do react-router) com cor cyan distinta. App.tsx: rota `/demo` adicionada.
+Backend, schema, migration e seed intocados.
+`pnpm --filter frontend typecheck` ✅ · build ✅ · `git diff --check` rc=0 ✅.
+
+**Sprint anterior: 5.0B.1** (entregue) — **Prontuário e Documentos Fake no Seed Demo.**
 `seed-demo-data.ts` estendido: 3 encontros clínicos fake (medicina ×2, psicologia ×1) + 3 notas
 (todos os campos com marcador `"DADO CLÍNICO FICTÍCIO PARA DEMONSTRAÇÃO"`) + 1 declaração médica fictícia
 (`"DOCUMENTO FICTÍCIO PARA DEMONSTRAÇÃO — SEM VALIDADE CLÍNICA OU LEGAL"`).
@@ -343,6 +367,9 @@ ADR 0013 + `docs/agenda-financial-integration-v0-scope.md` criados.
 retrocompat com cobranças existentes).
 
 **Sprints anteriores recentes (detalhes em `docs/sprint-history.md`):**
+- **5.0C.2** ✅ Fluxo de acesso à demo · seção "Como acessar" com 3 cards · credenciais demo fora da UI · estilos accessGrid/Card
+- **5.0C.1** ✅ Polish de copy da demo · "dataset/seed/sintéticos/marcadores" removidos · linguagem humana para clínica pequena
+- **5.0C** ✅ Página Demo `/demo` · hero + 6 módulos + Aurora + vídeo placeholder + segurança · Header "Demo" nav link
 - **5.0B.1** ✅ Prontuário/Documentos fake no seed · 3 encontros + 3 notas + 1 doc declaração · marcadores obrigatórios · clean atualizado
 - **5.0B** ✅ Demo Dataset / Seed Sintético · `seed:demo:full` · Clínica Demo Aurora · 20 pac + 20 appt + 12 cobranças + convênios + estoque
 - **5.0A** ✅ Plano de Piloto Controlado (docs-only) · `pilot-controlled-plan.md` · `pilot-go-no-go-checklist.md` · GO Fase 1
@@ -380,8 +407,8 @@ retrocompat com cobranças existentes).
 - **4.2A** ✅ ADR 0010 (docs-only) · **4.1** ✅ ADR 0009 · **4.0** ✅ ADR 0008
 
 **Trilha Clinic OS:**
-4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) · 5.0A–B.1 ✅ (Piloto + Demo Dataset + Clínico fake) →
-**Próxima fase TBD** (ADR própria necessária antes de qualquer código). **Próxima sprint: 5.0C** (Página demo/tour) ou **5.0B.1** (prontuário fake no seed).
+4.0–4.5D ✅ · 4.6A–D ✅ · 4.7A–D ✅ (Convênios v0.1 completo) · 4.8A–D ✅ (Estoque v0.1 completo) · 4.9A–C ✅ (Super Revisão + Cache Fix + UX Polish) · 5.0A–C.2 ✅ (Piloto + Demo Dataset + Página Demo + Fluxo de Acesso) →
+**Próxima fase TBD** (ADR própria necessária antes de qualquer código). **Próxima sprint: 5.0D** (QA/validação visual da página /demo + polish) ou **5.1A** (ADR Produção Segura AWS, se demo aprovada).
 Cada fase nova exige ADR própria. Detalhe: `docs/product-clinic-os-roadmap.md`.
 
 **Fase:** Fase 3 (produção/governança). **NÃO está pronto para produção** — ver P1 em `docs/security-notes.md`.
