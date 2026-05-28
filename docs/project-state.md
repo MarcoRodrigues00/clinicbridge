@@ -7,6 +7,27 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.0B** (entregue 2026-05-27) — **Demo Dataset / Seed Sintético.**
+
+Script `backend/scripts/seed-demo-data.ts` + `package.json` commands `seed:demo:full` / `seed:demo:full:clean`.
+Cria clínica "Clínica Demo Aurora" 100% sintética com:
+- 5 usuários demo (`demo.*@clinicbridge.local`, senha `DemoDevOnly!23`)
+- 3 profissionais da agenda + 6 serviços + links profissional×serviço
+- 20 pacientes fictícios (CPF null, email @demo.local, telefone fictício)
+- 20 agendamentos (hoje + 7 dias, status variados)
+- 12 cobranças (particular/convênio/misto, paid/pending/canceled/vencida)
+- 2 operadoras + 3 planos + 3 preços de referência + 3 carteirinhas
+- 7 itens de estoque (2 com estoque baixo) + movimentos
+
+**Guards:** `NODE_ENV=production` → recusa · `ALLOW_DEMO_SEED=true` obrigatório · idempotente.
+**Smoke users (`smoke.*`):** intactos e verificados.
+**Não incluído:** prontuário/documentos fake → 5.0B.1 ou 5.0C.
+
+`pnpm --filter backend typecheck` ✅ · build ✅ · `migrate:status` 18/0 ✅ · `git diff --check` rc=0 ✅.
+Ver `docs/demo-dataset.md`.
+
+---
+
 **Sprint 5.0A** (entregue 2026-05-27) — **Plano de Piloto Controlado (docs-only).**
 
 Criados dois documentos de planejamento do piloto:

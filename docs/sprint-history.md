@@ -5866,3 +5866,63 @@ para eventual reuso.
 - `git diff --check` rc=0 ✅
 
 **Sprint 5.0A entregue.** Gate para 5.0B (Demo Dataset / seed sintético completo) aberto.
+
+---
+
+## Sprint 5.0B — Demo Dataset / Seed Sintético (2026-05-27)
+
+**Tipo:** Backend only — novo script de seed. Zero migration, zero schema, zero frontend.
+
+### Entregáveis
+
+**`backend/scripts/seed-demo-data.ts`** — script completo com:
+- Guard `NODE_ENV=production` → exit 1
+- Guard `ALLOW_DEMO_SEED=true` obrigatório → exit 2 sem a flag
+- Idempotência: skip se demo patients existem; avisa para rodar clean first
+- `resolveOrCreateDemoClinic()`: upsert idempotente para estado parcial (owner orphan)
+- Função `seed()`: cria usuários, roles, profissionais, serviços, pacientes, agenda, financeiro, convênios, estoque
+- Função `clean()`: NULL clinica_id users → delete clinic (CASCADE) → delete users
+
+**`backend/package.json`** — novos scripts:
+```json
+"seed:demo:full": "tsx scripts/seed-demo-data.ts seed",
+"seed:demo:full:clean": "tsx scripts/seed-demo-data.ts clean"
+```
+
+**`docs/demo-dataset.md`** — documentação completa com tabelas de dados criados, guards, comandos, marcadores e o que NÃO faz.
+
+### Dados demo criados
+
+| Entidade | Quantidade |
+|----------|-----------|
+| Usuários demo | 5 (`demo.*@clinicbridge.local`) |
+| Profissionais da agenda | 3 |
+| Serviços | 6 |
+| Links profissional×serviço | 6 |
+| Pacientes sintéticos | 20 (18 ativos + 2 arquivados) |
+| Agendamentos | 20 (ontem + hoje + 7 dias) |
+| Cobranças | 12 (particular/convênio/misto/vencida/cancelada) |
+| Operadoras de convênio | 2 |
+| Planos | 3 |
+| Preços de referência | 3 |
+| Carteirinhas de pacientes | 3 |
+| Itens de estoque | 7 (2 com baixo estoque) |
+| Movimentos de estoque | 9 |
+
+### Validações realizadas
+
+- ✅ Guard sem flag: `exit 2` com mensagem clara
+- ✅ Seed rodou com sucesso: `[seed:demo:full] ✅ Clínica Demo Aurora`
+- ✅ Idempotência: re-run avisa e sai sem duplicar
+- ✅ Clean: remove clínica demo + usuários demo sem erro
+- ✅ Smoke users intactos: 5 `smoke.*@clinicbridge.local` preservados
+- ✅ `pnpm --filter backend typecheck` rc=0
+- ✅ `migrate:status` 18/0 (zero novas migrations)
+- ✅ `git diff --check` rc=0
+
+### Não incluído neste seed
+
+- Prontuário fake / encontros clínicos → documentado para 5.0B.1
+- Documentos médicos fake → documentado para 5.0B.1 ou 5.0C
+
+**Sprint 5.0B entregue.** Gate para 5.0C (Página demo/tour) ou 5.0B.1 (prontuário fake no seed) aberto.

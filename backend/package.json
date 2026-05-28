@@ -14,7 +14,9 @@
     "migrate:rollback": "tsx scripts/db.ts migrate:rollback",
     "migrate:status": "tsx scripts/db.ts migrate:status",
     "seed:demo": "tsx scripts/seed-demo-scheduling.ts seed",
-    "seed:demo:clean": "tsx scripts/seed-demo-scheduling.ts clean"
+    "seed:demo:clean": "tsx scripts/seed-demo-scheduling.ts clean",
+    "seed:demo:full": "tsx scripts/seed-demo-data.ts seed",
+    "seed:demo:full:clean": "tsx scripts/seed-demo-data.ts clean"
   },
   "dependencies": {
     "argon2": "^0.44.0",
