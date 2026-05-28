@@ -6878,3 +6878,97 @@ nunca destrava módulo clínico sem gate seguro (ADR 0009/0010/0011).
 - Zero código/schema/migration/backend/frontend/env/secret/SDK.
 
 **Sprint 5.1A entregue.** Gate para 5.1B (backend foundation, sem ADR nova) aberto.
+
+---
+
+## Sprint 5.1B (2026-05-28) — Backend foundation de Planos/Entitlements v0.1 (mock)
+
+Implementa a fundação backend da camada comercial (ADR 0018). **Provider mock/manual;
+sem gateway real, sem checkout, sem webhook real, sem secret/env novo, sem dado de cartão,
+sem integração externa.** Nenhuma tabela existente foi alterada (só FKs novos referenciando
+`clinics`/`users`).
+
+### Migration `20260608000000_billing_v0` (aditiva — batch 19)
+
+5 tabelas tenant-scoped por `clinica_id`:
+- **`clinic_subscriptions`** — 1 por tenant (`UNIQUE(clinica_id)`). CHECK em `plan_code`
+  (`essential|professional|assisted_pilot`), `status`
+  (`trialing|active|past_due|suspended|canceled|manual_pilot`),
+  `provider` (`mock|manual|asaas|stripe` ou NULL), e consistência `canceled ⇒ canceled_at`.
+  `created_by_user_id` → SET NULL. Campos de provider NULLABLE (fase mock).
+- **`clinic_entitlements`** — overrides por tenant (`UNIQUE(clinica_id, feature_key)`),
+  `source ∈ {plan,override,pilot}`. Defaults do plano são **computados em runtime** (não
+  materializados); a tabela guarda só overrides.
+- **`billing_provider_customers`** — mapa clínica↔cliente. `UNIQUE(provider,external_customer_id)`
+  + `UNIQUE(clinica_id,provider)`.
+- **`billing_provider_subscriptions`** — mapa assinatura↔assinatura do provider.
+- **`billing_events`** — ledger idempotente. `UNIQUE(provider,external_event_id)` = chave de
+  idempotência; só `payload_hash` (nunca payload cru); `clinica_id` → SET NULL (evidência).
+
+### Arquivos (backend)
+
+- Tipos em `src/types/db.d.ts` (5 row interfaces + enums + registro nas `Tables`).
+- DAOs: `clinicSubscriptionDao`, `clinicEntitlementDao`, `billingProviderCustomerDao`,
+  `billingProviderSubscriptionDao`, `billingEventDao` — todos tenant-scoped, **sem `listAll`**,
+  insert idempotente em `billing_events` (`onConflict(...).ignore()`), CAS em `updateStatus`.
+- Lógica pura: `billingPlans.ts` (catálogo + `computeEntitlements`), `billingStateMachine.ts`
+  (`canTransition` + `computeSoftLock`), `billingProvider.ts` (interface), `billingMockProvider.ts`.
+- `billingService.ts` (`getStatus`, `provisionSubscription`, `transitionStatus`,
+  `recordProviderEvent`) + `billingController.ts` + `routes/billing.ts` (mount em `app.ts`).
+- `middlewares/requireEntitlement.ts` — `requireEntitlement(featureKey)` + `requireNotSoftLocked()`
+  + `assertWithinLimit()` — **criados para uso futuro, NÃO montados em nenhuma rota** (5.1B só calcula).
+- `scripts/billing-admin.ts` — CLI dev-only (refuse em produção): `selftest|status|provision|transition|cleanup`.
+  Caminho manual auditado de provisionamento (não há endpoint público de alteração).
+
+### Endpoint
+
+- **`GET /billing/status`** — `patientsRateLimit → requireAuth → requireClinic →
+  requireRole(['dono_clinica','secretaria'])`. Retorna plano/estado/entitlements/soft-lock da
+  clínica do JWT (sem parâmetro de tenant → cross-tenant impossível por construção).
+  Política fina no service: `profissional_clinico` (grant) → 403 `forbidden_role`;
+  `admin_sistema` → 403 `no_clinic_context` (requireClinic). Payload **sem PII, sem valor
+  monetário, sem IDs externos do provider**.
+
+### Decisões de implementação
+
+- **Chaves de plano/entitlement em inglês** (a ADR §4 e o scope §3 deferem as chaves exatas à
+  5.1B). Módulos: `module.{patients,schedule,financial,reports,services,insurance,inventory,
+  clinical_records,clinical_documents}`. Limites: `limit.{users,professionals,imports_per_month}`.
+- **Default p/ clínica sem assinatura:** status sintetizado **não-persistido** (`provisioned:false`,
+  plano `professional`, estado `manual_pilot`, acesso total, sem lock). Honra "estado só muda por
+  webhook/ação manual" (nada é gravado num GET) e nunca trava tenant existente.
+- **Entitlement clínico nunca destrava o gate clínico:** `module.clinical_*` são dimensão
+  comercial; `requireClinicalRole` (ADR 0009/0010/0011) segue sendo a autoridade real e está
+  intocado. `essential` marca clínicos como `false` (plano só restringe).
+- **Soft-lock** só calcula flags em 5.1B (`can_create_new_records`, `read_only_mode`,
+  `export_allowed`, `lock_reason`); `export_allowed` é **sempre true** (portabilidade LGPD,
+  nunca sequestra dados). Nenhuma rota existente foi gateada.
+- **Audit metadata-only:** `billing.status.read`, `billing.subscription.provisioned`,
+  `billing.subscription.transitioned` — `recurso='billing_subscription'`, `recurso_id`=id da
+  assinatura; sem plano/valor/PII no audit (schema fixo de `audit_logs`).
+
+### Provider mock / state machine / idempotência
+
+- `MockProvider` implementa toda a interface `BillingProvider` **sem rede, sem secret**
+  (`mock_cus_*`/`mock_sub_*`; `verifyWebhookSignature` confere um marcador fixo — não é secret).
+- Estados (ADR §6): trialing→active→past_due→{active|suspended}; suspended→{active|canceled};
+  manual_pilot→{active|canceled}; canceled terminal. `active→suspended` exige passar por past_due.
+- `billing_events` idempotente: reenvio do mesmo `external_event_id` → no-op.
+
+### Checks + smoke
+
+- `pnpm --filter backend typecheck` ✅ · `build` ✅ · `migrate:latest` (batch 19) ✅ ·
+  rollback+re-apply ✅ · `git diff --check` rc=0 ✅.
+- `tsx scripts/billing-admin.ts selftest` ✅ (state machine, soft-lock, entitlements, idempotência, mock).
+- API smoke: 401 sem token ✅; dono/secretaria/gestor → 200 ✅; profissional → 403 ✅;
+  admin sem clínica → 403 `no_clinic_context` ✅; tenant isolation (smoke=essential vs Aurora=professional,
+  cada owner vê só o seu) ✅; soft-lock (active→past_due→suspended) coerente, export sempre liberado ✅;
+  payload sem PII/valor/IDs externos ✅; audit `billing.*` metadata-only ✅; zero integração externa ✅.
+  Linhas de billing sintéticas removidas após o smoke (smoke users intocados; 0 subscriptions/events).
+
+### Fora de escopo (mantido)
+
+Gateway real, checkout, SDK, webhook real/endpoint público, secret/env real, cobrança real,
+preços, NF-e, cupom/proration, cofre de cartão. Nenhum endpoint público de alteração de assinatura.
+
+**Próxima:** 5.1C (frontend de plano/assinatura — backend continua a defesa) · 5.1D spike sandbox.

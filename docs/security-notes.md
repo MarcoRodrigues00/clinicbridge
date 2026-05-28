@@ -77,6 +77,44 @@
   - **Exposição mínima no `PublicPatient` (Sprint 3.34):** `merged_into_id` (uuid) e `merged_at` (ISO timestamp) passam a sair em todas as respostas de paciente. **Não é PII** (UUID interno + timestamp). Habilita o badge sem mais chamadas; nunca acompanha nome/contato do principal.
   - **Fora de escopo (3.33/3.34):** seleção campo-a-campo, merge automático sem confirmação, undo/snapshot, qualquer dado clínico, paginação backend de duplicados, endpoint de contagem de agendamentos por paciente (UI usa copy genérica), lookup do nome do principal.
 
+## Billing / Planos / Entitlements (Sprint 5.1B — ADR 0018)
+
+Camada **comercial** (o SaaS cobrando a clínica) — **não confundir** com o financeiro da
+clínica (`financial_charges`, ADR 0012). Fase **mock**: sem gateway real, checkout, webhook real,
+secret/env, dado de cartão ou integração externa.
+
+- **Tenant isolation por construção:** `GET /billing/status` não tem parâmetro de tenant — usa
+  `req.auth.clinica_id` do JWT verificado; `clinicSubscriptionDao.findByClinic(clinica_id)`. Clínica
+  A nunca consulta billing da B. Todos os DAOs de billing são tenant-scoped; **sem `listAll`**. As
+  buscas `findByExternalId` (customer/subscription) existem só para resolver o tenant a partir do
+  mapa interno em webhooks futuros (anti-spoofing) — nunca confiando em `clinica_id` de payload.
+- **Permissões `GET /billing/status`:** gate `requireRole(['dono_clinica','secretaria'])`; política
+  fina no service — `dono_clinica`/`secretaria`/`gestor_clinica` leem; `profissional_clinico` (grant)
+  → 403 `forbidden_role` (não vê dado comercial); `admin_sistema` → 403 `no_clinic_context`. **Não há
+  endpoint público de alteração** — provisionar/transicionar é manual/dev-only (`scripts/billing-admin.ts`,
+  recusa em produção). Estado só muda por webhook verificado (futuro) ou ação manual auditada.
+- **Sem dado de cartão.** Nenhum PAN/CVV/validade é modelado (PCI fica no gateway). As tabelas guardam
+  só IDs externos, status e metadados mínimos.
+- **Sem PII clínica no billing.** A identidade de cobrança (nome da clínica, e-mail, CPF/CNPJ do
+  responsável financeiro) só sai para o provider via `BillingProvider`; **nenhum dado de paciente**.
+  Em 5.1B o `MockProvider` não envia nada (sem rede). O payload de `GET /billing/status` **não** contém
+  PII, valor monetário nem IDs externos do provider (verificado no smoke).
+- **Audit metadata-only:** `billing.status.read`, `billing.subscription.provisioned`,
+  `billing.subscription.transitioned` — `recurso='billing_subscription'`, `recurso_id`=id da
+  assinatura; sem plano/valor/PII (schema fixo de `audit_logs`).
+- **Idempotência:** `billing_events` com `UNIQUE(provider, external_event_id)`; insert
+  `onConflict(...).ignore()` → reprocessar o mesmo evento é no-op. Só `payload_hash` é guardado (nunca
+  o payload cru). `billing_events.clinica_id` → SET NULL (evidência) no delete da clínica.
+- **Soft-lock nunca sequestra dados.** `computeSoftLock` deriva `can_create_new_records` /
+  `read_only_mode` / `export_allowed` / `lock_reason` do estado; `export_allowed` é **sempre true**
+  (portabilidade LGPD). Em 5.1B só **calcula** — nenhuma rota existente foi gateada. Os guards
+  (`requireEntitlement`, `requireNotSoftLocked`, `assertWithinLimit`) existem mas **não estão montados**.
+- **Plano nunca destrava módulo clínico.** `module.clinical_records`/`module.clinical_documents` são
+  dimensão comercial; o gate clínico real (`requireClinicalRole`, ADR 0009/0010/0011) está **intocado**
+  e segue sendo a autoridade. O plano só **restringe** (ex.: `essential` marca clínicos como `false`).
+- **Migration aditiva** `20260608000000_billing_v0`: nenhuma tabela existente foi alterada (só FKs novos
+  referenciando `clinics`/`users`); reversível (rollback + re-apply testados).
+
 ## audit_logs (schema real)
 
 - Colunas: `acao`, `recurso`, `recurso_id`, `usuario_id`, `clinica_id`, `ip`, `user_agent`, `request_id`, `criado_em`.

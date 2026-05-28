@@ -22,6 +22,7 @@ import { reportsRouter } from './routes/reports';
 import { clinicServicesRouter } from './routes/clinicServices';
 import { insuranceRouter } from './routes/insurance';
 import { inventoryRouter } from './routes/inventory';
+import { billingRouter } from './routes/billing';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
@@ -134,6 +135,14 @@ export function createApp(): Express {
   // alongside the matching inventory_movements insert. notes/reason are
   // administrative-only; logger redacts both, audit is metadata-only.
   app.use(inventoryRouter);
+  // Plans, Billing & Entitlements v0.1 (Sprint 5.1B, ADR 0018). COMMERCIAL
+  // layer — the SaaS charging the clinic (NOT the clinic's financial module,
+  // ADR 0012). Read-only endpoint in 5.1B (GET /billing/status); commercial
+  // state changes only by a verified webhook (future) or an audited manual
+  // action. Mock provider only; no real gateway, no card data, no secrets.
+  // Entitlements are computed/validated in the backend; the status payload
+  // carries no PII, no money, and no provider external IDs.
+  app.use(billingRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

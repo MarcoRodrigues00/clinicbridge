@@ -7,6 +7,26 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.1B** (entregue 2026-05-28) — **Backend foundation de Planos/Entitlements v0.1 (mock).**
+
+Implementa a fundação backend da camada comercial (ADR 0018) com **provider mock/manual** — sem gateway real, checkout, webhook real, secret/env novo, dado de cartão ou integração externa. **Nenhuma tabela existente alterada** (só FKs novos referenciando `clinics`/`users`).
+
+**Migration `20260608000000_billing_v0` (aditiva, batch 19):** `clinic_subscriptions` (1/tenant via `UNIQUE(clinica_id)`; CHECK plan/status/provider; canceled⇒canceled_at) · `clinic_entitlements` (overrides por tenant; defaults computados em runtime) · `billing_provider_customers` · `billing_provider_subscriptions` · `billing_events` (ledger idempotente, `UNIQUE(provider,external_event_id)`, só `payload_hash`).
+
+**Backend:** tipos em `db.d.ts`; 5 DAOs tenant-scoped (sem `listAll`); lógica pura `billingPlans` (`computeEntitlements`) + `billingStateMachine` (`canTransition`/`computeSoftLock`); `billingProvider` (interface) + `billingMockProvider`; `billingService` (getStatus/provision/transition/recordEvent); `billingController` + `routes/billing.ts`; `middlewares/requireEntitlement.ts` (`requireEntitlement`/`requireNotSoftLocked`/`assertWithinLimit` — **criados, NÃO montados** em rotas); `scripts/billing-admin.ts` (CLI dev-only).
+
+**Endpoint:** `GET /billing/status` (`patientsRateLimit→requireAuth→requireClinic→requireRole(['dono_clinica','secretaria'])`). Tenant vem do JWT (sem parâmetro → cross-tenant impossível). Service bloqueia `profissional_clinico` (403); `admin_sistema` → 403 `no_clinic_context`. Payload **sem PII, sem valor monetário, sem IDs externos do provider**.
+
+**Decisões:** chaves de plano/entitlement em **inglês** (ADR §4/scope §3 deferem à 5.1B); default p/ clínica sem assinatura = status sintetizado não-persistido (`provisioned:false`, `professional`/`manual_pilot`, sem lock); entitlement clínico **nunca destrava** `requireClinicalRole` (intocado); soft-lock só calcula flags, `export_allowed` sempre true (portabilidade LGPD); audit metadata-only (`billing.status.read`/`.subscription.provisioned`/`.transitioned`).
+
+**Estados:** trialing→active→past_due→{active|suspended}; suspended→{active|canceled}; manual_pilot→{active|canceled}; canceled terminal. **Planos:** `essential` (sem insurance/inventory/clínico) · `professional` (tudo) · `assisted_pilot` (≈professional, limites conforme venda).
+
+**Checks:** typecheck ✅ · build ✅ · migrate:latest batch 19 ✅ · rollback+re-apply ✅ · `git diff --check` rc=0 ✅. **Smoke:** selftest (state machine/soft-lock/entitlements/idempotência/mock) ✅; 401 sem token ✅; dono/secretaria/gestor 200, profissional 403, admin 403 ✅; tenant isolation ✅; soft-lock coerente ✅; payload sem PII ✅; audit metadata-only ✅; zero integração externa ✅; linhas sintéticas limpas (smoke users intocados). Detalhe: `docs/sprint-history.md`.
+
+**Próxima:** 5.1C frontend · 5.1D spike sandbox (Asaas vs Stripe).
+
+---
+
 **Sprint 5.1A** (entregue 2026-05-28) — **ADR 0018 Planos, Billing e Entitlements v0.1 (docs/ADR-only).**
 
 Docs-only. Criados `docs/adr/0018-plans-billing-entitlements-v0.md` + `docs/plans-billing-entitlements-v0-scope.md`. Define a **camada comercial do ClinicBridge** (o SaaS cobrando a clínica — **não** confundir com `financial_charges`/ADR 0012, que é a clínica cobrando pacientes).
