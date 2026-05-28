@@ -7350,3 +7350,72 @@ Cada card: grid 3 colunas (ícone | título+desc | arrow). Hover: `border-color 
 typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅. CSS module: demoCta*, stepCard*, stepsSection — todos exportados. `target: "_blank"` confirmado no bundle. `isOwner && ... setTab("equipe")` confirmado. Validação visual no navegador: pendente.
 
 **Próxima:** seed sintético do piloto familiar, spike billing 5.1D, ou tours por módulo (TOUR_IDS já reservados em 6.0C.1).
+
+---
+
+## Sprint 6.0E (2026-05-28) — Checklist de configuração da clínica real v0.1
+
+Frontend-only. Sem seed, sem backend, sem migration, sem demo-login, sem dado fake.
+
+### Componente SetupChecklist
+
+`SetupChecklist.tsx` + `SetupChecklist.module.css` — substitui o bloco `stepsSection` do 6.0D.
+Props: `isOwner: boolean`, `onNavigate: (tab: string) => void`.
+
+### APIs usadas (apenas leitura de existência)
+
+| Item | API | Params | Done se |
+|---|---|---|---|
+| Serviços | `listClinicServices` | `active:true, limit:1` | `services.length > 0` |
+| Profissionais | `listClinicProfessionals` | `active:true` | `professionals.length > 0` |
+| Pacientes | `listPatients` | `limit:1` | `patients.length > 0` |
+| Agendamento | `listAppointments` | `from:'2020-01-01', limit:1` | `appointments.length > 0` |
+| Cobrança | `listFinancialCharges` | `limit:1` | `charges.length > 0` |
+| Convênios (opcional) | `listInsuranceProviders` | `active:true, limit:1` | `providers.length > 0` |
+| Estoque (opcional) | `listInventoryItems` | `active:true, limit:1` | `items.length > 0` |
+
+Profissionais: sem `limit` no backend — payload pequeno para clínica pequena; aceitável e documentado.
+Agendamentos: `from`/`to`/`limit` adicionados a `ListAppointmentsParams` em `api.ts` (backend já suportava).
+
+### Query pattern
+
+`queryKey: ['setup', '<item>'] as const` · `staleTime: 60_000` · `retry: false`.
+QueryFn retorna `boolean` diretamente (só o teste de existência, sem dados sensíveis).
+
+### Status por item
+
+- `loading` → spinner
+- `done` / `optional-done` → CheckCircle verde + badge "Concluído"
+- `pending` / `optional-pending` → Circle cinza + badge "Pendente" ou "Opcional"
+- `restricted` (403) → Lock + badge "Restrito" + sem botão Abrir
+
+### Controle de acesso
+
+- "Profissionais" tem `ownerOnly: true` → oculto para não-owners.
+- 403 em qualquer query → item individual marcado "Restrito" sem quebrar a tela.
+- Demo Aurora (`isDemo`): SetupChecklist não é renderizado (condição `!isDemo` no Dashboard).
+
+### UX / layout
+
+- Header: "Configure sua clínica" + contador "N de M concluídos" (só itens obrigatórios).
+- Barra de progresso animada (`transition: width 0.5s`).
+- Cada item: grid 5 colunas (status-icon | module-icon | info | badge | openBtn).
+- Mobile ≤480px: badge oculto, openBtn inline com info.
+- Demo Aurora CTA mantido, unchanged.
+
+### Alterações em api.ts
+
+`ListAppointmentsParams`: adicionados `from?`, `to?`, `limit?`.
+`listAppointments`: passa `from`, `to`, `limit` na URLSearchParams.
+
+### Arquivos
+
+`SetupChecklist.tsx` (novo) · `SetupChecklist.module.css` (novo) ·
+`Dashboard.tsx` (import + troca stepsSection → SetupChecklist) · `api.ts` (from/to/limit em appointments).
+
+### Checks
+
+typecheck ✅ · build ✅ · `git diff --check` rc=0 ✅.
+Bundle: todos os `queryKey: ['setup',…]`, `retry: false`, `staleTime`, `is403`, `resolveStatus`, badges — confirmados. Validação visual no navegador: pendente.
+
+**Próxima:** spike billing 5.1D, tours por módulo, ou polish de UX pós-piloto.

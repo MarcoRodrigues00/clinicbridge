@@ -40,6 +40,7 @@ import { ServicesPanel } from '../components/ServicesPanel';
 import { InsurancePanel } from '../components/InsurancePanel';
 import { InventoryPanel } from '../components/InventoryPanel';
 import { SubscriptionPanel } from '../components/SubscriptionPanel';
+import { SetupChecklist } from '../components/SetupChecklist';
 import { GuidedDemoTour, DEMO_TOUR_STEPS, ONBOARDING_STEPS } from '../components/GuidedDemoTour';
 import { DemoBlockedToast } from '../components/DemoBlockedToast';
 import { DemoMascot } from '../components/DemoMascot';
@@ -358,53 +359,14 @@ export function Dashboard(): JSX.Element {
               </div>
             )}
 
-            {/* ── Primeiros passos ─────────────────────────────────────────────
-                Actionable shortcuts that open the relevant tab. Only in real
-                sessions. Equipe step restricted to owners (matches tab visibility). */}
+            {/* ── Setup checklist (Sprint 6.0E) ──────────────────────────────
+                "Configure sua clínica" — live status from existing APIs.
+                Only in real clinic sessions; never shown in Demo Aurora. */}
             {!isDemo && (
-              <section className={styles.stepsSection}>
-                <h3 className={styles.stepsTitle}>Primeiros passos</h3>
-                <div className={styles.stepsGrid}>
-                  <button type="button" className={styles.stepCard} onClick={() => setTab('servicos')}>
-                    <Briefcase size={20} className={styles.stepIcon} aria-hidden="true" />
-                    <span className={styles.stepCardTitle}>Serviços</span>
-                    <span className={styles.stepCardDesc}>Tipos de atendimento e preços de referência</span>
-                    <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
-                  </button>
-                  {isOwner && (
-                    <button type="button" className={styles.stepCard} onClick={() => setTab('equipe')}>
-                      <Users size={20} className={styles.stepIcon} aria-hidden="true" />
-                      <span className={styles.stepCardTitle}>Equipe</span>
-                      <span className={styles.stepCardDesc}>Profissionais e membros da clínica</span>
-                      <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
-                    </button>
-                  )}
-                  <button type="button" className={styles.stepCard} onClick={() => setTab('pacientes')}>
-                    <Users size={20} className={styles.stepIcon} aria-hidden="true" />
-                    <span className={styles.stepCardTitle}>Pacientes</span>
-                    <span className={styles.stepCardDesc}>Histórico administrativo dos pacientes</span>
-                    <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
-                  </button>
-                  <button type="button" className={styles.stepCard} onClick={() => setTab('agenda')}>
-                    <CalendarDays size={20} className={styles.stepIcon} aria-hidden="true" />
-                    <span className={styles.stepCardTitle}>Agenda</span>
-                    <span className={styles.stepCardDesc}>Crie o primeiro agendamento da clínica</span>
-                    <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
-                  </button>
-                  <button type="button" className={styles.stepCard} onClick={() => setTab('financeiro')}>
-                    <Wallet size={20} className={styles.stepIcon} aria-hidden="true" />
-                    <span className={styles.stepCardTitle}>Financeiro</span>
-                    <span className={styles.stepCardDesc}>Cobranças, recebimentos e resumo</span>
-                    <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
-                  </button>
-                  <button type="button" className={styles.stepCard} onClick={() => setTab('relatorios')}>
-                    <BarChart3 size={20} className={styles.stepIcon} aria-hidden="true" />
-                    <span className={styles.stepCardTitle}>Relatórios</span>
-                    <span className={styles.stepCardDesc}>Resumo por período de agenda e financeiro</span>
-                    <ArrowRight size={14} className={styles.stepArrow} aria-hidden="true" />
-                  </button>
-                </div>
-              </section>
+              <SetupChecklist
+                isOwner={isOwner}
+                onNavigate={(tab) => setTab(tab as TabKey)}
+              />
             )}
 
             <div className={styles.grid}>
