@@ -1,9 +1,19 @@
 # ADR 0019 — Governança da Clínica, Sócios e Administradores v0.1
 
-> **Status:** Aceita (arquitetura) · **Implementação: Proposta** — nenhum código,
-> schema, migration, endpoint, RBAC, billing ou seed nesta ADR.
+> **Status:** Aceita (arquitetura) · **Implementação: Entregue 6.1A–6.1E** (v0.1).
+> A arquitetura desta ADR foi proposta em 6.0N (docs-only) e implementada nas
+> sprints seguintes: **6.1A** schema/migration `clinic_governance_members` + backfill
+> titular + endpoints read-only/promote; **6.1B** `requireClinicGovernance` + enforcement
+> nos *writes* do catálogo de Serviços (Titular + Administrador); **6.1C/6.1C.1** frontend
+> (`GovernancePanel`) + ajuda Auri; **6.1D** QA/hardening; **6.1E** correção GOV-NEW-1.
+> **Reconciliação (6.1E):** novos tenants **nascem com linha de titular** — `register()`
+> insere `clinic_governance_members(titular, active)` na mesma transação da criação de
+> clínica/usuário, tornando a tabela autoritativa para clínicas novas (o fallback
+> `dono_clinica→titular` em `requireClinicGovernance` passa a ser puro legado para clínicas
+> anteriores ao backfill). **Ainda NÃO implementado (backlog, exige sprint/ADR própria):**
+> revoke de administrador, transferência de titularidade, exclusão de clínica, billing.
 >
-> **Sprint:** 6.0N (docs/ADR-only)
+> **Sprint:** 6.0N (ADR) · 6.1A–6.1E (implementação)
 >
 > **Data:** 2026-05-29
 >

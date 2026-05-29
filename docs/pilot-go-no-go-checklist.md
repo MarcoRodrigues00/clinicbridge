@@ -4,6 +4,14 @@
 > **Data:** 2026-05-27
 > **Contexto:** Usar este checklist antes de iniciar cada fase do piloto.
 > Ver `docs/pilot-controlled-plan.md` para o plano completo.
+>
+> **Nota 2026-05-29 (6.1E):** **GOV-NEW-1 resolvido** — clínica recém-registrada agora
+> nasce com titular de governança (validado por smoke: 1 titular + promote 201). O piloto
+> familiar com **conta real limpa** deixa de estar bloqueado por esse item. **Pendências
+> conhecidas a comunicar aos participantes:** revoke de administrador e transferência de
+> titularidade ainda não existem. **Este checklist está desatualizado** (migrations 20/0,
+> ADR renomeada 5.1A→5.2A, itens de governança) — refresh completo é item PILOT-3 da
+> `docs/super-review-6-2A.md`. Dados reais e cobrança real seguem **NO-GO** (gate 5.2A).
 
 ---
 
