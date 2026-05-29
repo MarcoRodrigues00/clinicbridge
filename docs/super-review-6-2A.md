@@ -3,6 +3,11 @@
 > **Data:** 2026-05-29 · **Tipo:** QA/revisão multi-área, **docs-only** (sem feature nova, sem migration, sem commit).
 > **Escopo de fase:** Fase 3 (produção/governança). **NÃO pronto para dados reais.** Cobrança real e AWS seguem bloqueadas até ADR 5.2A.
 > **Precedentes:** `docs/super-review-6-0I.md`, `docs/super-review-4-9A.md`.
+>
+> **Atualização 2026-05-29 (Sprint 6.1E):** **GOV-NEW-1 RESOLVIDO** — `register()` agora cria a
+> linha de titular na mesma transação; smoke confirma clínica nova com 1 titular e promote 201.
+> **TEST-1 parcialmente endereçado** — base mínima de testes (`node:test`/`tsx`, 11 testes:
+> `requireClinicGovernance` + `maskCpf`); integração-DB segue de backlog (6.1E.1). Demais P1/P2/P3 inalterados.
 
 ---
 
@@ -89,8 +94,8 @@ P1: **zero testes automatizados** no repo (PILOT-1 — maior gap de processo; re
 
 | ID | Sev | Área | Descrição | Evidência | Risco | Recomendação | Sprint |
 |----|-----|------|-----------|-----------|-------|--------------|--------|
-| **GOV-NEW-1** | **P1** | Governance | Clínica registrada após o backfill 6.1A **não tem linha de titular** → `GET /clinic-governance` = `{members:[]}` e promover = **403 `governance_titular_required`** (verificado empiricamente). | `authService.ts:198-228` (sem `insertMember`); `requireClinicGovernance.ts:68-79`; `clinicGovernanceService.assertClinicTitular` | Recurso-âncora da fase **não-funcional para tenants novos** (cenário exato do piloto). Sem impacto de segurança (writes de catálogo ainda funcionam pelo fallback). | Inserir a linha de titular dentro da transação de `register()` (idempotente, espelha o backfill). **Toca auth/registration — aprovar antes.** | 6.1E |
-| **TEST-1** | **P1** | Processo | Zero testes automatizados; invariantes (tenant, CAS markPaid, fallback de governança, máscara PII, audit-sem-PII) guardados só por review/checklist. | `backend/package.json` + `frontend/package.json` (sem script `test`); sem `*.test.ts` | Refactor futuro pode quebrar invariante crítico e passar no typecheck+build. | Suite-guarda focada (vitest): isolamento por DAO, markPaid CAS, fallback governança, máscara `holder_name`, audit-sem-PII. Não cobertura total. | 6.1E (antes da Fase-2 anonimizada) |
+| **GOV-NEW-1** | **P1 ✅ RESOLVIDO (6.1E)** | Governance | Clínica registrada após o backfill 6.1A **não tinha linha de titular** → `GET /clinic-governance` = `{members:[]}` e promover = **403 `governance_titular_required`** (verificado empiricamente). | `authService.ts` (`register`); `requireClinicGovernance.ts:68-79`; `clinicGovernanceService.assertClinicTitular` | Recurso-âncora da fase era **não-funcional para tenants novos** (cenário exato do piloto). | **Corrigido na 6.1E:** `register()` insere titular na transação existente (`created_by_user_id=user.id`). Smoke: clínica nova = 1 titular, promote 201. | 6.1E ✅ |
+| **TEST-1** | **P1 🟡 PARCIAL (6.1E)** | Processo | Zero testes automatizados; invariantes guardados só por review/checklist. | `backend/package.json` (agora com `test`); 11 testes em `*.test.ts` | Refactor futuro pode quebrar invariante crítico. | **6.1E:** base mínima (`node:test`/`tsx`) cobrindo `requireClinicGovernance` (5 casos, incl. revoked-não-ressuscita) + `maskCpf`. **Backlog 6.1E.1:** integração-DB (isolamento por DAO, markPaid CAS, register titular, audit-sem-PII). | 6.1E ✅ / 6.1E.1 (DB) |
 | **BILL-1** | **P1** | Tenant/Backend | `billingEventDao.markStatus` UPDATE só por `id`, sem `clinica_id`. (carregado 6.0I) | `billingEventDao.ts:61-72` | Sem exploit hoje (id vem do mesmo request); cross-tenant mutation quando billing ativar. | Adicionar `clinica_id` ao WHERE (tratar caso NULL). **Toca billing/tenant — aprovar antes.** | 6.0M (pré-billing) |
 | **BILL-2** | **P1** | Backend | `provisionSubscription`: dois inserts DAO após chamada externa, fora de transação. (carregado 6.0I) | `billingService.ts:231-256` | Estado parcial irreversível após falha; retry bloqueado por 409. Admin-only/mock hoje. | Envolver os dois inserts locais em `db.transaction` (chamada externa fora da tx). | 6.0M (pré-billing) |
 | **UX-1** | **P1** | Product/UX | Nudges de "cadastrar profissional" caem no topo da aba Equipe (~1500 linhas), não no painel de Profissionais. (resíduo 6.0I P1-PROD-1) | `Dashboard.tsx:479-498`; `SetupChecklist.tsx:294-300`; `AdministrativeSchedulePanel.tsx:743-747` | Maior momento de fricção do 1º uso real; dono se perde entre sub-painéis. | `id`/ref no `ClinicProfessionalsPanel` + `scrollIntoView` no nudge (ou reordenar painéis). Frontend-only. | 6.0K-follow-up |
@@ -177,7 +182,7 @@ Sequência sugerida (pequena, incremental, sem abrir billing/AWS):
 | Decisão | Veredito | Condição |
 |---------|----------|----------|
 | **Continuar pré-piloto sintético** | ✅ **GO** | Dados 100% fictícios; Demo Aurora fictícia. Nenhum P0; P1s não bloqueiam o caminho sintético interno. |
-| **Piloto familiar anonimizado** | 🟡 **GO condicional** | Corrigir **GOV-NEW-1** (senão a clínica nova do piloto não usa governança) **e** landar **TEST-1** (suite-guarda) antes; dados estritamente sintéticos/anonimizados; comunicar aos participantes que **revoke/transferência ainda não existem**. |
+| **Piloto familiar anonimizado** | 🟢 **GO** (era 🟡) | **GOV-NEW-1 resolvido (6.1E)** + base mínima de testes (TEST-1 parcial). Dados estritamente sintéticos/anonimizados; comunicar aos participantes que **revoke/transferência de titularidade ainda não existem**. Recomendado fechar integração-DB (6.1E.1) em paralelo. |
 | **Dados reais de paciente** | ⛔ **NO-GO** | Bloqueado pelo GATE-5.2A: infra gerenciada, S3, WAF, restore offsite validado, retenção real, **revisão LGPD legal + termos publicados**. |
 | **Produção / AWS** | ⛔ **NO-GO** | Pausado por política até ADR 5.2A. |
 | **Cobrança real** | ⛔ **NO-GO** | Exige CNPJ + contrato/termos/LGPD + ADR 5.2A; **hardenar BILL-1/BILL-2/BILL-3/SEC-1 antes**. Não cobrar em CPF improvisado. |

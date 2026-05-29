@@ -7,6 +7,18 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.1E** (entregue 2026-05-29, backend — sem commit) — **Correção do P1 GOV-NEW-1 (titular em `register()`) + base mínima de testes automatizados.**
+
+**GOV-NEW-1 corrigido:** `authService.register` agora insere a linha de titular em `clinic_governance_members` **dentro da transação existente** (após `userDao.setClinic`), via `clinicGovernanceDao.insertMember(..., trx)` — `governance_role='titular'`, `status='active'`, `created_by_user_id=user.id` (titular auto-provisionado; o NULL do backfill 6.1A era artefato de migração sem ator). Atomicidade total: qualquer falha (user/clinic/governance) faz rollback de tudo. Sem guarda de duplicata (clinic.id novo ⇒ índices únicos parciais não conflitam). **Não tocado:** `registerStaff` (convite/secretaria), join request, demo-login, admin_sistema, grants clínicos, billing, seed. A camada comercial/UI não muda; `requireClinicGovernance` fallback `dono_clinica→titular` vira puro legado para tenants antigos.
+
+**Smoke (clínica descartável, container rebuild+recreate, via 8443):** register owner → clínica criada; login ok; `GET /clinic-governance` → **1 titular** (antes `{members:[]}`); criar membro secretaria + `POST /clinic-governance/admins` → **201** (governança = titular + administrador; antes 403 `governance_titular_required`). Cleanup completo (clínica/usuários removidos; audit logs preservados via SET NULL); smoke clinic restaurada (1 titular, 0 admin).
+
+**Testes (base mínima, sem dep nova):** runner = `node:test` (Node 20+, embutido) rodado por `tsx` (já devDep) — **zero infra externa**. `pnpm --filter backend test`. 11 testes ✅: `requireClinicGovernance` (titular ok; administrador ok/negado; **revoked NÃO ressuscita fallback**; dono sem linha = fallback legado; secretaria sem governança negada; `no_clinic_context`) + `maskCpf` (masking PII). `tsconfig` exclui `src/**/*.test.ts` do build (tests não vão p/ `dist`). Cobertura de `register` (linha titular) validada pelo smoke; teste de integração-DB de `register`/audit-no-PII fica de backlog (6.1E.1).
+
+**Checks:** backend typecheck ✅ · backend build ✅ (sem `.test.js` em `dist`) · frontend typecheck ✅ · migrate:status 20/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅ · `pnpm --filter backend test` 11/0 ✅. Sem migration, sem commit.
+
+---
+
 **Sprint 6.2A** (entregue 2026-05-29, super-revisão — docs-only) — **Super Revisão Pré-Piloto Pós-Governança do Clinic OS inteiro. Sem feature nova, sem migration, sem commit.**
 
 8 lentes especialistas em paralelo (subagents: Product/UX, Security/Auth, Tenant, LGPD, Governance/RBAC, Arch/frontend, Backend/API, Pre-pilot) + verificação empírica via API/DB. Documento completo: `docs/super-review-6-2A.md`. **Nenhum P0.** Maioria dos P1 da 6.0I confirmada resolvida (máscara `holder_name`, labels audit doc, `requireRole` em `GET /clinic-professionals`, PanelErrorBoundary, prefill cobrança, estado restrito prontuário).

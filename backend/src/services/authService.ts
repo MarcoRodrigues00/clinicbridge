@@ -3,6 +3,7 @@ import { env } from '../config/env';
 import { logger } from '../config/logger';
 import { auditLogDao } from '../dao/auditLogDao';
 import { clinicDao } from '../dao/clinicDao';
+import { clinicGovernanceDao } from '../dao/clinicGovernanceDao';
 import { mfaBackupCodeDao } from '../dao/mfaBackupCodeDao';
 import { userDao } from '../dao/userDao';
 import { HttpError } from '../middlewares/errorHandler';
@@ -218,6 +219,31 @@ export const authService = {
         );
 
         await userDao.setClinic(user.id, clinic.id, trx);
+
+        // GOV-NEW-1 fix (Sprint 6.1E; ADR 0019): a clinic is born with its owner
+        // as the active GOVERNANCE titular, in the SAME transaction as the
+        // user/clinic creation. Before this, only the 6.1A backfill created
+        // titular rows, so clinics registered AFTER the migration had no
+        // governance row — GET /clinic-governance returned {members:[]} and
+        // promoting an administrador 403'd (assertClinicTitular found no titular).
+        // Making the table authoritative for new tenants reduces the
+        // requireClinicGovernance dono_clinica→titular fallback to pure
+        // backward-compat. The clinic.id is brand-new, so the partial unique
+        // indexes (one active titular / one active member per clinic) cannot
+        // conflict — no duplicate guard needed. created_by_user_id = the owner:
+        // at registration the titular is self-provisioned (mirrors how
+        // promoteAdministrator records the acting user); the backfill used NULL
+        // only because a migration has no request actor. NO clinical grant, NO
+        // billing — governance is its own axis.
+        await clinicGovernanceDao.insertMember(
+          {
+            clinica_id: clinic.id,
+            user_id: user.id,
+            governance_role: 'titular',
+            created_by_user_id: user.id,
+          },
+          trx,
+        );
 
         const safeUser: SafeUser = {
           ...toSafeUser(user),
