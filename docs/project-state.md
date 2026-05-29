@@ -7,6 +7,21 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0J** (entregue 2026-05-29, frontend + 1 backend pontual) — **Polish LGPD/UX pré-dado-real (P1 baratos da 6.0I).**
+
+Correção de 3 P1 baratos e seguros antes de qualquer dado real. **Sem** migration, sem mudança de auth/tenant/permissão real, sem billing/Asaas, sem AWS, sem seed, sem unificação das 3 listas, sem `GET /clinic-professionals` (adiado). Sem commit.
+
+**Implementado:**
+- **[P1-LGPD-1] `holder_name` fora da listagem de convênios** — `insuranceService.ts`: `PublicPatientInsuranceListItem` não retorna mais `holder_name` (PII do titular); `holder_name` raw fica só na projeção de detalhe (`PublicPatientInsurance`), lazy-fetched no editar. Tipo espelhado no frontend (`api.ts`). Edição não quebra (o form lê do `detailQuery`, não da lista). Listagem já só renderizava `member_number_masked`.
+- **[P1-LGPD-2] Rótulos de auditoria de documento** — `ClinicalReadAuditPanel.tsx`: adicionados labels + opções de filtro para `clinical.document.list` / `clinical.document.read` / `clinical.document.pdf.downloaded` (antes apareciam como chave crua na trilha Art. 18).
+- **[P1-UI/BACKEND-1] Botão "Prontuário" não parece quebrado** — `ClinicalPatientPane.tsx`: ao receber 403 do backend (usuário sem acesso clínico), o painel mostra estado claro **"Acesso ao prontuário restrito"** (suprime aviso LGPD/abas/ações), em vez de erro genérico. Botão **não** é escondido por papel — uma `secretaria` pode ter grant clínico que o frontend não enxerga; backend continua sendo o gate real. Decisão documentada em `PatientsList.tsx`.
+
+**Checks:** backend typecheck ✅ · backend build ✅ · frontend typecheck ✅ · frontend build ✅ · migrate:status 19/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅. 5 arquivos alterados, nenhum tocando auth/tenant/billing. Sem commit.
+
+**Backlog 6.0I restante:** 6.0K (onboarding consultório solo / 3 listas / prefill preço→cobrança), 6.0L (error boundaries, queryKeys, split api.ts), 6.0M (hardening backend billing/tenant + `GET /clinic-professionals` — exige aprovação). Detalhe: `docs/super-review-6-0I.md`.
+
+---
+
 **Sprint 6.0I** (entregue 2026-05-29, read-only/diagnóstico) — **Super Revisão Geral Pré-Piloto.**
 
 Diagnóstico apenas. **Nenhum** arquivo de produto alterado, sem migration, sem mudança de auth/tenant/permissões, sem commit. 7 agents (UX/mobile, RBAC, tenant/segurança, LGPD, arquitetura frontend, arquitetura backend, produto/pré-piloto) revisaram o produto inteiro. Entregável: `docs/super-review-6-0I.md`.

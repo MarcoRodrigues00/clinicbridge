@@ -1127,7 +1127,9 @@ export interface InsurancePlan {
   updated_at: string;
 }
 
-// List projection: member_number_masked only, no notes.
+// List projection: member_number_masked only, NO holder_name, no notes
+// (LGPD minimization — Sprint 6.0J). holder_name (PII) lives in the detail
+// projection only, lazy-fetched on edit.
 export interface PatientInsuranceListItem {
   id: string;
   clinica_id: string;
@@ -1135,16 +1137,16 @@ export interface PatientInsuranceListItem {
   provider_id: string | null;
   plan_id: string | null;
   member_number_masked: string | null;
-  holder_name: string | null;
   valid_until: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-// Detail projection: adds raw member_number and notes.
+// Detail projection: adds raw member_number, holder_name (PII) and notes.
 export interface PatientInsurance extends PatientInsuranceListItem {
   member_number: string | null;
+  holder_name: string | null;
   notes: string | null;
 }
 

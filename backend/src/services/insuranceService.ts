@@ -447,8 +447,11 @@ function toPublicPlan(row: InsurancePlanRow): PublicInsurancePlan {
 }
 
 // Two projections for patient_insurances:
-//   - List item: member_number MASKED + no notes (LGPD minimization).
-//   - Detail: member_number RAW + holder_name RAW + notes (explicit drill-in).
+//   - List item: member_number MASKED, NO holder_name, NO notes (LGPD
+//     minimization — Sprint 6.0J). holder_name is the titular's full name (PII)
+//     and must not be returned in bulk list responses.
+//   - Detail: member_number RAW + holder_name RAW + notes (explicit drill-in,
+//     lazy-fetched only when the user opens edit).
 export interface PublicPatientInsuranceListItem {
   id: string;
   clinica_id: string;
@@ -456,7 +459,6 @@ export interface PublicPatientInsuranceListItem {
   provider_id: string | null;
   plan_id: string | null;
   member_number_masked: string | null;
-  holder_name: string | null;
   valid_until: string | null;
   active: boolean;
   created_at: Date;
@@ -465,6 +467,7 @@ export interface PublicPatientInsuranceListItem {
 
 export interface PublicPatientInsurance extends PublicPatientInsuranceListItem {
   member_number: string | null;
+  holder_name: string | null;
   notes: string | null;
 }
 
@@ -478,7 +481,6 @@ function toPatientInsuranceListItem(
     provider_id: row.provider_id,
     plan_id: row.plan_id,
     member_number_masked: maskMemberNumber(row.member_number),
-    holder_name: row.holder_name,
     valid_until: row.valid_until,
     active: row.active,
     created_at: row.created_at,
@@ -490,6 +492,7 @@ function toPublicPatientInsurance(row: PatientInsuranceRow): PublicPatientInsura
   return {
     ...toPatientInsuranceListItem(row),
     member_number: row.member_number,
+    holder_name: row.holder_name,
     notes: row.notes,
   };
 }
