@@ -21,4 +21,17 @@ export const billingWebhookController = {
     // surface as 401/400 via the central error handler.
     res.status(200).json({ received: true, outcome: result.outcome });
   },
+
+  // POST /billing/webhooks/asaas/sandbox/withdrawal-validation
+  //
+  // SANDBOX-only withdrawal authorization callback. The body is intentionally
+  // NOT read (metadata-only; default-deny). Origin is proven by the
+  // `asaas-access-token` header, verified inside the service.
+  async asaasSandboxWithdrawalValidation(req: Request, res: Response): Promise<void> {
+    const ctx = buildAuthContext(req);
+    const result = await billingWebhookService.validateAsaasSandboxWithdrawal(req.headers, ctx);
+    // 200 with the minimal decision shape; v0.1 always REFUSES. Gate/verify
+    // failures throw and surface as 404/401 via the central error handler.
+    res.status(200).json(result);
+  },
 };
