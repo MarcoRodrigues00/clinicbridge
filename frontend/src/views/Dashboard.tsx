@@ -32,6 +32,7 @@ import { AdministrativeSchedulePanel } from '../components/AdministrativeSchedul
 import { MfaSettings } from '../components/MfaSettings';
 import { JoinClinicGate } from '../components/JoinClinicGate';
 import { TeamManagementPanel } from '../components/TeamManagementPanel';
+import { RolePermissionsGuide } from '../components/RolePermissionsGuide';
 import { ClinicalRolesPanel } from '../components/ClinicalRolesPanel';
 import { ClinicalReadAuditPanel } from '../components/ClinicalReadAuditPanel';
 import { FinancialPanel } from '../components/FinancialPanel';
@@ -462,6 +463,7 @@ export function Dashboard(): JSX.Element {
 
         {tab === 'equipe' && isOwner && (
           <>
+            <RolePermissionsGuide />
             <TeamManagementPanel />
             <ClinicProfessionalsPanel />
             <ClinicalRolesPanel />

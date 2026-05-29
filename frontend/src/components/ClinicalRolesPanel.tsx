@@ -202,12 +202,8 @@ export function ClinicalRolesPanel(): JSX.Element | null {
               onChange={(e) => setGrantRole(e.target.value as ClinicalRoleName)}
               disabled={grantMutation.isPending}
             >
-              <option value="profissional_clinico">
-                Profissional clínico — registra atendimentos próprios
-              </option>
-              <option value="gestor_clinica">
-                Supervisor — lê atendimentos de toda a clínica
-              </option>
+              <option value="profissional_clinico">Profissional clínico</option>
+              <option value="gestor_clinica">Supervisor</option>
             </select>
           </label>
           <button

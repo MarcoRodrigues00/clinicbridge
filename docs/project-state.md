@@ -7,6 +7,23 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0H** (entregue 2026-05-29, frontend/polish-only) — **Polish pré-piloto de Equipe/Roles/Permissões visíveis.**
+
+Frontend-only. **Sem** backend, migration, API nova, mudança de auth/tenant, RBAC novo, seed, ou unificação de membros/profissionais/grants. Conteúdo 100% estático/apresentacional.
+
+**Implementado:**
+- `RolePermissionsGuide.tsx` (+ `.module.css`) — painel **somente leitura** "Quem pode o quê" no topo da aba Equipe (já owner-only). Cards por papel (Dono / Funcionário / Profissional clínico / Supervisor) com listas "pode/não pode", copy de clínica pequena, e caixa **"Auri explica"** (reusa `DemoMascot`).
+- Cada permissão descrita **reflete o backend real verificado**: `effectiveFinancialAccess` (dono/secretaria=full, gestor=transact, profissional=none), `assertNotProfissional` em convênios (profissional→403), estoque (dono=CRUD; secretaria/gestor=ler+movimentar; profissional→403), prontuário ADR 0010+ (profissional só os próprios; dono/gestor leem toda a clínica com auditoria). **Sem prometer acesso que o backend bloqueia.**
+- **Honestidade do modelo:** deixa explícito que só há 2 logins (Dono/Funcionário); "Profissional clínico"/"Supervisor" são **acessos ao prontuário** concedidos, não logins.
+- **Limitação documentada na própria UI (e backlog):** Equipe (login) × Profissionais da agenda × Acesso ao prontuário são **três listas separadas** hoje — não unificadas nesta sprint (exige ADR própria).
+- `Dashboard.tsx` — renderiza `<RolePermissionsGuide />` antes dos painéis existentes na aba `equipe`.
+
+**Backlog (não nesta sprint):** unificar membro da equipe × profissional da agenda × grant clínico (hoje três listas independentes; risco de inconsistência — exposto na UI).
+
+**Checks:** frontend typecheck ✅ · frontend build ✅ · backend typecheck ✅ · migrate (nenhuma pendente) ✅ · `git diff --check` rc=0 ✅. Sem commit.
+
+---
+
 **Sprint 5.1F** (entregue 2026-05-29, docs/QA-only) — **Fechamento da validação Asaas sandbox + correção edge p/ Cloudflare Tunnel.**
 
 Docs/QA-only. **Sem** mudança de código funcional de produto, migration, cobrança real, checkout real, webhook público de produção, secret commitado ou alteração de `.env`. Encerra a trilha sandbox aberta na 5.1E.

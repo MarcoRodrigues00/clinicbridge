@@ -448,6 +448,10 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  /* Allow the field to shrink inside a grid track: without this, a <select>
+     with long option text keeps the track at its intrinsic width and overflows
+     horizontally on mobile (Sprint 6.0H fix). */
+  min-width: 0;
 }
 
 .formLabel {
@@ -467,6 +471,12 @@
   font-size: 0.93rem;
   font-family: var(--font-sans);
   line-height: 1.5;
+  /* Never push past the column: shrink to the track and clip long option text
+     instead of overflowing the panel (Sprint 6.0H fix). */
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .formInput:focus,
