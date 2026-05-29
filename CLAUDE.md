@@ -14,16 +14,18 @@
 > **Runbooks:** `docs/backup-restore-local-runbook.md`, `docs/dns-tls-staging-runbook.md`, `docs/secrets-env-production-runbook.md`
 > **Prod/AWS:** `docs/production-minimum-plan.md`, `docs/aws-infra-sprint-3.41-plan.md`
 
-## Estado atual (2026-05-28)
+## Estado atual (2026-05-29)
 
 **Entregue (landing/demo/Auri/mobile):** 5.0E–5.0I — Demo Experience, tour Auri, landing demo em destaque, teaser+bolinha, nav mobile compacto, CLAUDE.md slimming. Ver `docs/project-state.md`.
-**Sprint atual:** 5.1E (entregue) — **AsaasProvider sandbox adapter v0.1.** Backend-only. `billingAsaasProvider.ts` (implements `BillingProvider`, sem mudar interface; `fetch` nativo; base URL sandbox hardcoded), `billingAsaasMapping.ts` (puro), `billingWebhookService.ts` + rota env-gated `POST /billing/webhooks/asaas/sandbox` (sem auth; IP-rate-limited; 404 se `ASAAS_ENV≠sandbox`). Verificação = **token compartilhado** `asaas-access-token` via `timingSafeEqual` (**não HMAC**); idempotência por `billing_events`; tenant **só por mapa interno**; **RECORD-only** (não muta assinatura/soft-lock). Envs `ASAAS_ENV|API_KEY|WEBHOOK_TOKEN` (só env; prod recusa ≠ disabled). **Sem** migration/cobrança/checkout/PII paciente/secret commitado/chamada sandbox real. Cmd `asaas:selftest`. `[VERIFICAR]` da 5.1D **seguem abertos** (precisam sandbox real). Ver `docs/project-state.md`.
-**Próxima sprint:** validar em **sandbox real** (conta/chave fictícia; provision+webhook reais; resolver `[VERIFICAR]`) → adendo à ADR 0018; ou voltar ao produto (validação visual 6.0x).
+**Sprint atual:** 5.1F (entregue, docs/QA-only) — **Fechamento da validação Asaas sandbox + correção edge p/ Cloudflare Tunnel.** Validado em sandbox (dados fictícios) via Cloudflare Tunnel (`cloudflared tunnel --url http://localhost:8080`): webhook billing `POST /billing/webhooks/asaas/sandbox` **record-only/idempotente** (não muta assinatura/soft-lock); withdrawal-validation `POST /billing/webhooks/asaas/sandbox/withdrawal-validation` **endpoint separado + default-deny** (sem token→401; token ok→`200 {status:"REFUSED",refuseReason}`); não toca billingService/financeiro/pacientes/PII; não salva/loga payload bruto. Nginx/edge agora detecta edge HTTPS (`CF-Visitor`/`X-Forwarded-Proto`) e **proxia direto** (sem loop `301→:8443`); HTTP local puro ainda redireciona p/ `:8443`. `docker-compose.yml` injeta `ASAAS_ENV|API_KEY|WEBHOOK_TOKEN` do **`.env` gitignored** (chave começa com `$` → escapar `$$`). **API key sandbox exposta no teste já rotacionada.** Cobrança real **continua bloqueada**. Ver `docs/project-state.md`.
+**Sprint anterior:** 5.1E (entregue) — **AsaasProvider sandbox adapter v0.1.** Backend-only; `billingAsaasProvider.ts` (implements `BillingProvider`, sem mudar interface), `billingAsaasMapping.ts` (puro). Verificação = **token compartilhado** `asaas-access-token` via `timingSafeEqual` (**não HMAC**). Envs só por env; prod recusa ≠ disabled. **Sem** migration/cobrança/checkout/PII paciente/secret commitado. Cmd `asaas:selftest`.
+**Próxima sprint:** voltar ao produto (**6.0/pré-piloto/polish**) ou abrir CNPJ + contrato/termos/LGPD antes de qualquer cobrança real. Backlog billing (checkout/cobrança real, webhook de produção, mutação real de assinatura/soft-lock) é **futuro** e exige decisão/ADR.
 **Depois:** **5.2A** ADR Produção Segura AWS (renumerada de 5.1A; obrigatória antes de dados reais e de cobrança real).
 
 **Fase:** Fase 3 (produção/governança). **NÃO pronto para produção com dados reais** — ver `docs/security-notes.md`.
 **Piloto controlado:** GO Fase 1 com dados sintéticos. Demo Aurora = 100% fictícia.
-**AWS:** provedor preferido; trilha pausada até 5.1A.
+**Cobrança real:** BLOQUEADA — exige CNPJ (contador), contrato/termos/política LGPD e ADR 5.2A. Não cobrar em CPF improvisado.
+**AWS:** provedor preferido; trilha pausada até 5.2A.
 
 ### Módulos entregues (resumo)
 
@@ -63,7 +65,7 @@ landing + /demo (DemoCallout, LandingAuriTeaser, hierarquia CTAs: "Ver demo guia
 
 ## Próximas prioridades
 
-- **5.1B–E:** Billing/entitlements — backend (mock) · frontend · spike sandbox (Asaas vs Stripe) · QA/security. ADR 0018.
+- **5.1B–F (concluído):** Billing/entitlements — backend (mock) · frontend · spike sandbox (Asaas vs Stripe) · adapter sandbox · validação sandbox via Cloudflare Tunnel (5.1F). ADR 0018. Cobrança real **segue bloqueada** (CNPJ + 5.2A). Checkout/cobrança real, webhook de produção e mutação real de assinatura/soft-lock = backlog futuro.
 - **5.2A:** ADR Produção Segura AWS — obrigatória antes de qualquer dado real e de cobrança real
 - **Camada comercial (invariantes ADR 0018):** plano por tenant (não por usuário); entitlements validados no backend; estado só muda por webhook verificado (nunca pelo frontend); soft-lock nunca sequestra dados; sem dado de cartão; billing não vaza PII clínica; webhook idempotente + tenant resolvido por mapa interno
 - **P1 antes de prod:** S3 bucket real; banco/Redis gerenciados; WAF; deploy; `TRUST_PROXY`/`REDIS_URL` em prod

@@ -30,6 +30,16 @@
 > permanece pausada porque 4.2B pode rodar inteiramente em local/staging
 > local. Runbook permanece válido.
 >
+> **Sprint 5.1E–5.1F entregues** (2026-05-28/29) — Asaas sandbox: `AsaasProvider`
+> atrás de `BillingProvider`; webhook billing record-only/idempotente (não muta
+> assinatura/soft-lock); withdrawal-validation endpoint separado e default-deny.
+> Validação sandbox concluída (dados fictícios) via Cloudflare Tunnel + Nginx/edge
+> (loop `301→:8443` corrigido). **Cobrança real CONTINUA BLOQUEADA:** exige CNPJ
+> (contador), contrato/termos/política LGPD e **ADR 5.2A (Produção Segura)** —
+> não cobrar em CPF improvisado. Checkout/cobrança real, webhook de produção e
+> mutação real de assinatura/soft-lock via webhook = backlog futuro. Detalhe:
+> `docs/project-state.md` (5.1F).
+>
 > Este roadmap é **sugestão de sequência**, não compromisso de datas. Nada
 > aqui autoriza código clínico — ver `docs/product-clinic-os-roadmap.md` para
 > as ADRs por módulo.
