@@ -177,7 +177,7 @@ export function SetupChecklist({ isOwner, onNavigate }: Props): JSX.Element {
       id: 'professionals',
       icon: Users,
       title: 'Profissionais',
-      description: 'Equipe que realiza atendimentos na clínica',
+      description: 'Quem atende na agenda (Equipe → Profissionais da agenda)',
       tab: 'equipe',
       status: resolveStatus(professionalsQ.isLoading, professionalsQ.isError, professionalsQ.error, professionalsQ.data, false),
       optional: false,
@@ -247,6 +247,12 @@ export function SetupChecklist({ isOwner, onNavigate }: Props): JSX.Element {
   const progressPct = totalRequired > 0 ? Math.round((doneCount / totalRequired) * 100) : 0;
   const anyLoading = items.some((item) => item.status === 'loading');
 
+  // Solo-practitioner nudge: the owner is often the main professional, but
+  // nothing auto-registers them as a "Profissional da agenda" (no auto-seed,
+  // no backend change). Surface a clear nudge only while no professional exists.
+  const showSoloNudge =
+    isOwner && !professionalsQ.isLoading && professionalsQ.data === false;
+
   return (
     <section className={styles.root} aria-labelledby="setup-title">
       <div className={styles.header}>
@@ -273,6 +279,26 @@ export function SetupChecklist({ isOwner, onNavigate }: Props): JSX.Element {
           aria-label={`${doneCount} de ${totalRequired} itens concluídos`}
         >
           <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
+        </div>
+      )}
+
+      {showSoloNudge && (
+        <div className={styles.soloNudge} role="note">
+          <User size={16} aria-hidden="true" />
+          <div className={styles.soloNudgeBody}>
+            <p className={styles.soloNudgeText}>
+              <strong>Você atende na clínica?</strong> Cadastre você mesmo como
+              profissional da agenda para marcar e organizar os atendimentos.
+            </p>
+            <button
+              type="button"
+              className={styles.soloNudgeBtn}
+              onClick={() => onNavigate('equipe')}
+            >
+              Cadastrar profissional
+              <ArrowRight size={12} aria-hidden="true" />
+            </button>
+          </div>
         </div>
       )}
 

@@ -24,6 +24,8 @@ import {
   Briefcase,
   FilterX,
   HelpCircle,
+  Users,
+  ArrowRight,
 } from 'lucide-react';
 import {
   api,
@@ -120,6 +122,21 @@ function getFinancialAlerts(
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
+// Format integer cents as "R$ 150,00" for the table-price hint (display only).
+function formatBRLFromCents(cents: number): string {
+  return (cents / 100).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
+
+// Convert integer cents to the value-input format "150,00" (comma decimal),
+// matching what the charge amount field parses back. Used only when the user
+// clicks "usar preço de tabela" — never applied automatically.
+function centsToAmountInput(cents: number): string {
+  return (cents / 100).toFixed(2).replace('.', ',');
+}
+
 function errMsg(err: unknown, fallback: string): string {
   if (err instanceof ApiError) {
     // Human-friendly message for the anti-overlap conflict (Sprint 6.0A). The
@@ -200,12 +217,14 @@ function timeFromIso(iso: string): string {
 
 interface AdministrativeSchedulePanelProps {
   onGoToFinanceiro?: () => void;
+  onGoToEquipe?: () => void;
   onAuriTour?: () => void;
 }
 
-export function AdministrativeSchedulePanel({ onGoToFinanceiro, onAuriTour }: AdministrativeSchedulePanelProps): JSX.Element {
+export function AdministrativeSchedulePanel({ onGoToFinanceiro, onGoToEquipe, onAuriTour }: AdministrativeSchedulePanelProps): JSX.Element {
   const queryClient = useQueryClient();
   const { clinic, user } = useAuth();
+  const isOwner = user?.papel === 'dono_clinica';
   const token = getToken();
 
   const [date, setDate] = useState(todayStr());
@@ -393,6 +412,13 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro, onAuriTour }: Ad
     return (id: string | null): string | null => (id ? (map.get(id) ?? 'Serviço') : null);
   }, [services]);
 
+  // Service lookup (id → full service) for the charge-form prefill. The service
+  // name is offered as an editable description suggestion; price_cents is shown
+  // as a click-to-apply hint — NEVER auto-copied into amount_cents (ADR 0015 §3.3).
+  const serviceById = useMemo(() => {
+    return new Map(services.map((s) => [s.id, s]));
+  }, [services]);
+
   const hasActiveFilters = filterProfessional !== '' || filterService !== '' || filterStatus !== '';
 
   function clearFilters(): void {
@@ -469,6 +495,12 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro, onAuriTour }: Ad
 
   function openChargeForm(appt: PublicAppointment): void {
     resetChargeForm();
+    // Prefill the description with the appointment's service name as an editable
+    // suggestion (ADR 0015: description is a fixed/editable suggestion). The
+    // amount stays empty — the table price is offered as a click-to-apply hint
+    // below, never auto-filled (ADR 0015 §3.3: humano decide o valor).
+    const svc = appt.service_id ? serviceById.get(appt.service_id) : undefined;
+    if (svc?.name) setChargeDescription(svc.name);
     setOpenChargeFormId(appt.id);
   }
 
@@ -696,6 +728,29 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro, onAuriTour }: Ad
           </div>
         )}
       </div>
+
+      {/* No professionals yet — guide the user to register one before scheduling.
+          For a solo practitioner, the owner IS the professional, so nudge them to
+          register their own name. The "Profissional da agenda" is a scheduling
+          label only — it does NOT grant a login. */}
+      {!professionalsQuery.isLoading && professionals.length === 0 && (
+        <div className={styles.noProfNotice} role="status">
+          <Users size={18} aria-hidden="true" />
+          <div className={styles.noProfBody}>
+            <p className={styles.noProfTitle}>Nenhum profissional da agenda cadastrado</p>
+            <p className={styles.noProfText}>
+              {isOwner
+                ? 'Cadastre pelo menos um profissional da agenda para organizar os agendamentos por profissional. Se você mesmo atende na clínica, cadastre o seu próprio nome como profissional.'
+                : 'Peça ao(à) dono(a) da clínica para cadastrar os profissionais da agenda. (O profissional da agenda é só um rótulo de agendamento — não dá acesso de login.)'}
+            </p>
+            {isOwner && onGoToEquipe && (
+              <button type="button" className={styles.noProfBtn} onClick={onGoToEquipe}>
+                Cadastrar profissional <ArrowRight size={13} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {!showForm ? (
         <button type="button" className={styles.addBtn} data-tour-id="agenda-create" onClick={() => { setShowForm(true); setError(null); setNotice(null); }}>
@@ -972,6 +1027,27 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro, onAuriTour }: Ad
                                 onChange={(e) => setChargeAmountStr(e.target.value)}
                                 disabled={createChargeMutation.isPending}
                               />
+                              {/* Table-price hint (ADR 0015 §3.3): the service price is a
+                                  visual suggestion the user APPLIES with one click — it is
+                                  never auto-copied into the amount. The human decides the value. */}
+                              {(() => {
+                                const svc = a.service_id ? serviceById.get(a.service_id) : undefined;
+                                if (svc?.price_cents == null) return null;
+                                const cents = svc.price_cents;
+                                return (
+                                  <span className={styles.priceHint}>
+                                    Tabela: {formatBRLFromCents(cents)}
+                                    <button
+                                      type="button"
+                                      className={styles.priceHintBtn}
+                                      onClick={() => setChargeAmountStr(centsToAmountInput(cents))}
+                                      disabled={createChargeMutation.isPending}
+                                    >
+                                      usar preço de tabela
+                                    </button>
+                                  </span>
+                                );
+                              })()}
                             </label>
                             <label className={styles.field}>
                               <span className={styles.fieldLabel}>Vencimento (opcional)</span>

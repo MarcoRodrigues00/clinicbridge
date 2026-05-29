@@ -7,6 +7,22 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0K** (entregue 2026-05-29, frontend-only) — **Onboarding consultório solo / clareza das 3 listas / prefill descrição→cobrança (preço como dica).**
+
+UX de onboarding pré-piloto. **Sem** backend, migration, auth, tenant, billing, seed ou auto-cadastro. Sem commit.
+
+**Implementado (6 arquivos frontend):**
+- **Agenda sem profissional** (`AdministrativeSchedulePanel.tsx`): aviso calmo quando `professionals.length === 0`. Dono recebe CTA "Cadastrar profissional" → aba Equipe (`onGoToEquipe`); não-dono é orientado a pedir ao dono. Texto deixa explícito que **"profissional da agenda" é só um rótulo de agendamento — não dá login**.
+- **Prefill da cobrança** (`AdministrativeSchedulePanel.tsx`, ADR 0015 §3.3): ao abrir o form de cobrança, a **descrição** vem preenchida com o nome do serviço (sugestão editável). O **valor continua vazio**; o preço de tabela aparece como dica clicável **"usar preço de tabela"** — aplicado só por clique, **nunca auto-copiado** para `amount`.
+- **Equipe — clareza das 3 listas** (`Dashboard.tsx`): helper compacto acima dos painéis explicando que Login / Profissional da agenda / Acesso ao prontuário são **cadastros separados** (a mesma pessoa pode estar nos três). Breakdown completo segue no `RolePermissionsGuide`.
+- **Checklist — nudge solo** (`SetupChecklist.tsx`): quando dono e sem profissional cadastrado, nudge "Você atende na clínica? Cadastre-se como profissional da agenda" → aba Equipe. Descrição do passo Profissionais ajustada.
+
+**Checks:** frontend typecheck ✅ · frontend build ✅ · backend typecheck ✅ · migrate:status 19/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅. 6 arquivos alterados, nenhum tocando auth/tenant/billing/backend. Sem commit.
+
+**Backlog 6.0I restante:** 6.0L (error boundaries, queryKeys, split api.ts), 6.0M (hardening backend billing/tenant + `GET /clinic-professionals` — exige aprovação). Detalhe: `docs/super-review-6-0I.md`.
+
+---
+
 **Sprint 6.0J** (entregue 2026-05-29, frontend + 1 backend pontual) — **Polish LGPD/UX pré-dado-real (P1 baratos da 6.0I).**
 
 Correção de 3 P1 baratos e seguros antes de qualquer dado real. **Sem** migration, sem mudança de auth/tenant/permissão real, sem billing/Asaas, sem AWS, sem seed, sem unificação das 3 listas, sem `GET /clinic-professionals` (adiado). Sem commit.

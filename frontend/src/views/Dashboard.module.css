@@ -778,3 +778,35 @@
   color: var(--text-0);
   font-weight: 600;
 }
+
+/* Compact 3-lists clarifier on the Equipe tab (Sprint 6.0K). */
+.threeListsHelper {
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: var(--r-sm);
+  background: rgba(34, 211, 238, 0.06);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  color: var(--text-1);
+}
+
+.threeListsTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-0);
+  margin: 0 0 0.45rem;
+}
+
+.threeListsItems {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.threeListsItems strong {
+  color: var(--text-0);
+  font-weight: 600;
+}
