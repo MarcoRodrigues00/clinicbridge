@@ -11,6 +11,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test src/middlewares/requireClinicGovernance.test.ts src/models/patient.test.ts",
+    "test:integration": "tsx --test src/tests/integration/*.integration.test.ts",
     "migrate:latest": "tsx scripts/db.ts migrate:latest",
     "migrate:rollback": "tsx scripts/db.ts migrate:rollback",
     "migrate:status": "tsx scripts/db.ts migrate:status",

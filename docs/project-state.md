@@ -7,6 +7,21 @@
 
 ## Última sprint aprovada
 
+**Micro Sprint 6.1E.1** (entregue 2026-05-29, backend testes — sem commit) — **Suíte mínima de testes de integração DB para invariantes críticos.**
+
+Fecha o débito de integração-DB do TEST-1 (super-revisão 6.2A). **Sem dependência nova** (node:test + tsx), **sem migration**, **sem infra separada** — roda contra o Postgres dev local (`DATABASE_URL`, localhost:5432). **Sem commit.**
+
+**Estrutura** (`backend/src/tests/integration/`, excluída do build via `tsconfig` `"src/tests"`): `helpers.ts` (re-exporta `db`, `uniq`, `registerTestClinic`, `createTestMember`, `createTestPatient`, `cleanup` id-scoped FK-safe) + 3 arquivos. **Isolamento por processo** confirmado (cada arquivo tem seu `db`/pool; `after(db.destroy())`). Comando: **`pnpm --filter backend test:integration`** (unit segue em `pnpm --filter backend test`). **7 testes, 7 ✅:**
+- **governance:** register cria exatamente 1 titular active; `listForClinic` retorna 1 titular; titular promove membro→administrador; audit `clinic.governance.admin.granted` **metadata-only** (`recurso_id` = id da linha, **≠ user_id** do promovido; `audit_logs` sem coluna `metadata/payload/entidade_tipo`).
+- **tenant:** clínicas A/B; serviço em B; `findById`/`update` como owner A → 404 `service_not_found`; serviço B inalterado.
+- **financial CAS:** `markPaid` 1ª vez ok; 2ª vez = `undefined` (CAS miss, sem dupla baixa); cross-tenant `markPaid` não paga cobrança de outra clínica.
+
+**Segurança dos testes:** só dados sintéticos prefixados (`qa.itest.*`, `*ITEST*`); cada teste limpa o que cria (verificado: **0 resíduos**); audit logs **preservados** (ON DELETE SET NULL anonimiza ator); sem truncate, sem `down -v`, smoke/demo intocados. **BILL-1** (markStatus sem clinica_id) **não corrigido** — fora de escopo, segue backlog pré-billing. Nenhum bug novo encontrado (a correção GOV-NEW-1 da 6.1E foi confirmada pelos testes).
+
+**Checks:** backend `test` 11/0 ✅ · `test:integration` 7/0 ✅ · backend typecheck ✅ · backend build ✅ (sem testes em `dist`) · frontend typecheck ✅ · migrate:status 20/0 ✅ · `git diff --check` rc=0 ✅. Sem commit.
+
+---
+
 **Sprint 6.1E** (entregue 2026-05-29, backend — sem commit) — **Correção do P1 GOV-NEW-1 (titular em `register()`) + base mínima de testes automatizados.**
 
 **GOV-NEW-1 corrigido:** `authService.register` agora insere a linha de titular em `clinic_governance_members` **dentro da transação existente** (após `userDao.setClinic`), via `clinicGovernanceDao.insertMember(..., trx)` — `governance_role='titular'`, `status='active'`, `created_by_user_id=user.id` (titular auto-provisionado; o NULL do backfill 6.1A era artefato de migração sem ator). Atomicidade total: qualquer falha (user/clinic/governance) faz rollback de tudo. Sem guarda de duplicata (clinic.id novo ⇒ índices únicos parciais não conflitam). **Não tocado:** `registerStaff` (convite/secretaria), join request, demo-login, admin_sistema, grants clínicos, billing, seed. A camada comercial/UI não muda; `requireClinicGovernance` fallback `dono_clinica→titular` vira puro legado para tenants antigos.
