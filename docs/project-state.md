@@ -7,6 +7,22 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0I** (entregue 2026-05-29, read-only/diagnóstico) — **Super Revisão Geral Pré-Piloto.**
+
+Diagnóstico apenas. **Nenhum** arquivo de produto alterado, sem migration, sem mudança de auth/tenant/permissões, sem commit. 7 agents (UX/mobile, RBAC, tenant/segurança, LGPD, arquitetura frontend, arquitetura backend, produto/pré-piloto) revisaram o produto inteiro. Entregável: `docs/super-review-6-0I.md`.
+
+**Veredicto:** **0 P0.** Núcleo sólido (tenant isolation por `clinica_id` em todos os 29 DAOs, sem `listAll`, sem delete físico, CAS `status='pending'` confirmado em financeiro, CPF mascarado, read-audit STRICT, billing/Asaas sandbox isolado). **5 P1** acionáveis antes de dado real:
+- LGPD: `holder_name` de convênio sai sem máscara na listagem (`insuranceService.ts:452-487`); painel de auditoria não rotula eventos de documento (`ClinicalReadAuditPanel.tsx:14-34`).
+- RBAC/UI: `GET /clinic-professionals` sem `requireRole` (`clinicProfessionals.ts:19`); botão "Prontuário" exibido a todos os papéis (gate só backend).
+- Produto: onboarding do consultório solo trava nas "3 listas" (Equipe × Profissional da agenda × Acesso ao prontuário) + dono não auto-cadastrado como profissional; preço de serviço não preenche cobrança.
+- Frontend: sem Error Boundaries; objeto literal em queryKey.
+
+**Próximos passos propostos (sprints pequenas, ver doc):** 6.0J (polish LGPD/UX) → 6.0K (onboarding solo) → 6.0L (hardening frontend) → 6.0M (hardening backend billing/tenant; pré-requisito de billing real junto com ADR 5.2A). Bloqueios de cobrança real e produção AWS **inalterados**. Itens que tocam authz/PII/tenant exigem **aprovação antes de aplicar**.
+
+**Checks:** frontend typecheck ✅ · backend typecheck ✅ · migrate:status 19/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅ · árvore limpa. Sem commit.
+
+---
+
 **Sprint 6.0H** (entregue 2026-05-29, frontend/polish-only) — **Polish pré-piloto de Equipe/Roles/Permissões visíveis.**
 
 Frontend-only. **Sem** backend, migration, API nova, mudança de auth/tenant, RBAC novo, seed, ou unificação de membros/profissionais/grants. Conteúdo 100% estático/apresentacional.

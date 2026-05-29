@@ -40,6 +40,16 @@
 > mutação real de assinatura/soft-lock via webhook = backlog futuro. Detalhe:
 > `docs/project-state.md` (5.1F).
 >
+> **Sprint 6.0I entregue** (2026-05-29, read-only/diagnóstico) — Super Revisão
+> Geral Pré-Piloto (7 agents). **0 P0.** Diagnóstico completo em
+> `docs/super-review-6-0I.md`. Sprints pequenas propostas: **6.0J** (polish
+> LGPD/UX: máscara `holder_name`, rótulos audit de documento, botão prontuário),
+> **6.0K** (onboarding consultório solo / 3 listas / prefill preço→cobrança),
+> **6.0L** (hardening frontend: error boundaries, queryKeys, split api.ts),
+> **6.0M** (hardening backend billing/tenant — pré-requisito de billing real
+> junto com ADR 5.2A). Itens que tocam authz/PII/tenant exigem aprovação antes
+> de aplicar. Bloqueios de cobrança real e produção AWS inalterados.
+>
 > Este roadmap é **sugestão de sequência**, não compromisso de datas. Nada
 > aqui autoriza código clínico — ver `docs/product-clinic-os-roadmap.md` para
 > as ADRs por módulo.
