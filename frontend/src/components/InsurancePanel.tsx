@@ -1826,7 +1826,8 @@ export function InsurancePanel({ onAuriTour }: { onAuriTour?: () => void } = {})
     enabled: !!token,
     staleTime: 30_000,
     queryFn: async () => {
-      const res = await api.listInsurancePlans(token as string, { limit: 200 });
+      // Backend caps limit at 100 (insuranceService). 200 → 400 insurance_invalid.
+      const res = await api.listInsurancePlans(token as string, { limit: 100 });
       return res.plans;
     },
   });
