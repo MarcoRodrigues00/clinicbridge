@@ -46,3 +46,16 @@ billingRouter.post(
   billingWebhookRateLimit,
   asyncHandler(billingWebhookController.asaasSandbox),
 );
+
+// POST /billing/webhooks/asaas/sandbox/withdrawal-validation — Sprint 5.1E.
+//
+// SANDBOX-only withdrawal authorization callback. Same posture as the webhook
+// above: NO requireAuth/requireClinic (origin proven by the shared
+// `asaas-access-token` header, verified in the service), IP-rate-limited, and
+// 404 unless ASAAS_ENV=sandbox. Metadata-only and DEFAULT-DENY — v0.1 refuses
+// every withdrawal and touches no subscription/soft-lock/financial/patient data.
+billingRouter.post(
+  '/billing/webhooks/asaas/sandbox/withdrawal-validation',
+  billingWebhookRateLimit,
+  asyncHandler(billingWebhookController.asaasSandboxWithdrawalValidation),
+);
