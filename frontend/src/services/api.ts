@@ -120,6 +120,20 @@ export interface ClinicMember {
   removed_at: string | null;
 }
 
+// Clinic Governance v0.1 (Sprint 6.1A/6.1C; ADR 0019). GOVERNANCE axis only
+// (Titular / Administrador) — orthogonal to clinical access and billing.
+// Metadata-only: no clinical data, no billing, no secrets.
+export type ClinicGovernanceRole = 'titular' | 'administrador';
+
+export interface GovernanceMember {
+  user_id: string;
+  nome: string;
+  email: string;
+  governance_role: ClinicGovernanceRole;
+  status: 'active' | 'revoked';
+  created_at: string;
+}
+
 export interface LoginPayload {
   email: string;
   senha: string;
@@ -1692,6 +1706,19 @@ export const api = {
 
   // Owner-only. Removes a member from the clinic (sets users.clinica_id=NULL +
   // history row). Refuses self-deactivation and owner-deactivation server-side.
+  // Clinic Governance (Sprint 6.1C; ADR 0019). Owner/titular only at the route;
+  // metadata-only. Promoting to Administrador grants NO clinical access / billing.
+  listClinicGovernance(token: string): Promise<{ members: GovernanceMember[] }> {
+    return apiFetch('/clinic-governance', { method: 'GET', token });
+  },
+
+  promoteClinicAdministrator(
+    token: string,
+    payload: { user_id: string },
+  ): Promise<{ member: GovernanceMember }> {
+    return apiFetch('/clinic-governance/admins', { method: 'POST', body: payload, token });
+  },
+
   deactivateClinicMember(token: string, userId: string): Promise<{ status: 'deactivated' }> {
     return apiFetch<{ status: 'deactivated' }>(
       `/clinic-members/${encodeURIComponent(userId)}/deactivate`,
