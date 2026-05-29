@@ -7,6 +7,12 @@
 
 ## Última sprint aprovada
 
+**Micro Sprint 6.1C.1** (entregue 2026-05-29, frontend-only) — **Auri explica Governança da Clínica na aba Equipe.**
+
+Apenas ajuda/tour. **Sem** backend, sem migration, sem permissões novas. Sem commit. Novo `TEAM_TOUR_STEPS` (3 passos curtos) + `TOUR_IDS.TEAM` em `GuidedDemoTour.tsx`, registrado em `MODULE_TOUR_STEPS`. `GovernancePanel` ganhou botão **"Auri explica"** (prop `onAuriTour`, padrão dos demais painéis) + `data-tour-id="governance-panel"` para spotlight; Dashboard liga via `openModuleTour(TOUR_IDS.TEAM)`. Estilos `governanceHeader`/`auriBtn` em `ClinicalPatientPane.module.css` (header com `flex-wrap` → mobile leve). Copy: governança = quem administra; Titular responde pela conta; Administradores ajudam na gestão (serviços/configurações permitidas); **não** libera prontuário — acesso clínico segue separado em *Acesso ao prontuário*. **Não promete** revoke/transferência de titularidade/acesso clínico/billing real. Checks: frontend typecheck ✅ · frontend build ✅ · backend typecheck ✅ · migrate:status 20/0 ✅ · `git diff --check` rc=0 ✅.
+
+---
+
 **Sprint 6.1C** (entregue 2026-05-29, frontend-only) — **Painel de Governança da Clínica na aba Equipe (ADR 0019): Titular vê governança e promove Administrador(a).**
 
 Camada de apresentação sobre o backend 6.1A/6.1B. **Sem** migration, sem backend novo, sem billing, sem acesso clínico, sem revoke/transferência (não há endpoint). Sem commit.
