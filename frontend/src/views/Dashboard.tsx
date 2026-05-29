@@ -32,6 +32,7 @@ import { AdministrativeSchedulePanel } from '../components/AdministrativeSchedul
 import { MfaSettings } from '../components/MfaSettings';
 import { JoinClinicGate } from '../components/JoinClinicGate';
 import { TeamManagementPanel } from '../components/TeamManagementPanel';
+import { GovernancePanel } from '../components/GovernancePanel';
 import { RolePermissionsGuide } from '../components/RolePermissionsGuide';
 import { ClinicalRolesPanel } from '../components/ClinicalRolesPanel';
 import { ClinicalReadAuditPanel } from '../components/ClinicalReadAuditPanel';
@@ -490,6 +491,7 @@ export function Dashboard(): JSX.Element {
             </div>
             <RolePermissionsGuide />
             <TeamManagementPanel />
+            <GovernancePanel />
             <ClinicProfessionalsPanel />
             <ClinicalRolesPanel />
           </PanelErrorBoundary>

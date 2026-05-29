@@ -7,6 +7,27 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.1C** (entregue 2026-05-29, frontend-only) — **Painel de Governança da Clínica na aba Equipe (ADR 0019): Titular vê governança e promove Administrador(a).**
+
+Camada de apresentação sobre o backend 6.1A/6.1B. **Sem** migration, sem backend novo, sem billing, sem acesso clínico, sem revoke/transferência (não há endpoint). Sem commit.
+
+**Novo `GovernancePanel.tsx`** (`frontend/src/components/`), montado na aba **Equipe** logo após `TeamManagementPanel` (`Dashboard.tsx`). Owner-only no cliente (`papel==='dono_clinica'` → senão `return null`); o backend continua sendo a autoridade. Reusa o stylesheet de `ClinicalRolesPanel` (`ClinicalPatientPane.module.css`). Mostra **Titular** (coroa) + **Administradores**; formulário promove membro elegível a Administrador(a) com **confirmação inline** em dois passos. Copy deixa explícito que ser Administrador **não** concede prontuário nem financeiro/assinatura — acesso clínico segue separado em *Acesso ao prontuário*.
+
+**API client (`services/api.ts`):** tipos `ClinicGovernanceRole`/`GovernanceMember` + `listClinicGovernance()` (`GET /clinic-governance`) e `promoteClinicAdministrator()` (`POST /clinic-governance/admins`). Tratamento de erro humanizado (403 titular-only, 404 membro indisponível, 400 `governance_member_exists`).
+
+**Bug encontrado e corrigido na validação:** dropdown de elegíveis vinha vazio por **colisão de queryKey** — `TeamManagementPanel` cacheia `['clinic-members']` como **array puro** (`res.members`), enquanto o painel precisa do shape `{members}`. Corrigido reusando a key `['clinicMembers']` de `ClinicalRolesPanel` (shape objeto), com comentário explicando a colisão. Debug temporário (`[GOVDBG]`) removido; `grep -R "GOVDBG\|TEMP\|verify_governance\|dbg"` em `frontend/src backend/src docs` = 0 ocorrências.
+
+**Validação (via 8443, smoke clinic `Clinica Smoke Dev`):**
+- **Titular (smoke.owner):** `GET /clinic-governance` → 1 titular; `GET /clinic-members` → 3 elegíveis (secretaria/gestor/profissional, todos ativos, nenhum `admin_sistema`).
+- **Promote secretaria→administrador:** 201; lista passa a titular+administrador; re-promote → 400 `governance_member_exists` (idempotência confirmada).
+- **Não-owner (smoke.secretaria, JWT `secretaria`):** `GET /clinic-governance` e `POST /admins` → **403 `forbidden_role`** na rota (painel nem renderiza no cliente).
+- **Serviços p/ Administrador (passo 7):** smoke.secretaria promovida cria (201) **e** edita (200) serviço no catálogo — `requireClinicGovernance(['titular','administrador'])` confirmado end-to-end.
+- **Cleanup:** serviço de teste removido; linha de governança `administrador` removida; baseline restaurado = **1 titular ativo, 0 administradores**. Audit logs do teste permanecem (append-only, metadata-only).
+
+**Checks:** frontend typecheck ✅ · frontend build ✅ · backend typecheck ✅ · migrate:status 20/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅. Sem migration nova. Sem commit.
+
+---
+
 **Sprint 6.1B** (entregue 2026-05-29, backend-only) — **Enforcement de Governança v0.1 (ADR 0019): primeiro módulo (catálogo de Serviços) passa a respeitar Titular + Administrador.**
 
 Primeiro passo de enforcement, pequeno e aditivo. **Sem** nova migration, sem frontend, sem billing, sem acesso clínico, sem transferência de titularidade/revoke/exclusão de clínica, sem RBAC genérico. Sem commit.
