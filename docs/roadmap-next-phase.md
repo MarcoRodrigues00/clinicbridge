@@ -1,5 +1,17 @@
 # ClinicBridge — Roadmap da Próxima Fase
 
+> **Atualizado 2026-05-29 (Super Revisão 6.2A):** a revisão pré-piloto pós-governança
+> (`docs/super-review-6-2A.md`) **reordena a próxima sprint**. Recomendada a seguir:
+> **6.1E — Fechamento de Governança + base de qualidade**: (1) `GOV-NEW-1` (P1) — `register()`
+> passa a inserir a linha de titular em `clinic_governance_members` (hoje clínicas novas ficam
+> sem titular → governança não-funcional para tenants novos; toca auth, aprovar); (2) `TEST-1`
+> (P1) — suite-guarda mínima de invariantes (vitest: tenant, markPaid CAS, fallback governança,
+> máscara PII, audit-sem-PII); (3) docs — reconciliar ADR 0019 ("entregue 6.1A–6.1D") + refresh
+> do `pilot-go-no-go-checklist.md`. **Pré-billing** (`BILL-1/2/3`, `SEC-1`, `LGPD-2`) entra só
+> quando cobrança real for desbloqueada. **Revoke de administrador** (governança v0.2) e
+> **transferência de titularidade** (ADR própria) ficam pós-piloto. Gate 5.2A e cobrança real
+> seguem bloqueados. Nenhum P0.
+
 > **Atualizado 2026-05-25:** ADR 0008 (Sprint 4.0) expande o produto para
 > **Clinic OS modular**. Este roadmap continua sendo a fonte das **fases
 > administrativas** (Fase 3 — produção/governança, Fase 4 administrativa de
