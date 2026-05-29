@@ -7,6 +7,18 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.2A** (entregue 2026-05-29, super-revisão — docs-only) — **Super Revisão Pré-Piloto Pós-Governança do Clinic OS inteiro. Sem feature nova, sem migration, sem commit.**
+
+8 lentes especialistas em paralelo (subagents: Product/UX, Security/Auth, Tenant, LGPD, Governance/RBAC, Arch/frontend, Backend/API, Pre-pilot) + verificação empírica via API/DB. Documento completo: `docs/super-review-6-2A.md`. **Nenhum P0.** Maioria dos P1 da 6.0I confirmada resolvida (máscara `holder_name`, labels audit doc, `requireRole` em `GET /clinic-professionals`, PanelErrorBoundary, prefill cobrança, estado restrito prontuário).
+
+**P1 novo de destaque (confirmado empiricamente):** `GOV-NEW-1` — clínica **registrada após o backfill 6.1A não recebe linha de titular** (`register()` não insere em `clinic_governance_members`). Verificado: clínica nova → `GET /clinic-governance` = `{members:[]}` e promover = **403 `governance_titular_required`** → governança **não-funcional para tenants novos** (cenário do piloto). Fix: inserir titular na transação de `register()` (toca auth — aprovar). Demais P1: zero testes automatizados (`TEST-1`); `billingEventDao.markStatus` sem `clinica_id` (`BILL-1`, carregado) e `provisionSubscription` sem transação (`BILL-2`, carregado) — billing no-op hoje, pré-requisito antes de cobrança real; nudge "cadastrar profissional" cai no topo da aba Equipe (`UX-1`, resíduo 6.0I); gate de dados reais 5.2A por construir (`GATE-5.2A`, **manter bloqueado**).
+
+**Go/No-Go:** pré-piloto sintético ✅ GO · piloto familiar anonimizado 🟡 GO condicional (corrigir GOV-NEW-1 + TEST-1 antes) · dados reais ⛔ NO-GO (GATE-5.2A) · AWS/produção ⛔ NO-GO · cobrança real ⛔ NO-GO. **Próxima recomendada: 6.1E** (GOV-NEW-1 + suite-guarda de invariantes + reconciliação ADR 0019/checklist). Verificação empírica limpa; smoke clinic restaurada (1 titular, 0 admin); audit logs preservados.
+
+**Checks:** frontend typecheck ✅ · backend typecheck ✅ · migrate:status 20/0 ✅ · `git diff --check` rc=0 ✅. Sem migration, sem commit.
+
+---
+
 **Sprint 6.1D** (entregue 2026-05-29, QA/hardening — docs-only) — **Fechamento do módulo Governança da Clínica (ADR 0019). Sem feature nova.**
 
 QA/hardening final; **sem** revoke/transferência/exclusão/billing/migration/novo enforcement/auth. Sem commit. Único ajuste de código: `CLAUDE.md` "19 migrações" → **20** (inclui `20260609_clinic_governance_v0`).
