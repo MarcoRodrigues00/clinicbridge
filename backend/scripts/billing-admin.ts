@@ -15,6 +15,8 @@ import {
   computeSoftLock,
 } from '../src/services/billingStateMachine';
 import { buildBillingActor } from '../src/services/billingService';
+import { asaasProvider, verifyAsaasToken } from '../src/services/billingAsaasProvider';
+import { mapAsaasEventToInternalStatus } from '../src/services/billingAsaasMapping';
 import type { PlanCode, SubscriptionStatus } from '../src/types/db';
 
 // =============================================================================
@@ -30,6 +32,7 @@ import type { PlanCode, SubscriptionStatus } from '../src/types/db';
 //
 // Usage:
 //   pnpm --filter backend exec tsx scripts/billing-admin.ts selftest
+//   pnpm --filter backend exec tsx scripts/billing-admin.ts asaas:selftest
 //   pnpm --filter backend exec tsx scripts/billing-admin.ts status <clinicId>
 //   pnpm --filter backend exec tsx scripts/billing-admin.ts provision <clinicId> <plan> [status]
 //   pnpm --filter backend exec tsx scripts/billing-admin.ts transition <clinicId> <toStatus>
@@ -212,6 +215,57 @@ async function cmdSelftest(): Promise<void> {
   log('\nALL SELFTESTS PASSED');
 }
 
+// Asaas adapter selftest — Sprint 5.1E. PURE logic only: token verification,
+// webhook parsing, status mapping. NO network, NO secrets printed. Runs without
+// ASAAS_ENV=sandbox (it exercises the exported pure helpers with explicit args).
+async function cmdAsaasSelftest(): Promise<void> {
+  log('== asaas: webhook token verify (timing-safe, NOT HMAC) ==');
+  assert(verifyAsaasToken('s3cr3t-token', 's3cr3t-token'), 'correct token accepted');
+  assert(!verifyAsaasToken('wrong-token', 's3cr3t-token'), 'invalid token rejected');
+  assert(!verifyAsaasToken(undefined, 's3cr3t-token'), 'missing provided token rejected');
+  assert(!verifyAsaasToken('s3cr3t-token', undefined), 'no configured secret → reject (fail closed)');
+  assert(!verifyAsaasToken('', 's3cr3t-token'), 'empty token rejected');
+  assert(!verifyAsaasToken('short', 's3cr3t-token-longer'), 'length mismatch rejected');
+
+  log('== asaas: webhook parser (CHARGE-centric envelope) ==');
+  const ev = asaasProvider.parseWebhookEvent(
+    JSON.stringify({
+      id: 'evt_sandbox_123',
+      event: 'PAYMENT_RECEIVED',
+      payment: { id: 'pay_1', customer: 'cus_1', subscription: 'sub_1', status: 'RECEIVED' },
+    }),
+  );
+  assert(ev.external_event_id === 'evt_sandbox_123', 'parses stable event id');
+  assert(ev.type === 'PAYMENT_RECEIVED', 'parses event type');
+  assert(ev.external_customer_id === 'cus_1', 'parses customer id (internal tenant resolution)');
+  assert(ev.external_subscription_id === 'sub_1', 'parses subscription id (internal tenant resolution)');
+
+  let threwMissing = false;
+  try {
+    asaasProvider.parseWebhookEvent(JSON.stringify({ event: 'PAYMENT_RECEIVED' }));
+  } catch {
+    threwMissing = true;
+  }
+  assert(threwMissing, 'missing event id → throws (no stable idempotency key)');
+
+  let threwJson = false;
+  try {
+    asaasProvider.parseWebhookEvent('not-json');
+  } catch {
+    threwJson = true;
+  }
+  assert(threwJson, 'invalid JSON → throws');
+
+  log('== asaas: event → internal status mapping ==');
+  assert(mapAsaasEventToInternalStatus('PAYMENT_CONFIRMED') === 'active', 'confirmed → active');
+  assert(mapAsaasEventToInternalStatus('PAYMENT_RECEIVED') === 'active', 'received → active');
+  assert(mapAsaasEventToInternalStatus('PAYMENT_OVERDUE') === 'past_due', 'overdue → past_due');
+  assert(mapAsaasEventToInternalStatus('PAYMENT_DELETED') === null, 'deleted → null (no auto transition)');
+  assert(mapAsaasEventToInternalStatus('UNKNOWN_EVENT') === null, 'unknown event → null (safe no-op)');
+
+  log('\nASAAS SELFTEST PASSED (pure logic, no network, no secrets printed)');
+}
+
 async function main(): Promise<void> {
   if (env.NODE_ENV === 'production') {
     // eslint-disable-next-line no-console
@@ -223,6 +277,9 @@ async function main(): Promise<void> {
     switch (cmd) {
       case 'selftest':
         await cmdSelftest();
+        break;
+      case 'asaas:selftest':
+        await cmdAsaasSelftest();
         break;
       case 'status':
         await cmdStatus(process.argv[3]);
@@ -243,7 +300,7 @@ async function main(): Promise<void> {
       default:
         // eslint-disable-next-line no-console
         console.error(
-          'Usage: tsx scripts/billing-admin.ts <selftest|status|provision|transition|cleanup> [args]',
+          'Usage: tsx scripts/billing-admin.ts <selftest|asaas:selftest|status|provision|transition|cleanup> [args]',
         );
         process.exit(2);
     }

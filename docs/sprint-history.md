@@ -7557,3 +7557,70 @@ Docs-only. **Sem** backend, migration, endpoint, webhook real, SDK, env/secret, 
 ### Checks
 
 docs-only. `git diff --check` rc=0 ✅ · `git status --short` (só docs alterados) ✅. Sem typecheck/build (nenhum código tocado).
+
+---
+
+## Sprint 5.1E (2026-05-28) — AsaasProvider sandbox adapter v0.1
+
+Backend-only (frontend intocado). **Sem** cobrança real, checkout real, webhook público de produção, SDK, secret commitado, PII de paciente, mudança no financeiro da clínica (ADR 0012), soft-lock em rotas existentes, ou mudança grande em `billingService`. **Sem migration** (reusa as 5 tabelas billing da 5.1B). **Nenhuma chamada real ao sandbox** (sem conta/chave Asaas).
+
+### Diagnóstico da interface `BillingProvider`
+
+A interface da 5.1B já estava pronta para Asaas: `name` inclui `'asaas'`; `verifyWebhookSignature(rawBody, headers)` e `parseWebhookEvent(rawBody)` casam com o modelo Asaas (token no header + envelope JSON). **Nenhuma mudança de interface foi necessária.** `getCustomerPortalUrl?` fica indefinido (portal do pagador Asaas = `[VERIFICAR]`).
+
+### Decisão de design
+
+- **Adapter ao lado do mock**, sem tocar a lógica de negócio. `billingService` **inalterado**; o webhook vive num **serviço novo** (`billingWebhookService.ts`) para não inflar o service de status.
+- **`fetch` nativo** (Node 18+), **sem SDK**.
+- **Base URL hardcoded** no host de sandbox (não env-configurável) para impedir apontar "sandbox" para produção.
+- **Mapping de status em módulo puro** isolado (`billingAsaasMapping.ts`), testável sem rede.
+- **Webhook RECORD-only** em v0.1: registra o evento verificado + computa o status interno pretendido, mas **não muta a assinatura nem aciona soft-lock** (aplicar transição via webhook fica para sprint futura com revisão própria — ADR 0018 §6/§7).
+
+### Arquivos novos
+
+`backend/src/services/billingAsaasProvider.ts` · `billingAsaasMapping.ts` · `billingWebhookService.ts` · `backend/src/controllers/billingWebhookController.ts`.
+
+### Arquivos alterados
+
+`env.ts` (3 envs + 2 guards) · `logger.ts` (redação) · `rateLimit.ts` (`billingWebhookRateLimit`) · `routes/billing.ts` (rota webhook) · `scripts/billing-admin.ts` (`asaas:selftest`) · `.env.example`.
+
+### Env/config
+
+- `ASAAS_ENV` = `disabled` (default) | `sandbox`. **Sem** valor `production`. Guard: produção recusa qualquer valor ≠ `disabled` (gateway real proibido até 5.2A).
+- `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` — secrets, **só por env**, nunca commitados/logados. Guard: `sandbox` exige ambos.
+
+### Webhook — verificação / idempotência / tenant isolation
+
+- **Rota:** `POST /billing/webhooks/asaas/sandbox` — sem `requireAuth`/`requireClinic`; IP-rate-limited; **404** se `ASAAS_ENV !== 'sandbox'`.
+- **Verificação:** token compartilhado no header `asaas-access-token`, comparado com `crypto.timingSafeEqual` (**NÃO é HMAC** — documentado). Token ausente/inválido → audit `billing.webhook.rejected` + 401.
+- **Idempotência:** `billing_events.recordIfNew` (`UNIQUE(provider, external_event_id)`); reenvio = no-op (200 rápido).
+- **Tenant:** resolvido **só** por `billing_provider_subscriptions`/`billing_provider_customers` (mapa interno); **nunca** do payload. Sem mapeamento → evento gravado como `ignored`, `clinica_id=null`, sem vazar dado.
+- **Metadata-only:** guarda `payload_hash` (sha256), nunca o payload cru; audit sem PII/valor.
+
+### Status mapping Asaas → interno
+
+`PAYMENT_CONFIRMED`/`PAYMENT_RECEIVED`/`PAYMENT_RECEIVED_IN_CASH` → `active` · `PAYMENT_OVERDUE` → `past_due` · resto (delete/refund/chargeback/desconhecido) → `null` (sem transição automática). Subconjunto documentado; **lista real `[VERIFICAR]`**.
+
+### Como evitou secrets/PII/logs sensíveis
+
+API key só em header de requisição outbound (nunca logada — em falha loga só status HTTP + path). Token de webhook nunca logado. Logger redige `asaas_api_key`/`asaas_webhook_token`/`req.headers["asaas-access-token"]`. Ao provider só vai a identidade de cobrança da clínica (nome/e-mail/CPF-CNPJ do responsável) — **zero PII de paciente**.
+
+### Chamada sandbox real?
+
+**Não** — sem conta/chave Asaas no ambiente. Adapter implementado + lógica pura validada + webhook validado E2E contra DB real com token fake. Chamadas reais pendentes: `createCustomer`/`createSubscription`/`getSubscription`/`cancelSubscription` (precisam de chave sandbox).
+
+### `[VERIFICAR]` resolvidos / pendentes
+
+**Resolvido:** nenhum de forma definitiva (exigem sandbox real). **Pendentes (todos):** `Idempotency-Key` na API REST; Pix recorrente (QR por ciclo vs Pix Automático); limite PF/MEI p/ recorrência B2B; portal do pagador; campo estável de event id no payload real (assumido `payload.id`); lista real de status/eventos.
+
+### Validação local
+
+`asaas:selftest` ✅ (6 token + 6 parser + 5 mapping). Webhook E2E (script throwaway, removido): token ausente/inválido→401; válido+tenant não mapeado→`ignored_unmapped` (clinica_id null); reenvio→`duplicate` (1 linha); nenhum secret em log.
+
+### Checks
+
+backend typecheck ✅ · build ✅ · frontend typecheck ✅ · migrate (nenhuma pendente) ✅ · `git diff --check` rc=0 ✅.
+
+### Próxima
+
+Validar em **sandbox real** (conta fictícia + chave; provision + webhook reais; resolver `[VERIFICAR]`) → adendo à ADR 0018. Alternativa: voltar ao produto.

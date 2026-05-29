@@ -226,12 +226,37 @@ portal do cliente, disponibilidade atual no Brasil. **Não cravar sem fonte ofic
       sprint: spike é docs-only, sem conta/API key/requisição).
 - [ ] **Adendo à ADR 0018** com a escolha formal + fontes — **só após sandbox** (5.1E).
 
-### 5.1E — QA/security billing hardening
-- [ ] Idempotência (reenvio de evento = no-op).
-- [ ] Verificação de assinatura (evento forjado rejeitado).
-- [ ] Tenant isolation de webhook (payload com `clinica_id` alheio não tem efeito).
-- [ ] Soft-lock validado (suspended bloqueia escrita, mantém leitura/export).
-- [ ] Greps: sem PAN/cartão, sem PII de paciente para gateway, sem segredo em log.
+### 5.1E — AsaasProvider sandbox adapter v0.1 — ✅ ENTREGUE (2026-05-28)
+- [x] `AsaasProvider implements BillingProvider` (`billingAsaasProvider.ts`) — sem
+      mudar a interface; `fetch` nativo, sem SDK; base URL **hardcoded** no host de
+      sandbox; outbound recusa se não-sandbox/sem chave.
+- [x] Mapping puro `mapAsaasEventToInternalStatus` (`billingAsaasMapping.ts`).
+- [x] `billingWebhookService.ts` + `billingWebhookController.ts` + rota env-gated
+      `POST /billing/webhooks/asaas/sandbox` (sem auth JWT; IP-rate-limited).
+- [x] **Verificação de webhook** = token compartilhado (`asaas-access-token`) com
+      `timingSafeEqual` (**não HMAC** — documentado); inválido/ausente → 401 +
+      `billing.webhook.rejected`.
+- [x] **Idempotência** por `billing_events.recordIfNew` (reenvio = no-op).
+- [x] **Tenant isolation:** resolvido só por mapa interno; payload nunca decide
+      tenant; sem mapeamento → `ignored`/`clinica_id=null`.
+- [x] Envs `ASAAS_ENV`/`ASAAS_API_KEY`/`ASAAS_WEBHOOK_TOKEN` (só env, nunca
+      commit/log); guards (sandbox exige secrets; produção recusa ≠ disabled).
+- [x] Logger redige secrets + header do token. **Sem PAN/cartão** (nunca modelado);
+      **sem PII de paciente** ao gateway (só identidade de cobrança da clínica).
+- [x] `scripts/billing-admin.ts asaas:selftest` (puro) + validação E2E do webhook
+      contra DB real com token fake (token ausente/inválido→401; idempotência;
+      tenant não mapeado→ignored).
+- [ ] **Soft-lock NÃO acionado em rotas existentes** (intencional, fora do escopo
+      desta sprint) — aplicar transição via webhook fica para sprint futura.
+- [ ] **Validação em sandbox REAL** (conta/chave Asaas) — pendente: resolve os
+      `[VERIFICAR]` e habilita o **adendo à ADR 0018**.
+
+### 5.1E-bis (futuro) — QA/security billing hardening (sandbox real)
+- [ ] Rodar `createCustomer`/`createSubscription`/webhook contra sandbox real.
+- [ ] Confirmar campo estável de event id + lista real de eventos/status.
+- [ ] Resolver `Idempotency-Key` API REST, Pix recorrente, PF/MEI B2B, portal.
+- [ ] Greps finais: sem PAN/cartão, sem PII de paciente, sem segredo em log.
+- [ ] **Adendo à ADR 0018** com a decisão formal + fontes.
 
 ---
 

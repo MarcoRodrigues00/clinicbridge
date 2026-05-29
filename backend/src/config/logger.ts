@@ -229,6 +229,18 @@ const redactPaths = [
   'body.reason',
   'req.body.reason',
   'payload.reason',
+
+  // Sprint 5.1E — Asaas sandbox gateway secrets (ADR 0018 §13).
+  // The API key and webhook token are read ONLY from env and never passed to the
+  // logger by discipline; these paths are the defense-in-depth safety net
+  // against an accidental `logger.info({ ... })` that includes them or the
+  // inbound `asaas-access-token` header. fast-redact bracket syntax handles the
+  // dashed header key.
+  'asaas_api_key',
+  'asaas_webhook_token',
+  '*.asaas_api_key',
+  '*.asaas_webhook_token',
+  'req.headers["asaas-access-token"]',
 ];
 
 export const logger = pino({

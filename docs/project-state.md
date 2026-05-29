@@ -7,6 +7,32 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.1E** (entregue 2026-05-28) — **AsaasProvider sandbox adapter v0.1.**
+
+Backend-only (frontend intocado). **Sem** cobrança real, checkout real, webhook público de produção, secret commitado, PII de paciente, alteração no financeiro da clínica, soft-lock em rotas existentes, ou mudança grande em `billingService`. **Sem migration** (reusa as 5 tabelas billing da 5.1B). **Nenhuma chamada real ao sandbox** (sem conta/chave Asaas).
+
+**Implementado:**
+- `billingAsaasProvider.ts` — `AsaasProvider implements BillingProvider` (sem mudar a interface). HTTP via `fetch` nativo (sem SDK). Base URL **hardcoded** no host de sandbox (`api-sandbox.asaas.com/v3`) — não env-configurável (anti-footgun). Métodos outbound recusam se `ASAAS_ENV !== 'sandbox'` ou sem `ASAAS_API_KEY`. Exporta `verifyAsaasToken()` (puro) e `isAsaasSandboxEnabled()`.
+- `billingAsaasMapping.ts` — função pura `mapAsaasEventToInternalStatus()` (PAYMENT_CONFIRMED/RECEIVED→active, PAYMENT_OVERDUE→past_due, resto→null).
+- `billingWebhookService.ts` — orquestra: gate sandbox (404) → verifica token (timing-safe, **não HMAC**) → parse → resolve tenant **só por mapa interno** → `billing_events.recordIfNew` (idempotente) → audit metadata-only. **Não muta a assinatura nem aciona soft-lock** (deferido).
+- `billingWebhookController.ts` + rota `POST /billing/webhooks/asaas/sandbox` (sem `requireAuth`/`requireClinic`; IP-rate-limited via novo `billingWebhookRateLimit`).
+- `env.ts`: `ASAAS_ENV=disabled|sandbox` (default disabled; **sem** valor production), `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` (secrets, só por env). Guards: sandbox exige ambos os secrets; **produção recusa** `ASAAS_ENV !== 'disabled'`.
+- `logger.ts`: redação defensiva dos secrets + header `asaas-access-token`.
+- `billing-admin.ts`: comando `asaas:selftest` (lógica pura, sem rede, sem secret impresso).
+- `.env.example`: placeholders Asaas (sem valores reais).
+
+**Validação local (sem Asaas real):** `asaas:selftest` ✅ (token ok/inválido/ausente/sem-secret; parser; mapping). Webhook E2E contra DB real com token fake ✅: token ausente/inválido→401; token válido + tenant não mapeado→`ignored_unmapped` (clinica_id=null); reenvio do mesmo event id→`duplicate` (1 linha em `billing_events`); nenhum secret em log.
+
+**Pendente (precisa conta/chave sandbox real):** todos os `[VERIFICAR]` da 5.1D continuam abertos — `Idempotency-Key` na API REST, Pix recorrente real, limite PF/MEI B2B, portal do pagador, campo estável de event id no payload real, lista real de status. O adapter assume `payload.id` como event id e um subconjunto documentado de eventos — **a confirmar contra payloads reais**.
+
+**Checks:** backend typecheck ✅ · build ✅ · frontend typecheck ✅ · migrate (nenhuma pendente) ✅ · `git diff --check` rc=0 ✅.
+
+**Não criada ADR 0019:** decisão final (adendo à ADR 0018) só após validação em sandbox real.
+
+**Próxima:** validar em **sandbox real** (criar conta fictícia + chave; rodar provision/webhook reais; resolver `[VERIFICAR]`) → então adendo à ADR 0018. Alternativa: voltar ao produto (validação visual 6.0x).
+
+---
+
 **Sprint 5.1D** (entregue 2026-05-28) — **Spike billing: Asaas vs Stripe (research/docs-only).**
 
 Docs-only. **Sem** backend, migration, endpoint, webhook real, SDK, env/secret, checkout, cobrança real ou alteração em `billingService`/`SubscriptionPanel`. Nenhum gateway ligado.
