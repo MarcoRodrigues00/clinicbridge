@@ -7,6 +7,26 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0M** (entregue 2026-05-29, backend-only) — **Hardening permissões/tenant pré-piloto: defense-in-depth no par Agenda (`requireRole` em clinic-professionals + appointments).**
+
+Auditoria de permissão/tenant nos endpoints administrativos + correção de 1 P1 pequeno. **Sem** migration, seed, billing/Asaas, AWS, mudança de RBAC/MFA/JWT, nem mudança de fluxo/UX. Sem commit.
+
+**Achado da auditoria:** todo módulo administrativo gateia leitura com `requireRole(['dono_clinica','secretaria'])` e escrita com `requireRole(['dono_clinica'])` (clinic-services, financial, insurance, inventory, reports, clinical-roles/read-audit owner-only, billing/status). **Exceção:** o "par Agenda" — `GET /clinic-professionals` e **todas** as rotas `appointments` — usava só `requireAuth + requireClinic`. Funcionalmente idêntico hoje (apenas `dono_clinica`/`secretaria` alcançam uma clínica; `admin_sistema` cai em `requireClinic` → `no_clinic_context`), mas faltava a camada explícita de `requireRole`.
+
+**Decisão sobre `GET /clinic-professionals`:** **não** restringir a owner-only (quebraria a Agenda para a secretária, que é quem mais usa, e para grants gestor/profissional que rodam sobre `papel=secretaria`). Em vez disso, adicionada a mesma allowlist de leitura `['dono_clinica','secretaria']` por **defense-in-depth/consistência**, sem mudar quem acessa. Mesma allowlist aplicada às 5 rotas `appointments` (par Agenda completo). Lista é administrativa (nome + label), **sem PII e sem dados clínicos**; DAO `listByClinic`/`findByIdForClinic` sempre filtra `clinica_id` (sem `listAll`).
+
+**Mudanças (2 arquivos):** `routes/clinicProfessionals.ts` (GET ganha `requireRole(scheduleReadAllowlist)`), `routes/appointments.ts` (importa `requireRole`; `requireRole(appointmentsAllowlist)` nas 5 rotas).
+
+**Smoke (container rebuild + recreate, via nginx 8443):**
+- `GET /clinic-professionals` e `GET /appointments`: dono ✅200 · secretaria ✅200 · gestor ✅200 · profissional(grant) ✅200 · **admin_sistema 403** (`no_clinic_context`, bloqueio na camada tenant antes do role) · sem token 401.
+- Tenant isolation: `GET /appointments/:id` de **outra clínica** por smoke.owner → **404 genérico** `appointment_not_found` (anti-enumeration); própria clínica → 200.
+
+**Checks:** backend typecheck ✅ · backend build ✅ · frontend typecheck ✅ · migrate:status 19/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅. Sem commit.
+
+**Backlog/observações:** demais módulos já consistentes (nenhum endpoint list/update/delete sem tenant check encontrado). Unificação Equipe × Profissionais da agenda × grants clínicos e RBAC granular seguem fora de escopo (exigem ADR). Smoke cross-tenant usou dados sintéticos já existentes (3 clínicas com appointments) — sem fixture nova.
+
+---
+
 **Micro Sprint 6.0L.1** (entregue 2026-05-29, frontend-only, 1 linha) — **Correção do 400 em `GET /insurance/plans?limit=200` (aba Convênios).**
 
 Achado não bloqueante da validação 6.0L. **Causa raiz:** o `plansQuery` compartilhado do `InsurancePanel.tsx` pedia `limit: 200`, mas o backend (`insuranceService.ts`, `LIST_MAX_LIMIT = 100`) recusa com `400 insurance_invalid` ("limit deve estar entre 1 e 100"). Os demais call-sites (planos por seção, providers, serviços) já usavam `limit: 100`. **Correção mínima:** `200 → 100` no único call-site fora do padrão, alinhado ao cap do backend e ao limite MVP do módulo. **Sem** backend, migration, validação, seed, billing, AWS ou mudança de regra de convênio. Sem commit.

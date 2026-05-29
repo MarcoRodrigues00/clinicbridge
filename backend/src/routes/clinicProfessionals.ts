@@ -16,11 +16,22 @@ import { asyncHandler } from '../utils/asyncHandler';
 // Owner-only writes; reads allowed for owner + secretaria.
 export const clinicProfessionalsRouter = Router();
 
+// Read allowlist (Sprint 6.0M hardening). The agenda professional list is
+// non-PII administrative data consumed by Agenda and Serviços, so reads stay
+// open to the whole operational staff (dono + secretaria) — but we add the
+// explicit requireRole layer that every other administrative read already has,
+// for defense-in-depth and consistency. requireClinic already blocks
+// admin_sistema (no clinica_id) and deactivated members; this never narrows the
+// agenda flow for legitimate users (gestor/profissional grants ride on
+// papel=secretaria and remain allowed).
+const scheduleReadAllowlist = ['dono_clinica', 'secretaria'] as const;
+
 clinicProfessionalsRouter.get(
   '/clinic-professionals',
   patientsRateLimit,
   requireAuth,
   requireClinic,
+  requireRole(scheduleReadAllowlist),
   asyncHandler(clinicProfessionalController.list),
 );
 

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { appointmentController } from '../controllers/appointmentController';
-import { requireAuth, requireClinic } from '../middlewares/requireAuth';
+import { requireAuth, requireClinic, requireRole } from '../middlewares/requireAuth';
 import { patientsRateLimit } from '../middlewares/rateLimit';
 import { asyncHandler } from '../utils/asyncHandler';
 
@@ -11,11 +11,20 @@ import { asyncHandler } from '../utils/asyncHandler';
 // Reuses the IP-keyed patientsRateLimit (runs before auth).
 export const appointmentsRouter = Router();
 
+// Operational allowlist (Sprint 6.0M hardening). Both staff papéis operate the
+// agenda (reads + writes), so the allowlist is broad — but we add the explicit
+// requireRole layer that the other administrative modules already have, for
+// defense-in-depth and consistency. requireClinic already blocks admin_sistema
+// (no clinica_id) and deactivated members; this does not change behavior for any
+// papel that can legitimately reach a clinic.
+const appointmentsAllowlist = ['dono_clinica', 'secretaria'] as const;
+
 appointmentsRouter.get(
   '/appointments',
   patientsRateLimit,
   requireAuth,
   requireClinic,
+  requireRole(appointmentsAllowlist),
   asyncHandler(appointmentController.list),
 );
 
@@ -24,6 +33,7 @@ appointmentsRouter.post(
   patientsRateLimit,
   requireAuth,
   requireClinic,
+  requireRole(appointmentsAllowlist),
   asyncHandler(appointmentController.create),
 );
 
@@ -32,6 +42,7 @@ appointmentsRouter.get(
   patientsRateLimit,
   requireAuth,
   requireClinic,
+  requireRole(appointmentsAllowlist),
   asyncHandler(appointmentController.detail),
 );
 
@@ -40,6 +51,7 @@ appointmentsRouter.patch(
   patientsRateLimit,
   requireAuth,
   requireClinic,
+  requireRole(appointmentsAllowlist),
   asyncHandler(appointmentController.updateStatus),
 );
 
@@ -48,5 +60,6 @@ appointmentsRouter.patch(
   patientsRateLimit,
   requireAuth,
   requireClinic,
+  requireRole(appointmentsAllowlist),
   asyncHandler(appointmentController.reschedule),
 );
