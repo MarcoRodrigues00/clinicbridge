@@ -10,7 +10,7 @@
 // stylesheet for visual consistency.
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, Crown, UserPlus, Loader2, Info } from 'lucide-react';
+import { ShieldCheck, Crown, UserPlus, Loader2, Info, HelpCircle } from 'lucide-react';
 import {
   api,
   ApiError,
@@ -39,7 +39,7 @@ function governanceError(err: unknown): string {
   return 'Operação não concluída. Tente novamente.';
 }
 
-export function GovernancePanel(): JSX.Element | null {
+export function GovernancePanel({ onAuriTour }: { onAuriTour?: () => void } = {}): JSX.Element | null {
   const { user } = useAuth();
   const token = getToken();
   const queryClient = useQueryClient();
@@ -117,12 +117,25 @@ export function GovernancePanel(): JSX.Element | null {
   }
 
   return (
-    <div className={styles.rolesPanel}>
+    <div className={styles.rolesPanel} data-tour-id="governance-panel">
       <div>
-        <p className={styles.rolesPanelTitle}>
-          <ShieldCheck size={18} aria-hidden="true" />
-          Governança da clínica
-        </p>
+        <div className={styles.governanceHeader}>
+          <p className={styles.rolesPanelTitle}>
+            <ShieldCheck size={18} aria-hidden="true" />
+            Governança da clínica
+          </p>
+          {onAuriTour && (
+            <button
+              type="button"
+              className={styles.auriBtn}
+              onClick={onAuriTour}
+              title="Auri explica este módulo"
+            >
+              <HelpCircle size={14} aria-hidden="true" />
+              Auri explica
+            </button>
+          )}
+        </div>
         <p className={styles.rolesPanelSubtitle}>
           Quem responde pela conta. O <strong>Titular</strong> é o responsável
           principal; <strong>Administradores</strong> ajudam na gestão. Ser

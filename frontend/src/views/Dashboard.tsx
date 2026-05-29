@@ -491,7 +491,7 @@ export function Dashboard(): JSX.Element {
             </div>
             <RolePermissionsGuide />
             <TeamManagementPanel />
-            <GovernancePanel />
+            <GovernancePanel onAuriTour={() => openModuleTour(TOUR_IDS.TEAM)} />
             <ClinicProfessionalsPanel />
             <ClinicalRolesPanel />
           </PanelErrorBoundary>

@@ -617,6 +617,37 @@
   color: var(--text-0);
 }
 
+/* Sprint 6.1C.1: title row that keeps the "Auri explica" button beside the
+   governance title and wraps gracefully on narrow screens (mobile-light). */
+.governanceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.auriBtn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border-strong);
+  color: var(--text-2);
+  border-radius: var(--r-sm);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.auriBtn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan-soft);
+}
+
 .rolesPanelSubtitle {
   margin-top: 0.4rem;
   color: var(--text-1);

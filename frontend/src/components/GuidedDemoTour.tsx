@@ -50,6 +50,7 @@ export const TOUR_IDS = {
   INVENTORY: 'inventory',     // future: item, movimento, estoque baixo
   REPORTS: 'reports',         // future: período e interpretação dos cards
   PLAN: 'plan',               // future: assinatura, limites, pagamento
+  TEAM: 'team',               // Sprint 6.1C.1: governança da clínica (aba Equipe)
 } as const;
 
 export type TourId = (typeof TOUR_IDS)[keyof typeof TOUR_IDS];
@@ -281,6 +282,27 @@ export const PLAN_TOUR_STEPS: DemoTourStep[] = [
   },
 ];
 
+// Clinic Governance tour (Sprint 6.1C.1): explains the governance axis added in
+// 6.1C. Short on purpose. Promises NOTHING that does not exist yet — no revoke,
+// no titularity transfer, no clinical access, no real billing.
+export const TEAM_TOUR_STEPS: DemoTourStep[] = [
+  {
+    id: 'tm-welcome', tab: null, targetId: null, mood: 'wave',
+    title: 'Governança da clínica',
+    body: 'Governança define quem administra a clínica. O Titular responde pela conta.',
+  },
+  {
+    id: 'tm-roles', tab: null, targetId: 'governance-panel', mood: 'happy',
+    title: 'Titular e Administradores',
+    body: 'Administradores ajudam na gestão — como serviços e configurações permitidas. O Titular segue como responsável principal.',
+  },
+  {
+    id: 'tm-clinical', tab: null, targetId: null, mood: 'neutral',
+    title: 'Acesso clínico é separado',
+    body: 'Ser Administrador não libera o prontuário automaticamente. O acesso clínico continua separado, em Acesso ao prontuário.',
+  },
+];
+
 // Map used by Dashboard to resolve the active module tour steps.
 // ClinicalDocumentsPanel manages its own tour state (nested context, not top-level tab).
 export const MODULE_TOUR_STEPS: Partial<Record<TourId, DemoTourStep[]>> = {
@@ -291,6 +313,7 @@ export const MODULE_TOUR_STEPS: Partial<Record<TourId, DemoTourStep[]>> = {
   [TOUR_IDS.INVENTORY]: INVENTORY_TOUR_STEPS,
   [TOUR_IDS.REPORTS]: REPORTS_TOUR_STEPS,
   [TOUR_IDS.PLAN]: PLAN_TOUR_STEPS,
+  [TOUR_IDS.TEAM]: TEAM_TOUR_STEPS,
 };
 
 // ── App onboarding steps (Sprint 6.0C) ───────────────────────────────────────
