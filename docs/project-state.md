@@ -7,6 +7,14 @@
 
 ## Última sprint aprovada
 
+**Micro Sprint 6.0L.1** (entregue 2026-05-29, frontend-only, 1 linha) — **Correção do 400 em `GET /insurance/plans?limit=200` (aba Convênios).**
+
+Achado não bloqueante da validação 6.0L. **Causa raiz:** o `plansQuery` compartilhado do `InsurancePanel.tsx` pedia `limit: 200`, mas o backend (`insuranceService.ts`, `LIST_MAX_LIMIT = 100`) recusa com `400 insurance_invalid` ("limit deve estar entre 1 e 100"). Os demais call-sites (planos por seção, providers, serviços) já usavam `limit: 100`. **Correção mínima:** `200 → 100` no único call-site fora do padrão, alinhado ao cap do backend e ao limite MVP do módulo. **Sem** backend, migration, validação, seed, billing, AWS ou mudança de regra de convênio. Sem commit.
+
+**Checks:** frontend typecheck ✅ · frontend build ✅ · backend typecheck ✅ · migrate:status 19/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅. 1 arquivo (`InsurancePanel.tsx`). **Validação UI:** aba Convênios + as 3 sub-seções (Carteirinhas / Convênios aceitos / Preços) → `/insurance/plans?limit=100` retorna 200, **nenhum ≥400**; planos/preços carregam normalmente.
+
+---
+
 **Sprint 6.0L** (entregue 2026-05-29, frontend-only) — **Hardening frontend pré-piloto: error boundaries por painel + queryKeys escalares.**
 
 Redução de risco de tela branca e cache frágil antes do piloto. **Sem** mudança de regra de negócio, backend, migration, auth, tenant, permissões, billing/Asaas, AWS ou seed. Sem commit.
