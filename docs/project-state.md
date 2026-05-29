@@ -7,6 +7,26 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.1A** (entregue 2026-05-29, backend-only) — **Fundação de Governança da Clínica v0.1 (ADR 0019): tabela `clinic_governance_members` + backfill titular + endpoints read-only/promote.**
+
+Base backend segura para governança (Titular/Administrador), **sem frontend**. **Sem** billing, sem mexer em `user_clinical_roles`, sem RBAC existente alterado, sem acesso clínico automático. Sem commit.
+
+**Migration `20260609000000_clinic_governance_v0`:** tabela `clinic_governance_members` (`clinica_id` FK CASCADE, `user_id` FK CASCADE, `governance_role` CHECK `titular|administrador`, `status` CHECK `active|revoked`, `created_at/created_by_user_id` SET NULL, `revoked_at/revoked_by_user_id` SET NULL, `revoke_reason` varchar(200) nullable — nunca PII/audit). CHECKs de consistência status×revoked_at. **2 índices únicos parciais:** 1 governança ativa por `(clinica_id,user_id)`; **1 titular ativo por clínica**. **Backfill:** pré-check aborta se clínica tiver >1 `dono_clinica` ativo; pula clínica sem dono (não inventa titular); `INSERT ... WHERE NOT EXISTS` (idempotente dev). Aplicado: **25 clínicas → 25 titulares** (cada uma com 1 dono ativo; 0 ambíguas/órfãs).
+
+**Backend (6 arquivos novos + 3 editados):** `db.d.ts` (`ClinicGovernanceMemberRow` + tipos + registro `Tables`); `dao/clinicGovernanceDao.ts` (sempre tenant-scoped, sem `listAll`); `services/clinicGovernanceService.ts` (helpers `getGovernanceForClinic`/`getGovernanceMember`/`assertClinicTitular`/`assertClinicAdministratorOrTitular` + `listForClinic` + `promoteAdministrator`); `controllers/clinicGovernanceController.ts`; `routes/clinicGovernance.ts`; mount em `app.ts`.
+
+**Endpoints:** `GET /clinic-governance` (requireAuth+requireClinic+`requireRole(CLINIC_ADMIN_ROLES)`; metadata-only: user_id/nome/email/governance_role/status/created_at; audit `clinic.governance.list`). `POST /clinic-governance/admins` (promove membro a `administrador`; **titular-only** = route requireRole + service `assertClinicTitular`; **não cria grant clínico**; audit `clinic.governance.admin.granted`). Auditoria **metadata-only** (recurso_id = id da linha de governança, **nunca** user_id).
+
+**Smoke (container rebuild+recreate, via 8443):**
+- `GET /clinic-governance`: owner ✅200 (só a própria clínica — tenant-scoped) · secretaria/gestor/profissional 403 `forbidden_role` · admin_sistema 403 `no_clinic_context` · sem token 401.
+- `POST /clinic-governance/admins`: titular→secretaria mesma clínica ✅201 · re-promover 400 `governance_member_exists` · promover o próprio titular 400 · secretaria 403 `forbidden_role` · admin_sistema 403 `no_clinic_context` · cross-tenant 404 `member_not_found` · admin_sistema-alvo 404 · **0 grants clínicos criados**. Constraint de 2º titular ativo rejeitada no DB. Linha administrador de teste removida (cleanup).
+
+**Fora desta sprint (schema-ready, sem endpoint):** revoke de governança, transferência de titularidade, exclusão de clínica, cancelamento de assinatura. `administrador` ainda **não concede poder real** (enforcement = sprint futura). Sem frontend, sem billing, sem RBAC novo. Próximas: 6.1B backend (enforcement matriz A/B/C + transferência/offboarding) · 6.1C frontend · 6.1D audit/QA.
+
+**Checks:** backend typecheck ✅ · backend build ✅ · frontend typecheck ✅ · migrate:latest ✅ (batch 20) · migrate:status 20/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅. Sem commit.
+
+---
+
 **Sprint 6.0N** (entregue 2026-05-29, docs/ADR-only) — **ADR 0019 Governança da Clínica, Sócios e Administradores v0.1.**
 
 Decisão de arquitetura (sem código) para a dor de sócios/coadministradores em clínicas pequenas. **Sem** código, schema, migration, RBAC, billing ou seed. Sem commit.

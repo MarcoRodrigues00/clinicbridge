@@ -547,6 +547,33 @@ export interface UserClinicalRoleRow {
   revoked_by_user_id: string | null;
 }
 
+// Clinic Governance v0.1 — Sprint 6.1A (ADR 0019).
+//
+// GOVERNANCE axis (Titular / Administrador). Orthogonal to clinical access
+// (user_clinical_roles) and to billing (clinic_subscriptions). Being an
+// Administrador/Titular grants NO clinical access and NO billing power on its
+// own. Tenant-scoped by clinica_id. No physical delete: revocation flips
+// status='revoked' + revoked_at.
+export type ClinicGovernanceRole = 'titular' | 'administrador';
+
+export type ClinicGovernanceStatus = 'active' | 'revoked';
+
+export interface ClinicGovernanceMemberRow {
+  id: string;
+  clinica_id: string;
+  user_id: string;
+  governance_role: ClinicGovernanceRole;
+  status: ClinicGovernanceStatus;
+  created_at: Date;
+  created_by_user_id: string | null;
+  // status='active' ⇒ revoked_at IS NULL. Active uniqueness enforced by partial
+  // unique indexes on (clinica_id, user_id) and on (clinica_id) for titular.
+  revoked_at: Date | null;
+  revoked_by_user_id: string | null;
+  // Length-bounded administrative reason. NEVER PII; NEVER written to audit_logs.
+  revoke_reason: string | null;
+}
+
 // Plans, Billing & Entitlements v0.1 — Sprint 5.1B (ADR 0018).
 //
 // COMMERCIAL layer — the ClinicBridge SaaS charging the CLINIC. NOT the clinic's
@@ -653,6 +680,7 @@ declare module 'knex/types/tables' {
     clinical_read_audit: ClinicalReadAuditRow;
     clinical_documents: ClinicalDocumentRow;
     user_clinical_roles: UserClinicalRoleRow;
+    clinic_governance_members: ClinicGovernanceMemberRow;
     financial_charges: FinancialChargeRow;
     clinic_services: ClinicServiceRow;
     professional_services: ProfessionalServiceRow;
