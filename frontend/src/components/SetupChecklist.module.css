@@ -231,3 +231,59 @@
   .badge { display: none; }
   .openBtn { justify-self: start; }
 }
+
+/* Solo-practitioner nudge (Sprint 6.0K). */
+.soloNudge {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin: 0.4rem 0 0.9rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--r-sm);
+  background: rgba(34, 211, 238, 0.06);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+}
+
+.soloNudge > svg {
+  color: var(--cyan);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.soloNudgeBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.soloNudgeText {
+  font-size: 0.86rem;
+  color: var(--text-2);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.soloNudgeText strong {
+  color: var(--text-0);
+  font-weight: 700;
+}
+
+.soloNudgeBtn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.38rem 0.7rem;
+  border-radius: var(--r-sm);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #04121a;
+  background: var(--cyan);
+  border: 1px solid transparent;
+}
+
+.soloNudgeBtn:hover {
+  background: var(--cyan-soft);
+}

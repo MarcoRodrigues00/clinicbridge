@@ -436,6 +436,7 @@ export function Dashboard(): JSX.Element {
             </p>
             <AdministrativeSchedulePanel
               onGoToFinanceiro={() => setTab('financeiro')}
+              onGoToEquipe={() => setTab('equipe')}
               onAuriTour={() => openModuleTour(TOUR_IDS.AGENDA)}
             />
           </>
@@ -463,6 +464,17 @@ export function Dashboard(): JSX.Element {
 
         {tab === 'equipe' && isOwner && (
           <>
+            {/* Compact clarifier (Sprint 6.0K): the three sections below are
+                SEPARATE registers — not the same list. Kept short on purpose;
+                the full breakdown stays in RolePermissionsGuide. */}
+            <div className={styles.threeListsHelper}>
+              <p className={styles.threeListsTitle}>São três cadastros diferentes — a mesma pessoa pode estar nos três:</p>
+              <ul className={styles.threeListsItems}>
+                <li><strong>Login no sistema</strong> — quem entra no ClinicBridge (Equipe / membros).</li>
+                <li><strong>Profissional da agenda</strong> — aparece nos agendamentos. Não dá login por si só.</li>
+                <li><strong>Acesso ao prontuário</strong> — concedido à parte. Ter login não dá acesso clínico sozinho.</li>
+              </ul>
+            </div>
             <RolePermissionsGuide />
             <TeamManagementPanel />
             <ClinicProfessionalsPanel />
