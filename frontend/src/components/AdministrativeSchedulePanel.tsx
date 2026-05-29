@@ -315,10 +315,7 @@ export function AdministrativeSchedulePanel({ onGoToFinanceiro, onGoToEquipe, on
   });
 
   const appointmentsQuery = useQuery({
-    queryKey: [
-      ...APPOINTMENTS_KEY,
-      { date, professional_id: filterProfessional, service_id: filterService, status: filterStatus },
-    ],
+    queryKey: [...APPOINTMENTS_KEY, date, filterProfessional, filterService, filterStatus],
     enabled: !!token,
     queryFn: async () => {
       const res = await api.listAppointments(token as string, {

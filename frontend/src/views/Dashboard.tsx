@@ -41,6 +41,7 @@ import { ServicesPanel } from '../components/ServicesPanel';
 import { InsurancePanel } from '../components/InsurancePanel';
 import { InventoryPanel } from '../components/InventoryPanel';
 import { SubscriptionPanel } from '../components/SubscriptionPanel';
+import { PanelErrorBoundary } from '../components/PanelErrorBoundary';
 import { SetupChecklist } from '../components/SetupChecklist';
 import { GuidedDemoTour, DEMO_TOUR_STEPS, ONBOARDING_STEPS, MODULE_TOUR_STEPS, TOUR_IDS } from '../components/GuidedDemoTour';
 import type { TourId } from '../components/GuidedDemoTour';
@@ -414,7 +415,7 @@ export function Dashboard(): JSX.Element {
         )}
 
         {tab === 'pacientes' && (
-          <>
+          <PanelErrorBoundary label="Pacientes">
             <PatientsList
               refreshKey={patientsRefresh}
               onPatientsChanged={() => setPatientsRefresh((n) => n + 1)}
@@ -424,7 +425,7 @@ export function Dashboard(): JSX.Element {
               refreshKey={patientsRefresh}
               onPatientsChanged={() => setPatientsRefresh((n) => n + 1)}
             />
-          </>
+          </PanelErrorBoundary>
         )}
 
         {tab === 'agenda' && (
@@ -434,36 +435,48 @@ export function Dashboard(): JSX.Element {
               <strong> Equipe → Profissionais da agenda</strong>. Aqui você só
               consome os profissionais ativos da clínica.
             </p>
-            <AdministrativeSchedulePanel
-              onGoToFinanceiro={() => setTab('financeiro')}
-              onGoToEquipe={() => setTab('equipe')}
-              onAuriTour={() => openModuleTour(TOUR_IDS.AGENDA)}
-            />
+            <PanelErrorBoundary label="Agenda">
+              <AdministrativeSchedulePanel
+                onGoToFinanceiro={() => setTab('financeiro')}
+                onGoToEquipe={() => setTab('equipe')}
+                onAuriTour={() => openModuleTour(TOUR_IDS.AGENDA)}
+              />
+            </PanelErrorBoundary>
           </>
         )}
 
         {tab === 'financeiro' && (
-          <FinancialPanel onAuriTour={() => openModuleTour(TOUR_IDS.FINANCIAL)} />
+          <PanelErrorBoundary label="Financeiro">
+            <FinancialPanel onAuriTour={() => openModuleTour(TOUR_IDS.FINANCIAL)} />
+          </PanelErrorBoundary>
         )}
 
         {tab === 'relatorios' && (
-          <ReportsPanel onAuriTour={() => openModuleTour(TOUR_IDS.REPORTS)} />
+          <PanelErrorBoundary label="Relatórios">
+            <ReportsPanel onAuriTour={() => openModuleTour(TOUR_IDS.REPORTS)} />
+          </PanelErrorBoundary>
         )}
 
         {tab === 'servicos' && (
-          <ServicesPanel />
+          <PanelErrorBoundary label="Serviços">
+            <ServicesPanel />
+          </PanelErrorBoundary>
         )}
 
         {tab === 'convenios' && (
-          <InsurancePanel onAuriTour={() => openModuleTour(TOUR_IDS.INSURANCE)} />
+          <PanelErrorBoundary label="Convênios">
+            <InsurancePanel onAuriTour={() => openModuleTour(TOUR_IDS.INSURANCE)} />
+          </PanelErrorBoundary>
         )}
 
         {tab === 'estoque' && (
-          <InventoryPanel onAuriTour={() => openModuleTour(TOUR_IDS.INVENTORY)} />
+          <PanelErrorBoundary label="Estoque">
+            <InventoryPanel onAuriTour={() => openModuleTour(TOUR_IDS.INVENTORY)} />
+          </PanelErrorBoundary>
         )}
 
         {tab === 'equipe' && isOwner && (
-          <>
+          <PanelErrorBoundary label="Equipe">
             {/* Compact clarifier (Sprint 6.0K): the three sections below are
                 SEPARATE registers — not the same list. Kept short on purpose;
                 the full breakdown stays in RolePermissionsGuide. */}
@@ -479,11 +492,13 @@ export function Dashboard(): JSX.Element {
             <TeamManagementPanel />
             <ClinicProfessionalsPanel />
             <ClinicalRolesPanel />
-          </>
+          </PanelErrorBoundary>
         )}
 
         {tab === 'assinatura' && (
-          <SubscriptionPanel onAuriTour={() => openModuleTour(TOUR_IDS.PLAN)} />
+          <PanelErrorBoundary label="Assinatura">
+            <SubscriptionPanel onAuriTour={() => openModuleTour(TOUR_IDS.PLAN)} />
+          </PanelErrorBoundary>
         )}
 
         {tab === 'seguranca' && (

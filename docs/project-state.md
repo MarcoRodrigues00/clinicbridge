@@ -7,6 +7,25 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0L** (entregue 2026-05-29, frontend-only) — **Hardening frontend pré-piloto: error boundaries por painel + queryKeys escalares.**
+
+Redução de risco de tela branca e cache frágil antes do piloto. **Sem** mudança de regra de negócio, backend, migration, auth, tenant, permissões, billing/Asaas, AWS ou seed. Sem commit.
+
+**Implementado (5 arquivos frontend — 2 novos, 3 alterados):**
+- **`PanelErrorBoundary` (novo)** (`PanelErrorBoundary.tsx` + `.module.css`): class component (`getDerivedStateFromError` + `componentDidCatch`). Se um painel quebrar em render, mostra card calmo **"Não foi possível carregar esta área. Tente atualizar a página."** em vez de derrubar o dashboard. **Nunca** expõe stack/detalhe técnico ao usuário; loga no console **só em DEV** (`import.meta.env.DEV`), sem PII (apenas o label da área + erro bruto). Não engole erro sem feedback. Não altera o caminho feliz dos painéis.
+- **Boundaries aplicados no `Dashboard.tsx`** envolvendo os painéis grandes por aba: **Pacientes** (PatientsList + DuplicatesList), **Agenda**, **Financeiro**, **Relatórios**, **Serviços**, **Convênios**, **Estoque**, **Equipe** (bloco owner-only), **Assinatura**. Cada um recebe `label` para o log DEV.
+- **QueryKeys escalares (P1 da 6.0I)** — sem mudar filtros/comportamento, sem mexer em invalidação (que continua por prefixo):
+  - `ServicesPanel.tsx`: `[...SERVICES_KEY, { showInactive }]` → `[...SERVICES_KEY, 'list', showInactive]`.
+  - `AdministrativeSchedulePanel.tsx` (appointments): `[...APPOINTMENTS_KEY, { date, professional_id, service_id, status }]` → `[...APPOINTMENTS_KEY, date, filterProfessional, filterService, filterStatus]`.
+
+**Checks:** frontend typecheck ✅ · frontend build ✅ · backend typecheck ✅ · migrate:status 19/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅. Sem commit.
+
+**Validação visual sugerida:** abrir cada aba e confirmar render normal; confirmar que demo Aurora, onboarding e tours Auri seguem funcionando; (dev) forçar um throw temporário num painel para ver o card de fallback. Filtros de agenda e toggle "mostrar inativos" em Serviços devem continuar refletindo no cache.
+
+**Backlog 6.0I restante:** split grande de `api.ts` (adiado — não trivial), 6.0M (hardening backend billing/tenant + `GET /clinic-professionals` — exige aprovação). Detalhe: `docs/super-review-6-0I.md`.
+
+---
+
 **Sprint 6.0K** (entregue 2026-05-29, frontend-only) — **Onboarding consultório solo / clareza das 3 listas / prefill descrição→cobrança (preço como dica).**
 
 UX de onboarding pré-piloto. **Sem** backend, migration, auth, tenant, billing, seed ou auto-cadastro. Sem commit.
