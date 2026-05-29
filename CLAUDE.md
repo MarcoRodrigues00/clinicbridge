@@ -43,13 +43,13 @@ landing + /demo (DemoCallout, LandingAuriTeaser, hierarquia CTAs: "Ver demo guia
 
 **Fora do escopo permanente (não implementar sem nova ADR):** telemedicina · ICP-Brasil · TISS/TUSS real · NFS-e · gateway de pagamento · app mobile · CID estruturado · prescrição eletrônica legal · IA clínica · SNGPC/ANVISA.
 
-### Migrações (19 aplicadas)
+### Migrações (20 aplicadas)
 
 `20260520_init` · `20260521_audit_logs` · `20260522_import_files` · `20260523_import_sessions` ·
 `20260524_patients` · `20260525_import_sessions_summary` · `20260526_scheduling` · `20260527_user_mfa` ·
 `20260528_user_mfa_backup_codes` · `20260529_clinic_team` · `20260530_clinic_join_requests_revoked` ·
 `20260601_patients_merged_into` · `20260602_clinical_encounters_v0` · `20260603_clinical_documents_v0` ·
-`20260604_financial_charges_v0` · `20260605_clinic_services_v0` · `20260606_insurance_billing_v0` · `20260607_inventory_v0` · `20260608_billing_v0`.
+`20260604_financial_charges_v0` · `20260605_clinic_services_v0` · `20260606_insurance_billing_v0` · `20260607_inventory_v0` · `20260608_billing_v0` · `20260609_clinic_governance_v0`.
 
 ### Seeds / demo / smoke
 
