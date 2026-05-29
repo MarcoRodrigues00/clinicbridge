@@ -7,6 +7,24 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.1D** (entregue 2026-05-29, QA/hardening — docs-only) — **Fechamento do módulo Governança da Clínica (ADR 0019). Sem feature nova.**
+
+QA/hardening final; **sem** revoke/transferência/exclusão/billing/migration/novo enforcement/auth. Sem commit. Único ajuste de código: `CLAUDE.md` "19 migrações" → **20** (inclui `20260609_clinic_governance_v0`).
+
+**Achado e corrigido:** smoke clinic tinha **1 administrador residual** (smoke.secretaria, de teste manual de UI pós-6.1C) — removido; baseline restaurado = **1 titular ativo, 0 administradores**, 0 serviços `GOV TEST` residuais. Audit logs **não** apagados.
+
+**Smoke Governança (via 8443):** `GET /clinic-governance` → owner 200 · secretaria/gestor/profissional 403 · admin_sistema 403 `no_clinic_context` · sem token 401. `POST /clinic-governance/admins` → owner promove 201 · re-promote 400 `governance_member_exists` · secretaria 403 · admin_sistema 403 · cross-tenant 404 `member_not_found` (genérico) · promover admin_sistema 404 (genérico). **Efeitos colaterais:** promoção **não** cria `user_clinical_roles` (0), **não** muda `users.papel` (segue `secretaria`), **não** toca billing (0 customers).
+
+**Smoke enforcement Serviços (via 8443):** antes de promover → owner cria 201 · secretaria/gestor/profissional 403 `forbidden_governance` · sem token 401 · admin_sistema 403 `no_clinic_context`. Após promover secretaria→administrador → cria 201 · edita 200 · cross-tenant PATCH 404 `service_not_found` (genérico). Cleanup: serviços de teste + linha admin removidos.
+
+**Audit metadata-only confirmado:** `recurso_id` = id da **linha de governança** (nunca o `user_id`/nome/email do promovido); `usuario_id`=ator; sem colunas `metadata`/`entidade_tipo`. **Código:** `GovernancePanel`/`GuidedDemoTour`/`Dashboard` sem `console.log`/debug (grep limpo). Copy não promete prontuário/billing/revoke/transferência (texto de confirmação diz explicitamente que o fluxo de remoção "ainda não" existe).
+
+**Checks:** frontend typecheck ✅ · frontend build ✅ · backend typecheck ✅ · backend build ✅ · migrate:status 20/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅. Sem migration. Sem commit.
+
+**Backlog (exige ADR/sprint própria):** revoke de administrador · transferência de titularidade · exclusão de clínica · ampliar enforcement a outros módulos (appointments/financeiro/etc.) · billing real.
+
+---
+
 **Micro Sprint 6.1C.1** (entregue 2026-05-29, frontend-only) — **Auri explica Governança da Clínica na aba Equipe.**
 
 Apenas ajuda/tour. **Sem** backend, sem migration, sem permissões novas. Sem commit. Novo `TEAM_TOUR_STEPS` (3 passos curtos) + `TOUR_IDS.TEAM` em `GuidedDemoTour.tsx`, registrado em `MODULE_TOUR_STEPS`. `GovernancePanel` ganhou botão **"Auri explica"** (prop `onAuriTour`, padrão dos demais painéis) + `data-tour-id="governance-panel"` para spotlight; Dashboard liga via `openModuleTour(TOUR_IDS.TEAM)`. Estilos `governanceHeader`/`auriBtn` em `ClinicalPatientPane.module.css` (header com `flex-wrap` → mobile leve). Copy: governança = quem administra; Titular responde pela conta; Administradores ajudam na gestão (serviços/configurações permitidas); **não** libera prontuário — acesso clínico segue separado em *Acesso ao prontuário*. **Não promete** revoke/transferência de titularidade/acesso clínico/billing real. Checks: frontend typecheck ✅ · frontend build ✅ · backend typecheck ✅ · migrate:status 20/0 ✅ · `git diff --check` rc=0 ✅.
