@@ -115,6 +115,40 @@ secret/env, dado de cartão ou integração externa.
 - **Migration aditiva** `20260608000000_billing_v0`: nenhuma tabela existente foi alterada (só FKs novos
   referenciando `clinics`/`users`); reversível (rollback + re-apply testados).
 
+### AsaasProvider sandbox adapter (Sprint 5.1E — ADR 0018 §13) — SANDBOX/MOCK only
+
+> **Sem migration nesta sprint** (reusa as 5 tabelas billing). **Sem cobrança real, checkout real,
+> webhook público de produção, secret commitado ou PII de paciente.** Nenhuma chamada real ao
+> sandbox foi feita (sem conta/chave). `billingService` e o financeiro da clínica (ADR 0012) intocados.
+
+- **Gateway só sandbox/disabled.** `ASAAS_ENV` = `disabled` (default) | `sandbox`; **não existe** valor
+  `production`. Guard em `env.ts`: produção **recusa boot** com `ASAAS_ENV !== 'disabled'` (gateway real
+  proibido até a ADR de Produção Segura, 5.2A). Base URL **hardcoded** no host de sandbox
+  (`api-sandbox.asaas.com/v3`) — não env-configurável (anti-footgun).
+- **Secrets só por env.** `ASAAS_API_KEY` + `ASAAS_WEBHOOK_TOKEN` — nunca commitados, nunca logados.
+  `sandbox` exige ambos (guard). Logger redige `asaas_api_key`/`asaas_webhook_token`/
+  `req.headers["asaas-access-token"]`. Em falha de requisição outbound loga só status HTTP + path
+  (nunca a chave/headers/body).
+- **Verificação de webhook = token compartilhado, NÃO HMAC.** Asaas envia o token no header
+  `asaas-access-token`; comparado com `crypto.timingSafeEqual` (`verifyAsaasToken`, puro/testável).
+  Token ausente/inválido → audit `billing.webhook.rejected` + 401. Modelo mais fraco que HMAC do Stripe
+  (prova origem, não integridade do payload) — mitigado por HTTPS + idempotência + tenant por mapa
+  interno. **Rota só existe quando `ASAAS_ENV=sandbox` (404 caso contrário); sem `requireAuth`/
+  `requireClinic`; IP-rate-limited (`billingWebhookRateLimit`).**
+- **Idempotência:** `billing_events.recordIfNew` (`UNIQUE(provider, external_event_id)`); reenvio = no-op,
+  resposta 200 rápida. `external_event_id` = `payload.id` do Asaas (**campo a confirmar em payload real**).
+- **Tenant isolation:** `clinica_id` resolvido **só** por `billing_provider_subscriptions`/
+  `billing_provider_customers` (mapa interno) — **nunca** do payload. Sem mapeamento → evento gravado
+  como `ignored`, `clinica_id=null`, sem vazar dado. `payload_hash` (sha256) guardado, nunca o payload cru.
+- **Webhook RECORD-only em v0.1:** registra o evento verificado e computa o status interno pretendido
+  (`mapAsaasEventToInternalStatus`), mas **não muta a assinatura nem aciona soft-lock** — aplicar
+  transição via webhook fica para sprint futura com revisão própria (ADR 0018 §6/§7). **Nenhuma rota
+  existente foi gateada por entitlement/soft-lock.**
+- **PII:** ao provider só vai a identidade de cobrança da clínica (nome/e-mail/CPF-CNPJ do responsável);
+  **zero PII de paciente**, **zero dado de cartão** (nunca modelado).
+- **`[VERIFICAR]` ainda abertos** (exigem sandbox real): `Idempotency-Key` na API REST, Pix recorrente,
+  limite PF/MEI B2B, portal do pagador, campo de event id no payload real, lista real de eventos/status.
+
 ## audit_logs (schema real)
 
 - Colunas: `acao`, `recurso`, `recurso_id`, `usuario_id`, `clinica_id`, `ip`, `user_agent`, `request_id`, `criado_em`.

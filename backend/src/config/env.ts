@@ -170,6 +170,25 @@ const EnvSchema = z.object({
       });
       return z.NEVER;
     }),
+
+  // Asaas billing gateway — SANDBOX only (Sprint 5.1E, ADR 0018 §13).
+  // COMMERCIAL layer (the SaaS charging the clinic) — NOT the clinic's financial
+  // module (ADR 0012). 'disabled' (default): no adapter wired; the sandbox
+  // webhook route returns 404 and outbound Asaas calls refuse. 'sandbox':
+  // enables the sandbox adapter + the env-gated webhook route. There is NO
+  // 'production' value on purpose — a real gateway is forbidden until the
+  // production-security ADR (5.2A); the production guard below also rejects any
+  // non-'disabled' value when NODE_ENV=production.
+  ASAAS_ENV: z.enum(['disabled', 'sandbox']).default('disabled'),
+  // Sandbox API key (Asaas Integrações → new key; shown once, irrecoverable).
+  // SECRET — read only from env, never committed, never logged. Required when
+  // ASAAS_ENV=sandbox (enforced below).
+  ASAAS_API_KEY: z.string().optional(),
+  // Shared token Asaas sends in the `asaas-access-token` webhook header. This is
+  // NOT an HMAC signature — verification is a timing-safe equality check
+  // (billingAsaasProvider.ts). SECRET — never logged. Required when
+  // ASAAS_ENV=sandbox (enforced below).
+  ASAAS_WEBHOOK_TOKEN: z.string().optional(),
 }).superRefine((val, ctx) => {
   if (val.RATE_LIMIT_STORE === 'redis' && !val.REDIS_URL) {
     ctx.addIssue({
@@ -177,6 +196,26 @@ const EnvSchema = z.object({
       path: ['REDIS_URL'],
       message: 'REDIS_URL is required when RATE_LIMIT_STORE=redis.',
     });
+  }
+
+  // Asaas sandbox needs BOTH secrets to be meaningful: the API key for outbound
+  // calls and the webhook token for verification. Enforcing presence stops a
+  // half-configured sandbox from silently accepting unverified webhooks.
+  if (val.ASAAS_ENV === 'sandbox') {
+    if (!val.ASAAS_API_KEY || val.ASAAS_API_KEY.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ASAAS_API_KEY'],
+        message: 'ASAAS_API_KEY is required when ASAAS_ENV=sandbox (sandbox key only — never a real key).',
+      });
+    }
+    if (!val.ASAAS_WEBHOOK_TOKEN || val.ASAAS_WEBHOOK_TOKEN.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ASAAS_WEBHOOK_TOKEN'],
+        message: 'ASAAS_WEBHOOK_TOKEN is required when ASAAS_ENV=sandbox.',
+      });
+    }
   }
 
   // Production guards (Sprint 3.6 + 3.39). Refuse to boot production with the
@@ -262,6 +301,19 @@ const EnvSchema = z.object({
           'CLINICAL_READ_AUDIT_STRICT must be set to "true" in production (ADR 0010 §8.2.1). ' +
           'Clinical content reads must be fail-closed when audit persistence fails; ' +
           'best-effort mode is acceptable only in dev/staging with synthetic data.',
+      });
+    }
+
+    // No real payment gateway in production until the production-security ADR
+    // (5.2A). Until then the gateway runs in mock/sandbox only — refuse to boot
+    // production with the Asaas adapter enabled (Sprint 5.1E, ADR 0018 §15).
+    if (val.ASAAS_ENV !== 'disabled') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ASAAS_ENV'],
+        message:
+          'ASAAS_ENV must be "disabled" in production: a real/sandbox payment gateway is ' +
+          'forbidden until the production-security ADR (5.2A).',
       });
     }
   }

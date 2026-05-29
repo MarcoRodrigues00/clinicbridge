@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { billingController } from '../controllers/billingController';
+import { billingWebhookController } from '../controllers/billingWebhookController';
 import { requireAuth, requireClinic, requireRole } from '../middlewares/requireAuth';
-import { patientsRateLimit } from '../middlewares/rateLimit';
+import { billingWebhookRateLimit, patientsRateLimit } from '../middlewares/rateLimit';
 import { asyncHandler } from '../utils/asyncHandler';
 
 // Plans, Billing & Entitlements v0.1 (Sprint 5.1B; ADR 0018).
@@ -30,4 +31,18 @@ billingRouter.get(
   requireClinic,
   requireRole(billingReadAllowlist),
   asyncHandler(billingController.status),
+);
+
+// POST /billing/webhooks/asaas/sandbox — Sprint 5.1E (ADR 0018 §8/§10).
+//
+// SANDBOX-ONLY inbound provider webhook. NO requireAuth/requireClinic: the
+// provider is authenticated by the shared `asaas-access-token` header, verified
+// in the service (timing-safe; NOT an HMAC). The service 404s unless
+// ASAAS_ENV=sandbox, so this route is inert by default. IP-rate-limited before
+// the token check. Idempotent by UNIQUE(provider, external_event_id); the tenant
+// is resolved from internal provider maps, NEVER from the payload.
+billingRouter.post(
+  '/billing/webhooks/asaas/sandbox',
+  billingWebhookRateLimit,
+  asyncHandler(billingWebhookController.asaasSandbox),
 );

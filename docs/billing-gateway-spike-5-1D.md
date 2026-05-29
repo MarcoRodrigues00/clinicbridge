@@ -334,5 +334,26 @@ visual 6.0x / seed de piloto) antes de codar o adapter — a decisão de gateway
 - **Stripe segue como plano B barato** pela abstração `BillingProvider`.
 - **Go** para sandbox fictício; **No-Go** para dinheiro/produção/webhook público.
 - **Próximo:** 5.1E adapter Asaas em sandbox + resolver os **[VERIFICAR]**.
-</content>
-</invoke>
+
+---
+
+## 13. Addendum — Sprint 5.1E (adapter implementado; sandbox real pendente)
+
+A 5.1E implementou o **`AsaasProvider` sandbox adapter** atrás da abstração
+`BillingProvider` (sem mudar a interface), o **webhook sandbox** (`POST
+/billing/webhooks/asaas/sandbox`, env-gated), verificação de **token
+compartilhado** com `timingSafeEqual` (confirmando que **não é HMAC** — §3/§11),
+idempotência por `billing_events` e **tenant por mapa interno**. Detalhe técnico
+em `docs/sprint-history.md` (Sprint 5.1E) e `docs/security-notes.md`.
+
+**Importante:** a 5.1E **não fez chamadas reais ao sandbox** (sem conta/chave).
+Validou-se a lógica pura (`asaas:selftest`) e o webhook E2E contra o DB real com
+token fake. Portanto **nenhum `[VERIFICAR]` da §6 foi resolvido definitivamente** —
+todos seguem abertos até a validação em sandbox real. O adapter assume hoje:
+`external_event_id = payload.id` e um subconjunto documentado de eventos
+(`PAYMENT_CONFIRMED/RECEIVED → active`, `PAYMENT_OVERDUE → past_due`, resto →
+nenhuma transição) — **a confirmar contra payloads reais** antes de aplicar
+qualquer transição de assinatura a partir do webhook.
+
+**Decisão ainda não cravada / ADR 0019 não criada:** mantém-se a recomendação
+Asaas preferencial; o adendo formal à ADR 0018 só após o sandbox real.

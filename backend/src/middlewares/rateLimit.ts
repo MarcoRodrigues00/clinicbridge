@@ -48,3 +48,15 @@ export const importRateLimit = makeRateLimit(
   env.IMPORT_RATE_LIMIT_MAX,
   'Muitas requisições. Aguarde alguns minutos e tente novamente.',
 );
+
+// Billing webhook endpoint (Sprint 5.1E). The provider is unauthenticated by JWT
+// (origin proven by the shared token in the handler), so an IP-keyed limiter
+// caps abuse/forgery attempts before the token check. Reuses the patients
+// window/max defaults to avoid adding a sandbox-only env knob; its own scope
+// keeps the counter namespaced.
+export const billingWebhookRateLimit = makeRateLimit(
+  'billing_webhook',
+  env.PATIENTS_RATE_LIMIT_WINDOW_MS,
+  env.PATIENTS_RATE_LIMIT_MAX,
+  'Muitas requisições. Aguarde alguns minutos e tente novamente.',
+);
