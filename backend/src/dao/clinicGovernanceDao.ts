@@ -59,6 +59,21 @@ export const clinicGovernanceDao = {
       .first();
   },
 
+  // Whether the user has ANY governance row (active OR revoked) in the clinic.
+  // Used to distinguish "never had governance" from "had it revoked" so the
+  // legacy dono_clinica→titular fallback never resurrects a revoked member.
+  // Tenant-scoped; existence only (no row data leaves the DAO).
+  async hasAnyMemberForUserClinic(
+    clinica_id: string,
+    user_id: string,
+    conn: Knex = db,
+  ): Promise<boolean> {
+    const row = await conn<ClinicGovernanceMemberRow>('clinic_governance_members')
+      .where({ clinica_id, user_id })
+      .first('id');
+    return row !== undefined;
+  },
+
   // The clinic's active titular, if any. Tenant-scoped.
   async findActiveTitular(
     clinica_id: string,

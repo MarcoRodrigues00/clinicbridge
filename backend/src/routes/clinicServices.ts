@@ -1,38 +1,46 @@
 import { Router } from 'express';
 import { clinicServiceController } from '../controllers/clinicServiceController';
 import {
-  CLINIC_ADMIN_ROLES,
   requireAuth,
   requireClinic,
   requireRole,
 } from '../middlewares/requireAuth';
+import { requireClinicGovernance } from '../middlewares/requireClinicGovernance';
 import { patientsRateLimit } from '../middlewares/rateLimit';
 import { asyncHandler } from '../utils/asyncHandler';
 
-// Catálogo de Serviços v0.1 — Sprint 4.6B (ADR 0015).
+// Catálogo de Serviços v0.1 — Sprint 4.6B (ADR 0015) · governança 6.1B (ADR 0019).
 //
-// ADMINISTRATIVE/COMMERCIAL module — uses requireRole, NOT requireClinicalRole.
+// ADMINISTRATIVE/COMMERCIAL module.
 //
 // Pipeline:
 //   1. patientsRateLimit BEFORE auth (mirrors clinic-professionals; same
 //      shape as financial GETs).
 //   2. requireAuth (Bearer JWT).
 //   3. requireClinic (DB-checked; deactivated users / admin_sistema blocked).
-//   4. requireRole on EVERY route:
-//      - READS: ['dono_clinica','secretaria'] — the selector in the agenda
-//        is consumed by both papers (profissional_clinico, whose papel is
-//        'secretaria' plus a clinical grant, passes here; this is intentional
-//        per ADR 0015 §2.7).
-//      - WRITES: CLINIC_ADMIN_ROLES = ['dono_clinica'] only — catalog is a
-//        pricing-table decision (mirrors clinic-professionals).
+//   4. authorization:
+//      - READS: requireRole(['dono_clinica','secretaria']) — UNCHANGED. The
+//        agenda selector is consumed by both papers (profissional_clinico,
+//        whose papel is 'secretaria' plus a clinical grant, passes here;
+//        intentional per ADR 0015 §2.7).
+//      - WRITES: requireClinicGovernance(['titular','administrador']) — Sprint
+//        6.1B (ADR 0019). FIRST module to enforce the governance axis. Was
+//        owner-only (CLINIC_ADMIN_ROLES); now the Titular AND promoted
+//        Administradores can mutate the catalog. This is ADDITIVE: secretaria
+//        never had catalog write (still doesn't), so no existing flow breaks;
+//        a legacy `dono_clinica` without a governance row is treated as titular
+//        by the middleware. Being an Administrador grants NO clinical access
+//        and NO billing power.
 //
-// Smoke matrix (ADR 0015 §2.7 + testing-checklist):
-//   - smoke.owner       (papel=dono_clinica)                 → full CRUD
-//   - smoke.secretaria  (papel=secretaria)                   → read only
-//   - smoke.gestor      (papel=secretaria + gestor_clinica)  → read only
-//   - smoke.profissional(papel=secretaria + profissional_*)  → read only (selector)
-//   - smoke.admin       (papel=admin_sistema)                → 403 no_clinic_context
+// Smoke matrix (governança 6.1B):
+//   - smoke.owner       (papel=dono_clinica / titular)        → full CRUD
+//   - administrador     (promoted via /clinic-governance)     → full CRUD
+//   - smoke.secretaria  (papel=secretaria, sem governança)    → read only (403 write)
+//   - smoke.gestor      (papel=secretaria + gestor_clinica)   → read only (403 write)
+//   - smoke.profissional(papel=secretaria + profissional_*)   → read only (selector)
+//   - smoke.admin       (papel=admin_sistema)                 → 403 no_clinic_context
 const catalogReadAllowlist = ['dono_clinica', 'secretaria'] as const;
+const catalogWriteGovernance = ['titular', 'administrador'] as const;
 
 export const clinicServicesRouter = Router();
 
@@ -52,7 +60,7 @@ clinicServicesRouter.post(
   patientsRateLimit,
   requireAuth,
   requireClinic,
-  requireRole(CLINIC_ADMIN_ROLES),
+  requireClinicGovernance(catalogWriteGovernance),
   asyncHandler(clinicServiceController.create),
 );
 
@@ -74,7 +82,7 @@ clinicServicesRouter.post(
   patientsRateLimit,
   requireAuth,
   requireClinic,
-  requireRole(CLINIC_ADMIN_ROLES),
+  requireClinicGovernance(catalogWriteGovernance),
   asyncHandler(clinicServiceController.linkProfessional),
 );
 
@@ -84,7 +92,7 @@ clinicServicesRouter.patch(
   patientsRateLimit,
   requireAuth,
   requireClinic,
-  requireRole(CLINIC_ADMIN_ROLES),
+  requireClinicGovernance(catalogWriteGovernance),
   asyncHandler(clinicServiceController.updateProfessionalLinkStatus),
 );
 
@@ -95,7 +103,7 @@ clinicServicesRouter.patch(
   patientsRateLimit,
   requireAuth,
   requireClinic,
-  requireRole(CLINIC_ADMIN_ROLES),
+  requireClinicGovernance(catalogWriteGovernance),
   asyncHandler(clinicServiceController.updateStatus),
 );
 
@@ -115,6 +123,6 @@ clinicServicesRouter.patch(
   patientsRateLimit,
   requireAuth,
   requireClinic,
-  requireRole(CLINIC_ADMIN_ROLES),
+  requireClinicGovernance(catalogWriteGovernance),
   asyncHandler(clinicServiceController.update),
 );
