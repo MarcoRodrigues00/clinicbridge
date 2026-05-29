@@ -7,6 +7,28 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.1B** (entregue 2026-05-29, backend-only) — **Enforcement de Governança v0.1 (ADR 0019): primeiro módulo (catálogo de Serviços) passa a respeitar Titular + Administrador.**
+
+Primeiro passo de enforcement, pequeno e aditivo. **Sem** nova migration, sem frontend, sem billing, sem acesso clínico, sem transferência de titularidade/revoke/exclusão de clínica, sem RBAC genérico. Sem commit.
+
+**Novo middleware `requireClinicGovernance(['titular'|'administrador'])`** (`middlewares/requireClinicGovernance.ts`): compõe após `requireAuth+requireClinic`; consulta `clinic_governance_members` ativo por `(clinica_id,user_id)`; **não** usa `user_clinical_roles` nem billing. **Compat legado:** `dono_clinica` no JWT é tratado como `titular` **somente quando NUNCA teve linha de governança** (clínicas criadas após o backfill 6.1A não têm linha; registro não cria uma nesta sprint). `secretaria`/`admin_sistema` não têm esse fallback. 403 genérico (`forbidden_governance`), sem enumeração. **Hardening (revisão pré-commit):** o fallback **nunca ressuscita** um titular revogado — se existe linha ativa, ela é autoritativa (papel não permitido → 403 sem fallback); se não há ativa mas existe linha **revogada**, retorna 403 (novo helper tenant-scoped `clinicGovernanceDao.hasAnyMemberForUserClinic`, só existência, sem `listAll`). Fallback só vale para `dono_clinica` sem **nenhuma** linha.
+
+**Módulo escolhido: `clinic-services` (apenas WRITES).** As 5 rotas de escrita (POST/PATCH serviço, link/status de profissional) trocaram `requireRole(CLINIC_ADMIN_ROLES)` → `requireClinicGovernance(['titular','administrador'])`. **READS inalterados** (`requireRole(['dono_clinica','secretaria'])`) para preservar o seletor de Serviços na Agenda/Financeiro. Mudança **aditiva**: secretaria nunca teve escrita no catálogo (continua sem), então nenhum fluxo quebra; Administrador promovido **ganha** escrita no catálogo. Service-layer não tem gate de papel (só `clinica_id`), então a rota é o único ponto de autorização.
+
+**NÃO aplicado nesta sprint (documentado):** appointments/clinic-professionals (risco de quebrar Agenda para secretaria comum — avaliar isolar leitura×escrita antes), financeiro/convênios/estoque/relatórios (grupo B futuro), e o grupo A Titular-only (governança/billing/read-audit/grants clínicos/export — seguem como estão). Billing continua gateado por `requireRole` (não governança).
+
+**Smoke (`clinic-services`, container rebuild+recreate, via 8443):**
+- **WRITE antes do promote:** owner/titular ✅201 · secretaria/gestor/profissional 403 `forbidden_governance` · admin_sistema 403 `no_clinic_context` · sem token 401.
+- **READ (inalterado):** secretaria/gestor ✅200 (seletor preservado).
+- **WRITE após promover secretaria→administrador:** ✅201 (enforcement confirmado).
+- **Cross-tenant:** owner PATCH serviço de outra clínica → 404 `service_not_found` (tenant isolation intacto; governança não enfraquece).
+- **Sem poder extra:** promovido manteve `users.papel='secretaria'`, **0** `user_clinical_roles`, nenhuma capacidade de billing nova (billing não usa governança). Linha admin de teste + serviços de teste removidos (cleanup).
+- **Guard revogado (revisão pré-commit):** owner com **apenas** linha revogada + JWT `dono_clinica` → write **403** (não ressuscitado); owner **sem nenhuma** linha → write **201** (fallback legado preservado). Linha do titular restaurada; estado final = 1 titular ativo.
+
+**Checks:** backend typecheck ✅ · backend build ✅ · frontend typecheck ✅ · migrate:status 20/0 (Pending: []) ✅ · `git diff --check` rc=0 ✅. Sem nova migration. Sem commit.
+
+---
+
 **Sprint 6.1A** (entregue 2026-05-29, backend-only) — **Fundação de Governança da Clínica v0.1 (ADR 0019): tabela `clinic_governance_members` + backfill titular + endpoints read-only/promote.**
 
 Base backend segura para governança (Titular/Administrador), **sem frontend**. **Sem** billing, sem mexer em `user_clinical_roles`, sem RBAC existente alterado, sem acesso clínico automático. Sem commit.
