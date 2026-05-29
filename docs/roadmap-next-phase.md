@@ -50,6 +50,21 @@
 > junto com ADR 5.2A). Itens que tocam authz/PII/tenant exigem aprovação antes
 > de aplicar. Bloqueios de cobrança real e produção AWS inalterados.
 >
+> **Sprints 6.0J–6.0M entregues** (2026-05-29) — polish LGPD/UX, onboarding solo,
+> hardening frontend (error boundaries/queryKeys + fix 6.0L.1 do 400 em Convênios)
+> e hardening backend (defense-in-depth `requireRole` no par Agenda).
+>
+> **Sprint 6.0N entregue** (2026-05-29, docs/ADR-only) — **ADR 0019 Governança da
+> Clínica, Sócios e Administradores v0.1**
+> (`docs/adr/0019-clinic-governance-partners-administrators-v0.md`). Decide o
+> modelo de **três eixos** (Governança: Titular único > Administrador/Sócio >
+> Funcionário · Acesso clínico por grant ADR 0009 · Billing por tenant ADR 0018),
+> a matriz de ações por risco (grupo A Titular-apenas / B Titular+Administrador /
+> C grants clínicos) e a nomenclatura de produto. **Sem código/schema/RBAC.**
+> Implementação adiada até ADR 5.2A + billing mais maduro. Sprints futuras
+> propostas: **6.1A** schema de governança · **6.1B** backend · **6.1C** frontend
+> · **6.1D** audit/QA (cada uma exige autorização própria).
+>
 > Este roadmap é **sugestão de sequência**, não compromisso de datas. Nada
 > aqui autoriza código clínico — ver `docs/product-clinic-os-roadmap.md` para
 > as ADRs por módulo.

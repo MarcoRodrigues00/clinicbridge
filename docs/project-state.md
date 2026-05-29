@@ -7,6 +7,22 @@
 
 ## Última sprint aprovada
 
+**Sprint 6.0N** (entregue 2026-05-29, docs/ADR-only) — **ADR 0019 Governança da Clínica, Sócios e Administradores v0.1.**
+
+Decisão de arquitetura (sem código) para a dor de sócios/coadministradores em clínicas pequenas. **Sem** código, schema, migration, RBAC, billing ou seed. Sem commit.
+
+**Decisão:** três eixos ortogonais — (1) **Governança**: Titular único > Administrador/Sócio > Funcionário; (2) **Acesso clínico**: grants `user_clinical_roles` (ADR 0009), **nunca** automáticos por ser sócio; (3) **Billing**: atributo do tenant (ADR 0018), desacoplado de grant clínico. Mantém **um Titular por clínica** (transferível só por fluxo formal); Administrador tem poderes altos exceto o grupo A (transferir titularidade, excluir clínica, cancelar assinatura, dados legais/fiscais, export total, remover outro admin, segurança crítica). Naming: "Titular da clínica" / "Administrador da clínica" na UI; role técnica (`dono_clinica`/`secretaria` + grants) **não muda** nesta ADR. Compatibilidade: `dono_clinica` → Titular inicial; zero admins = comportamento atual.
+
+**Arquivos (1 novo + 2 docs):** `docs/adr/0019-clinic-governance-partners-administrators-v0.md`; entradas curtas em `docs/project-state.md` e `docs/roadmap-next-phase.md`.
+
+**Guard-rails (não fazer agora):** vários donos equivalentes; acesso clínico automático p/ sócio; remover Titular sem transferência formal; misturar billing com grant clínico; modelar participação societária. Implementação adiada até **ADR 5.2A** + billing mais maduro (salvo necessidade explícita do piloto).
+
+**Sprints futuras propostas:** 6.1A schema de governança · 6.1B backend · 6.1C frontend · 6.1D audit/QA (cada uma exige autorização própria).
+
+**Checks:** `git diff --check` rc=0 ✅ · docs-only (sem build/typecheck). Sem commit.
+
+---
+
 **Sprint 6.0M** (entregue 2026-05-29, backend-only) — **Hardening permissões/tenant pré-piloto: defense-in-depth no par Agenda (`requireRole` em clinic-professionals + appointments).**
 
 Auditoria de permissão/tenant nos endpoints administrativos + correção de 1 P1 pequeno. **Sem** migration, seed, billing/Asaas, AWS, mudança de RBAC/MFA/JWT, nem mudança de fluxo/UX. Sem commit.
