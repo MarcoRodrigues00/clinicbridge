@@ -8,6 +8,12 @@
 > linha de titular na mesma transação; smoke confirma clínica nova com 1 titular e promote 201.
 > **TEST-1 parcialmente endereçado** — base mínima de testes (`node:test`/`tsx`, 11 testes:
 > `requireClinicGovernance` + `maskCpf`); integração-DB segue de backlog (6.1E.1). Demais P1/P2/P3 inalterados.
+>
+> **Atualização 2026-05-29 (Micro Sprint 6.1E.1):** **TEST-1 essencialmente resolvido** — suíte de
+> integração-DB (`pnpm --filter backend test:integration`, 7 testes) cobrindo register-titular,
+> governança audit metadata-only, tenant isolation (serviço A×B) e financial markPaid CAS
+> (incl. cross-tenant). Total: **18 testes** (11 unit + 7 integração), zero dep nova. Backlog
+> remanescente de testes: ampliar para mais DAOs/endpoints e CI (não bloqueante).
 
 ---
 
@@ -95,7 +101,7 @@ P1: **zero testes automatizados** no repo (PILOT-1 — maior gap de processo; re
 | ID | Sev | Área | Descrição | Evidência | Risco | Recomendação | Sprint |
 |----|-----|------|-----------|-----------|-------|--------------|--------|
 | **GOV-NEW-1** | **P1 ✅ RESOLVIDO (6.1E)** | Governance | Clínica registrada após o backfill 6.1A **não tinha linha de titular** → `GET /clinic-governance` = `{members:[]}` e promover = **403 `governance_titular_required`** (verificado empiricamente). | `authService.ts` (`register`); `requireClinicGovernance.ts:68-79`; `clinicGovernanceService.assertClinicTitular` | Recurso-âncora da fase era **não-funcional para tenants novos** (cenário exato do piloto). | **Corrigido na 6.1E:** `register()` insere titular na transação existente (`created_by_user_id=user.id`). Smoke: clínica nova = 1 titular, promote 201. | 6.1E ✅ |
-| **TEST-1** | **P1 🟡 PARCIAL (6.1E)** | Processo | Zero testes automatizados; invariantes guardados só por review/checklist. | `backend/package.json` (agora com `test`); 11 testes em `*.test.ts` | Refactor futuro pode quebrar invariante crítico. | **6.1E:** base mínima (`node:test`/`tsx`) cobrindo `requireClinicGovernance` (5 casos, incl. revoked-não-ressuscita) + `maskCpf`. **Backlog 6.1E.1:** integração-DB (isolamento por DAO, markPaid CAS, register titular, audit-sem-PII). | 6.1E ✅ / 6.1E.1 (DB) |
+| **TEST-1** | **P1 ✅ RESOLVIDO (6.1E + 6.1E.1)** | Processo | Zero testes automatizados; invariantes guardados só por review/checklist. | `backend/package.json` (`test` + `test:integration`); 18 testes | Refactor futuro pode quebrar invariante crítico. | **6.1E:** unit (`requireClinicGovernance` 5 casos incl. revoked-não-ressuscita + `maskCpf`). **6.1E.1:** integração-DB (register-titular, governança audit metadata-only, tenant A×B, markPaid CAS + cross-tenant). **Backlog (não bloqueante):** ampliar DAOs/endpoints + CI. | 6.1E / 6.1E.1 ✅ |
 | **BILL-1** | **P1** | Tenant/Backend | `billingEventDao.markStatus` UPDATE só por `id`, sem `clinica_id`. (carregado 6.0I) | `billingEventDao.ts:61-72` | Sem exploit hoje (id vem do mesmo request); cross-tenant mutation quando billing ativar. | Adicionar `clinica_id` ao WHERE (tratar caso NULL). **Toca billing/tenant — aprovar antes.** | 6.0M (pré-billing) |
 | **BILL-2** | **P1** | Backend | `provisionSubscription`: dois inserts DAO após chamada externa, fora de transação. (carregado 6.0I) | `billingService.ts:231-256` | Estado parcial irreversível após falha; retry bloqueado por 409. Admin-only/mock hoje. | Envolver os dois inserts locais em `db.transaction` (chamada externa fora da tx). | 6.0M (pré-billing) |
 | **UX-1** | **P1** | Product/UX | Nudges de "cadastrar profissional" caem no topo da aba Equipe (~1500 linhas), não no painel de Profissionais. (resíduo 6.0I P1-PROD-1) | `Dashboard.tsx:479-498`; `SetupChecklist.tsx:294-300`; `AdministrativeSchedulePanel.tsx:743-747` | Maior momento de fricção do 1º uso real; dono se perde entre sub-painéis. | `id`/ref no `ClinicProfessionalsPanel` + `scrollIntoView` no nudge (ou reordenar painéis). Frontend-only. | 6.0K-follow-up |
