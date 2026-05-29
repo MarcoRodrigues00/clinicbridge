@@ -711,8 +711,13 @@ export function PatientsList({
                         Arquivar
                       </button>
                     ))}
-                  {/* Prontuário button — available for non-archived patients;
-                      backend is authoritative on whether the user has clinical access. */}
+                  {/* Prontuário button — available for non-archived patients.
+                      The backend is authoritative on clinical access. We do NOT
+                      hide the button by papel because a secretaria may legitimately
+                      hold a clinical grant (gestor/profissional_clinico) that the
+                      frontend user object does not expose. Instead, ClinicalPatientPane
+                      renders a clear "Acesso ao prontuário restrito" state on 403
+                      (Sprint 6.0J) so a blocked user sees an explanation, not an error. */}
                   {p.status !== 'archived' && (
                     <button
                       type="button"

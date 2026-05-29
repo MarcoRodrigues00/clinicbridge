@@ -67,7 +67,19 @@
   font-size: 0.86rem;
   padding: 0.42rem 0.65rem;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
+  /* Render the native control (and the open dropdown / date picker) in dark
+     UI instead of the white system default — Sprint 6.0J visual fix. */
+  color-scheme: dark;
+}
+
+/* Fallback for browsers that honor option styling (e.g. Firefox / Windows
+   Chromium): keep the open menu items legible. Browsers that ignore this still
+   render dark via color-scheme above. */
+.filterSelect option {
+  background: var(--surface-2);
+  color: var(--text-1);
 }
 
 .filterSelect:focus,

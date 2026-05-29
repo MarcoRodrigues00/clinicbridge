@@ -15,6 +15,10 @@ const ACAO_LABELS: Record<string, string> = {
   'clinical.encounter.read': 'Leitura de atendimento',
   'clinical.encounter.list': 'Listagem de atendimentos',
   'clinical.timeline.list': 'Visualização de histórico',
+  // Documentos médicos (Sprint 6.0J — antes ficavam sem rótulo na trilha).
+  'clinical.document.list': 'Listagem de documentos',
+  'clinical.document.read': 'Leitura de documento',
+  'clinical.document.pdf.downloaded': 'Download de PDF de documento',
 };
 
 // Human-readable labels for papel_at_read values.
@@ -31,6 +35,9 @@ const ACAO_OPTIONS = [
   { value: 'clinical.encounter.read', label: 'Leitura de atendimento' },
   { value: 'clinical.encounter.list', label: 'Listagem de atendimentos' },
   { value: 'clinical.timeline.list', label: 'Visualização de histórico' },
+  { value: 'clinical.document.list', label: 'Listagem de documentos' },
+  { value: 'clinical.document.read', label: 'Leitura de documento' },
+  { value: 'clinical.document.pdf.downloaded', label: 'Download de PDF de documento' },
 ];
 
 function formatDateTime(iso: string): string {

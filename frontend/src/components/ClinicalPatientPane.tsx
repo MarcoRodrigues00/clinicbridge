@@ -825,6 +825,13 @@ export function ClinicalPatientPane({ patient, open, onClose }: ClinicalPatientP
 
   const showBack = view.kind !== 'timeline';
 
+  // Sprint 6.0J — the backend is authoritative on clinical access. A user
+  // without clinical access (e.g. a secretaria with no clinical grant) gets a
+  // 403 from the timeline endpoint. Instead of leaving the working chrome
+  // (LGPD notice, tabs, "Novo atendimento") around a bare error — which reads
+  // as "broken" — we render a single, clear "restricted" state.
+  const accessDenied = isClinicalForbidden(timelineQuery.error);
+
   return (
     <dialog
       ref={dialogRef}
@@ -857,6 +864,20 @@ export function ClinicalPatientPane({ patient, open, onClose }: ClinicalPatientP
 
         {/* Body */}
         <div className={styles.paneBody}>
+          {accessDenied ? (
+            <div className={styles.forbiddenMsg} role="status">
+              <p>
+                <ShieldAlert size={16} style={{ display: 'inline', marginRight: '0.4rem' }} aria-hidden="true" />
+                Acesso ao prontuário restrito
+              </p>
+              <p>
+                Esta é uma área clínica. Sua conta não tem acesso ao prontuário
+                deste paciente. Se você precisa desse acesso, fale com o(a) dono(a)
+                da clínica.
+              </p>
+            </div>
+          ) : (
+          <>
           {/* Audit notice — always visible. Protective tone (ShieldCheck), not alarming. */}
           <p className={styles.auditNotice}>
             <ShieldCheck size={15} aria-hidden="true" />
@@ -925,6 +946,8 @@ export function ClinicalPatientPane({ patient, open, onClose }: ClinicalPatientP
               onCreated={() => setView({ kind: 'detail', encounterId: view.encounterId })}
               onCancel={() => setView({ kind: 'detail', encounterId: view.encounterId })}
             />
+          )}
+          </>
           )}
         </div>
       </div>

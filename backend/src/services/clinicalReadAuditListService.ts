@@ -17,10 +17,17 @@ export interface ClinicalReadAuditListActor {
 
 // Allowlist of acao values the service accepts as filters (mirrors the
 // ALLOWED_ACOES set in clinicalReadAuditService so the sets stay in sync).
+// Document events (Sprint 4.3B) are written by clinicalReadAuditService but
+// were missing here, so filtering by them returned 400 (fixed Sprint 6.0J).
+// This is a filter allowlist only — it does not change the response contract;
+// the list query returns the same access METADATA regardless of acao value.
 const ALLOWED_ACAO_FILTERS = new Set<string>([
   'clinical.encounter.read',
   'clinical.encounter.list',
   'clinical.timeline.list',
+  'clinical.document.list',
+  'clinical.document.read',
+  'clinical.document.pdf.downloaded',
 ]);
 
 const LIST_DEFAULT_LIMIT = 50;
