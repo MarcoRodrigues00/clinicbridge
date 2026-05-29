@@ -7624,3 +7624,42 @@ backend typecheck ✅ · build ✅ · frontend typecheck ✅ · migrate (nenhuma
 ### Próxima
 
 Validar em **sandbox real** (conta fictícia + chave; provision + webhook reais; resolver `[VERIFICAR]`) → adendo à ADR 0018. Alternativa: voltar ao produto.
+
+---
+
+## Sprint 5.1F (2026-05-29) — Fechamento validação Asaas sandbox + correção edge Cloudflare Tunnel (docs/QA-only)
+
+Docs/QA-only. **Sem** mudança de código funcional de produto, migration, cobrança real, checkout real, webhook público de produção, secret commitado ou alteração de `.env`. Encerra a trilha sandbox da 5.1E com validação real (dados fictícios) ponta a ponta.
+
+### Validação concluída (sandbox)
+
+- `AsaasProvider` existe atrás de `BillingProvider` (sem mudança de interface).
+- Webhook billing `POST /billing/webhooks/asaas/sandbox`: **record-only/idempotente** em `billing_events` (UNIQUE provider+external_event_id); **não muta assinatura nem aciona soft-lock**; tenant só por mapa interno.
+- Withdrawal-validation `POST /billing/webhooks/asaas/sandbox/withdrawal-validation`: **endpoint separado** do webhook de cobrança, **default-deny** → `200 { status: "REFUSED", refuseReason: "ClinicBridge sandbox v0.1 does not approve withdrawals automatically" }`. Não toca `billingService`/assinatura/soft-lock/financeiro/pacientes/PII; **não salva nem loga payload bruto**.
+- Testes reais via **Cloudflare Tunnel + Nginx/edge**: sem token → **401 sem 301**; token correto → **200 REFUSED**; `/health` pelo túnel sem 301.
+
+### Infra corrigida (dev/edge)
+
+- Tunnel: `cloudflared tunnel --url http://localhost:8080`.
+- Nginx/edge detecta edge HTTPS (`CF-Visitor: {"scheme":"https"}` / `X-Forwarded-Proto: https`) e **proxia direto** ao backend — fim do loop `301 → :8443`. HTTP **local puro** ainda redireciona para o HTTPS local self-signed `:8443`.
+- `docker-compose.yml` injeta `ASAAS_ENV`/`ASAAS_API_KEY`/`ASAAS_WEBHOOK_TOKEN` no backend a partir do `.env` (gitignored); defaults mantêm o gateway `disabled`. Nenhum secret no compose.
+- Fluxo backend via edge: `docker compose --profile edge build backend` · `docker compose --profile edge up -d backend nginx` · `pnpm --filter backend migrate:status`. Bind-mount de config no WSL2 fica stale após edição → `--force-recreate`.
+
+### Segurança/segredos
+
+- API key sandbox exposta durante o teste **já foi rotacionada**.
+- `.env` gitignored e nunca commitado; `ASAAS_API_KEY` só no `.env` local.
+- Chaves Asaas começam com `$` → escapar como `$$` no `.env` consumido pelo docker compose (`ASAAS_API_KEY=$$aact_hmlg_...`); senão o compose interpola, apaga o valor e vaza o trecho no warning.
+- Nunca logar API key/token/header `asaas-access-token`/payload bruto.
+
+### Decisão de negócio
+
+Cobrança real **continua bloqueada**; gateway real **não** liberado para produção. Antes de cobrar clientes reais: abrir **CNPJ** (contador online), definir **contrato/termos/política LGPD**; **não cobrar em CPF improvisado**. Produção AWS só depois da **ADR 5.2A (Produção Segura)**. Próxima fase de produto pode voltar para **6.0/pré-piloto/polish**.
+
+### Backlog explícito (futuro)
+
+Integração Asaas real de checkout/cobrança · webhook de produção verificado · mutação real de assinatura/soft-lock via webhook · termos/contrato/política de privacidade para piloto pago · CNPJ/contador antes de cobrança real · go/no-go de dados reais **bloqueado até produção segura (5.2A)**.
+
+### Checks
+
+backend typecheck ✅ · frontend typecheck ✅ · migrate (nenhuma pendente) ✅ · `git diff --check` rc=0 ✅. Sem commit.

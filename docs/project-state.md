@@ -7,6 +7,40 @@
 
 ## Última sprint aprovada
 
+**Sprint 5.1F** (entregue 2026-05-29, docs/QA-only) — **Fechamento da validação Asaas sandbox + correção edge p/ Cloudflare Tunnel.**
+
+Docs/QA-only. **Sem** mudança de código funcional de produto, migration, cobrança real, checkout real, webhook público de produção, secret commitado ou alteração de `.env`. Encerra a trilha sandbox aberta na 5.1E.
+
+**Validação concluída (sandbox, dados fictícios):**
+- `AsaasProvider` existe atrás de `BillingProvider` (sem mudança de interface).
+- Webhook de billing sandbox (`POST /billing/webhooks/asaas/sandbox`) é **record-only/idempotente** em `billing_events` (UNIQUE provider+external_event_id); **não muta assinatura nem aciona soft-lock**; tenant só por mapa interno.
+- Withdrawal-validation sandbox (`POST /billing/webhooks/asaas/sandbox/withdrawal-validation`) é **endpoint separado** e **default-deny**: responde `200 { status: "REFUSED", refuseReason: "ClinicBridge sandbox v0.1 does not approve withdrawals automatically" }`. Não toca `billingService`/assinatura/soft-lock/financeiro da clínica/pacientes/PII; **não salva nem loga payload bruto**.
+- Testes reais via Cloudflare Tunnel + Nginx/edge passaram: sem token → **401 sem 301**; token correto → **200 REFUSED**; `/health` pelo túnel sem 301.
+
+**Infra corrigida (dev/edge — `infra/nginx/`, `docker-compose.yml`):**
+- Cloudflare Tunnel deve apontar para `cloudflared tunnel --url http://localhost:8080`.
+- Nginx/edge agora detecta edge HTTPS (`CF-Visitor`/`X-Forwarded-Proto: https`) e **proxia direto**, evitando o loop `301 → :8443`. HTTP **local puro** ainda redireciona para o HTTPS local self-signed `:8443`.
+- `docker-compose.yml` injeta `ASAAS_ENV`/`ASAAS_API_KEY`/`ASAAS_WEBHOOK_TOKEN` no backend **a partir do `.env` (gitignored)** — defaults mantêm o gateway `disabled`; nenhum secret no compose.
+- Mudança de backend via edge: `docker compose --profile edge build backend` · `docker compose --profile edge up -d backend nginx` · `pnpm --filter backend migrate:status`. Bind-mount de config no WSL2 fica stale após editar — use `--force-recreate`.
+
+**Segurança/segredos:**
+- A API key sandbox exposta durante o teste **já foi rotacionada**.
+- `.env` é **gitignored** e não deve ser commitado; `ASAAS_API_KEY` fica só no `.env` local.
+- Chaves Asaas começam com `$` → escapar como `$$` no `.env` consumido pelo docker compose (`ASAAS_API_KEY=$$aact_hmlg_...`), senão o compose interpola e apaga o valor (e vaza o trecho no warning).
+- Nunca logar API key/token/header `asaas-access-token`/payload bruto (logger redige defensivamente).
+
+**Decisão de negócio (cobrança real CONTINUA BLOQUEADA):**
+- Gateway real **não** liberado para produção.
+- Antes de cobrar clientes reais: **abrir CNPJ** (contador online), definir **contrato/termos/política LGPD**. **Não cobrar em CPF improvisado.**
+- Produção AWS só depois da **ADR 5.2A (Produção Segura)**.
+- Próxima fase de produto pode voltar para **6.0/pré-piloto/polish**.
+
+**Backlog explícito (tudo futuro, exige decisão/ADR própria):** integração Asaas real de checkout/cobrança · webhook de produção (verificado) · mutação real de assinatura/soft-lock via webhook · termos/contrato/política de privacidade para piloto pago · CNPJ/contador antes de cobrança real · go/no-go de dados reais **bloqueado até produção segura (5.2A)**.
+
+**Checks:** backend typecheck ✅ · frontend typecheck ✅ · migrate (nenhuma pendente) ✅ · `git diff --check` rc=0 ✅. Sem commit.
+
+---
+
 **Sprint 5.1E** (entregue 2026-05-28) — **AsaasProvider sandbox adapter v0.1.**
 
 Backend-only (frontend intocado). **Sem** cobrança real, checkout real, webhook público de produção, secret commitado, PII de paciente, alteração no financeiro da clínica, soft-lock em rotas existentes, ou mudança grande em `billingService`. **Sem migration** (reusa as 5 tabelas billing da 5.1B). **Nenhuma chamada real ao sandbox** (sem conta/chave Asaas).
@@ -30,7 +64,7 @@ Backend-only (frontend intocado). **Sem** cobrança real, checkout real, webhook
 
 **Não criada ADR 0019:** decisão final (adendo à ADR 0018) só após validação em sandbox real.
 
-**Próxima:** validar em **sandbox real** (criar conta fictícia + chave; rodar provision/webhook reais; resolver `[VERIFICAR]`) → então adendo à ADR 0018. Alternativa: voltar ao produto (validação visual 6.0x).
+**Próxima:** *(fechado na 5.1F — validação sandbox concluída via Cloudflare Tunnel; cobrança real segue bloqueada até CNPJ + ADR 5.2A.)*
 
 ---
 
