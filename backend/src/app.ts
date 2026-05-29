@@ -13,6 +13,7 @@ import { clinicProfessionalsRouter } from './routes/clinicProfessionals';
 import { appointmentsRouter } from './routes/appointments';
 import { clinicJoinRequestsRouter } from './routes/clinicJoinRequests';
 import { clinicMembersRouter } from './routes/clinicMembers';
+import { clinicGovernanceRouter } from './routes/clinicGovernance';
 import { clinicalEncountersRouter } from './routes/clinicalEncounters';
 import { clinicalRolesRouter } from './routes/clinicalRoles';
 import { clinicalReadAuditRouter } from './routes/clinicalReadAudit';
@@ -94,6 +95,9 @@ export function createApp(): Express {
   app.use(appointmentsRouter);
   app.use(clinicJoinRequestsRouter);
   app.use(clinicMembersRouter);
+  // Clinic Governance v0.1 (Sprint 6.1A, ADR 0019) — administrative governance
+  // axis (Titular/Administrador). NO clinical content, NO billing.
+  app.use(clinicGovernanceRouter);
   // Clinical Prontuário v0.1 (Sprint 4.2B-3, ADR 0010). All routes are gated
   // by requireAuth + requireClinic + (requireClinicalRole | requireRole).
   // Logger redacts the 5 textual clinical fields + cancel/rectification
