@@ -497,7 +497,7 @@ export function ServicesPanel(): JSX.Element {
   const [notice, setNotice] = useState<string | null>(null);
 
   const listQuery = useQuery({
-    queryKey: [...SERVICES_KEY, { showInactive }],
+    queryKey: [...SERVICES_KEY, 'list', showInactive],
     enabled: !!token,
     queryFn: async () => {
       const res = await api.listClinicServices(token as string, {
