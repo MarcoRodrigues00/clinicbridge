@@ -6,6 +6,10 @@ export interface AuthClaims {
   sub: string;
   clinica_id: string | null;
   papel: UserPapel;
+  // True ONLY for sessions minted by /auth/demo-login. Used by the backend
+  // demo read-only guard (blockDemoWrites). A normal login never sets it, so a
+  // real clinic session can never be flagged as demo.
+  is_demo?: boolean;
 }
 
 const VALID_PAPEIS: readonly UserPapel[] = ['admin_sistema', 'dono_clinica', 'secretaria'];
@@ -78,6 +82,7 @@ export const tokenService = {
       sub: payload.sub,
       clinica_id,
       papel: payload.papel,
+      is_demo: payload.is_demo === true,
     };
   },
 };
