@@ -27,6 +27,7 @@ import { billingRouter } from './routes/billing';
 import { corsMiddleware } from './middlewares/cors';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestId } from './middlewares/requestId';
+import { blockDemoWrites } from './middlewares/blockDemoWrites';
 
 export function createApp(): Express {
   const app = express();
@@ -86,6 +87,13 @@ export function createApp(): Express {
 
   app.use(healthRouter);
   app.use(authRouter);
+
+  // Backend read-only guard for the guided demo. Placed AFTER authRouter (so the
+  // demo user can still log in/out) and BEFORE every business router, so a
+  // demo-flagged session (is_demo JWT claim) is refused on any mutating verb.
+  // Cannot affect real clinic sessions — the claim is set only by demo-login.
+  app.use(blockDemoWrites);
+
   app.use(importFilesRouter);
   app.use(importPreviewRouter);
   app.use(importValidationRouter);
