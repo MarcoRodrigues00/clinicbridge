@@ -14,8 +14,12 @@ const EnvSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('1h'),
 
   // CORS — comma-separated list of allowed origins. Wildcard ('*') is rejected
-  // in production by the cors middleware itself.
-  FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
+  // in production by the cors middleware itself. The dev default lists both 5173
+  // and 5174 because Vite auto-bumps to 5174 when 5173 is already taken (e.g.
+  // another local app), and a mismatched origin silently blocks login/demo.
+  FRONTEND_ORIGIN: z
+    .string()
+    .default('http://localhost:5173,http://localhost:5174'),
 
   // Auth rate limiting (express-rate-limit). 20 requests / 15 min / IP fits the
   // MVP and is configurable so load tests / CI can override without code changes.
