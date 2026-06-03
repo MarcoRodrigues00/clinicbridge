@@ -234,7 +234,7 @@ export const REPORTS_TOUR_STEPS: DemoTourStep[] = [
   {
     id: 'rep-filters', tab: null, targetId: 'reports-filters', mood: 'happy',
     title: 'Escolha o período',
-    body: 'Hoje, 7 dias, mês atual ou intervalo personalizado. O resumo e os blocos abaixo se atualizam automaticamente.',
+    body: 'Hoje, 7 dias, 30 dias, mês atual ou intervalo personalizado. O resumo e os blocos abaixo se atualizam automaticamente.',
     placement: 'bottom',
   },
   {

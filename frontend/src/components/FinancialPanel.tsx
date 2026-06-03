@@ -66,6 +66,16 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// ISO date `days` ago (negative offset). Used to seed the default 30-day
+// financial window so the "Recebido no período" summary stays populated even
+// in the first days of a month (the backend summary otherwise defaults to the
+// current month, which on day 1–3 looks empty for non-technical staff).
+function isoDaysAgo(days: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
 function isOverdue(charge: FinancialChargeListItem): boolean {
   return (
     charge.status === 'pending' &&
@@ -182,8 +192,11 @@ function ChargeListView({
   onAuriTour,
 }: ListViewProps): JSX.Element {
   const [filterStatus, setFilterStatus] = useState<FinancialChargeStatus | ''>('');
-  const [filterDateFrom, setFilterDateFrom] = useState('');
-  const [filterDateTo, setFilterDateTo] = useState('');
+  // Default to a rolling 30-day window so the summary (esp. "Recebido no
+  // período") and the list open populated instead of showing the near-empty
+  // current-month default on the first days of a month.
+  const [filterDateFrom, setFilterDateFrom] = useState(isoDaysAgo(29));
+  const [filterDateTo, setFilterDateTo] = useState(todayIso());
 
   const hasActiveFilters = filterStatus !== '' || filterDateFrom !== '' || filterDateTo !== '';
 

@@ -157,7 +157,10 @@ function resolvePreset(preset: ReportPeriodPreset): PeriodValue {
   if (preset === 'last7') {
     return { date_from: isoOffsetDays(-6), date_to: todayIso(), preset };
   }
-  // currentMonth (default)
+  if (preset === 'last30') {
+    return { date_from: isoOffsetDays(-29), date_to: todayIso(), preset };
+  }
+  // currentMonth
   return { date_from: startOfMonthIso(), date_to: todayIso(), preset };
 }
 
@@ -623,7 +626,10 @@ export function ReportsPanel({ onAuriTour }: { onAuriTour?: () => void } = {}): 
   const isPapelAllowed =
     user?.papel === 'dono_clinica' || user?.papel === 'secretaria';
 
-  const [preset, setPreset] = useState<ReportPeriodPreset>('currentMonth');
+  // Default to "last 30 days": on the first days of a month, "current month"
+  // shows an almost-empty report; a rolling 30-day window keeps the summary
+  // populated and legible for non-technical staff.
+  const [preset, setPreset] = useState<ReportPeriodPreset>('last30');
   const [customFrom, setCustomFrom] = useState<string>(startOfMonthIso());
   const [customTo, setCustomTo] = useState<string>(todayIso());
   const [refreshKey, setRefreshKey] = useState(0);
@@ -761,6 +767,7 @@ export function ReportsPanel({ onAuriTour }: { onAuriTour?: () => void } = {}): 
             [
               { key: 'today', label: 'Hoje' },
               { key: 'last7', label: 'Últimos 7 dias' },
+              { key: 'last30', label: 'Últimos 30 dias' },
               { key: 'currentMonth', label: 'Mês atual' },
               { key: 'custom', label: 'Personalizado' },
             ] as const

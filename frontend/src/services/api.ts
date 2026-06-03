@@ -894,7 +894,7 @@ export interface CancelFinancialChargePayload {
 // retorna PII (nome, CPF, e-mail, telefone, endereço, notes, cancel_reason,
 // description, administrative_notes, dados clínicos).
 
-export type ReportPeriodPreset = 'today' | 'last7' | 'currentMonth' | 'custom';
+export type ReportPeriodPreset = 'today' | 'last7' | 'last30' | 'currentMonth' | 'custom';
 
 export interface ReportsFilters {
   date_from?: string;
