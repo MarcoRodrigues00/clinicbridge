@@ -62,7 +62,7 @@ services:
       TRUST_PROXY: "1"
       RATE_LIMIT_STORE: "redis"
       REDIS_URL: "redis://redis:6379"
-      FRONTEND_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:5173}"
+      FRONTEND_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:5173,http://localhost:5174}"
       ALLOW_DEMO_LOGIN: "true"
       # Asaas SANDBOX adapter (Sprint 5.1E). Values come ONLY from the local .env
       # (gitignored) — NEVER hardcode the key/token here. Defaults keep the
