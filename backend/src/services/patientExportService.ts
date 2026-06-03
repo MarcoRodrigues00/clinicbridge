@@ -4,7 +4,7 @@ import { logger } from '../config/logger';
 import { auditLogDao } from '../dao/auditLogDao';
 import { patientDao } from '../dao/patientDao';
 import { HttpError } from '../middlewares/errorHandler';
-import { toPublicPatient, type PublicPatient } from '../models/patient';
+import { maskMemberNumber, toPublicPatient, type PublicPatient } from '../models/patient';
 import type { AuthContext } from './authService';
 
 export type ExportFormat = 'csv' | 'xlsx';
@@ -24,14 +24,25 @@ export interface PatientExportFile {
 // Columns exported, in order. These are exactly the administrative fields of
 // PublicPatient minus `id`. NEVER includes raw cpf, clinical data, tokens, or
 // user ids.
-const EXPORT_COLUMNS: Array<{ key: keyof PublicPatient; header: string }> = [
+// `mask` (optional) transforms the raw string cell before neutralization, so
+// PII like the insurance card number is never exported in full (data
+// minimization). The CPF is already masked upstream as `cpf_masked`.
+const EXPORT_COLUMNS: Array<{
+  key: keyof PublicPatient;
+  header: string;
+  mask?: (value: string) => string;
+}> = [
   { key: 'nome', header: 'nome' },
   { key: 'telefone', header: 'telefone' },
   { key: 'email', header: 'email' },
   { key: 'cpf_masked', header: 'cpf_masked' },
   { key: 'data_nascimento', header: 'data_nascimento' },
   { key: 'convenio', header: 'convenio' },
-  { key: 'numero_carteirinha', header: 'numero_carteirinha' },
+  {
+    key: 'numero_carteirinha',
+    header: 'numero_carteirinha',
+    mask: (value) => maskMemberNumber(value) ?? '',
+  },
   { key: 'status', header: 'status' },
   { key: 'origem', header: 'origem' },
   { key: 'import_session_id', header: 'import_session_id' },
@@ -55,6 +66,14 @@ function cellToText(value: PublicPatient[keyof PublicPatient]): string {
   return neutralizeFormula(String(value));
 }
 
+// Resolves a cell, applying the column's optional `mask` to raw string values
+// (e.g. numero_carteirinha) before neutralization.
+function resolveCell(p: PublicPatient, col: (typeof EXPORT_COLUMNS)[number]): string {
+  const raw = p[col.key];
+  if (col.mask && typeof raw === 'string') return cellToText(col.mask(raw));
+  return cellToText(raw);
+}
+
 // RFC 4180 quoting on top of the already-neutralized text.
 function csvField(text: string): string {
   if (/[",\r\n]/.test(text)) {
@@ -67,7 +86,7 @@ function buildCsv(patients: PublicPatient[]): string {
   const lines: string[] = [];
   lines.push(EXPORT_COLUMNS.map((c) => csvField(c.header)).join(','));
   for (const p of patients) {
-    lines.push(EXPORT_COLUMNS.map((c) => csvField(cellToText(p[c.key]))).join(','));
+    lines.push(EXPORT_COLUMNS.map((c) => csvField(resolveCell(p, c))).join(','));
   }
   // Leading BOM so Excel reads UTF-8 (accents) correctly. CRLF line endings.
   return `﻿${lines.join('\r\n')}\r\n`;
@@ -79,7 +98,7 @@ async function buildXlsx(patients: PublicPatient[]): Promise<Buffer> {
   ws.addRow(EXPORT_COLUMNS.map((c) => c.header));
   for (const p of patients) {
     // Every cell is written as neutralized text — no cell is ever a formula.
-    ws.addRow(EXPORT_COLUMNS.map((c) => cellToText(p[c.key])));
+    ws.addRow(EXPORT_COLUMNS.map((c) => resolveCell(p, c)));
   }
   const out = await wb.xlsx.writeBuffer();
   return Buffer.from(out as ArrayBuffer);
