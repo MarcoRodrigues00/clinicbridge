@@ -516,7 +516,7 @@ export function Dashboard(): JSX.Element {
               <h3 className={styles.cardTitle}>Autenticação e sessão</h3>
               <p className={styles.cardText}>
                 O ClinicBridge valida autenticação e sessão com isolamento por clínica
-                (multi-tenant) em todas as áreas administrativas.
+                em todas as áreas administrativas — cada clínica acessa apenas os próprios dados.
               </p>
             </section>
 

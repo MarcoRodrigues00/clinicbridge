@@ -5,7 +5,7 @@ import styles from './Security.module.css';
 const ITEMS = [
   {
     icon: Layers,
-    label: 'Multi-tenant por clínica',
+    label: 'Dados isolados por clínica',
     desc: 'Cada clínica acessa apenas os próprios dados. O sistema isola tudo por clínica desde o cadastro inicial.',
     tags: ['Por clínica', 'Acesso isolado'],
   },
