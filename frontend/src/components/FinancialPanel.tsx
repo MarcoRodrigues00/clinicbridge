@@ -76,6 +76,16 @@ function isoDaysAgo(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+// ISO date one day after the given YYYY-MM-DD. The financial summary/list
+// endpoints treat `date_to` as an EXCLUSIVE upper bound, so to include the
+// whole selected end day (esp. charges paid/created TODAY) we query the next
+// day. This mirrors the inclusive window used by the Relatórios panel.
+function nextDayIso(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 function isOverdue(charge: FinancialChargeListItem): boolean {
   return (
     charge.status === 'pending' &&
@@ -191,32 +201,42 @@ function ChargeListView({
   onAccessBlocked,
   onAuriTour,
 }: ListViewProps): JSX.Element {
-  const [filterStatus, setFilterStatus] = useState<FinancialChargeStatus | ''>('');
   // Default to a rolling 30-day window so the summary (esp. "Recebido no
   // período") and the list open populated instead of showing the near-empty
   // current-month default on the first days of a month.
-  const [filterDateFrom, setFilterDateFrom] = useState(isoDaysAgo(29));
-  const [filterDateTo, setFilterDateTo] = useState(todayIso());
+  const defaultDateFrom = isoDaysAgo(29);
+  const defaultDateTo = todayIso();
+  const [filterStatus, setFilterStatus] = useState<FinancialChargeStatus | ''>('');
+  const [filterDateFrom, setFilterDateFrom] = useState(defaultDateFrom);
+  const [filterDateTo, setFilterDateTo] = useState(defaultDateTo);
 
-  const hasActiveFilters = filterStatus !== '' || filterDateFrom !== '' || filterDateTo !== '';
+  // "Active" means the user diverged from the default window — so the default
+  // 30-day view does NOT show a "Limpar filtros" affordance on load.
+  const hasActiveFilters =
+    filterStatus !== '' ||
+    filterDateFrom !== defaultDateFrom ||
+    filterDateTo !== defaultDateTo;
+
+  // Make the selected end day inclusive (the API bound is exclusive).
+  const queryDateTo = filterDateTo ? nextDayIso(filterDateTo) : undefined;
 
   const filters = useMemo(
     () => ({
       status: filterStatus || undefined,
       date_from: filterDateFrom || undefined,
-      date_to: filterDateTo || undefined,
+      date_to: queryDateTo,
       limit: 50,
     }),
-    [filterStatus, filterDateFrom, filterDateTo],
+    [filterStatus, filterDateFrom, queryDateTo],
   );
 
   // Summary (totalizadores)
   const summaryQuery = useQuery({
-    queryKey: ['financial', 'summary', filterDateFrom, filterDateTo],
+    queryKey: ['financial', 'summary', filterDateFrom, queryDateTo],
     queryFn: () =>
       api.getFinancialSummary(token, {
         date_from: filterDateFrom || undefined,
-        date_to: filterDateTo || undefined,
+        date_to: queryDateTo,
       }),
     staleTime: 30_000,
     retry: false,
@@ -248,8 +268,8 @@ function ChargeListView({
 
   function clearFilters(): void {
     setFilterStatus('');
-    setFilterDateFrom('');
-    setFilterDateTo('');
+    setFilterDateFrom(defaultDateFrom);
+    setFilterDateTo(defaultDateTo);
   }
 
   return (
