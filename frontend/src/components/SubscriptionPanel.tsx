@@ -329,7 +329,7 @@ function BillingContent({ billing, onAuriTour }: { billing: BillingStatus; onAur
             )}
             <span>
               {billing.soft_lock.read_only_mode
-                ? 'Modo leitura: ativado (escritas bloqueadas)'
+                ? 'Modo leitura: ativado (alterações bloqueadas)'
                 : 'Modo leitura: desativado (escrita normal)'}
             </span>
           </div>

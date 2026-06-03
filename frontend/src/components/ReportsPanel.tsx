@@ -861,8 +861,8 @@ export function ReportsPanel({ onAuriTour }: { onAuriTour?: () => void } = {}): 
       </section>
 
       <p className={styles.disclaimer}>
-        Relatórios on-demand. Não substituem contabilidade nem emissão fiscal.
-        Sem export ou impressão no v0.1.
+        Relatórios gerados na hora. Não substituem contabilidade nem emissão fiscal.
+        A exportação e a impressão chegam em breve.
       </p>
     </div>
   );

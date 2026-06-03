@@ -156,9 +156,9 @@ export function UploadPanel({
           Enviar arquivo (CSV/XLSX)
         </h2>
         <p className={styles.note}>
-          O upload é seguro e o arquivo fica isolado por clínica. O
-          processamento/migração dos dados ainda não foi implementado — esta etapa
-          apenas armazena o arquivo e seus metadados.
+          O upload é seguro e o arquivo fica isolado por clínica. Por enquanto, o
+          arquivo é apenas enviado e guardado com segurança — a migração dos dados
+          acontece em uma etapa seguinte, com acompanhamento.
         </p>
       </div>
 

@@ -131,12 +131,14 @@ async function generateUniqueInviteCode(): Promise<string> {
 }
 
 // Builds the final session (JWT) for an authenticated user. Used by the non-MFA
-// login path and by verifyMfaLogin after a valid TOTP code.
-function buildSession(user: UserRow): LoginResult {
+// login path and by verifyMfaLogin after a valid TOTP code. `is_demo` is set
+// ONLY by the demo-login path so the backend can enforce a read-only demo.
+function buildSession(user: UserRow, opts?: { is_demo?: boolean }): LoginResult {
   const token = tokenService.sign({
     sub: user.id,
     clinica_id: user.clinica_id,
     papel: user.papel,
+    ...(opts?.is_demo ? { is_demo: true } : {}),
   });
   return { user: toSafeUser(user), token, expires_in: env.JWT_EXPIRES_IN };
 }
@@ -390,7 +392,7 @@ export const authService = {
       clinica_id: user.clinica_id,
       ctx,
     });
-    return buildSession(user);
+    return buildSession(user, { is_demo: true });
   },
 
   // Second step of MFA login: verifies the challenge token + TOTP code, then
