@@ -14,7 +14,7 @@ export function Footer(): JSX.Element {
           Funcionalidades clínicas e documentos estão em evolução. Assinatura digital válida,
           integrações oficiais e obrigações regulatórias específicas exigem etapas próprias.
         </p>
-        <span className={styles.meta}>v0.1 · piloto</span>
+        <span className={styles.meta}>piloto</span>
       </div>
     </footer>
   );

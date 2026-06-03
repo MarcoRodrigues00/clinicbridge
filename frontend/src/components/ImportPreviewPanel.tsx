@@ -413,8 +413,8 @@ export function ImportPreviewPanel({
               <div className={styles.saveSuccess} role="status">
                 <CheckCircle2 size={16} aria-hidden="true" />
                 <span>
-                  Revisão salva. Nenhum paciente foi importado ainda. Sessão de migração criada
-                  com status: {SESSION_STATUS_LABELS[savedSession.status]}.
+                  Revisão salva. Nenhum paciente foi importado ainda
+                  ({SESSION_STATUS_LABELS[savedSession.status]}).
                 </span>
               </div>
             ) : null}
