@@ -131,7 +131,7 @@ export const FINANCIAL_TOUR_STEPS: DemoTourStep[] = [
   {
     id: 'fi-payer', tab: null, targetId: 'financial-payer', mood: 'happy',
     title: 'Tipo de pagador',
-    body: 'O badge indica se a cobrança é particular, convênio ou mista.',
+    body: 'A etiqueta colorida indica se a cobrança é particular, convênio ou mista.',
   },
   {
     id: 'fi-create', tab: null, targetId: null, mood: 'happy',
@@ -188,7 +188,7 @@ export const INSURANCE_TOUR_STEPS: DemoTourStep[] = [
   {
     id: 'ins-pii', tab: null, targetId: null, mood: 'neutral',
     title: 'Carteirinha é dado pessoal',
-    body: 'O número da carteirinha é PII administrativa. Ele não é exibido na listagem — acesse o registro do paciente para vê-lo.',
+    body: 'O número da carteirinha é um dado pessoal. Ele não é exibido na listagem — acesse o registro do paciente para vê-lo.',
   },
   {
     id: 'ins-prices', tab: null, targetId: null, mood: 'neutral',
@@ -491,7 +491,7 @@ export const DEMO_TOUR_STEPS: DemoTourStep[] = [
     targetId: 'financial-payer',
     mood: 'happy',
     title: 'Quem paga?',
-    body: 'O badge mostra se é particular, convênio ou misto.',
+    body: 'A etiqueta colorida mostra se é particular, convênio ou misto.',
   },
   {
     id: 'financial-details',
