@@ -53,6 +53,19 @@ export function maskCpf(cpf: string | null | undefined): string | null {
   return `***.***.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
 }
 
+// Masks an insurance card / member number, keeping only the last 4 chars so the
+// value is never exposed in bulk (lists/exports). Mirrors the member_number
+// masking used for patient_insurances in insuranceService. Returns null for
+// empty/missing input.
+export function maskMemberNumber(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  if (trimmed.length <= 4) return '*'.repeat(trimmed.length);
+  const tail = trimmed.slice(-4);
+  return `${'*'.repeat(Math.max(4, trimmed.length - 4))}${tail}`;
+}
+
 function toIsoOrString(value: unknown): string {
   if (value instanceof Date) return value.toISOString();
   return String(value);

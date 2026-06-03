@@ -39,7 +39,7 @@ const CAPABILITIES: Capability[] = [
   {
     title: 'Clínica e governança',
     items: [
-      'Prontuário e documentos v0.1',
+      'Prontuário e documentos',
       'MFA, papéis e auditoria LGPD',
       'Retenção e backup (local)',
     ],

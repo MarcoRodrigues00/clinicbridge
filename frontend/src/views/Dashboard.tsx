@@ -433,8 +433,8 @@ export function Dashboard(): JSX.Element {
           <>
             <p className={styles.agendaHint}>
               Profissionais usados nos agendamentos são cadastrados em
-              <strong> Equipe → Profissionais da agenda</strong>. Aqui você só
-              consome os profissionais ativos da clínica.
+              <strong> Equipe → Profissionais da agenda</strong>. Aqui aparecem
+              apenas os profissionais ativos da clínica.
             </p>
             <PanelErrorBoundary label="Agenda">
               <AdministrativeSchedulePanel
@@ -541,7 +541,7 @@ export function Dashboard(): JSX.Element {
                 </li>
                 <li className={styles.checkItem}>
                   <Clock size={18} className={styles.iconPending} aria-hidden="true" />
-                  <span>Preparação para produção (em andamento)</span>
+                  <span>Novos recursos a caminho</span>
                 </li>
               </ul>
             </section>
@@ -554,7 +554,7 @@ export function Dashboard(): JSX.Element {
         <div className={styles.footerInner}>
           <span className={styles.footerBrand}>
             <Logo size={20} />
-            ClinicBridge · Clinic OS
+            ClinicBridge · Gestão de clínicas
           </span>
           <p className={styles.footerNote}>
             Gestão clínica e administrativa para consultórios. Não substitui avaliação
