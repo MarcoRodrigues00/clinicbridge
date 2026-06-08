@@ -22,6 +22,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       port: Number(env.VITE_PORT) || 5173,
+      // Fail loudly if the port is taken instead of silently hopping to the
+      // next free port (which lands ClinicBridge on an unexpected port and
+      // looks like "it stopped working"). See frontend/.env VITE_PORT.
+      strictPort: true,
       proxy: proxyTarget
         ? {
             '/api': {
