@@ -1,0 +1,96 @@
+name: security-checks
+
+# Academic-grade security gate for ClinicBridge (sprint SEC-FINAL.1).
+# Verifies the R01–R10 defense requirements (docs/security-final-10-requirements.md)
+# on every push and PR to main. No deploy, no real secrets, synthetic data only.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    # Ephemeral Postgres for the DB-backed tenant/audit integration tests.
+    # CI-only throwaway credentials — never used anywhere else.
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: clinicbridge_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # CI-only, non-production placeholders. The security tests do not connect to
+      # a real database for the no-DB suite; the integration suite uses the
+      # service above. JWT_SECRET is ≥48 chars to satisfy env validation.
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/clinicbridge_ci
+      JWT_SECRET: ci-only-jwt-secret-not-a-real-secret-padding-aaaaaaaaaaaaaaaa
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # --- Fail fast on any tracked secret/data file (R10) ---
+      - name: Check for tracked sensitive files
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$|\.pem$|\.key$|\.crt$|\.sql$|\.dump$|\.csv$|\.xlsx$|\.zip$'; then
+            echo "::error::Sensitive files are tracked by git (see matches above). Remove them and add to .gitignore."
+            exit 1
+          fi
+          echo "OK: no tracked secret/data files."
+
+      # --- Static quality gates ---
+      - name: Backend typecheck
+        run: pnpm --filter backend typecheck
+
+      - name: Frontend typecheck
+        run: pnpm --filter frontend typecheck
+
+      - name: Backend build
+        run: pnpm --filter backend build
+
+      - name: Frontend build
+        run: pnpm --filter frontend build
+
+      # --- Security test suites ---
+      - name: Backend unit tests
+        run: pnpm --filter backend test
+
+      - name: Security tests (R01–R10, no DB)
+        run: pnpm --filter backend test:security
+
+      - name: Apply DB migrations (for integration tests)
+        run: pnpm --filter backend migrate:latest
+
+      - name: Integration tests (tenant / governance / financial, DB-backed)
+        run: pnpm --filter backend test:integration

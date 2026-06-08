@@ -57,7 +57,7 @@ const XLSX_CONTENT_TYPE =
 // Neutralizes spreadsheet formula injection (CWE-1236). A cell whose text starts
 // with one of = + - @ (or a leading tab/CR/LF) is prefixed with a single quote
 // so Excel/Sheets/LibreOffice treat it as text, never a formula.
-function neutralizeFormula(value: string): string {
+export function neutralizeFormula(value: string): string {
   return /^[=+\-@\t\r\n]/.test(value) ? `'${value}` : value;
 }
 
