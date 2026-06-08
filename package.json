@@ -13,6 +13,8 @@
     "backend:dev": "pnpm --filter backend dev",
     "backend:build": "pnpm --filter backend build",
     "frontend:dev": "pnpm --filter frontend dev",
-    "frontend:build": "pnpm --filter frontend build"
+    "frontend:build": "pnpm --filter frontend build",
+    "test:security": "pnpm --filter backend test:security",
+    "security:test": "pnpm --filter backend test:security"
   }
 }

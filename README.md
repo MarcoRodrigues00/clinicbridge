@@ -190,10 +190,44 @@ docker compose down
 docker compose config
 ```
 
-## 🧪 Testes / checklist manual
+## 🧪 Testes
 
-Não há suíte automatizada ainda; a verificação é por **build + smoke tests manuais** (curl/SQL).
-O roteiro completo (rate limit memory/redis, trust proxy, upload por magic bytes, export, retenção, papéis) está em [`docs/testing-checklist.md`](docs/testing-checklist.md).
+### Testes automatizados de segurança
+
+Há uma **suíte automatizada de segurança** que verifica os 10 requisitos de defesa
+(R01–R10) com testes sem banco (unitários + checagens estáticas), usando o runner
+nativo do Node (`tsx --test`):
+
+```bash
+# Suíte de segurança (R01–R10, não precisa de banco)
+pnpm test:security
+# equivalente: pnpm --filter backend test:security
+
+# Cobertura adicional DB-backed (tenant/governança/financeiro)
+pnpm --filter backend test:integration
+```
+
+Os testes cobrem: autenticação/JWT (401), autorização por papel (403), isolamento
+multi-tenant, mascaramento de PII e anti-formula-injection, redação de logs, cifra
+do segredo MFA, validação de upload por magic bytes, configuração de rate limit,
+guards de boot de produção e ausência de arquivos sensíveis rastreados pelo git.
+
+Roda também em CI a cada `push`/`pull_request` para `main`
+([`.github/workflows/security-checks.yml`](.github/workflows/security-checks.yml)):
+typecheck + build de backend/frontend, testes de segurança e integração, e o gate de
+arquivos sensíveis.
+
+**Documentos da defesa:**
+[`docs/security-final-10-requirements.md`](docs/security-final-10-requirements.md)
+(10 requisitos detalhados) ·
+[`docs/security-controls-catalog.md`](docs/security-controls-catalog.md)
+(catálogo completo de 64 controles).
+
+### Checklist manual
+
+Complementarmente, há um roteiro de **smoke tests manuais** (curl/SQL): rate limit
+memory/redis, trust proxy, upload por magic bytes, export, retenção, papéis — em
+[`docs/testing-checklist.md`](docs/testing-checklist.md).
 
 ```bash
 # Builds (devem passar)

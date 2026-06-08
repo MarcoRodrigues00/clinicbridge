@@ -1,7 +1,11 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
-const EnvSchema = z.object({
+// Exported so the security test suite can assert the production guards reject
+// insecure configs (R09) WITHOUT booting the app or touching a database. The
+// schema is pure: importing it never connects to Postgres. The module-level
+// safeParse below still validates the live process.env exactly as before.
+export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   BACKEND_PORT: z.coerce.number().int().positive().default(3001),
   LOG_LEVEL: z
