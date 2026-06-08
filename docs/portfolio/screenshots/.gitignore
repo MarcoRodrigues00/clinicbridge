@@ -1,0 +1,18 @@
+# Screenshots are NOT versioned — even synthetic captures can carry PII or secrets.
+# Keep image files local. Only this folder's README/.gitignore are tracked.
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.tiff
+*.heic
+*.mp4
+*.mov
+*.webm
+*.pdf
+
+# Keep the placeholder docs tracked.
+!.gitignore
+!README.md
