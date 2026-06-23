@@ -22,6 +22,19 @@ ClinicBridge é um **Clinic OS modular** para clínicas pequenas: nasceu resolve
 
 O projeto é usado hoje como **portfólio técnico**, **entrega acadêmica de segurança** e **demonstração local guiada** (com persona "Auri" e dataset 100% fictício). Cada módulo clínico tem ADR própria; o escopo permanece **administrativo**, não substituindo prontuário/sistema clínico real.
 
+## ✨ Destaques de engenharia de segurança
+
+Os pontos que diferenciam o projeto, sem ler as tabelas inteiras:
+
+- 🏢 **Isolamento multi-tenant rígido** — `clinica_id` forçado em **todo DAO**; acesso cross-tenant vira **404 genérico** (`patient_not_found`) para evitar enumeração; DAOs sem `listAll`.
+- 🔑 **Auth forte** — senhas **argon2id**, **MFA/TOTP com segredo cifrado em repouso (AES-256-GCM)** + backup codes; sessões JWT; rate limit no login.
+- 🛡️ **Privacidade por padrão (LGPD)** — CPF **sempre mascarado**, `member_number`/`holder_name` mascarados; **logs e auditoria são metadata-only** (nunca CPF/nome/telefone/e-mail).
+- 🧾 **Auditoria append-only** + **read-audit** específica para dados clínicos; **sem delete físico** em entidades sensíveis (arquivar, não apagar).
+- 📥 **Importação/upload segura** — validação por **magic bytes** (não pela extensão), storage privado com nome aleatório + **SHA-256**; export **neutraliza formula injection**; retenção é **dry-run** (não apaga).
+- 🚧 **Defesa no backend** — o frontend nunca decide segurança; autorização por papel + grants clínicos + governança (`requireClinicGovernance`).
+- 🔒 **Configuração segura** — **guards de boot de produção**, segredos só via env, e um **gate de CI que falha o build** se qualquer arquivo sensível (`.env`/`.pem`/`.csv`/`.xlsx`/dump…) for rastreado pelo git.
+- ✅ **64 testes de segurança automatizados** (R01–R10) + integração com Postgres efêmero, rodando no GitHub Actions a cada push/PR.
+
 ## 🎯 O problema
 
 Clínicas pequenas costumam ter dados espalhados em planilhas e sistemas antigos, com:
