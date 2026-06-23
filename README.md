@@ -205,6 +205,30 @@ docker compose config
 
 > Detalhe e critérios de gating: [`docs/roadmap-next-phase.md`](docs/roadmap-next-phase.md) · `docs/product-clinic-os-roadmap.md`.
 
+## 📸 Screenshots
+
+**Landing / Home**
+![Home](docs/screenshots/01-home.png)
+
+**Dashboard**
+![Dashboard](docs/screenshots/02-dashboard.png)
+
+**Patients (PII masked, tenant-isolated)**
+![Patients](docs/screenshots/03-patients.png)
+
+**Security & governance**
+![Security](docs/screenshots/04-security.png)
+![Governance](docs/screenshots/05-governance.png)
+
+**Guided import pipeline**
+![Import](docs/screenshots/06-import.png)
+
+**CI — GitHub Actions (build · typecheck · security tests)**
+![CI](docs/screenshots/07-ci-github-actions.png)
+
+**Responsive / mobile**
+<img src="docs/screenshots/08-mobile.png" width="320">
+
 ## 📸 Portfólio / evidências
 
 Materiais para case técnico, vídeo/demo e LinkedIn ficam em [`docs/portfolio/`](docs/portfolio/):
@@ -213,7 +237,7 @@ Materiais para case técnico, vídeo/demo e LinkedIn ficam em [`docs/portfolio/`
 - [`demo-script.md`](docs/portfolio/demo-script.md) — roteiro de vídeo/demo de 3–5 min com narração;
 - [`linkedin-post-draft.md`](docs/portfolio/linkedin-post-draft.md) — rascunhos de post (curto e técnico);
 - [`evidence-checklist.md`](docs/portfolio/evidence-checklist.md) — checklist de prints/evidências a capturar;
-- [`screenshots/`](docs/portfolio/screenshots/) — pasta de capturas (placeholder; **imagens não versionadas** para evitar PII).
+- [`docs/screenshots/`](docs/screenshots/) — capturas versionadas da aplicação (**PII mascarada / dados sintéticos**), exibidas na seção [Screenshots](#-screenshots) acima.
 
 > O PDF final da faculdade é gerado **fora do repositório** e **não** entra no Git.
 
