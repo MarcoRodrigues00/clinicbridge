@@ -5,7 +5,7 @@
 | **Status** | Accepted |
 | **Data** | 2026-05-27 |
 | **Sprint** | 4.5A (docs/ADR-only) |
-| **Autores** | Produto + eng |
+| **Autores** | Marco Rodrigues |
 | **Relacionado** | ADR 0008 (Clinic OS) · ADR 0009 (roles) · ADR 0012 (Financeiro) · ADR 0013 (Agenda × Financeiro) · `docs/management-reports-v0-scope.md` · `docs/product-clinic-os-roadmap.md` §Fase-4.5 |
 
 ---

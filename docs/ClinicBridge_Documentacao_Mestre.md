@@ -3,7 +3,7 @@
 > Documento mestre do projeto. Reúne plano, arquitetura, banco, fluxo, segurança, modelagem de ameaças, backlog, roteiro de apresentação e conteúdo do relatório.
 >
 > Versão: 1.0 — Data: maio/2026
-> Autor: Marco (marco.vrodrigues@hotmail.com)
+> Autor: Marco Rodrigues
 
 ---
 
@@ -860,7 +860,7 @@ Cada item tem um critério de aceite resumido. A divisão segue a sugerida, com 
 
 ### Capa
 **ClinicBridge — Plataforma de migração segura de dados administrativos para clínicas pequenas**
-Autor: Marco · Maio de 2026 · Versão 1.0
+Autor: Marco Rodrigues · Maio de 2026 · Versão 1.0
 
 ### 9.1 Introdução
 O ClinicBridge é um projeto de SaaS direcionado a clínicas pequenas e profissionais de saúde autônomos que precisam migrar dados de sistemas antigos para novas ferramentas. O foco inicial é em dados administrativos (pacientes, contatos, agenda), evitando dados clínicos sensíveis na primeira versão para reduzir risco regulatório e manter o escopo controlado.

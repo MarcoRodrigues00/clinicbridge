@@ -5,7 +5,7 @@
 | **Status** | Accepted |
 | **Data** | 2026-05-27 |
 | **Sprint** | 4.4E-A (docs/ADR-only) |
-| **Autores** | Produto + eng |
+| **Autores** | Marco Rodrigues |
 | **Relacionado** | ADR 0012 (Financeiro v0.1) · ADR 0006 (Agenda) · ADR 0008 (Clinic OS) · `docs/agenda-financial-integration-v0-scope.md` |
 
 ---
